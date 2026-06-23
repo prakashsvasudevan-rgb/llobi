@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About | LLOBI.com</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Outfit:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{--grape:#6C4AB6;--sunny:#FFC93C;--berry:#FF6B8A;--mint:#3DDC97;--ink:#2B2150;--panel:#F3EFFA;--line:#E6DEF4;}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Outfit',sans-serif;background:var(--panel);color:var(--ink);min-height:100vh;display:flex;flex-direction:column}
+    /* ── Top bar ── */
+    .topbar{width:100%;background:#fff;border-bottom:3px solid #000;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+    .brand{font-family:'Fredoka',sans-serif;font-size:1.6rem;font-weight:700;color:var(--grape);display:flex;align-items:center;gap:8px;text-decoration:none}
+    .brand .dot{background:var(--sunny);border-radius:10px;padding:4px 10px;box-shadow:0 3px 0 #E0A800;transform:rotate(-4deg);font-size:1rem}
+    .nav{display:flex;gap:6px}
+    .nav a{font-weight:700;font-size:.88rem;color:var(--ink);text-decoration:none;padding:7px 14px;border-radius:10px;border:2px solid transparent;transition:.15s}
+    .nav a:hover,.nav a.active{background:var(--panel);border-color:var(--line)}
+    /* ── Hero ── */
+    .hero{background:linear-gradient(135deg,var(--grape) 0%,#4A2C8F 100%);color:#fff;padding:60px 24px 50px;text-align:center;position:relative;overflow:hidden}
+    .hero::before{content:'⭐ 🎮 🚀 🌟 💻 🎯 ⭐ 🎮 🚀';position:absolute;top:12px;left:0;width:100%;font-size:1.4rem;opacity:.12;letter-spacing:28px;white-space:nowrap}
+    .avatar{width:110px;height:110px;border-radius:50%;background:var(--sunny);border:5px solid #fff;box-shadow:0 8px 0 rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;font-size:3.2rem;margin:0 auto 20px;position:relative;z-index:1}
+    .hero h1{font-family:'Fredoka',sans-serif;font-size:2.6rem;margin-bottom:8px;position:relative;z-index:1}
+    .hero .sub{font-size:1.05rem;opacity:.85;font-weight:600;position:relative;z-index:1}
+    .badge-row{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:20px;position:relative;z-index:1}
+    .badge{background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.3);border-radius:20px;padding:6px 16px;font-weight:800;font-size:.82rem;backdrop-filter:blur(4px)}
+    /* ── Page layout ── */
+    .page{max-width:860px;width:100%;margin:0 auto;padding:40px 24px 60px;display:flex;flex-direction:column;gap:32px}
+    /* ── Cards ── */
+    .card{background:#fff;border-radius:20px;border:3px solid #000;box-shadow:0 6px 0 #000;overflow:hidden}
+    .card-head{display:flex;align-items:center;gap:12px;padding:16px 22px;border-bottom:2px solid var(--line)}
+    .card-head .icon{font-size:1.5rem}
+    .card-head h2{font-family:'Fredoka',sans-serif;font-size:1.3rem;color:var(--grape)}
+    .card-body{padding:22px}
+    .card-body p{font-size:.97rem;font-weight:500;line-height:1.75;color:#3a3060;margin-bottom:14px}
+    .card-body p:last-child{margin-bottom:0}
+    /* ── Skills grid ── */
+    .skills-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+    .skill{display:flex;align-items:flex-start;gap:14px;background:var(--panel);border-radius:14px;padding:16px;border:2px solid var(--line)}
+    .skill-icon{font-size:1.6rem;flex-shrink:0;margin-top:2px}
+    .skill-title{font-weight:800;font-size:.92rem;color:var(--grape);margin-bottom:4px}
+    .skill-desc{font-size:.82rem;font-weight:500;color:#555;line-height:1.5}
+    /* ── Quote ── */
+    .quote-box{background:linear-gradient(135deg,#6C4AB6,#4A2C8F);color:#fff;border-radius:20px;border:3px solid #000;box-shadow:0 6px 0 #000;padding:32px 28px;text-align:center}
+    .quote-box blockquote{font-family:'Fredoka',sans-serif;font-size:1.55rem;line-height:1.5;margin-bottom:14px}
+    .quote-box cite{font-size:.88rem;opacity:.75;font-weight:700}
+    /* ── Footer ── */
+    footer{background:#fff;border-top:3px solid #000;padding:14px 24px;text-align:center;font-weight:700;color:var(--ink);font-size:.85rem;margin-top:auto}
+    @media(max-width:600px){.hero h1{font-size:1.9rem}.skills-grid{grid-template-columns:1fr}.nav a{font-size:.78rem;padding:6px 10px}}
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="brand" href="/"><span>LLOBI</span><span class="dot">.com</span></a>
+  <nav class="nav">
+    <a href="/">🎮 Games</a>
+    <a href="/about/" class="active">About</a>
+  </nav>
+</div>
+
+<div class="hero">
+  <div class="avatar">👦</div>
+  <h1>Pranav Krishna Prakash</h1>
+  <p class="sub">Founder &amp; Creator of LLOBI.com · Age 10 · Primary 5</p>
+  <div class="badge-row">
+    <div class="badge">🏫 West Grove Primary School</div>
+    <div class="badge">📍 Jurong West, Singapore</div>
+    <div class="badge">💻 Young Developer</div>
+    <div class="badge">🤖 AI Builder</div>
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="card">
+    <div class="card-head"><span class="icon">👋</span><h2>About Me &amp; LLOBI.com</h2></div>
+    <div class="card-body">
+      <p>Hi! I'm Pranav, a 10-year-old student in Primary 5 at West Grove Primary School, Jurong West, Singapore. I built LLOBI.com — a free games website for kids — all by myself as a mid-year project.</p>
+      <p>It all started when I wanted to learn how to build things on the internet. I picked up coding using AI tools like <strong>Claude Code, ChatGPT, and Antigravity</strong>, learning step by step as I created each new game. What began as a small experiment turned into a website with over a dozen original games, all designed and built by me.</p>
+      <p>I'm passionate about programming and technology, and I believe AI is the future of building things. LLOBI.com is my way of proving that even a Primary 5 student can create real, working technology.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><span class="icon">🎯</span><h2>Why I'm Building This</h2></div>
+    <div class="card-body">
+      <p>After PSLE, I hope to earn a <strong>DSA (Direct School Admission)</strong> place at a secondary school based on my technology background. LLOBI.com is my portfolio — a real, live website that shows what I can design, build, and ship.</p>
+      <p>Every game on this site represents something I learned: new code, new ideas, new problems I had to solve. I'm not just playing with technology — I'm building with it.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><span class="icon">🛠️</span><h2>Technical Skills</h2></div>
+    <div class="card-body">
+      <div class="skills-grid">
+        <div class="skill">
+          <div class="skill-icon">🌐</div>
+          <div><div class="skill-title">HTML5, CSS3 &amp; JavaScript</div><div class="skill-desc">Built every game and the entire website from scratch using core web technologies</div></div>
+        </div>
+        <div class="skill">
+          <div class="skill-icon">🎮</div>
+          <div><div class="skill-title">HTML5 Canvas Game Dev</div><div class="skill-desc">Coded game graphics, animations, and real-time rendering using the Canvas API</div></div>
+        </div>
+        <div class="skill">
+          <div class="skill-icon">⚡</div>
+          <div><div class="skill-title">Game Physics</div><div class="skill-desc">Gravity, collision detection, bouncing, projectile motion, and smooth movement</div></div>
+        </div>
+        <div class="skill">
+          <div class="skill-icon">🌀</div>
+          <div><div class="skill-title">Procedural Generation</div><div class="skill-desc">Mazes, race tracks, and levels that generate differently every single playthrough</div></div>
+        </div>
+        <div class="skill">
+          <div class="skill-icon">📱</div>
+          <div><div class="skill-title">Responsive Web Design</div><div class="skill-desc">The site and all games work on phones, tablets, and computers</div></div>
+        </div>
+        <div class="skill">
+          <div class="skill-icon">💾</div>
+          <div><div class="skill-title">Data &amp; Local Storage</div><div class="skill-desc">Saving high scores, play counts, and player stats using browser localStorage</div></div>
+        </div>
+        <div class="skill">
+          <div class="skill-icon">🐙</div>
+          <div><div class="skill-title">Git &amp; GitHub</div><div class="skill-desc">Managing all my source code with version control and an online repository</div></div>
+        </div>
+        <div class="skill">
+          <div class="skill-icon">🚀</div>
+          <div><div class="skill-title">Web Deployment</div><div class="skill-desc">Hosting LLOBI.com live on Vercel with automatic updates on every code change</div></div>
+        </div>
+        <div class="skill">
+          <div class="skill-icon">🤖</div>
+          <div><div class="skill-title">AI-Assisted Coding</div><div class="skill-desc">Using Claude Code and ChatGPT as real coding tools — not just for answers, but to build</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="quote-box">
+    <blockquote>"If a Primary 5 student can build a real games website — imagine what's possible with the right school and the right support."</blockquote>
+    <cite>— Pranav Krishna Prakash, Founder of LLOBI.com</cite>
+  </div>
+
+</div>
+
+<footer>Made with 💜 by Pranav Krishna Prakash · <strong>LLOBI.com</strong> · West Grove Primary School, Singapore</footer>
+
+</body>
+</html>

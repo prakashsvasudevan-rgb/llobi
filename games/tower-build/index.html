@@ -404,6 +404,7 @@ function solid(t){ return t!==T.AIR&&t!==T.LEAVES&&t!==T.LOG; }
 let inv={};
 let hotbarTypes=[null,null,null,null,null];
 function addItem(type,n=1){ if(!ITEMS[type]) return; inv[type]=(inv[type]||0)+n; refreshUI(); updateGoal(); }
+function showFloat(txt){ if(pl) floats.push({txt,wx:pl.x,wy:pl.y-40,a:1}); }
 function canCraft(r){ return Object.entries(r.need).every(([k,v])=>(inv[k]||0)>=v); }
 function doCraft(r){ if(!canCraft(r)) return; Object.entries(r.need).forEach(([k,v])=>{inv[k]-=v;if(inv[k]<=0)delete inv[k];}); addItem(r.out,r.qty); showFloat('✅ +'+r.qty+' '+ITEMS[r.out].icon); }
 function refreshUI(){
@@ -443,12 +444,12 @@ function updateGoal(){
 
 // ── Player ────────────────────────────────────────────────────────
 const PW=28,PH=50;
-let pl,camX,lives,score,floats,running;
+let pl,camX,camY,lives,score,floats,running;
 function initPlayer(){
   var sx=8, sy=SKY;
   for(let y=0;y<WH;y++) if(world[y][sx]===T.GRASS){sy=y;break;}
   pl={x:sx*TS+6,y:(sy-2)*TS,vx:0,vy:0,onG:false,dir:1,wf:0,hurt:0};
-  camX=pl.x-W/2; lives=10; score=0; floats=[];
+  camX=pl.x-W/2; camY=pl.y-H/2; lives=10; score=0; floats=[];
   mineTarget=null; mineStart=0; miningMs=0;
   inv={}; hotbarTypes=[null,null,null,null,null]; gIdx=0;
   refreshUI(); updateGoal(); renderHearts();
@@ -470,7 +471,7 @@ function startMine(cx,cy,move){
   if(!running) return;
   var r=canvas.getBoundingClientRect();
   var sx=(cx-r.left)*(W/r.width), sy=(cy-r.top)*(H/r.height);
-  var tx=Math.floor((sx+camX)/TS), ty=Math.floor(sy/TS);
+  var tx=Math.floor((sx+camX)/TS), ty=Math.floor((sy+camY)/TS);
   var t=tileAt(tx,ty);
   if(t===T.AIR||t===T.LEAVES){ if(!move) stopMine(); return; }
   // Check required tool
@@ -489,7 +490,7 @@ function startMine(cx,cy,move){
 function moveMineBar(tx,ty){
   var el=document.getElementById('mineBar');
   el.style.left=(tx*TS-camX)+'px';
-  el.style.top=(ty*TS-8)+'px';
+  el.style.top=(ty*TS-camY-8)+'px';
   document.getElementById('mineBg').style.width=TS+'px';
 }
 function stopMine(){ mineTarget=null; document.getElementById('mineBar').style.display='none'; document.getElementById('mineFill').style.width='0%'; }
@@ -497,7 +498,7 @@ function stopMine(){ mineTarget=null; document.getElementById('mineBar').style.d
 function placeBlock(cx,cy){
   var r=canvas.getBoundingClientRect();
   var tx=Math.floor(((cx-r.left)*(W/r.width)+camX)/TS);
-  var ty=Math.floor((cy-r.top)*(H/r.height)/TS);
+  var ty=Math.floor(((cy-r.top)*(H/r.height)+camY)/TS);
   // Must be an air tile
   if(tileAt(tx,ty)!==T.AIR) return;
   // Must be adjacent to at least one solid tile (so blocks float properly)
@@ -691,6 +692,8 @@ function update(){
   pl.hurt=Math.max(0,pl.hurt-1);
   camX+=(pl.x-W/2-camX)*.1;
   camX=Math.max(0,Math.min(camX,(WW-1)*TS-W));
+  camY+=(pl.y-H/2-camY)*.1;
+  camY=Math.max(0,Math.min(camY,(WH-1)*TS-H));
 
   // Mine timer
   if(mineTarget&&mouseDown){
@@ -732,7 +735,7 @@ function update(){
     }
   });
 
-  floats.forEach(f=>{f.y-=.9;f.a-=.015;}); floats=floats.filter(f=>f.a>0);
+  floats.forEach(f=>{f.wy-=.9;f.a-=.015;}); floats=floats.filter(f=>f.a>0);
   showInteractHint();
 }
 
@@ -746,14 +749,15 @@ function draw(){
   drawMtns();
   clouds.forEach(cl=>{cl.x+=cl.s;if(cl.x>W+260)cl.x=-260;drawCloud(cl.x,cl.y,cl.w);});
   var tx0=Math.max(0,Math.floor(camX/TS)-1), tx1=Math.min(WW,Math.ceil((camX+W)/TS)+1);
-  for(var ty=0;ty<WH;ty++) for(var tx=tx0;tx<tx1;tx++){ var t=world[ty][tx]; if(t===T.AIR) continue; drawTile(tx,ty,t); }
+  var ty0=Math.max(0,Math.floor(camY/TS)-1), ty1=Math.min(WH,Math.ceil((camY+H)/TS)+1);
+  for(var ty=ty0;ty<ty1;ty++) for(var tx=tx0;tx<tx1;tx++){ var t=world[ty][tx]; if(t===T.AIR) continue; drawTile(tx,ty,t); }
   animals.forEach(drawAnimal);
   slimes.forEach(drawSlime);
   drawPlayer();
   // Mine crack overlay
   if(mineTarget&&mouseDown){
     var pct=Math.min(1,(performance.now()-mineStart)/miningMs);
-    var bx=mineTarget.tx*TS-camX, by=mineTarget.ty*TS;
+    var bx=mineTarget.tx*TS-camX, by=mineTarget.ty*TS-camY;
     ctx.fillStyle='rgba(0,0,0,'+(.4*pct)+')';
     ctx.fillRect(bx,by,TS,TS);
     ctx.strokeStyle='rgba(255,255,255,'+(.6*pct)+')';
@@ -763,7 +767,7 @@ function draw(){
       ctx.lineTo(bx+4+ci*8,by+2+ci*6); ctx.stroke();
     }
   }
-  floats.forEach(f=>{ ctx.save(); ctx.globalAlpha=f.a; ctx.textAlign='center'; ctx.font='bold 15px Outfit,sans-serif'; ctx.strokeStyle='#000'; ctx.lineWidth=3; ctx.strokeText(f.txt,f.x,f.y); ctx.fillStyle='#fff'; ctx.fillText(f.txt,f.x,f.y); ctx.restore(); });
+  floats.forEach(f=>{ ctx.save(); ctx.globalAlpha=f.a; ctx.textAlign='center'; ctx.font='bold 15px Outfit,sans-serif'; var fx=f.wx-camX, fy=f.wy-camY; ctx.strokeStyle='#000'; ctx.lineWidth=3; ctx.strokeText(f.txt,fx,fy); ctx.fillStyle='#fff'; ctx.fillText(f.txt,fx,fy); ctx.restore(); });
 }
 
 function drawMtns(){
@@ -773,7 +777,7 @@ function drawMtns(){
 function drawCloud(x,y,w){ ctx.fillStyle='rgba(255,255,255,.88)'; ctx.beginPath();ctx.ellipse(x+w/2,y,w/2,15,0,0,Math.PI*2);ctx.fill(); ctx.beginPath();ctx.ellipse(x+w*.3,y+5,w*.28,11,0,0,Math.PI*2);ctx.fill(); ctx.beginPath();ctx.ellipse(x+w*.72,y+4,w*.24,10,0,0,Math.PI*2);ctx.fill(); }
 
 function drawTile(tx,ty,t){
-  var x=tx*TS-camX, y=ty*TS; ctx.save();
+  var x=tx*TS-camX, y=ty*TS-camY; ctx.save();
   if(t===T.GRASS){
     ctx.fillStyle='#7a4a20';ctx.fillRect(x,y,TS,TS);
     ctx.fillStyle='#4a8030';ctx.fillRect(x,y,TS,9);
@@ -836,7 +840,7 @@ function drawTile(tx,ty,t){
 }
 
 function drawPlayer(){
-  var px=pl.x-camX, py=pl.y; ctx.save();
+  var px=pl.x-camX, py=pl.y-camY; ctx.save();
   if(pl.dir<0){ctx.translate(px+PW,py);ctx.scale(-1,1);}else ctx.translate(px,py);
   if(pl.hurt>0) ctx.globalAlpha=pl.hurt%6<3?.35:1;
   var leg=pl.onG&&pl.vx!==0?Math.sin(pl.wf*Math.PI)*5:0;
@@ -856,7 +860,7 @@ function drawPlayer(){
 }
 
 function drawAnimal(a){
-  var ax=a.x-camX, ay=a.y;
+  var ax=a.x-camX, ay=a.y-camY;
   var bob=a.onG&&a.vx!==0?Math.sin(a.wf*Math.PI)*2:0;
   ctx.save();
   if(a.dir<0){ctx.translate(ax+a.w,ay);ctx.scale(-1,1);}else ctx.translate(ax,ay);
@@ -888,7 +892,7 @@ function drawAnimal(a){
 }
 
 function drawSlime(s){
-  var sx=s.x-camX, sy=s.y, bob=Math.sin(s.wf*Math.PI)*3;
+  var sx=s.x-camX, sy=s.y-camY, bob=Math.sin(s.wf*Math.PI)*3;
   ctx.save(); ctx.translate(sx,sy);
   ctx.fillStyle='#44bb33'; ctx.beginPath(); ctx.ellipse(13,11+bob,13,9,0,0,Math.PI*2); ctx.fill();
   ctx.fillStyle='#77dd55'; ctx.beginPath(); ctx.ellipse(11,7+bob,8,6,0,0,Math.PI*2); ctx.fill();

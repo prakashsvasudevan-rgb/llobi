@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Block Stack | LLOBI.com</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Outfit:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{--grape:#6C4AB6;--sunny:#FFC93C;--berry:#FF6B8A;--mint:#3DDC97;--ink:#2B2150;--panel:#F3EFFA;--line:#E6DEF4;}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Outfit',sans-serif;background:#1a0533;color:#fff;min-height:100vh;display:flex;flex-direction:column;align-items:center}
+
+    .topbar{width:100%;background:#fff;border-bottom:3px solid #000;padding:10px 20px;display:flex;align-items:center;justify-content:space-between}
+    .brand{font-family:'Fredoka',sans-serif;font-size:1.5rem;font-weight:700;color:var(--grape);display:flex;align-items:center;gap:8px;text-decoration:none}
+    .brand .dot{background:var(--sunny);border-radius:10px;padding:4px 8px;box-shadow:0 3px 0 #E0A800;transform:rotate(-4deg);font-size:1rem}
+    .back-btn{font-family:'Fredoka',sans-serif;font-weight:600;background:var(--panel);border:2px solid var(--line);border-radius:10px;padding:7px 14px;cursor:pointer;color:var(--ink);font-size:.9rem}
+
+    .game-wrap{display:grid;grid-template-columns:1fr 260px;gap:20px;max-width:960px;width:100%;padding:20px;flex:1}
+    .game-col{display:flex;flex-direction:column;gap:14px}
+
+    .game-box{background:#2d0a4e;border-radius:20px;border:3px solid #000;box-shadow:0 8px 0 #000;overflow:hidden;position:relative}
+    .game-hud{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:#1a0533;gap:8px;flex-wrap:wrap}
+    .hud-stat{display:flex;align-items:center;gap:5px;font-weight:800;font-size:.85rem}
+    .hud-stat .lbl{opacity:.6;font-size:.72rem}
+    .stat-val{font-family:'Fredoka',sans-serif;font-size:1.2rem;color:var(--sunny)}
+    .like-btn{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.1);border:2px solid rgba(255,255,255,.2);border-radius:10px;padding:6px 12px;cursor:pointer;font-weight:800;font-size:.85rem;color:#fff;transition:.15s;margin-left:auto}
+    .like-btn:hover,.like-btn.liked{background:rgba(255,201,60,.25);border-color:var(--sunny);color:var(--sunny)}
+
+    canvas{display:block;width:100%;aspect-ratio:9/16;max-height:70vh;margin:0 auto;cursor:pointer;touch-action:manipulation}
+
+    .overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(26,5,51,.9);backdrop-filter:blur(6px);z-index:10;transition:.3s}
+    .overlay.hidden{opacity:0;pointer-events:none}
+    .ov-box{background:#2d0a4e;border:3px solid var(--sunny);border-radius:20px;padding:28px 36px;text-align:center;box-shadow:0 8px 0 #000;max-width:300px}
+    .ov-box h2{font-family:'Fredoka',sans-serif;font-size:2.6rem;color:var(--sunny);margin-bottom:8px}
+    .ov-box p{opacity:.85;margin-bottom:20px;font-weight:600;line-height:1.5;font-size:.95rem}
+    .ov-score{font-family:'Fredoka',sans-serif;font-size:3rem;color:var(--mint);margin:10px 0}
+    .play-btn{font-family:'Fredoka',sans-serif;font-weight:700;font-size:1.1rem;background:var(--sunny);color:#000;border:none;border-radius:14px;padding:13px 32px;cursor:pointer;box-shadow:0 5px 0 #c8960a;transition:.1s}
+    .play-btn:active{transform:translateY(3px);box-shadow:0 2px 0 #c8960a}
+    .hi-badge{display:inline-block;background:var(--berry);color:#fff;font-weight:800;font-size:.75rem;padding:4px 10px;border-radius:20px;margin-bottom:10px}
+
+    .tap-hint{position:absolute;bottom:16px;left:0;right:0;text-align:center;font-weight:800;font-size:.85rem;opacity:.5;pointer-events:none;animation:pulse 1.5s ease-in-out infinite}
+    @keyframes pulse{0%,100%{opacity:.5}50%{opacity:1}}
+
+    .side{display:flex;flex-direction:column;gap:14px}
+    .card{background:#2d0a4e;border-radius:18px;border:3px solid #000;box-shadow:0 6px 0 #000;overflow:hidden}
+    .card-head{background:var(--grape);font-family:'Fredoka',sans-serif;font-size:1rem;font-weight:600;padding:10px 16px}
+    .card-body{padding:16px}
+    .tip{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-weight:700;font-size:.85rem}
+    .tip-icon{font-size:1.3rem;flex-shrink:0}
+    .score-list{list-style:none}
+    .score-list li{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.08);font-weight:700;font-size:.88rem}
+    .score-list li:last-child{border:none}
+    .score-list .rank{color:var(--sunny);font-family:'Fredoka',sans-serif}
+    .score-list .you{color:var(--mint)}
+
+    .game-footer{width:100%;background:#fff;border-top:3px solid #000;padding:12px 20px;text-align:center;font-weight:700;color:var(--ink);font-size:.85rem}
+
+    @media(max-width:680px){
+      .game-wrap{grid-template-columns:1fr;padding:10px}
+      .side{display:none}
+      canvas{max-height:60vh}
+    }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="brand" href="/"><span class="dot">🎮</span>llobi</a>
+  <button class="back-btn" onclick="window.location.href='/'">← All Games</button>
+</div>
+
+<div class="game-wrap">
+  <div class="game-col">
+    <div class="game-box">
+      <div class="game-hud">
+        <div class="hud-stat"><span class="lbl">SCORE</span><span class="stat-val" id="scoreVal">0</span></div>
+        <div class="hud-stat"><span class="lbl">BEST</span><span class="stat-val" id="bestVal">0</span></div>
+        <div class="hud-stat"><span class="lbl">LEVEL</span><span class="stat-val" id="levelVal">1</span></div>
+        <div class="hud-stat"><span>▶</span><span id="playCount">0</span></div>
+        <button class="like-btn" id="likeBtn"><span id="likeIcon">👍</span><span id="likeCount">0</span></button>
+      </div>
+
+      <canvas id="gameCanvas" width="360" height="640"></canvas>
+      <div class="tap-hint" id="tapHint">TAP or SPACE to drop!</div>
+
+      <div class="overlay" id="startOverlay">
+        <div class="ov-box">
+          <h2>🧱 BLOCK STACK</h2>
+          <p>Tap to drop each block. Stack them perfectly to keep going. Miss and it's over!</p>
+          <button class="play-btn" id="startBtn">PLAY NOW</button>
+        </div>
+      </div>
+
+      <div class="overlay hidden" id="gameOverOverlay">
+        <div class="ov-box">
+          <div class="hi-badge" id="hiBadge" style="display:none">🏆 NEW HIGH SCORE!</div>
+          <h2>GAME OVER</h2>
+          <p>You stacked</p>
+          <div class="ov-score" id="finalScore">0</div>
+          <p style="margin-bottom:8px">blocks high!</p>
+          <button class="play-btn" id="restartBtn">PLAY AGAIN</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="side">
+    <div class="card">
+      <div class="card-head">HOW TO PLAY</div>
+      <div class="card-body">
+        <div class="tip"><span class="tip-icon">👆</span> Tap or click to drop the moving block</div>
+        <div class="tip"><span class="tip-icon">🎯</span> Land perfectly for a bonus and keep full width</div>
+        <div class="tip"><span class="tip-icon">✂️</span> Only the overlapping part survives</div>
+        <div class="tip"><span class="tip-icon">⚡</span> Blocks get faster as you go higher</div>
+        <div class="tip"><span class="tip-icon">💀</span> Miss completely = game over</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head">HIGH SCORES</div>
+      <div class="card-body">
+        <ol class="score-list" id="scoreList"></ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="game-footer">🧱 Block Stack — llobi.com — Free games for everyone!</div>
+
+<script>
+  // ── Stats ──────────────────────────────────────────────────────────
+  const GAME_ID='block-stack';
+  function getStats(){ return JSON.parse(localStorage.getItem('llobi_stats_'+GAME_ID)||'{"plays":1820,"likes":430,"liked":false}'); }
+  function saveStats(s){ localStorage.setItem('llobi_stats_'+GAME_ID,JSON.stringify(s)); }
+  function renderStats(){
+    var s=getStats();
+    document.getElementById('playCount').innerText=s.plays.toLocaleString();
+    document.getElementById('likeCount').innerText=s.likes.toLocaleString();
+    document.getElementById('likeBtn').classList.toggle('liked',s.liked);
+    document.getElementById('likeIcon').innerText=s.liked?'💛':'👍';
+  }
+  (function(){ var s=getStats(); s.plays+=1; saveStats(s); renderStats(); })();
+  document.getElementById('likeBtn').addEventListener('click',function(){
+    var s=getStats(); s.liked?s.likes--:s.likes++; s.liked=!s.liked; saveStats(s); renderStats();
+  });
+
+  // ── High scores ───────────────────────────────────────────────────
+  const DEF=[{name:'Builder',score:28},{name:'Stacker',score:22},{name:'Brickie',score:17},{name:'Jenga',score:12},{name:'You',score:0,isPlayer:true}];
+  function getScores(){ return JSON.parse(localStorage.getItem('llobi_block_scores')||JSON.stringify(DEF)); }
+  function saveScores(a){ localStorage.setItem('llobi_block_scores',JSON.stringify(a)); }
+  function renderScores(){
+    var a=getScores().sort((a,b)=>b.score-a.score).slice(0,5);
+    document.getElementById('scoreList').innerHTML=a.map((e,i)=>`<li><span class="rank">${i+1}.</span><span class="${e.isPlayer?'you':''}">${e.name}</span><span>${e.score}</span></li>`).join('');
+  }
+  function updatePlayerScore(s){ var a=getScores(),p=a.find(e=>e.isPlayer); if(p&&s>p.score){p.score=s;saveScores(a);} }
+  renderScores();
+
+  function getBest(){ return parseInt(localStorage.getItem('llobi_block_best')||'0'); }
+  function setBest(s){ localStorage.setItem('llobi_block_best',s); }
+  document.getElementById('bestVal').innerText=getBest();
+
+  // ── Game ──────────────────────────────────────────────────────────
+  const canvas=document.getElementById('gameCanvas');
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width, H=canvas.height;
+  const BLOCK_H=28;
+  const BASE_W=200;
+  const COLORS=['#FF6B8A','#36C5F0','#3DDC97','#FFC93C','#A78BFA','#FF8C42','#F472B6','#34D399'];
+
+  let stack=[], moving=null, score=0, level=1, running=false, animId, camY=0, targetCamY=0;
+
+  function colorFor(i){ return COLORS[i%COLORS.length]; }
+
+  function initGame(){
+    score=0; level=1; camY=0; targetCamY=0;
+    document.getElementById('scoreVal').innerText='0';
+    document.getElementById('levelVal').innerText='1';
+    document.getElementById('tapHint').style.display='block';
+
+    // Base platform
+    stack=[{x:(W-BASE_W)/2, y:H-BLOCK_H, w:BASE_W, color:'#6C4AB6'}];
+    spawnMoving();
+    running=true;
+  }
+
+  function spawnMoving(){
+    var prev=stack[stack.length-1];
+    var speed=Math.min(2+score*0.15, 7);
+    moving={
+      x: 0,
+      y: prev.y - BLOCK_H,
+      w: prev.w,
+      color: colorFor(stack.length),
+      dx: speed,
+      dir: 1
+    };
+  }
+
+  function drop(){
+    if(!running||!moving) return;
+    document.getElementById('tapHint').style.display='none';
+    var prev=stack[stack.length-1];
+
+    // Calculate overlap
+    var left  = Math.max(moving.x, prev.x);
+    var right = Math.min(moving.x+moving.w, prev.x+prev.w);
+    var overlap = right - left;
+
+    if(overlap <= 0){ endGame(); return; }
+
+    // Perfect bonus
+    var perfect = Math.abs(moving.x - prev.x) < 4;
+    if(perfect){
+      overlap = prev.w;
+      left = prev.x;
+      spawnPerfectText(moving.x+moving.w/2, moving.y);
+    }
+
+    // Push landed block
+    stack.push({x:left, y:moving.y, w:overlap, color:moving.color});
+    score++;
+    level=Math.floor(score/5)+1;
+    document.getElementById('scoreVal').innerText=score;
+    document.getElementById('levelVal').innerText=level;
+
+    // Scroll camera up
+    targetCamY = Math.max(0, (stack.length-12)*BLOCK_H);
+
+    spawnMoving();
+  }
+
+  var perfectTexts=[];
+  function spawnPerfectText(x,y){
+    perfectTexts.push({x,y,alpha:1,dy:-1.5});
+  }
+
+  function update(){
+    if(!running||!moving) return;
+    moving.x += moving.dx * moving.dir;
+    var prev=stack[stack.length-1];
+    var maxX=W;
+    if(moving.x+moving.w>=maxX){ moving.dir=-1; }
+    if(moving.x<=0){ moving.dir=1; }
+    // Smooth camera
+    camY += (targetCamY-camY)*0.08;
+    // perfect texts
+    perfectTexts.forEach(t=>{ t.y+=t.dy; t.alpha-=0.025; });
+    perfectTexts=perfectTexts.filter(t=>t.alpha>0);
+  }
+
+  function draw(){
+    // Sky gradient
+    var g=ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,'#0f0020'); g.addColorStop(1,'#2d0a4e');
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+
+    // Stars
+    ctx.fillStyle='rgba(255,255,255,.5)';
+    [[30,40],[100,90],[200,30],[290,70],[50,200],[320,150],[160,180]].forEach(([sx,sy])=>{
+      ctx.fillRect(sx,sy,1.5,1.5);
+    });
+
+    ctx.save();
+    ctx.translate(0, camY);
+
+    // Stacked blocks
+    stack.forEach((b,i)=>{
+      drawBlock(b.x, b.y-camY*0, b.w, BLOCK_H, b.color);
+    });
+
+    // Moving block
+    if(moving && running){
+      drawBlock(moving.x, moving.y, moving.w, BLOCK_H, moving.color);
+
+      // guide line
+      var prev=stack[stack.length-1];
+      ctx.setLineDash([4,4]);
+      ctx.strokeStyle='rgba(255,255,255,.15)';
+      ctx.lineWidth=1;
+      ctx.beginPath();
+      ctx.moveTo(prev.x, moving.y+BLOCK_H);
+      ctx.lineTo(prev.x+prev.w, moving.y+BLOCK_H);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    ctx.restore();
+
+    // Perfect texts (screen space)
+    perfectTexts.forEach(t=>{
+      ctx.save();
+      ctx.globalAlpha=t.alpha;
+      ctx.font='bold 20px Fredoka, sans-serif';
+      ctx.fillStyle='#FFC93C';
+      ctx.textAlign='center';
+      ctx.fillText('PERFECT! +🌟', t.x, t.y-camY+camY);
+      ctx.restore();
+    });
+  }
+
+  function drawBlock(x, y, w, h, color){
+    // shadow
+    ctx.fillStyle='rgba(0,0,0,.3)';
+    ctx.fillRect(x+3, y+5, w, h);
+    // main face
+    ctx.fillStyle=color;
+    roundRect(x, y, w, h, 6);
+    ctx.fill();
+    // top shine
+    ctx.fillStyle='rgba(255,255,255,.22)';
+    roundRect(x+2, y+2, w-4, h/2, 4);
+    ctx.fill();
+    // border
+    ctx.strokeStyle='rgba(0,0,0,.4)';
+    ctx.lineWidth=2;
+    roundRect(x, y, w, h, 6);
+    ctx.stroke();
+  }
+
+  function roundRect(x,y,w,h,r){
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+    ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+    ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+    ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y);
+    ctx.closePath();
+  }
+
+  function loop(){
+    update();
+    draw();
+    animId=requestAnimationFrame(loop);
+  }
+
+  function endGame(){
+    running=false;
+    cancelAnimationFrame(animId);
+    var best=getBest(), isNew=score>best;
+    if(isNew){ setBest(score); document.getElementById('bestVal').innerText=score; }
+    updatePlayerScore(score);
+    renderScores();
+    document.getElementById('finalScore').innerText=score;
+    document.getElementById('hiBadge').style.display=isNew?'inline-block':'none';
+    draw();
+    document.getElementById('gameOverOverlay').classList.remove('hidden');
+  }
+
+  function startGame(){
+    document.getElementById('startOverlay').classList.add('hidden');
+    document.getElementById('gameOverOverlay').classList.add('hidden');
+    cancelAnimationFrame(animId);
+    initGame();
+    loop();
+  }
+
+  document.getElementById('startBtn').addEventListener('click',startGame);
+  document.getElementById('restartBtn').addEventListener('click',startGame);
+
+  // Drop on tap / click / space
+  canvas.addEventListener('click', drop);
+  canvas.addEventListener('touchstart', e=>{ e.preventDefault(); drop(); }, {passive:false});
+  document.addEventListener('keydown', e=>{ if(e.code==='Space'||e.key===' '){ e.preventDefault(); drop(); }});
+
+  // Initial draw
+  ctx.fillStyle='#1a0533'; ctx.fillRect(0,0,W,H);
+</script>
+</body>
+</html>

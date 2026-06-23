@@ -231,7 +231,7 @@ function mkPlayer(cx,cy,cs){
 function mkGhost(cx,cy){
   return {cx,cy,px:cx*cellSize+cellSize/2,py:cy*cellSize+cellSize/2,
     tx:cx*cellSize+cellSize/2,ty:cy*cellSize+cellSize/2,
-    moving:false, stepTimer:0};
+    moving:false, stepTimer:0, hideTimer:0};
 }
 
 function initLevel(lv){
@@ -333,21 +333,29 @@ function update(dt){
 
   // Ghost smooth movement
   if(ghost){
-    ghostBFS();
-    if(ghost.moving){
-      var dx2=ghost.tx-ghost.px, dy2=ghost.ty-ghost.py;
-      var d2=Math.sqrt(dx2*dx2+dy2*dy2);
-      if(d2<=3){ ghost.px=ghost.tx; ghost.py=ghost.ty; ghost.moving=false; }
-      else { ghost.px+=dx2/d2*3; ghost.py+=dy2/d2*3; }
-    }
-    // Ghost catches player
-    var gdx=ghost.px-player.px, gdy=ghost.py-player.py;
-    if(Math.sqrt(gdx*gdx+gdy*gdy)<cellSize*.5){
-      // Reset player to start, lose 50 pts
-      score=Math.max(0,score-50);
-      player=mkPlayer(0,0,cellSize);
-      showFloat('-50 👻',CW/2,CH/2,'#ff4444',28);
-      document.getElementById('scoreVal').textContent=score;
+    if(ghost.hideTimer>0){
+      ghost.hideTimer-=dt;
+    } else {
+      ghostBFS();
+      if(ghost.moving){
+        var dx2=ghost.tx-ghost.px, dy2=ghost.ty-ghost.py;
+        var d2=Math.sqrt(dx2*dx2+dy2*dy2);
+        if(d2<=3){ ghost.px=ghost.tx; ghost.py=ghost.ty; ghost.moving=false; }
+        else { ghost.px+=dx2/d2*3; ghost.py+=dy2/d2*3; }
+      }
+      // Ghost catches player
+      var gdx=ghost.px-player.px, gdy=ghost.py-player.py;
+      if(Math.sqrt(gdx*gdx+gdy*gdy)<cellSize*.5){
+        score=Math.max(0,score-50);
+        player=mkPlayer(0,0,cellSize);
+        // Send ghost back to its corner and hide for 10 seconds
+        ghost.cx=cols-1; ghost.cy=0;
+        ghost.px=ghost.cx*cellSize+cellSize/2; ghost.py=ghost.cy*cellSize+cellSize/2;
+        ghost.tx=ghost.px; ghost.ty=ghost.py; ghost.moving=false;
+        ghost.hideTimer=10000;
+        showFloat('-50 👻 Ghost hiding!',CW/2,CH*.4,'#ff4444',22);
+        document.getElementById('scoreVal').textContent=score;
+      }
     }
   }
 
@@ -491,7 +499,7 @@ function draw(){
   ctx.fillText('🏁',ox+cellSize/2,oy+cellSize/2);
 
   // Ghost
-  if(ghost){
+  if(ghost&&ghost.hideTimer<=0){
     var gx2=ox+ghost.px, gy2=oy+ghost.py;
     ctx.save(); ctx.translate(gx2,gy2);
     ctx.shadowColor='#aa00ff'; ctx.shadowBlur=16;

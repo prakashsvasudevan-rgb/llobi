@@ -2,58 +2,55 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>Tower Build | LLOBI.com</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Outfit:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Outfit:wght@700;800&display=swap" rel="stylesheet">
   <style>
     :root{--grape:#6C4AB6;--sunny:#FFC93C;--berry:#FF6B8A;--mint:#3DDC97;--ink:#2B2150;--panel:#F3EFFA;--line:#E6DEF4;}
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Outfit',sans-serif;background:#1a2744;color:#fff;min-height:100vh;display:flex;flex-direction:column;align-items:center}
-    .topbar{width:100%;background:#fff;border-bottom:3px solid #000;padding:10px 20px;display:flex;align-items:center;justify-content:space-between}
-    .brand{font-family:'Fredoka',sans-serif;font-size:1.5rem;font-weight:700;color:var(--grape);display:flex;align-items:center;gap:8px;text-decoration:none}
-    .brand .dot{background:var(--sunny);border-radius:10px;padding:4px 8px;box-shadow:0 3px 0 #E0A800;transform:rotate(-4deg);font-size:1rem}
-    .back-btn{font-family:'Fredoka',sans-serif;font-weight:600;background:var(--panel);border:2px solid var(--line);border-radius:10px;padding:7px 14px;cursor:pointer;color:var(--ink);font-size:.9rem}
+    *{margin:0;padding:0;box-sizing:border-box;image-rendering:pixelated}
+    body{font-family:'Outfit',sans-serif;background:#1a0a00;color:#fff;min-height:100vh;display:flex;flex-direction:column;align-items:center;overflow:hidden}
+    .topbar{width:100%;background:#fff;border-bottom:3px solid #000;padding:8px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+    .brand{font-family:'Outfit',sans-serif;font-size:1.3rem;font-weight:800;color:var(--grape);display:flex;align-items:center;gap:8px;text-decoration:none}
+    .brand .dot{background:var(--sunny);border-radius:8px;padding:3px 7px;box-shadow:0 3px 0 #c8960a;font-size:.9rem}
+    .back-btn{font-weight:700;background:var(--panel);border:2px solid var(--line);border-radius:8px;padding:5px 12px;cursor:pointer;color:var(--ink);font-size:.85rem;font-family:'Outfit',sans-serif}
 
-    .game-wrap{display:grid;grid-template-columns:1fr 260px;gap:20px;max-width:960px;width:100%;padding:20px;flex:1}
-    .game-col{display:flex;flex-direction:column;gap:14px}
-    .game-box{background:#0d1b3e;border-radius:20px;border:3px solid #000;box-shadow:0 8px 0 #000;overflow:hidden;position:relative}
-    .game-hud{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:#060e22;gap:8px;flex-wrap:wrap}
-    .hud-stat{display:flex;align-items:center;gap:5px;font-weight:800;font-size:.85rem}
-    .hud-stat .lbl{opacity:.6;font-size:.72rem}
-    .stat-val{font-family:'Fredoka',sans-serif;font-size:1.2rem;color:var(--sunny)}
-    .like-btn{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.1);border:2px solid rgba(255,255,255,.2);border-radius:10px;padding:6px 12px;cursor:pointer;font-weight:800;font-size:.85rem;color:#fff;transition:.15s;margin-left:auto}
-    .like-btn:hover,.like-btn.liked{background:rgba(255,201,60,.25);border-color:var(--sunny);color:var(--sunny)}
+    .game-area{position:relative;flex:1;width:100%;display:flex;flex-direction:column;max-width:900px}
+    canvas{display:block;width:100%;flex:1;cursor:crosshair;touch-action:none}
 
-    canvas{display:block;width:100%;aspect-ratio:9/16;max-height:72vh;margin:0 auto;cursor:pointer;touch-action:manipulation}
+    /* HUD overlay */
+    #hud{position:absolute;top:0;left:0;right:0;pointer-events:none;padding:8px}
+    .hud-top{display:flex;justify-content:space-between;align-items:flex-start}
+    .hearts{display:flex;gap:2px;flex-wrap:wrap;max-width:220px}
+    .heart{width:18px;height:18px;font-size:14px;line-height:18px;text-align:center}
+    .goal-box{background:rgba(0,0,0,.65);border:2px solid #8B6914;border-radius:4px;padding:6px 10px;font-size:.7rem;font-family:'Press Start 2P',monospace;line-height:1.6;max-width:180px}
+    .goal-box .g-title{color:#FFC93C;font-size:.55rem}
+    .stats-box{display:flex;gap:6px;align-items:center}
+    .like-btn{pointer-events:all;display:flex;align-items:center;gap:5px;background:rgba(0,0,0,.6);border:2px solid rgba(255,255,255,.3);border-radius:8px;padding:5px 10px;cursor:pointer;font-weight:800;font-size:.8rem;color:#fff}
+    .like-btn.liked{border-color:var(--sunny);color:var(--sunny)}
+    .play-count{background:rgba(0,0,0,.6);border-radius:8px;padding:5px 10px;font-size:.8rem;font-weight:800}
 
-    .overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(6,14,34,.9);backdrop-filter:blur(6px);z-index:10;transition:.3s}
-    .overlay.hidden{opacity:0;pointer-events:none}
-    .ov-box{background:#0d1b3e;border:3px solid var(--sunny);border-radius:20px;padding:28px 36px;text-align:center;box-shadow:0 8px 0 #000;max-width:300px}
-    .ov-box h2{font-family:'Fredoka',sans-serif;font-size:2.6rem;color:var(--sunny);margin-bottom:8px}
-    .ov-box p{opacity:.85;margin-bottom:16px;font-weight:600;line-height:1.5;font-size:.95rem}
-    .ov-score{font-family:'Fredoka',sans-serif;font-size:3rem;color:var(--mint);margin:8px 0}
-    .play-btn{font-family:'Fredoka',sans-serif;font-weight:700;font-size:1.1rem;background:var(--sunny);color:#000;border:none;border-radius:14px;padding:13px 32px;cursor:pointer;box-shadow:0 5px 0 #c8960a;transition:.1s}
-    .play-btn:active{transform:translateY(3px);box-shadow:0 2px 0 #c8960a}
-    .hi-badge{display:inline-block;background:var(--berry);color:#fff;font-weight:800;font-size:.75rem;padding:4px 10px;border-radius:20px;margin-bottom:10px}
-    .tap-hint{position:absolute;bottom:14px;left:0;right:0;text-align:center;font-weight:800;font-size:.85rem;opacity:.6;pointer-events:none;animation:pulse 1.4s ease-in-out infinite}
-    @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+    /* Inventory bar */
+    #invBar{position:absolute;bottom:0;left:50%;transform:translateX(-50%);display:flex;gap:4px;background:rgba(139,105,20,.9);border:3px solid #5a3e00;border-bottom:none;border-radius:8px 8px 0 0;padding:6px 8px;pointer-events:all}
+    .inv-slot{width:52px;height:52px;background:rgba(200,160,80,.4);border:2px solid #5a3e00;border-radius:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:1.5rem;position:relative;cursor:pointer;user-select:none}
+    .inv-slot.active{background:rgba(255,220,100,.5);border-color:#FFC93C;box-shadow:0 0 0 2px #FFC93C}
+    .inv-slot .qty{position:absolute;bottom:2px;right:4px;font-size:.65rem;font-weight:800;color:#fff;text-shadow:1px 1px 0 #000}
 
-    .side{display:flex;flex-direction:column;gap:14px}
-    .card{background:#0d1b3e;border-radius:18px;border:3px solid #000;box-shadow:0 6px 0 #000;overflow:hidden}
-    .card-head{background:var(--grape);font-family:'Fredoka',sans-serif;font-size:1rem;font-weight:600;padding:10px 16px}
-    .card-body{padding:16px}
-    .tip{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-weight:700;font-size:.85rem}
-    .tip-icon{font-size:1.3rem;flex-shrink:0}
-    .score-list{list-style:none}
-    .score-list li{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.08);font-weight:700;font-size:.88rem}
-    .score-list li:last-child{border:none}
-    .score-list .rank{color:var(--sunny);font-family:'Fredoka',sans-serif}
-    .score-list .you{color:var(--mint)}
-    .game-footer{width:100%;background:#fff;border-top:3px solid #000;padding:12px 20px;text-align:center;font-weight:700;color:var(--ink);font-size:.85rem}
+    /* Mobile controls */
+    #mobileCtrl{position:absolute;bottom:80px;left:0;right:0;display:none;justify-content:space-between;padding:0 12px;pointer-events:none}
+    .ctrl-group{display:flex;gap:8px;pointer-events:all}
+    .ctrl-btn{width:56px;height:56px;border-radius:12px;border:3px solid #000;background:rgba(255,255,255,.18);font-size:1.4rem;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;backdrop-filter:blur(4px)}
+    .ctrl-btn:active{background:rgba(255,255,255,.35)}
+    @media(max-width:680px){#mobileCtrl{display:flex}}
 
-    @media(max-width:680px){.game-wrap{grid-template-columns:1fr;padding:10px}.side{display:none}canvas{max-height:62vh}}
+    /* Overlays */
+    .overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:20}
+    .overlay.hidden{display:none}
+    .ov-box{background:#2d1a00;border:4px solid #FFC93C;border-radius:12px;padding:28px 36px;text-align:center;max-width:320px;box-shadow:0 8px 0 #000}
+    .ov-box h2{font-family:'Press Start 2P',monospace;font-size:1.1rem;color:#FFC93C;margin-bottom:14px;line-height:1.5}
+    .ov-box p{font-weight:700;font-size:.9rem;opacity:.85;margin-bottom:16px;line-height:1.6}
+    .play-btn{font-family:'Press Start 2P',monospace;font-size:.75rem;background:#3DDC97;color:#000;border:none;border-radius:8px;padding:12px 24px;cursor:pointer;box-shadow:0 4px 0 #1a7a4a;line-height:1.5}
+    .play-btn:active{transform:translateY(3px);box-shadow:0 1px 0 #1a7a4a}
+    .hi-badge{display:inline-block;background:var(--berry);color:#fff;font-weight:800;font-size:.7rem;padding:4px 10px;border-radius:20px;margin-bottom:10px}
   </style>
 </head>
 <body>
@@ -63,360 +60,618 @@
   <button class="back-btn" onclick="window.location.href='/'">← All Games</button>
 </div>
 
-<div class="game-wrap">
-  <div class="game-col">
-    <div class="game-box">
-      <div class="game-hud">
-        <div class="hud-stat"><span class="lbl">HEIGHT</span><span class="stat-val" id="scoreVal">0</span></div>
-        <div class="hud-stat"><span class="lbl">BEST</span><span class="stat-val" id="bestVal">0</span></div>
-        <div class="hud-stat"><span class="lbl">WIND</span><span class="stat-val" id="windVal">🌬️ 0</span></div>
-        <div class="hud-stat"><span>▶</span><span id="playCount">0</span></div>
+<div class="game-area" id="gameArea">
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div class="hud-top">
+      <div>
+        <div class="hearts" id="hearts"></div>
+        <div class="goal-box" id="goalBox">
+          <div class="g-title">GOAL:</div>
+          <div id="goalText">Chop a tree</div>
+          <div id="goalPct">0%</div>
+        </div>
+      </div>
+      <div class="stats-box">
+        <div class="play-count">▶ <span id="playCount">0</span></div>
         <button class="like-btn" id="likeBtn"><span id="likeIcon">👍</span><span id="likeCount">0</span></button>
-      </div>
-
-      <canvas id="gameCanvas" width="360" height="640"></canvas>
-      <div class="tap-hint" id="tapHint">TAP or CLICK to drop the block!</div>
-
-      <div class="overlay" id="startOverlay">
-        <div class="ov-box">
-          <h2>🏰 TOWER BUILD</h2>
-          <p>Drop blocks from the crane to build the tallest tower. Watch out for wind!</p>
-          <button class="play-btn" id="startBtn">PLAY NOW</button>
-        </div>
-      </div>
-
-      <div class="overlay hidden" id="gameOverOverlay">
-        <div class="ov-box">
-          <div class="hi-badge" id="hiBadge" style="display:none">🏆 NEW RECORD!</div>
-          <h2>TOWER FELL!</h2>
-          <p>Your tower reached</p>
-          <div class="ov-score" id="finalScore">0</div>
-          <p style="margin-bottom:16px">floors high!</p>
-          <button class="play-btn" id="restartBtn">BUILD AGAIN</button>
-        </div>
       </div>
     </div>
   </div>
 
-  <div class="side">
-    <div class="card">
-      <div class="card-head">HOW TO PLAY</div>
-      <div class="card-body">
-        <div class="tip"><span class="tip-icon">🏗️</span> A crane swings a block back and forth</div>
-        <div class="tip"><span class="tip-icon">👆</span> Tap or click to drop it onto your tower</div>
-        <div class="tip"><span class="tip-icon">🎯</span> Land it straight for a bonus point</div>
-        <div class="tip"><span class="tip-icon">🌬️</span> Wind pushes blocks sideways as they fall</div>
-        <div class="tip"><span class="tip-icon">💥</span> Block falls off the tower = game over</div>
-      </div>
+  <!-- Inventory bar -->
+  <div id="invBar">
+    <div class="inv-slot active" data-slot="0"><span id="s0">🪵</span><span class="qty" id="q0"></span></div>
+    <div class="inv-slot" data-slot="1"><span id="s1">🪨</span><span class="qty" id="q1"></span></div>
+    <div class="inv-slot" data-slot="2"><span id="s2"></span><span class="qty" id="q2"></span></div>
+    <div class="inv-slot" data-slot="3"><span id="s3"></span><span class="qty" id="q3"></span></div>
+    <div class="inv-slot" data-slot="4"><span id="s4"></span><span class="qty" id="q4"></span></div>
+    <div class="inv-slot" data-slot="5" title="Craft">🛠️</div>
+  </div>
+
+  <!-- Mobile controls -->
+  <div id="mobileCtrl">
+    <div class="ctrl-group">
+      <div class="ctrl-btn" id="btnLeft">◀</div>
+      <div class="ctrl-btn" id="btnRight">▶</div>
     </div>
-    <div class="card">
-      <div class="card-head">HIGH SCORES</div>
-      <div class="card-body"><ol class="score-list" id="scoreList"></ol></div>
+    <div class="ctrl-group">
+      <div class="ctrl-btn" id="btnMine">⛏️</div>
+      <div class="ctrl-btn" id="btnJump">▲</div>
+    </div>
+  </div>
+
+  <!-- Start overlay -->
+  <div class="overlay" id="startOverlay">
+    <div class="ov-box">
+      <h2>⛏️ CRAFT &amp; BUILD</h2>
+      <p>Mine wood and stone, craft tools, and survive! Arrow keys to move, SPACE to jump, click to mine.</p>
+      <button class="play-btn" id="startBtn">START GAME</button>
+    </div>
+  </div>
+
+  <!-- Game over overlay -->
+  <div class="overlay hidden" id="deadOverlay">
+    <div class="ov-box">
+      <div class="hi-badge" id="hiBadge" style="display:none">🏆 NEW RECORD!</div>
+      <h2>YOU DIED!</h2>
+      <p>You collected <strong id="finalScore">0</strong> resources!</p>
+      <button class="play-btn" id="restartBtn">TRY AGAIN</button>
     </div>
   </div>
 </div>
 
-<div class="game-footer">🏰 Tower Build — llobi.com — Free games for everyone!</div>
-
 <script>
-  // ── Stats ──────────────────────────────────────────────────────────
-  const GAME_ID='tower-build';
-  function getStats(){ return JSON.parse(localStorage.getItem('llobi_stats_'+GAME_ID)||'{"plays":1540,"likes":380,"liked":false}'); }
-  function saveStats(s){ localStorage.setItem('llobi_stats_'+GAME_ID,JSON.stringify(s)); }
-  function renderStats(){
-    var s=getStats();
-    document.getElementById('playCount').innerText=s.plays.toLocaleString();
-    document.getElementById('likeCount').innerText=s.likes.toLocaleString();
-    document.getElementById('likeBtn').classList.toggle('liked',s.liked);
-    document.getElementById('likeIcon').innerText=s.liked?'💛':'👍';
+// ── Stats ──────────────────────────────────────────────────────────
+const GAME_ID='tower-build';
+function getStats(){ return JSON.parse(localStorage.getItem('llobi_stats_'+GAME_ID)||'{"plays":1540,"likes":380,"liked":false}'); }
+function saveStats(s){ localStorage.setItem('llobi_stats_'+GAME_ID,JSON.stringify(s)); }
+function renderStats(){
+  var s=getStats();
+  document.getElementById('playCount').innerText=s.plays.toLocaleString();
+  document.getElementById('likeCount').innerText=s.likes.toLocaleString();
+  document.getElementById('likeBtn').classList.toggle('liked',s.liked);
+  document.getElementById('likeIcon').innerText=s.liked?'💛':'👍';
+}
+(function(){ var s=getStats(); s.plays+=1; saveStats(s); renderStats(); })();
+document.getElementById('likeBtn').addEventListener('click',function(){
+  var s=getStats(); s.liked?s.likes--:s.likes++; s.liked=!s.liked; saveStats(s); renderStats();
+});
+function getBest(){ return parseInt(localStorage.getItem('llobi_craft_best')||'0'); }
+function setBest(s){ localStorage.setItem('llobi_craft_best',s); }
+
+// ── Canvas setup ──────────────────────────────────────────────────
+const canvas=document.getElementById('gameCanvas');
+const ctx=canvas.getContext('2d');
+let W,H;
+function resize(){
+  var area=document.getElementById('gameArea');
+  W=canvas.width=area.clientWidth;
+  H=canvas.height=area.clientHeight-70; // leave room for inv bar
+}
+resize();
+window.addEventListener('resize',resize);
+
+// ── Constants ────────────────────────────────────────────────────
+const TS=40; // tile size px
+const GRAVITY=0.5;
+const PLAYER_SPEED=3.5;
+const JUMP_FORCE=-11;
+const WORLD_W=80; // tiles wide
+const WORLD_H=30; // tiles tall
+const SKY_H=10;   // tiles of sky
+
+// Tile types
+const T={AIR:0,GRASS:1,DIRT:2,STONE:3,LOG:4,LEAVES:5,WOOD_PLANK:6,COAL:7};
+const TILE_COLOR={
+  [T.GRASS]:'#4a8c3f',
+  [T.DIRT]:'#8B5E3C',
+  [T.STONE]:'#888',
+  [T.LOG]:'#6B3D11',
+  [T.LEAVES]:'#2d7a1f',
+  [T.WOOD_PLANK]:'#c8a05a',
+  [T.COAL]:'#333'
+};
+const TILE_TOP={
+  [T.GRASS]:'#5cb85c',
+  [T.DIRT]:'#a06030',
+  [T.STONE]:'#aaa',
+  [T.LOG]:'#7a4a18',
+  [T.LEAVES]:'#3a9c28',
+  [T.WOOD_PLANK]:'#d4ad6a',
+  [T.COAL]:'#555'
+};
+const TILE_EMOJI={[T.LOG]:'🌲',[T.STONE]:'🪨',[T.COAL]:'🪨'};
+const TILE_DROP={
+  [T.GRASS]:null,
+  [T.DIRT]:null,
+  [T.LOG]:{type:'wood',icon:'🪵'},
+  [T.LEAVES]:null,
+  [T.STONE]:{type:'stone',icon:'🪨'},
+  [T.COAL]:{type:'coal',icon:'🖤'},
+  [T.WOOD_PLANK]:{type:'plank',icon:'🟫'}
+};
+
+// ── World ────────────────────────────────────────────────────────
+let world=[];
+function genWorld(){
+  world=[];
+  for(let y=0;y<WORLD_H;y++){
+    world[y]=[];
+    for(let x=0;x<WORLD_W;x++) world[y][x]=T.AIR;
   }
-  (function(){ var s=getStats(); s.plays+=1; saveStats(s); renderStats(); })();
-  document.getElementById('likeBtn').addEventListener('click',function(){
-    var s=getStats(); s.liked?s.likes--:s.likes++; s.liked=!s.liked; saveStats(s); renderStats();
+  // Terrain
+  for(let x=0;x<WORLD_W;x++){
+    var surfY=SKY_H+Math.round(Math.sin(x*0.18)*2+Math.cos(x*0.07)*1.5);
+    surfY=Math.max(SKY_H,Math.min(SKY_H+4,surfY));
+    world[surfY][x]=T.GRASS;
+    for(let y=surfY+1;y<surfY+4;y++) if(y<WORLD_H) world[y][x]=T.DIRT;
+    for(let y=surfY+4;y<WORLD_H;y++) if(y<WORLD_H) world[y][x]=T.STONE;
+    // Coal veins
+    if(Math.random()<0.06 && surfY+6<WORLD_H) world[surfY+5+Math.floor(Math.random()*3)][x]=T.COAL;
+
+    // Trees (on every ~7th tile)
+    if(x%7===3 && surfY+1<WORLD_H){
+      var th=4+Math.floor(Math.random()*2);
+      for(let ly=0;ly<th;ly++) if(surfY-ly-1>=0) world[surfY-ly-1][x]=T.LOG;
+      // Leaves
+      for(let lx=-2;lx<=2;lx++) for(let ly=-2;ly<=1;ly++){
+        var nx=x+lx, ny=surfY-th+ly;
+        if(nx>=0&&nx<WORLD_W&&ny>=0&&ny<WORLD_H&&world[ny][nx]===T.AIR)
+          world[ny][nx]=T.LEAVES;
+      }
+    }
+  }
+}
+
+// ── Inventory ────────────────────────────────────────────────────
+let inv={wood:0,stone:0,coal:0,plank:0,axe:false,pick:false};
+const GOALS=[
+  {text:'Chop 3 wood',check:()=>inv.wood>=3},
+  {text:'Collect 5 stone',check:()=>inv.stone>=5},
+  {text:'Craft planks',check:()=>inv.plank>=1},
+  {text:'Mine coal',check:()=>inv.coal>=1},
+  {text:'Collect 10 wood',check:()=>inv.wood>=10},
+];
+let goalIdx=0;
+function updateGoal(){
+  if(goalIdx>=GOALS.length) goalIdx=GOALS.length-1;
+  var g=GOALS[goalIdx];
+  document.getElementById('goalText').innerText=g.text;
+  if(g.check()){
+    goalIdx++;
+    document.getElementById('goalPct').innerText='✅ Done!';
+    setTimeout(updateGoal,600);
+  } else {
+    document.getElementById('goalPct').innerText='';
+  }
+}
+function updateInvUI(){
+  var items=[
+    {icon:inv.wood?'🪵':'',qty:inv.wood||''},
+    {icon:inv.stone?'🪨':'',qty:inv.stone||''},
+    {icon:inv.plank?'🟫':'',qty:inv.plank||''},
+    {icon:inv.coal?'🖤':'',qty:inv.coal||''},
+    {icon:inv.axe?'🪓':inv.pick?'⛏️':'',qty:''},
+  ];
+  items.forEach((it,i)=>{
+    document.getElementById('s'+i).innerText=it.icon;
+    document.getElementById('q'+i).innerText=it.qty||'';
+  });
+  updateGoal();
+}
+
+// Craft slot click
+document.querySelector('[data-slot="5"]').addEventListener('click',()=>{
+  if(inv.wood>=2){inv.wood-=2;inv.plank+=4;floatText(player.x-camX,'CRAFTED PLANKS! 🟫');}
+  else floatText(player.x-camX,'Need 2 🪵 wood');
+  updateInvUI();
+});
+
+// ── Player ───────────────────────────────────────────────────────
+let player,camX,lives,score,running,mineTarget,mineProgress,floats;
+function initPlayer(){
+  var startX=10;
+  var surfY=SKY_H;
+  for(let y=0;y<WORLD_H;y++) if(world[y][startX]===T.GRASS){surfY=y;break;}
+  player={
+    x:startX*TS+4, y:(surfY-2)*TS,
+    vx:0, vy:0,
+    w:TS-8, h:TS*1.8,
+    onGround:false,
+    facing:1,
+    walkFrame:0
+  };
+  camX=player.x-W/2;
+  lives=10; score=0; mineTarget=null; mineProgress=0; floats=[];
+  renderHearts();
+  inv={wood:0,stone:0,coal:0,plank:0,axe:false,pick:false};
+  goalIdx=0;
+  updateInvUI();
+}
+
+function renderHearts(){
+  document.getElementById('hearts').innerHTML=
+    Array.from({length:10},(_,i)=>`<div class="heart">${i<lives?'❤️':'🖤'}</div>`).join('');
+}
+
+// ── Physics ──────────────────────────────────────────────────────
+const keys={};
+document.addEventListener('keydown',e=>{
+  keys[e.code]=true;
+  if(e.code==='Space'){ e.preventDefault(); jump(); }
+});
+document.addEventListener('keyup',e=>{ keys[e.code]=false; });
+
+function jump(){
+  if(player.onGround){ player.vy=JUMP_FORCE; player.onGround=false; }
+}
+
+function tileAt(tx,ty){
+  if(tx<0||tx>=WORLD_W||ty<0||ty>=WORLD_H) return T.STONE;
+  return world[ty][tx];
+}
+function isSolid(t){ return t!==T.AIR&&t!==T.LEAVES; }
+
+function updatePlayer(){
+  if(!running) return;
+  // Input
+  if(keys['ArrowLeft']||keys['KeyA']||mobileKeys.left){ player.vx=-PLAYER_SPEED; player.facing=-1; }
+  else if(keys['ArrowRight']||keys['KeyD']||mobileKeys.right){ player.vx=PLAYER_SPEED; player.facing=1; }
+  else player.vx=0;
+
+  player.vy+=GRAVITY;
+  player.vy=Math.min(player.vy,14);
+
+  // Move X
+  player.x+=player.vx;
+  player.x=Math.max(0,Math.min(player.x,(WORLD_W-1)*TS));
+  resolveX();
+
+  // Move Y
+  player.y+=player.vy;
+  player.onGround=false;
+  resolveY();
+
+  // Camera
+  camX+=(player.x-W/2-camX)*0.1;
+  camX=Math.max(0,Math.min(camX,(WORLD_W-1)*TS-W));
+
+  // Walk animation
+  if(player.vx!==0) player.walkFrame=(player.walkFrame+0.2)%4;
+
+  // Mine
+  if(mineTarget&&(keys['KeyE']||mobileKeys.mine)){
+    mineProgress+=0.4;
+    if(mineProgress>=10) breakTile(mineTarget.tx,mineTarget.ty);
+  } else { mineProgress=0; }
+
+  // Floats
+  floats.forEach(f=>{ f.y-=1; f.alpha-=0.018; });
+  floats=floats.filter(f=>f.alpha>0);
+
+  // Damage from falling
+  if(player.vy>13){ lives=Math.max(0,lives-1); renderHearts(); if(lives<=0) endGame(); }
+}
+
+function resolveX(){
+  var L=Math.floor(player.x/TS), R=Math.floor((player.x+player.w)/TS);
+  var top=Math.floor(player.y/TS), bot=Math.floor((player.y+player.h-1)/TS);
+  for(let ty=top;ty<=bot;ty++){
+    if(isSolid(tileAt(L,ty))){ player.x=L*TS+TS; }
+    if(isSolid(tileAt(R,ty))){ player.x=R*TS-player.w; }
+  }
+}
+function resolveY(){
+  var top=Math.floor(player.y/TS), bot=Math.floor((player.y+player.h)/TS);
+  var L=Math.floor((player.x+2)/TS), R=Math.floor((player.x+player.w-2)/TS);
+  for(let tx=L;tx<=R;tx++){
+    if(isSolid(tileAt(tx,bot))){ player.y=bot*TS-player.h; player.vy=0; player.onGround=true; }
+    if(isSolid(tileAt(tx,top))){ player.y=top*TS+TS; player.vy=0; }
+  }
+}
+
+// ── Mining ───────────────────────────────────────────────────────
+canvas.addEventListener('click',e=>doMine(e.clientX,e.clientY));
+canvas.addEventListener('touchstart',e=>{
+  e.preventDefault();
+  doMine(e.touches[0].clientX,e.touches[0].clientY);
+},{passive:false});
+
+function doMine(cx,cy){
+  var rect=canvas.getBoundingClientRect();
+  var sx=(cx-rect.left)*(W/rect.width);
+  var sy=(cy-rect.top)*(H/rect.height);
+  var wx=sx+camX, wy=sy;
+  var tx=Math.floor(wx/TS), ty=Math.floor(wy/TS);
+  if(tileAt(tx,ty)!==T.AIR&&tileAt(tx,ty)!==T.LEAVES){
+    mineTarget={tx,ty};
+    breakTile(tx,ty);
+  }
+}
+
+function breakTile(tx,ty){
+  var t=world[ty][tx];
+  if(t===T.AIR||t===T.LEAVES) return;
+  var drop=TILE_DROP[t];
+  world[ty][tx]=T.AIR;
+  mineTarget=null; mineProgress=0;
+  if(drop){
+    inv[drop.type]=(inv[drop.type]||0)+1;
+    score++;
+    floatText(tx*TS-camX+TS/2,drop.icon+' +1');
+    updateInvUI();
+  }
+}
+
+function floatText(sx,text){
+  floats.push({sx,sy:H*0.6,text,alpha:1});
+}
+
+// ── Enemies (slimes) ─────────────────────────────────────────────
+let slimes=[];
+function spawnSlimes(){
+  slimes=[];
+  for(let i=0;i<4;i++){
+    var x=(15+i*12)*TS;
+    var sy=SKY_H;
+    for(let y=0;y<WORLD_H;y++) if(world[y][Math.floor(x/TS)]===T.GRASS){sy=y;break;}
+    slimes.push({x,y:(sy-1)*TS,vx:1,vy:0,onGround:false,dir:1,frame:0});
+  }
+}
+
+function updateSlimes(){
+  slimes.forEach(s=>{
+    s.vy+=GRAVITY;
+    s.x+=s.vx*s.dir;
+    s.y+=s.vy;
+    var tx=Math.floor(s.x/TS), ty=Math.floor((s.y+24)/TS);
+    if(isSolid(tileAt(tx+(s.dir>0?1:0),ty))){ s.dir*=-1; }
+    if(isSolid(tileAt(tx,ty))){ s.y=ty*TS-24; s.vy=0; s.onGround=true; }
+    s.frame=(s.frame+0.1)%2;
+    // Hit player
+    var dx=s.x-player.x, dy=s.y-player.y;
+    if(Math.sqrt(dx*dx+dy*dy)<30){
+      lives=Math.max(0,lives-1); renderHearts();
+      if(lives<=0) endGame();
+      s.x+=s.dir*80;
+    }
+  });
+}
+
+// ── Clouds ───────────────────────────────────────────────────────
+var clouds=Array.from({length:6},(_,i)=>({x:i*220,y:30+Math.random()*80,w:90+Math.random()*60,spd:0.2+Math.random()*0.2}));
+
+// ── Draw ─────────────────────────────────────────────────────────
+function draw(){
+  // Sky
+  var sg=ctx.createLinearGradient(0,0,0,H);
+  sg.addColorStop(0,'#5B8DEF'); sg.addColorStop(1,'#A8D8FF');
+  ctx.fillStyle=sg; ctx.fillRect(0,0,W,H);
+
+  // Sun
+  ctx.beginPath(); ctx.arc(W-80,70,38,0,Math.PI*2);
+  ctx.fillStyle='#FFE066'; ctx.fill();
+  ctx.strokeStyle='#FFC93C'; ctx.lineWidth=4; ctx.stroke();
+
+  // Clouds
+  clouds.forEach(c=>{
+    c.x+=c.spd; if(c.x>W+200) c.x=-200;
+    drawCloud(c.x,c.y,c.w);
   });
 
-  // ── Scores ────────────────────────────────────────────────────────
-  const DEF=[{name:'Architect',score:24},{name:'Builder',score:18},{name:'Brickie',score:14},{name:'Foreman',score:9},{name:'You',score:0,isPlayer:true}];
-  function getScores(){ return JSON.parse(localStorage.getItem('llobi_tower_scores')||JSON.stringify(DEF)); }
-  function saveScores(a){ localStorage.setItem('llobi_tower_scores',JSON.stringify(a)); }
-  function renderScores(){
-    var a=getScores().sort((a,b)=>b.score-a.score).slice(0,5);
-    document.getElementById('scoreList').innerHTML=a.map((e,i)=>`<li><span class="rank">${i+1}.</span><span class="${e.isPlayer?'you':''}">${e.name}</span><span>${e.score}</span></li>`).join('');
-  }
-  function updatePlayerScore(s){ var a=getScores(),p=a.find(e=>e.isPlayer); if(p&&s>p.score){p.score=s;saveScores(a);} }
-  renderScores();
-  function getBest(){ return parseInt(localStorage.getItem('llobi_tower_best')||'0'); }
-  function setBest(s){ localStorage.setItem('llobi_tower_best',s); }
-  document.getElementById('bestVal').innerText=getBest();
+  // Background mountains
+  drawMountains();
 
-  // ── Game ──────────────────────────────────────────────────────────
-  const canvas=document.getElementById('gameCanvas');
-  const ctx=canvas.getContext('2d');
-  const W=canvas.width, H=canvas.height;
-  const BW=80, BH=34; // block size
-  const COLORS=['#FF6B8A','#36C5F0','#3DDC97','#FFC93C','#A78BFA','#FF8C42','#F472B6'];
-  const DARKS= ['#c43060','#1a8fb5','#1fa868','#c8960a','#6d4fd4','#c05a10','#b5358a'];
-
-  let crane, block, tower, score, wind, running, animId, camY, targetCamY, floatTexts;
-
-  function initGame(){
-    score=0; camY=0; targetCamY=0; running=true; floatTexts=[];
-    wind=(Math.random()-0.5)*1.4;
-    document.getElementById('scoreVal').innerText='0';
-    document.getElementById('windVal').innerText='🌬️ '+(wind>0?'+':'')+wind.toFixed(1);
-    document.getElementById('tapHint').style.display='block';
-
-    // Ground base
-    tower=[{x:W/2-BW/2, y:H-BH, w:BW, h:BH, color:'#6C4AB6', dark:'#4B2E91'}];
-
-    // Crane
-    crane={x:W/2, y:80, angle:0, speed:0.025, armLen:120};
-    spawnBlock();
-  }
-
-  function spawnBlock(){
-    var idx=tower.length%COLORS.length;
-    // Block hangs from crane tip
-    var tip=craneTip();
-    block={
-      x:tipx-BW/2, y:tipy,
-      vx:0, vy:0,
-      w:BW, h:BH,
-      color:COLORS[idx], dark:DARKS[idx],
-      falling:false
-    };
-  }
-
-  function craneTip(){
-    return {
-      x: crane.x + Math.sin(crane.angle)*crane.armLen,
-      y: crane.y + Math.cos(crane.angle)*20
-    };
-  }
-
-  function drop(){
-    if(!running||!block||block.falling) return;
-    document.getElementById('tapHint').style.display='none';
-    block.falling=true;
-    block.vy=2;
-    block.vx=wind;
-  }
-
-  function update(){
-    if(!running) return;
-
-    // Swing crane
-    crane.angle+=crane.speed;
-    var amp=Math.min(0.6+score*0.015, 1.1);
-    crane.angle=Math.sin(Date.now()*crane.speed)*amp;
-
-    if(block && !block.falling){
-      var tip=craneTip();
-      block.x=tip.x-block.w/2;
-      block.y=tip.y;
+  // World tiles
+  var tileX0=Math.max(0,Math.floor(camX/TS)-1);
+  var tileX1=Math.min(WORLD_W,Math.ceil((camX+W)/TS)+1);
+  for(let ty=0;ty<WORLD_H;ty++){
+    for(let tx=tileX0;tx<tileX1;tx++){
+      var t=world[ty][tx];
+      if(t===T.AIR) continue;
+      drawTile(tx,ty,t);
     }
-
-    if(block && block.falling){
-      block.vx+=wind*0.04;
-      block.vy=Math.min(block.vy+0.35, 12);
-      block.x+=block.vx;
-      block.y+=block.vy;
-
-      // Check land on top of tower
-      var top=tower[tower.length-1];
-      if(block.y+block.h >= top.y){
-        block.y=top.y-block.h;
-        // Check overlap
-        var left=Math.max(block.x, top.x);
-        var right=Math.min(block.x+block.w, top.x+top.w);
-        var overlap=right-left;
-        if(overlap<10){ endGame(); return; }
-
-        var perfect=Math.abs(block.x-top.x)<6;
-        var lx=perfect?top.x:left;
-        var lw=perfect?top.w:overlap;
-
-        tower.push({x:lx, y:top.y-block.h, w:lw, h:block.h, color:block.color, dark:block.dark});
-        score++;
-        document.getElementById('scoreVal').innerText=score;
-
-        // Float text
-        if(perfect) floatTexts.push({x:lx+lw/2, y:top.y-block.h, text:'PERFECT! ⭐', alpha:1});
-        else floatTexts.push({x:lx+lw/2, y:top.y-block.h, text:'+1', alpha:1, small:true});
-
-        // Camera scroll
-        targetCamY=Math.max(0,(tower.length-10)*BH);
-
-        // Increase wind every 5 floors
-        if(score%5===0){
-          wind=(Math.random()-0.5)*(1.4+score*0.06);
-          document.getElementById('windVal').innerText='🌬️ '+(wind>0?'+':'')+wind.toFixed(1);
-        }
-
-        block=null;
-        setTimeout(spawnBlock, 300);
-      }
-
-      // Fell off screen
-      if(block && block.y > H+100) endGame();
-    }
-
-    // Camera lerp
-    camY+=(targetCamY-camY)*0.07;
-
-    // Float texts
-    floatTexts.forEach(t=>{ t.y-=1.2; t.alpha-=0.02; });
-    floatTexts=floatTexts.filter(t=>t.alpha>0);
   }
 
-  function draw(){
-    // Night sky
-    var g=ctx.createLinearGradient(0,0,0,H);
-    g.addColorStop(0,'#06091a'); g.addColorStop(1,'#0d1b3e');
-    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  // Slimes
+  slimes.forEach(s=>drawSlime(s));
 
-    // Stars
-    [[40,50],[120,30],[220,80],[300,40],[60,180],[280,160],[170,110],[340,200],[20,260]].forEach(([sx,sy])=>{
-      ctx.fillStyle='rgba(255,255,255,.7)';
-      ctx.beginPath(); ctx.arc(sx,sy,1.2,0,Math.PI*2); ctx.fill();
-    });
+  // Player
+  drawPlayer();
 
-    // Moon
-    ctx.beginPath(); ctx.arc(310,55,28,0,Math.PI*2);
-    ctx.fillStyle='#FFF9C4'; ctx.fill();
-    ctx.beginPath(); ctx.arc(322,46,22,0,Math.PI*2);
-    ctx.fillStyle='#0d1b3e'; ctx.fill();
-
-    ctx.save();
-    ctx.translate(0, camY);
-
-    // Ground
-    ctx.fillStyle='#1a3a1a'; ctx.fillRect(0,H-10,W,10);
-    ctx.fillStyle='#2d5a2d'; ctx.fillRect(0,H-20,W,10);
-
-    // Tower blocks
-    tower.forEach((b,i)=>{
-      drawBlock(b.x, b.y, b.w, b.h, b.color, b.dark);
-    });
-
-    // Crane arm
-    var tipPos=craneTip();
-    ctx.strokeStyle='#8B6914';
-    ctx.lineWidth=6;
-    ctx.lineCap='round';
-    ctx.beginPath();
-    ctx.moveTo(crane.x, crane.y-30);
-    ctx.lineTo(crane.x, crane.y+10);
-    ctx.lineTo(tipPos.x, crane.y+10);
-    ctx.stroke();
-    // Crane rope to block
-    if(block && !block.falling){
-      ctx.strokeStyle='rgba(255,255,255,.5)';
-      ctx.lineWidth=2;
-      ctx.beginPath();
-      ctx.moveTo(tipPos.x, crane.y+10);
-      ctx.lineTo(block.x+block.w/2, block.y);
-      ctx.stroke();
-    }
-    // Crane base
-    ctx.fillStyle='#8B6914';
-    ctx.fillRect(crane.x-10, crane.y-30, 20, 40);
+  // Mine progress bar
+  if(mineTarget&&mineProgress>0){
+    var bx=mineTarget.tx*TS-camX, by=mineTarget.ty*TS;
+    ctx.fillStyle='rgba(0,0,0,.5)';
+    ctx.fillRect(bx,by+TS-8,TS,8);
     ctx.fillStyle='#FFC93C';
-    ctx.fillRect(crane.x-12, crane.y-32, 24, 8);
+    ctx.fillRect(bx,by+TS-8,TS*(mineProgress/10),8);
+  }
 
-    // Falling block
-    if(block){
-      drawBlock(block.x, block.y, block.w, block.h, block.color, block.dark);
-    }
-
+  // Float texts
+  floats.forEach(f=>{
+    ctx.save();
+    ctx.globalAlpha=f.alpha;
+    ctx.font='700 16px Outfit,sans-serif';
+    ctx.strokeStyle='#000'; ctx.lineWidth=3; ctx.textAlign='center';
+    ctx.strokeText(f.text,f.sx,f.sy);
+    ctx.fillStyle='#FFF'; ctx.fillText(f.text,f.sx,f.sy);
     ctx.restore();
+    f.sy-=1;
+  });
+}
 
-    // Float texts (screen space)
-    floatTexts.forEach(t=>{
-      var sy=t.y-camY;
-      ctx.save();
-      ctx.globalAlpha=t.alpha;
-      ctx.textAlign='center';
-      if(t.small){
-        ctx.font='700 16px Fredoka, sans-serif';
-        ctx.fillStyle='#3DDC97';
-        ctx.fillText(t.text, t.x, sy);
-      } else {
-        ctx.font='800 20px Fredoka, sans-serif';
-        ctx.strokeStyle='#000'; ctx.lineWidth=3;
-        ctx.strokeText(t.text, t.x, sy);
-        ctx.fillStyle='#FFC93C';
-        ctx.fillText(t.text, t.x, sy);
-      }
-      ctx.restore();
-    });
-  }
-
-  function drawBlock(x,y,w,h,color,dark){
-    var r=8;
-    // shadow
-    ctx.fillStyle='rgba(0,0,0,.25)';
-    roundRect(x+4,y+6,w,h,r); ctx.fill();
-    // 3d bottom face
-    ctx.fillStyle=dark;
-    roundRect(x,y+6,w,h,r); ctx.fill();
-    // top face
-    ctx.fillStyle=color;
-    roundRect(x,y,w,h,r); ctx.fill();
-    // shine
-    ctx.fillStyle='rgba(255,255,255,.28)';
-    roundRect(x+5,y+5,w-10,10,3); ctx.fill();
-    // border
-    ctx.strokeStyle='rgba(0,0,0,.5)';
-    ctx.lineWidth=2.5;
-    roundRect(x,y,w,h,r); ctx.stroke();
-    // rivets
+function drawTile(tx,ty,t){
+  var x=tx*TS-camX, y=ty*TS;
+  var col=TILE_COLOR[t]||'#888';
+  var top=TILE_TOP[t]||col;
+  // main block
+  ctx.fillStyle=col;
+  ctx.fillRect(x,y,TS,TS);
+  // top highlight strip
+  if(t===T.GRASS){
+    ctx.fillStyle=top;
+    ctx.fillRect(x,y,TS,6);
+    // grass blades
+    ctx.fillStyle='#6cd45c';
+    for(let i=4;i<TS;i+=6) ctx.fillRect(x+i,y-3,2,4);
+  } else if(t===T.LOG){
+    ctx.fillStyle='#4a2000';
+    ctx.fillRect(x+2,y,4,TS); ctx.fillRect(x+TS-6,y,4,TS);
+    ctx.fillStyle='#8B5E3C';
+    ctx.fillRect(x+6,y,TS-12,TS);
+    ctx.fillStyle='rgba(255,255,255,.1)';
+    ctx.fillRect(x+10,y+4,6,TS-8);
+  } else if(t===T.LEAVES){
+    ctx.fillStyle='#2d7a1f';
+    ctx.fillRect(x,y,TS,TS);
+    ctx.fillStyle='#3a9c28';
+    ctx.fillRect(x+4,y,TS-8,TS-4);
+    ctx.fillStyle='rgba(255,255,255,.07)';
+    ctx.fillRect(x+6,y+3,8,5);
+  } else if(t===T.STONE){
+    ctx.fillStyle='#999';
+    ctx.fillRect(x,y,TS,TS);
+    ctx.fillStyle='rgba(0,0,0,.1)';
+    ctx.fillRect(x,y,TS/2,TS/2);
+    ctx.fillRect(x+TS/2,y+TS/2,TS/2,TS/2);
+    ctx.fillStyle='rgba(255,255,255,.1)';
+    ctx.fillRect(x+TS/2,y,TS/2,TS/2);
+    ctx.fillRect(x,y+TS/2,TS/2,TS/2);
+  } else if(t===T.COAL){
+    ctx.fillStyle='#666';
+    ctx.fillRect(x,y,TS,TS);
+    ctx.fillStyle='#111';
+    ctx.fillRect(x+8,y+8,10,10); ctx.fillRect(x+22,y+18,8,8);
+  } else if(t===T.WOOD_PLANK){
+    ctx.fillStyle='#c8a05a';
+    ctx.fillRect(x,y,TS,TS);
     ctx.fillStyle='rgba(0,0,0,.15)';
-    [x+10, x+w-10].forEach(rx=>{
-      ctx.beginPath(); ctx.arc(rx, y+h/2, 3.5, 0, Math.PI*2); ctx.fill();
-    });
+    ctx.fillRect(x,y+TS/2,TS,2);
+    ctx.fillRect(x+TS/2,y,2,TS/2);
   }
+  // grid border
+  ctx.strokeStyle='rgba(0,0,0,.2)';
+  ctx.lineWidth=1;
+  ctx.strokeRect(x,y,TS,TS);
+}
 
-  function roundRect(x,y,w,h,r){
+function drawPlayer(){
+  var px=player.x-camX, py=player.y;
+  var flip=player.facing<0;
+  ctx.save();
+  if(flip){ ctx.translate(px+player.w,py); ctx.scale(-1,1); }
+  else ctx.translate(px,py);
+
+  var leg=player.onGround?Math.sin(player.walkFrame*Math.PI)*6:0;
+  // Legs
+  ctx.fillStyle='#2244aa';
+  ctx.fillRect(2,Math.round(player.h*0.6),10,Math.round(player.h*0.4)+leg);
+  ctx.fillRect(player.w-12,Math.round(player.h*0.6),10,Math.round(player.h*0.4)-leg);
+  // Body
+  ctx.fillStyle='#5588ff';
+  ctx.fillRect(1,Math.round(player.h*0.3),player.w-2,Math.round(player.h*0.32));
+  // Head
+  ctx.fillStyle='#FFD599';
+  ctx.fillRect(4,0,player.w-8,Math.round(player.h*0.32));
+  // Hair
+  ctx.fillStyle='#4a2000';
+  ctx.fillRect(4,0,player.w-8,6);
+  // Eyes
+  ctx.fillStyle='#000';
+  ctx.fillRect(player.w-14,8,4,4);
+  // Beard
+  ctx.fillStyle='#6b3000';
+  ctx.fillRect(4,Math.round(player.h*0.22),player.w-8,6);
+  // Tool
+  if(inv.axe||inv.pick){
+    ctx.fillStyle='#8B5E3C';
+    ctx.fillRect(player.w,player.h*0.3,4,16);
+    ctx.fillStyle=inv.axe?'#888':'#aaa';
+    ctx.fillRect(player.w-2,player.h*0.28,8,8);
+  }
+  ctx.restore();
+}
+
+function drawSlime(s){
+  var sx=s.x-camX, sy=s.y;
+  var bob=Math.sin(s.frame*Math.PI)*3;
+  ctx.fillStyle='#55cc44';
+  ctx.beginPath();
+  ctx.ellipse(sx+16,sy+20+bob,16,12,0,0,Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle='#88ee66';
+  ctx.beginPath();
+  ctx.ellipse(sx+14,sy+16+bob,10,8,0,0,Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle='#000';
+  ctx.fillRect(sx+8,sy+16+bob,4,4);
+  ctx.fillRect(sx+18,sy+16+bob,4,4);
+  ctx.strokeStyle='rgba(0,0,0,.3)';
+  ctx.lineWidth=1;
+  ctx.beginPath();
+  ctx.ellipse(sx+16,sy+32+bob,14,4,0,0,Math.PI*2);
+  ctx.stroke();
+}
+
+function drawCloud(x,y,w){
+  ctx.fillStyle='rgba(255,255,255,.88)';
+  ctx.beginPath(); ctx.ellipse(x+w/2,y,w/2,18,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(x+w*0.25,y+8,w*0.28,14,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(x+w*0.75,y+6,w*0.25,12,0,0,Math.PI*2); ctx.fill();
+}
+
+function drawMountains(){
+  ctx.fillStyle='rgba(100,150,80,.35)';
+  [[0,H*0.55,180],[120,H*0.45,220],[280,H*0.5,160],[480,H*0.42,250],[700,H*0.52,200]].forEach(([mx,my,mw])=>{
     ctx.beginPath();
-    ctx.moveTo(x+r,y);
-    ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
-    ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
-    ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
-    ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y);
-    ctx.closePath();
-  }
+    ctx.moveTo(mx,H*0.75);
+    ctx.lineTo(mx+mw/2,my);
+    ctx.lineTo(mx+mw,H*0.75);
+    ctx.fill();
+  });
+}
 
-  function loop(){ update(); draw(); animId=requestAnimationFrame(loop); }
+// ── Mobile controls ───────────────────────────────────────────────
+var mobileKeys={left:false,right:false,mine:false};
+function mbtn(id,key){
+  var el=document.getElementById(id);
+  el.addEventListener('touchstart',e=>{e.preventDefault();mobileKeys[key]=true;},{passive:false});
+  el.addEventListener('touchend',e=>{e.preventDefault();mobileKeys[key]=false;},{passive:false});
+}
+mbtn('btnLeft','left'); mbtn('btnRight','right'); mbtn('btnMine','mine');
+document.getElementById('btnJump').addEventListener('touchstart',e=>{e.preventDefault();jump();},{passive:false});
 
-  function endGame(){
-    running=false;
-    cancelAnimationFrame(animId);
-    var best=getBest(), isNew=score>best;
-    if(isNew){ setBest(score); document.getElementById('bestVal').innerText=score; }
-    updatePlayerScore(score);
-    renderScores();
-    document.getElementById('finalScore').innerText=score;
-    document.getElementById('hiBadge').style.display=isNew?'inline-block':'none';
-    draw();
-    document.getElementById('gameOverOverlay').classList.remove('hidden');
-  }
+// ── Game loop ─────────────────────────────────────────────────────
+let animId;
+function loop(){ updatePlayer(); updateSlimes(); draw(); animId=requestAnimationFrame(loop); }
 
-  function startGame(){
-    document.getElementById('startOverlay').classList.add('hidden');
-    document.getElementById('gameOverOverlay').classList.add('hidden');
-    cancelAnimationFrame(animId);
-    initGame();
-    loop();
-  }
+function endGame(){
+  running=false;
+  cancelAnimationFrame(animId);
+  var best=getBest(), isNew=score>best;
+  if(isNew) setBest(score);
+  document.getElementById('finalScore').innerText=score;
+  document.getElementById('hiBadge').style.display=isNew?'inline-block':'none';
+  document.getElementById('deadOverlay').classList.remove('hidden');
+}
 
-  document.getElementById('startBtn').addEventListener('click',startGame);
-  document.getElementById('restartBtn').addEventListener('click',startGame);
-  canvas.addEventListener('click', drop);
-  canvas.addEventListener('touchstart',e=>{ e.preventDefault(); drop(); },{passive:false});
-  document.addEventListener('keydown',e=>{ if(e.code==='Space'||e.key===' '){ e.preventDefault(); drop(); }});
+function startGame(){
+  document.getElementById('startOverlay').classList.add('hidden');
+  document.getElementById('deadOverlay').classList.add('hidden');
+  cancelAnimationFrame(animId);
+  genWorld();
+  initPlayer();
+  spawnSlimes();
+  running=true;
+  loop();
+}
 
-  ctx.fillStyle='#06091a'; ctx.fillRect(0,0,W,H);
+document.getElementById('startBtn').addEventListener('click',startGame);
+document.getElementById('restartBtn').addEventListener('click',startGame);
 </script>
 </body>
 </html>

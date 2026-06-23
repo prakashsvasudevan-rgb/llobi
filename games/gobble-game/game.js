@@ -1168,6 +1168,9 @@ class GameEntity {
           ctx.lineTo(p3.x, p3.y);
           ctx.closePath();
           ctx.fill();
+        }
+      }
+    }
   }
 
   // Draw procedural passenger car

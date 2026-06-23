@@ -272,6 +272,14 @@
     </div>
   </footer>
 
+  <div id="jsError" style="display:none;position:fixed;top:0;left:0;right:0;background:red;color:#fff;padding:12px;font-size:13px;z-index:9999;word-break:break-all;"></div>
+  <script>
+    window.onerror = function(msg, src, line, col, err) {
+      var el = document.getElementById('jsError');
+      el.style.display = 'block';
+      el.innerText = 'JS ERROR line ' + line + ': ' + msg;
+    };
+  </script>
   <script src="game.js"></script>
 </body>
 </html>

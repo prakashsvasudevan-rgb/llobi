@@ -315,7 +315,7 @@
 
   // left rail = top 6 popular icons
   document.getElementById('rail').innerHTML = popular.slice(0,6).map((g,i)=>`
-    <div class="rail-tile" style="background:${bgs[i%bgs.length]}" title="${g.n}" onclick="playGame('${g.n}')">${g.e}</div>`
+    <div class="rail-tile" style="background:${bgs[i%bgs.length]}" title="${g.n}" onclick="playGame('${g.n}','${g.url||''}')">${g.e}</div>`
   ).join('');
 
   function playGame(name,url){ if(url){ window.location.href=url; } else { alert("Coming soon: "+name); } }

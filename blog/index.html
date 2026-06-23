@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blog | LLOBI.com</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Outfit:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{--grape:#6C4AB6;--sunny:#FFC93C;--berry:#FF6B8A;--mint:#3DDC97;--ink:#2B2150;--panel:#F3EFFA;--line:#E6DEF4;}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Outfit',sans-serif;background:var(--panel);color:var(--ink);min-height:100vh;display:flex;flex-direction:column}
+    .topbar{width:100%;background:#fff;border-bottom:3px solid #000;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+    .brand{font-family:'Fredoka',sans-serif;font-size:1.6rem;font-weight:700;color:var(--grape);display:flex;align-items:center;gap:8px;text-decoration:none}
+    .brand .dot{background:var(--sunny);border-radius:10px;padding:4px 10px;box-shadow:0 3px 0 #E0A800;transform:rotate(-4deg);font-size:1rem}
+    .nav{display:flex;gap:6px}
+    .nav a{font-weight:700;font-size:.88rem;color:var(--ink);text-decoration:none;padding:7px 14px;border-radius:10px;border:2px solid transparent;transition:.15s}
+    .nav a:hover,.nav a.active{background:var(--panel);border-color:var(--line)}
+    .hero{background:linear-gradient(135deg,#1a1a2e 0%,#2d1b69 100%);color:#fff;padding:48px 24px 40px;text-align:center}
+    .hero h1{font-family:'Fredoka',sans-serif;font-size:2.4rem;margin-bottom:8px}
+    .hero p{font-size:1rem;font-weight:600;opacity:.75}
+    .page{max-width:800px;width:100%;margin:0 auto;padding:36px 24px 60px}
+    .post-card{background:#fff;border-radius:20px;border:3px solid #000;box-shadow:0 6px 0 #000;overflow:hidden;text-decoration:none;color:var(--ink);display:flex;flex-direction:column;transition:.15s;margin-bottom:24px}
+    .post-card:hover{transform:translateY(-3px);box-shadow:0 9px 0 #000}
+    .post-banner{background:linear-gradient(135deg,#1a1a2e,#2d1b69);padding:28px 28px 20px;color:#fff}
+    .post-tag{display:inline-block;background:var(--berry);color:#fff;font-weight:800;font-size:.72rem;padding:3px 10px;border-radius:20px;margin-bottom:12px}
+    .post-banner h2{font-family:'Fredoka',sans-serif;font-size:1.6rem;line-height:1.25;margin-bottom:10px}
+    .post-meta{font-size:.82rem;font-weight:700;opacity:.65;display:flex;gap:14px}
+    .post-body{padding:20px 28px 24px}
+    .post-body p{font-size:.92rem;font-weight:500;line-height:1.7;color:#3a3060;margin-bottom:14px}
+    .read-more{display:inline-flex;align-items:center;gap:6px;background:var(--grape);color:#fff;font-family:'Fredoka',sans-serif;font-weight:600;font-size:.92rem;padding:9px 20px;border-radius:12px;box-shadow:0 4px 0 #4A2C8F;transition:.1s}
+    .read-more:hover{transform:translateY(2px);box-shadow:0 2px 0 #4A2C8F}
+    footer{background:#fff;border-top:3px solid #000;padding:14px 24px;text-align:center;font-weight:700;color:var(--ink);font-size:.85rem;margin-top:auto}
+    @media(max-width:600px){.hero h1{font-size:1.8rem}.post-banner h2{font-size:1.3rem}}
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="brand" href="/"><span>LLOBI</span><span class="dot">.com</span></a>
+  <nav class="nav">
+    <a href="/">🎮 Games</a>
+    <a href="/about/">About</a>
+    <a href="/blog/" class="active">Blog</a>
+  </nav>
+</div>
+
+<div class="hero">
+  <h1>📝 The LLOBI Blog</h1>
+  <p>Stories, lessons, and behind-the-scenes from building LLOBI.com</p>
+</div>
+
+<div class="page">
+
+  <a class="post-card" href="/blog/how-i-built-llobi/">
+    <div class="post-banner">
+      <div class="post-tag">Origin Story</div>
+      <h2>How I Built LLOBI.com — A 10-Year-Old's Story</h2>
+      <div class="post-meta">
+        <span>✍️ Pranav Krishna Prakash</span>
+        <span>📅 23 June 2025</span>
+        <span>⏱️ 4 min read</span>
+      </div>
+    </div>
+    <div class="post-body">
+      <p>It started with a simple question during the June school holidays: "Can I actually build a real website?" I had no idea how to code — but I was curious. Here's the full story of how LLOBI.com went from zero to live.</p>
+      <div class="read-more">Read Post →</div>
+    </div>
+  </a>
+
+</div>
+
+<footer>Made with 💜 by Pranav Krishna Prakash · <strong>LLOBI.com</strong> · West Grove Primary School, Singapore</footer>
+
+</body>
+</html>

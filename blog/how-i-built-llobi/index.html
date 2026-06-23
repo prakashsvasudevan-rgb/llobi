@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How I Built LLOBI.com | Blog</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Outfit:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{--grape:#6C4AB6;--sunny:#FFC93C;--berry:#FF6B8A;--mint:#3DDC97;--ink:#2B2150;--panel:#F3EFFA;--line:#E6DEF4;}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Outfit',sans-serif;background:var(--panel);color:var(--ink);min-height:100vh;display:flex;flex-direction:column}
+    .topbar{width:100%;background:#fff;border-bottom:3px solid #000;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+    .brand{font-family:'Fredoka',sans-serif;font-size:1.6rem;font-weight:700;color:var(--grape);display:flex;align-items:center;gap:8px;text-decoration:none}
+    .brand .dot{background:var(--sunny);border-radius:10px;padding:4px 10px;box-shadow:0 3px 0 #E0A800;transform:rotate(-4deg);font-size:1rem}
+    .nav{display:flex;gap:6px}
+    .nav a{font-weight:700;font-size:.88rem;color:var(--ink);text-decoration:none;padding:7px 14px;border-radius:10px;border:2px solid transparent;transition:.15s}
+    .nav a:hover,.nav a.active{background:var(--panel);border-color:var(--line)}
+
+    /* Hero */
+    .hero{background:linear-gradient(135deg,#1a1a2e 0%,#2d1b69 100%);color:#fff;padding:52px 24px 44px;position:relative;overflow:hidden}
+    .hero::after{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")}
+    .hero-inner{max-width:760px;margin:0 auto;position:relative;z-index:1}
+    .back-link{display:inline-flex;align-items:center;gap:6px;color:rgba(255,255,255,.6);font-weight:700;font-size:.85rem;text-decoration:none;margin-bottom:20px;transition:.15s}
+    .back-link:hover{color:#fff}
+    .post-tag{display:inline-block;background:var(--berry);color:#fff;font-weight:800;font-size:.75rem;padding:4px 12px;border-radius:20px;margin-bottom:14px}
+    .hero h1{font-family:'Fredoka',sans-serif;font-size:2.4rem;line-height:1.2;margin-bottom:14px}
+    .meta{display:flex;flex-wrap:wrap;align-items:center;gap:16px;font-size:.85rem;font-weight:700;opacity:.75}
+    .meta span{display:flex;align-items:center;gap:5px}
+
+    /* Article */
+    .article-wrap{max-width:760px;width:100%;margin:0 auto;padding:40px 24px 60px}
+    .article{background:#fff;border-radius:20px;border:3px solid #000;box-shadow:0 6px 0 #000;padding:36px 40px}
+    .article h3{font-family:'Fredoka',sans-serif;font-size:1.4rem;color:var(--grape);margin:32px 0 12px;padding-bottom:8px;border-bottom:2px solid var(--line)}
+    .article h3:first-child{margin-top:0}
+    .article p{font-size:.98rem;font-weight:500;line-height:1.85;color:#3a3060;margin-bottom:16px}
+    .article p:last-child{margin-bottom:0}
+    .article em{font-style:italic;color:#5a4a8a}
+    .article strong{font-weight:800;color:var(--ink)}
+
+    /* Tool cards */
+    .tool-list{display:flex;flex-direction:column;gap:10px;margin:16px 0}
+    .tool{display:flex;align-items:flex-start;gap:14px;background:var(--panel);border-radius:14px;padding:14px 16px;border:2px solid var(--line)}
+    .tool-icon{font-size:1.5rem;flex-shrink:0}
+    .tool-name{font-weight:800;font-size:.92rem;color:var(--grape);margin-bottom:3px}
+    .tool-desc{font-size:.84rem;font-weight:500;color:#555;line-height:1.5}
+
+    /* Pull quote */
+    .pull-quote{background:linear-gradient(135deg,var(--grape),#4A2C8F);color:#fff;border-radius:16px;padding:24px 28px;margin:28px 0;border-left:5px solid var(--sunny)}
+    .pull-quote p{font-family:'Fredoka',sans-serif;font-size:1.25rem;line-height:1.5;color:#fff;margin:0}
+
+    /* Sign off */
+    .signoff{margin-top:36px;padding-top:24px;border-top:2px solid var(--line);display:flex;align-items:center;gap:16px}
+    .signoff-avatar{width:52px;height:52px;border-radius:50%;background:var(--sunny);border:3px solid #000;display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0}
+    .signoff-name{font-weight:800;font-size:.95rem;color:var(--grape)}
+    .signoff-meta{font-size:.8rem;font-weight:600;opacity:.65;margin-top:2px}
+
+    footer{background:#fff;border-top:3px solid #000;padding:14px 24px;text-align:center;font-weight:700;color:var(--ink);font-size:.85rem;margin-top:auto}
+    @media(max-width:600px){.hero h1{font-size:1.7rem}.article{padding:24px 20px}.nav a{font-size:.78rem;padding:6px 10px}}
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="brand" href="/"><span>LLOBI</span><span class="dot">.com</span></a>
+  <nav class="nav">
+    <a href="/">🎮 Games</a>
+    <a href="/about/">About</a>
+    <a href="/blog/" class="active">Blog</a>
+  </nav>
+</div>
+
+<div class="hero">
+  <div class="hero-inner">
+    <a class="back-link" href="/blog/">← All Posts</a>
+    <div class="post-tag">Origin Story</div>
+    <h1>How I Built LLOBI.com — A 10-Year-Old's Story</h1>
+    <div class="meta">
+      <span>✍️ Pranav Krishna Prakash</span>
+      <span>📅 23 June 2025</span>
+      <span>⏱️ 4 min read</span>
+    </div>
+  </div>
+</div>
+
+<div class="article-wrap">
+  <div class="article">
+
+    <p>It started with a simple question I asked myself during the June school holidays: <em>"Can I actually build a real website?"</em></p>
+    <p>I had no idea how to code. I didn't know what HTML was, what JavaScript did, or how websites even worked behind the scenes. But I was curious — and curiosity, I've learned, is the only starting point you really need.</p>
+
+    <h3>Where It All Began</h3>
+    <p>One day I was browsing <strong>Poki.com</strong> — a free games website — and I thought it was really cool. I told my dad about it. He looked at it and said, <em>"Why don't you build your own?"</em></p>
+    <p>I was surprised. I asked him, <em>"How?"</em></p>
+    <p>He smiled and said, <em>"Go figure it out. Use ChatGPT and Claude."</em></p>
+    <p>That was it. No instructions, no hand-holding. Just a challenge and two tools. I went away and started asking questions — and those two tools guided me step by step, explaining everything I didn't understand.</p>
+    <p>Once I had enough information to know what I wanted to build and how, I went back to my dad and briefed him on the plan. He asked me one question: <em>"What's the objective of this project?"</em></p>
+    <p>I said, <em>"I just want to try building it."</em></p>
+    <p>He said, <em>"OK — I support you."</em></p>
+    <p>That was all I needed.</p>
+
+    <h3>Getting the Domain &amp; Hosting</h3>
+    <p>The first real step was registering a domain. I used <strong>GoDaddy</strong> (paid plan, through my dad's account) to purchase <strong>llobi.com</strong> — my very first domain name. Seeing it live on the internet felt incredible.</p>
+    <p>For hosting I used <strong>Vercel Pro</strong>, also on my dad's account. Every time I push new code to GitHub, Vercel automatically updates the live website within seconds. It's like magic — except now I understand exactly how it works.</p>
+
+    <h3>The Tools I Used</h3>
+    <div class="tool-list">
+      <div class="tool">
+        <div class="tool-icon">🪐</div>
+        <div>
+          <div class="tool-name">Antigravity — Where It Started</div>
+          <div class="tool-desc">Antigravity was the very first tool I used — before the website even existed. I used it to build and play my first game right on my laptop, just to prove to myself that making games was actually possible. It gave me the confidence to keep going.</div>
+        </div>
+      </div>
+      <div class="tool">
+        <div class="tool-icon">🤖</div>
+        <div>
+          <div class="tool-name">ChatGPT — Ideas &amp; Understanding</div>
+          <div class="tool-desc">Used for brainstorming game ideas, understanding new concepts, and getting clear explanations when I was confused about how something worked.</div>
+        </div>
+      </div>
+      <div class="tool">
+        <div class="tool-icon">💻</div>
+        <div>
+          <div class="tool-name">Claude Code — Building Everything</div>
+          <div class="tool-desc">My main coding assistant throughout the entire build. I'd describe what I wanted and Claude would help me write the code, explain why things worked the way they did, and help me fix bugs when things broke.</div>
+        </div>
+      </div>
+      <div class="tool">
+        <div class="tool-icon">🐙</div>
+        <div>
+          <div class="tool-name">Git &amp; GitHub — Saving My Work</div>
+          <div class="tool-desc">Every change I made was tracked and saved. This rescued me more than once when something broke badly and I needed to go back to a version that worked.</div>
+        </div>
+      </div>
+    </div>
+
+    <h3>How I Built the Games</h3>
+    <p>Every game started with an idea — something I thought would be fun to play. I'd describe it, build it piece by piece, test it, break it, figure out why it broke, and fix it. Then repeat.</p>
+    <p>I built <strong>Gobble, Snake Classic, Fruit Slice, Speedy Karts, Maze Runner, Star Hopper, Paint Pop, Sky Glider</strong>, and more — each one teaching me something new. Physics, animation, collision detection, procedural generation — big words I now actually understand because I had to use them to make real things work.</p>
+
+    <div class="pull-quote">
+      <p>"There were days when nothing worked. But I kept going — and every bug I fixed taught me more than any lesson could."</p>
+    </div>
+
+    <h3>What I Learned</h3>
+    <p>The biggest thing I learned isn't about code. It's about <strong>not giving up</strong>. There were days when nothing worked — when the screen was blank for no reason, when my character fell through the floor, when I spent hours on a bug that turned out to be one wrong line.</p>
+    <p>AI tools are powerful, but they're just that — tools. You still have to think. You still have to decide what to build, how it should feel, and what to do when something doesn't work. <strong>AI can help you build things, but the ideas and the decisions are still yours.</strong></p>
+
+    <h3>What's Next</h3>
+    <p>LLOBI.com is still growing. More games, more ideas, more things to learn. This is just the beginning.</p>
+    <p>If you're a kid reading this and you're curious about building something — just start. You don't need to know everything. You just need to ask the first question.</p>
+
+    <div class="signoff">
+      <div class="signoff-avatar">👦</div>
+      <div>
+        <div class="signoff-name">Pranav Krishna Prakash</div>
+        <div class="signoff-meta">Age 10 · Primary 5 · West Grove Primary School, Jurong West, Singapore</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<footer>Made with 💜 by Pranav Krishna Prakash · <strong>LLOBI.com</strong> · West Grove Primary School, Singapore</footer>
+
+</body>
+</html>

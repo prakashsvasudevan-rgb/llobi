@@ -945,17 +945,29 @@ body {
 
 /* Mobile Devices */
 @media (max-width: 650px) {
+  .app-layout {
+    padding: 10px;
+    gap: 12px;
+  }
   .sidebar-column {
-    grid-template-columns: 1fr;
+    display: none;
   }
   .levels-container {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
   }
   .main-title, .title-shadow {
-    font-size: 3.5rem;
+    font-size: 2.8rem;
   }
   .game-title-container {
-    height: 60px;
+    height: 50px;
+    margin: 8px auto 12px;
+  }
+  .game-column {
+    padding: 12px;
+  }
+  .canvas-container {
+    min-height: 300px;
+    touch-action: none;
   }
   .sub-footer {
     flex-direction: column;
@@ -963,6 +975,38 @@ body {
     gap: 12px;
   }
   .leaderboard-panel {
-    display: none; /* Hide leaderboard on very small screens to fit canvas */
+    display: none;
+  }
+  .game-hud {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  /* On-screen joystick for mobile */
+  .mobile-joystick {
+    display: flex !important;
   }
 }
+
+/* Mobile joystick — hidden on desktop */
+.mobile-joystick {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 0 4px;
+}
+.joy-row { display: flex; gap: 8px; }
+.joy-btn {
+  width: 62px; height: 62px;
+  border-radius: 14px;
+  border: 3px solid #000;
+  background: #f7a26c;
+  color: #000;
+  font-size: 1.5rem;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 5px 0 #c06020;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.joy-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 #c06020; }

@@ -71,9 +71,17 @@
     /* FOOTER */
     .game-footer{width:100%;background:#fff;border-top:3px solid #000;padding:12px 20px;text-align:center;font-weight:700;color:var(--ink);font-size:.85rem}
 
+    /* MOBILE D-PAD */
+    .dpad{display:none;flex-direction:column;align-items:center;gap:6px;padding:14px;background:#16213e;border-top:3px solid #000}
+    .dpad-row{display:flex;gap:6px}
+    .dpad-btn{width:64px;height:64px;border-radius:14px;border:3px solid #000;background:#0f3460;color:#fff;font-size:1.6rem;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 5px 0 #000;active:transform translateY(3px);-webkit-tap-highlight-color:transparent;user-select:none}
+    .dpad-btn:active{transform:translateY(3px);box-shadow:0 2px 0 #000}
+
     @media(max-width:680px){
-      .game-wrap{grid-template-columns:1fr}
+      .game-wrap{grid-template-columns:1fr;padding:10px}
       .side{display:none}
+      .dpad{display:flex}
+      .game-hud{flex-wrap:wrap;gap:8px}
     }
   </style>
 </head>
@@ -159,6 +167,16 @@
         <ol class="score-list" id="scoreList">
           <li><span class="rank">1.</span><span>Loading…</span><span>—</span></li>
         </ol>
+      </div>
+    </div>
+
+    <!-- MOBILE D-PAD -->
+    <div class="dpad">
+      <div class="dpad-row"><button class="dpad-btn" id="dUp">▲</button></div>
+      <div class="dpad-row">
+        <button class="dpad-btn" id="dLeft">◀</button>
+        <button class="dpad-btn" id="dDown">▼</button>
+        <button class="dpad-btn" id="dRight">▶</button>
       </div>
     </div>
   </div>
@@ -368,6 +386,28 @@
       case 'ArrowRight':case 'd':case 'D': if(dir.x!==-1) nextDir={x:1,y:0}; e.preventDefault(); break;
     }
   });
+
+  // D-pad buttons
+  document.getElementById('dUp').addEventListener('touchstart',e=>{e.preventDefault();if(dir.y!==1)nextDir={x:0,y:-1};},{passive:false});
+  document.getElementById('dDown').addEventListener('touchstart',e=>{e.preventDefault();if(dir.y!==-1)nextDir={x:0,y:1};},{passive:false});
+  document.getElementById('dLeft').addEventListener('touchstart',e=>{e.preventDefault();if(dir.x!==1)nextDir={x:-1,y:0};},{passive:false});
+  document.getElementById('dRight').addEventListener('touchstart',e=>{e.preventDefault();if(dir.x!==-1)nextDir={x:1,y:0};},{passive:false});
+
+  // Swipe detection on canvas
+  var swipeStart={x:0,y:0};
+  canvas.addEventListener('touchstart',e=>{swipeStart={x:e.touches[0].clientX,y:e.touches[0].clientY};},{passive:true});
+  canvas.addEventListener('touchend',e=>{
+    var dx=e.changedTouches[0].clientX-swipeStart.x;
+    var dy=e.changedTouches[0].clientY-swipeStart.y;
+    if(Math.abs(dx)<20&&Math.abs(dy)<20) return;
+    if(Math.abs(dx)>Math.abs(dy)){
+      if(dx>0&&dir.x!==-1) nextDir={x:1,y:0};
+      else if(dx<0&&dir.x!==1) nextDir={x:-1,y:0};
+    } else {
+      if(dy>0&&dir.y!==-1) nextDir={x:0,y:1};
+      else if(dy<0&&dir.y!==1) nextDir={x:0,y:-1};
+    }
+  },{passive:true});
 
   // Speed update loop
   setInterval(()=>{

@@ -123,6 +123,16 @@
         ONLY ON <span class="badge-logo">LLOBI<span>.com</span></span>
       </div>
 
+      <!-- Mobile joystick -->
+      <div class="mobile-joystick" id="mobileJoystick">
+        <div class="joy-row"><button class="joy-btn" id="jUp">▲</button></div>
+        <div class="joy-row">
+          <button class="joy-btn" id="jLeft">◀</button>
+          <button class="joy-btn" id="jDown">▼</button>
+          <button class="joy-btn" id="jRight">▶</button>
+        </div>
+      </div>
+
     </main>
 
     <!-- Side Panel (Right) -->
@@ -315,6 +325,23 @@
       else          { s.likes -= 1; s.liked = false; }
       saveStats(s);
       renderStats();
+    });
+  </script>
+  <script>
+    // Mobile joystick — simulate key events for the game engine
+    function joyPress(k){ keys[k]=true; }
+    function joyRelease(k){ keys[k]=false; }
+    [
+      ['jUp',   'arrowup',    'arrowdown'],
+      ['jDown', 'arrowdown',  'arrowup'],
+      ['jLeft', 'arrowleft',  'arrowright'],
+      ['jRight','arrowright', 'arrowleft'],
+    ].forEach(([id, key])=>{
+      var btn = document.getElementById(id);
+      btn.addEventListener('touchstart', e=>{ e.preventDefault(); joyPress(key); }, {passive:false});
+      btn.addEventListener('touchend',   e=>{ e.preventDefault(); joyRelease(key); }, {passive:false});
+      btn.addEventListener('mousedown',  ()=> joyPress(key));
+      btn.addEventListener('mouseup',    ()=> joyRelease(key));
     });
   </script>
   <script src="game.js"></script>

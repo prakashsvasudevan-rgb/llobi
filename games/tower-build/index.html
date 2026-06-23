@@ -314,7 +314,9 @@ const SMELT={
 };
 
 // ── World tiles ───────────────────────────────────────────────────
-const T={AIR:0,GRASS:1,DIRT:2,STONE:3,LOG:4,LEAVES:5,COAL_ORE:6,IRON_ORE:7,COPPER_ORE:8,DIAMOND_ORE:9,EMERALD_ORE:10,RUBY_ORE:11};
+const T={AIR:0,GRASS:1,DIRT:2,STONE:3,LOG:4,LEAVES:5,COAL_ORE:6,IRON_ORE:7,COPPER_ORE:8,DIAMOND_ORE:9,EMERALD_ORE:10,RUBY_ORE:11,PLANK:12,PLACED_STONE:13};
+// Map inventory item → tile to place
+const ITEM_TO_TILE={plank:12,stone:13,wood:4};
 const TS=40, WW=120, WH=40, SKY=10;
 
 // Mine time in ms per tile type
@@ -338,7 +340,10 @@ const TILE_DROP={
   [T.STONE]:'stone', [T.COAL_ORE]:'coal',
   [T.IRON_ORE]:'iron_ore', [T.COPPER_ORE]:'copper_ore',
   [T.DIAMOND_ORE]:'diamond', [T.EMERALD_ORE]:'emerald', [T.RUBY_ORE]:'ruby',
+  [T.PLANK]:'plank', [T.PLACED_STONE]:'stone',
 };
+// Add mine times for placed blocks
+Object.assign(MINE_TIME,{[T.PLANK]:500,[T.PLACED_STONE]:1000});
 
 let world=[];
 function genWorld(){
@@ -392,7 +397,8 @@ function genWorld(){
 }
 
 function tileAt(tx,ty){ if(tx<0||tx>=WW||ty<0||ty>=WH) return T.STONE; return world[ty][tx]; }
-function solid(t){ return t!==T.AIR&&t!==T.LEAVES; }
+// Logs and leaves are passable — player/animals walk through trees
+function solid(t){ return t!==T.AIR&&t!==T.LEAVES&&t!==T.LOG; }
 
 // ── Inventory ─────────────────────────────────────────────────────
 let inv={};
@@ -451,7 +457,8 @@ function renderHearts(){ document.getElementById('hearts').innerHTML=Array.from(
 
 // ── Mining with timer ─────────────────────────────────────────────
 let mineTarget=null, mineStart=0, miningMs=0, mouseDown=false, mousePos={x:0,y:0};
-canvas.addEventListener('mousedown',e=>{ if(openModal) return; mouseDown=true; startMine(e.clientX,e.clientY); });
+canvas.addEventListener('contextmenu',e=>{ e.preventDefault(); if(openModal||!running) return; placeBlock(e.clientX,e.clientY); });
+canvas.addEventListener('mousedown',e=>{ if(openModal) return; if(e.button===2) return; mouseDown=true; startMine(e.clientX,e.clientY); });
 canvas.addEventListener('mouseup',()=>{ mouseDown=false; stopMine(); });
 canvas.addEventListener('mouseleave',()=>{ mouseDown=false; stopMine(); });
 canvas.addEventListener('mousemove',e=>{ if(mouseDown&&!openModal) startMine(e.clientX,e.clientY,true); });
@@ -486,6 +493,28 @@ function moveMineBar(tx,ty){
   document.getElementById('mineBg').style.width=TS+'px';
 }
 function stopMine(){ mineTarget=null; document.getElementById('mineBar').style.display='none'; document.getElementById('mineFill').style.width='0%'; }
+
+function placeBlock(cx,cy){
+  var r=canvas.getBoundingClientRect();
+  var tx=Math.floor(((cx-r.left)*(W/r.width)+camX)/TS);
+  var ty=Math.floor((cy-r.top)*(H/r.height)/TS);
+  // Must be an air tile
+  if(tileAt(tx,ty)!==T.AIR) return;
+  // Must be adjacent to at least one solid tile (so blocks float properly)
+  var adj=[[tx-1,ty],[tx+1,ty],[tx,ty-1],[tx,ty+1]];
+  if(!adj.some(([nx,ny])=>solid(tileAt(nx,ny)))) return;
+  // Get active held item and map to tile
+  var held=hotbarTypes[activeSlot];
+  var tile=ITEM_TO_TILE[held];
+  if(!tile) return;
+  if(!(inv[held]>0)) return;
+  // Place it
+  world[ty][tx]=tile;
+  inv[held]--;
+  if(inv[held]<=0) delete inv[held];
+  refreshUI();
+  showFloat(ITEMS[held].icon+' placed');
+}
 
 // ── Animals ──────────────────────────────────────────────────────
 let animals=[];
@@ -792,6 +821,15 @@ function drawTile(tx,ty,t){
     ctx.fillStyle='#555';ctx.fillRect(x,y,TS,TS);
     ctx.fillStyle='#ee2244';ctx.fillRect(x+5,y+5,13,13);ctx.fillRect(x+20,y+20,10,10);
     ctx.fillStyle='rgba(255,200,200,.35)';ctx.fillRect(x+8,y+8,5,5);
+  } else if(t===T.PLANK){
+    ctx.fillStyle='#c8a05a';ctx.fillRect(x,y,TS,TS);
+    ctx.fillStyle='rgba(0,0,0,.15)';ctx.fillRect(x,y+TS/2-1,TS,2);ctx.fillRect(x+TS/2-1,y,2,TS/2);
+    ctx.fillStyle='rgba(255,255,255,.18)';ctx.fillRect(x+2,y+2,TS-4,6);
+  } else if(t===T.PLACED_STONE){
+    ctx.fillStyle='#888';ctx.fillRect(x,y,TS,TS);
+    ctx.fillStyle='rgba(0,0,0,.12)';ctx.fillRect(x,y,TS/2,TS/2);ctx.fillRect(x+TS/2,y+TS/2,TS/2,TS/2);
+    ctx.fillStyle='rgba(255,255,255,.14)';ctx.fillRect(x+TS/2,y,TS/2,TS/2);ctx.fillRect(x,y+TS/2,TS/2,TS/2);
+    ctx.fillStyle='rgba(255,255,255,.22)';ctx.fillRect(x+2,y+2,8,5);
   }
   ctx.strokeStyle='rgba(0,0,0,.18)';ctx.lineWidth=1;ctx.strokeRect(x,y,TS,TS);
   ctx.restore();

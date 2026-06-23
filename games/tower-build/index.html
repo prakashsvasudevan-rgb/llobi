@@ -318,11 +318,20 @@ const T={AIR:0,GRASS:1,DIRT:2,STONE:3,LOG:4,LEAVES:5,COAL_ORE:6,IRON_ORE:7,COPPE
 const TS=40, WW=120, WH=40, SKY=10;
 
 // Mine time in ms per tile type
+// Iron=1500 base. Wood=0.5s SLOWER than iron=2000. Emerald=0.2s faster=1300. Ruby=0.5s faster=1000. Diamond=fastest=600.
 const MINE_TIME={
   [T.LEAVES]:500, [T.DIRT]:500, [T.GRASS]:500,
-  [T.LOG]:1000, [T.STONE]:1000,
-  [T.COAL_ORE]:1000, [T.IRON_ORE]:1500, [T.COPPER_ORE]:1500,
-  [T.DIAMOND_ORE]:2000, [T.EMERALD_ORE]:2000, [T.RUBY_ORE]:2000,
+  [T.LOG]:2000,
+  [T.STONE]:1000, [T.COAL_ORE]:1000,
+  [T.IRON_ORE]:1500, [T.COPPER_ORE]:1500,
+  [T.RUBY_ORE]:1000,
+  [T.EMERALD_ORE]:1300,
+  [T.DIAMOND_ORE]:600,
+};
+// Tools required to break certain tiles (without them the block can't be mined)
+const NEED_TOOL={
+  [T.DIAMOND_ORE]:['iron_pick','stone_pick','diamond_pick','copper_pick','emerald_pick','ruby_pick'],
+  [T.IRON_ORE]:['stone_pick','iron_pick','diamond_pick','copper_pick','emerald_pick','ruby_pick'],
 };
 const TILE_DROP={
   [T.LOG]:'wood', [T.DIRT]:null, [T.GRASS]:null, [T.LEAVES]:null,
@@ -449,18 +458,23 @@ canvas.addEventListener('touchstart',e=>{ if(openModal) return; e.preventDefault
 canvas.addEventListener('touchend',e=>{ e.preventDefault(); mouseDown=false; stopMine(); },{passive:false});
 
 function startMine(cx,cy,move){
+  if(!running) return;
   var r=canvas.getBoundingClientRect();
   var sx=(cx-r.left)*(W/r.width), sy=(cy-r.top)*(H/r.height);
   var tx=Math.floor((sx+camX)/TS), ty=Math.floor(sy/TS);
   var t=tileAt(tx,ty);
-  if(t===T.AIR||t===T.LEAVES){ stopMine(); return; }
-  // If same target, don't reset
+  if(t===T.AIR||t===T.LEAVES){ if(!move) stopMine(); return; }
+  // Check required tool
+  var req=NEED_TOOL[t];
+  if(req){
+    var equipped=hotbarTypes[activeSlot];
+    if(!req.includes(equipped)){ showFloat('Need better pickaxe! ⛏️'); stopMine(); return; }
+  }
+  // Same target — keep going, don't reset timer
   if(mineTarget&&mineTarget.tx===tx&&mineTarget.ty===ty) return;
   mineTarget={tx,ty,t};
   mineStart=performance.now(); miningMs=MINE_TIME[t]||1000;
-  var barEl=document.getElementById('mineBar');
-  barEl.style.display='block';
-  barEl.style.width=TS+'px';
+  document.getElementById('mineBar').style.display='block';
   moveMineBar(tx,ty);
 }
 function moveMineBar(tx,ty){
@@ -649,14 +663,17 @@ function update(){
 
   // Mine timer
   if(mineTarget&&mouseDown){
-    var pct=Math.min(1,(performance.now()-mineStart)/miningMs);
-    document.getElementById('mineFill').style.width=(pct*100)+'%';
+    var elapsed=performance.now()-mineStart;
+    var pct=miningMs>0?Math.min(1,elapsed/miningMs):0;
+    document.getElementById('mineFill').style.width=(pct*100).toFixed(1)+'%';
     moveMineBar(mineTarget.tx,mineTarget.ty);
     if(pct>=1){
-      var tx=mineTarget.tx, ty=mineTarget.ty, t=mineTarget.t;
-      world[ty][tx]=T.AIR;
-      var d=TILE_DROP[t]; if(d){addItem(d,1);score++;showFloat((ITEMS[d]?.icon||'')+ ' +1');}
-      stopMine();
+      var mtx=mineTarget.tx, mty=mineTarget.ty, mt=mineTarget.t;
+      stopMine(); // clear target BEFORE modifying world to prevent stale ref
+      if(world[mty]&&world[mty][mtx]!==T.AIR){
+        world[mty][mtx]=T.AIR;
+        var d=TILE_DROP[mt]; if(d){addItem(d,1);score++;showFloat((ITEMS[d]?.icon||'')+' +1');}
+      }
     }
   }
 

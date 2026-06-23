@@ -254,6 +254,7 @@ body {
   position: relative;
   width: 100%;
   flex-grow: 1;
+  min-height: 420px;
   background-color: var(--bg-color); /* Fallback match */
   border-radius: 16px;
   border: 3px solid #1c1a27;

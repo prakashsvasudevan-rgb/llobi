@@ -43,6 +43,16 @@
             <span class="timer-value" id="gameTimer">00:45</span>
           </div>
 
+          <!-- Stats -->
+          <div class="hud-widget" id="playCountWidget" title="Times played">
+            <span>▶</span>
+            <span id="hudPlayCount">0</span>
+          </div>
+          <button class="hud-btn like-btn" id="likeBtn" title="Like this game">
+            <span id="likeIcon">👍</span>
+            <span id="hudLikeCount">0</span>
+          </button>
+
           <!-- Pause Button -->
           <button class="hud-btn pause-btn" id="pauseBtn" title="Pause Game">
             <span class="pause-icon">‖</span>
@@ -272,13 +282,40 @@
     </div>
   </footer>
 
-  <div id="jsError" style="display:none;position:fixed;top:0;left:0;right:0;background:red;color:#fff;padding:12px;font-size:13px;z-index:9999;word-break:break-all;"></div>
   <script>
-    window.onerror = function(msg, src, line, col, err) {
-      var el = document.getElementById('jsError');
-      el.style.display = 'block';
-      el.innerText = 'JS ERROR line ' + line + ': ' + msg;
-    };
+    // ── Stats: play count + likes ──────────────────────────────────────
+    const GAME_ID = 'gobble';
+
+    function getStats() {
+      return JSON.parse(localStorage.getItem('llobi_stats_' + GAME_ID) || '{"plays":1247,"likes":312,"liked":false}');
+    }
+    function saveStats(s) {
+      localStorage.setItem('llobi_stats_' + GAME_ID, JSON.stringify(s));
+    }
+    function renderStats() {
+      var s = getStats();
+      document.getElementById('hudPlayCount').innerText = s.plays.toLocaleString();
+      document.getElementById('hudLikeCount').innerText = s.likes.toLocaleString();
+      var btn = document.getElementById('likeBtn');
+      if (s.liked) btn.classList.add('liked');
+      else btn.classList.remove('liked');
+    }
+
+    // increment play count once per page load
+    (function() {
+      var s = getStats();
+      s.plays += 1;
+      saveStats(s);
+      renderStats();
+    })();
+
+    document.getElementById('likeBtn').addEventListener('click', function() {
+      var s = getStats();
+      if (!s.liked) { s.likes += 1; s.liked = true; }
+      else          { s.likes -= 1; s.liked = false; }
+      saveStats(s);
+      renderStats();
+    });
   </script>
   <script src="game.js"></script>
 </body>

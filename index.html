@@ -92,6 +92,8 @@
   .tile .hot{position:absolute;top:7px;left:7px;background:var(--berry);color:#fff;font-weight:800;font-size:.6rem;padding:3px 7px;border-radius:20px;letter-spacing:.3px}
   .tile .label{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(transparent,rgba(43,33,80,.82));color:#fff;font-family:'Fredoka';font-weight:500;font-size:.72rem;padding:14px 8px 7px;text-align:center;opacity:0;transition:.16s}
   .tile:hover .label{opacity:1}
+  .tile-stats{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;padding:5px 7px;background:linear-gradient(rgba(43,33,80,.55),transparent);color:#fff;font-size:.6rem;font-weight:800;opacity:0;transition:.16s}
+  .tile:hover .tile-stats{opacity:1}
   /* tall feature tile spanning 2x2 */
   .tile.big{grid-column:span 2;grid-row:span 2;font-size:4.5rem}
 
@@ -265,7 +267,7 @@
     {n:"Tower Build",e:"🏰"},{n:"Bug Squash",e:"🐞"},
     {n:"Paint Pop",e:"🎨"},{n:"Sky Glider",e:"🪂"},
     {n:"Coin Dash",e:"🪙"},{n:"Robo Jump",e:"🤖"},
-    {n:"Gobble",e:"😋",hot:"LIVE",url:"/games/gobble-game/"}
+    {n:"Gobble",e:"😋",hot:"LIVE",url:"/games/gobble-game/",id:"gobble"}
   ];
   const fresh=[
     {n:"Penguin Slide",e:"🐧",hot:"NEW"},{n:"Magic Match",e:"🔮"},
@@ -283,12 +285,21 @@
     {n:"2 Player",e:"👫",c:73,bg:"#D6E9FF"},{n:"Classics",e:"⭐",c:58,bg:"#FFF6CC"}
   ];
 
-  const tile=(g,i,big)=>`
+  function getGameStats(id){
+    return JSON.parse(localStorage.getItem('llobi_stats_'+id)||'{"plays":1247,"likes":312}');
+  }
+
+  const tile=(g,i,big)=>{
+    const stats = g.id ? getGameStats(g.id) : null;
+    const statsHtml = stats ? `<div class="tile-stats"><span>▶ ${stats.plays.toLocaleString()}</span><span>👍 ${stats.likes.toLocaleString()}</span></div>` : '';
+    return `
     <div class="tile ${big?'big':''}" style="background:${bgs[i%bgs.length]}" onclick="playGame('${g.n}','${g.url||''}')">
       ${g.hot?`<span class="hot">${g.hot}</span>`:''}
       <span>${g.e}</span>
       <div class="label">${g.n}</div>
+      ${statsHtml}
     </div>`;
+  };
 
   // first popular tile is the big 2x2 hero tile
   document.getElementById('gridPopular').innerHTML =

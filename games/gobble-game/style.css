@@ -203,6 +203,34 @@ body {
   font-size: 1.2rem;
   color: #000;
 }
+.like-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 12px;
+  width: auto;
+  font-family: var(--font-ui);
+  font-weight: 800;
+  font-size: .85rem;
+  color: #000;
+}
+.like-btn.liked {
+  background: #fff9c4;
+  border-color: #f9a825;
+  box-shadow: 0 4px 0 #f9a825;
+}
+.hud-widget {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(0,0,0,.12);
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-family: var(--font-ui);
+  font-weight: 800;
+  font-size: .85rem;
+  color: #fff;
+}
 
 /* GOBBLE Banner Title */
 .game-title-container {

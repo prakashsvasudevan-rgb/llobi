@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Maze Runner | LLOBI.com</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Outfit:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{--grape:#6C4AB6;--sunny:#FFC93C;--berry:#FF6B8A;--mint:#3DDC97;--ink:#2B2150;--panel:#F3EFFA;--line:#E6DEF4;}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Outfit',sans-serif;background:#1a1a2e;color:#fff;min-height:100vh;display:flex;flex-direction:column;align-items:center}
+    .topbar{width:100%;background:#fff;border-bottom:3px solid #000;padding:10px 20px;display:flex;align-items:center;justify-content:space-between}
+    .brand{font-family:'Fredoka',sans-serif;font-size:1.5rem;font-weight:700;color:var(--grape);display:flex;align-items:center;gap:8px;text-decoration:none}
+    .brand .dot{background:var(--sunny);border-radius:10px;padding:4px 8px;box-shadow:0 3px 0 #E0A800;transform:rotate(-4deg);font-size:1rem}
+    .back-btn{font-family:'Fredoka',sans-serif;font-weight:600;background:var(--panel);border:2px solid var(--line);border-radius:10px;padding:7px 14px;cursor:pointer;color:var(--ink);font-size:.9rem}
+    .back-btn:hover{background:var(--line)}
+    .game-wrap{display:grid;grid-template-columns:1fr 280px;gap:20px;max-width:1000px;width:100%;padding:20px;flex:1}
+    .game-col{display:flex;flex-direction:column;gap:14px}
+    .game-box{background:#0d0d22;border-radius:20px;border:3px solid #000;box-shadow:0 8px 0 #000;overflow:hidden;position:relative}
+    .game-hud{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:#0a0a1a;border-bottom:2px solid #222}
+    .hud-stat{display:flex;align-items:center;gap:6px;font-weight:800;font-size:.88rem}
+    .hud-stat .label{opacity:.5;font-size:.72rem}
+    .stat-val{font-family:'Fredoka',sans-serif;font-size:1.2rem;color:var(--sunny)}
+    .like-btn{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.1);border:2px solid rgba(255,255,255,.2);border-radius:10px;padding:5px 10px;cursor:pointer;font-weight:800;font-size:.82rem;color:#fff;transition:.15s}
+    .like-btn:hover,.like-btn.liked{background:rgba(255,201,60,.2);border-color:var(--sunny);color:var(--sunny)}
+    canvas{display:block;width:100%;aspect-ratio:1}
+    .overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,12,.88);backdrop-filter:blur(6px);z-index:10;transition:.3s}
+    .overlay.hidden{opacity:0;pointer-events:none}
+    .ov-box{background:#0d0d22;border:3px solid var(--sunny);border-radius:20px;padding:28px 36px;text-align:center;box-shadow:0 8px 0 #000;max-width:300px}
+    .ov-box h2{font-family:'Fredoka',sans-serif;font-size:2.4rem;color:var(--sunny);margin-bottom:6px}
+    .ov-box p{opacity:.85;margin-bottom:18px;font-weight:600;font-size:.95rem}
+    .play-btn{font-family:'Fredoka',sans-serif;font-weight:700;font-size:1rem;background:var(--mint);color:#000;border:none;border-radius:14px;padding:11px 28px;cursor:pointer;box-shadow:0 5px 0 #25B07A;transition:.1s;margin:4px}
+    .play-btn:active{transform:translateY(3px);box-shadow:0 2px 0 #25B07A}
+    .hi-badge{display:inline-block;background:var(--berry);color:#fff;font-weight:800;font-size:.75rem;padding:4px 10px;border-radius:20px;margin-bottom:10px}
+    .dpad{display:none;gap:0;padding:12px;background:#0a0a1a;border-top:2px solid #222;align-items:center;justify-content:center;flex-direction:column}
+    .dpad-row{display:flex;gap:6px;justify-content:center}
+    .dpad-btn{width:60px;height:56px;border-radius:12px;border:3px solid #333;background:#1a1a33;color:#fff;font-size:1.3rem;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 0 #000;-webkit-tap-highlight-color:transparent;user-select:none;margin:3px}
+    .dpad-btn:active{transform:translateY(3px);box-shadow:0 1px 0 #000}
+    .side{display:flex;flex-direction:column;gap:14px}
+    .card{background:#0d1f3c;border-radius:18px;border:3px solid #000;box-shadow:0 6px 0 #000;overflow:hidden}
+    .card-head{background:var(--grape);font-family:'Fredoka',sans-serif;font-size:1rem;font-weight:600;padding:10px 16px}
+    .card-body{padding:16px}
+    .card-body p{font-weight:600;font-size:.9rem;opacity:.85;line-height:1.5;margin-bottom:10px}
+    .tip{display:flex;align-items:center;gap:10px;margin-bottom:9px;font-weight:700;font-size:.85rem}
+    .tip-icon{font-size:1.3rem;flex-shrink:0}
+    .key-grid{display:grid;grid-template-columns:repeat(3,38px);gap:4px;justify-content:center;margin:8px 0}
+    .key{background:#0a1628;border:2px solid rgba(255,255,255,.25);border-radius:7px;width:38px;height:34px;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:800}
+    .score-list{list-style:none}
+    .score-list li{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.08);font-weight:700;font-size:.88rem}
+    .score-list li:last-child{border:none}
+    .score-list .rank{color:var(--sunny);font-family:'Fredoka',sans-serif}
+    .game-footer{width:100%;background:#fff;border-top:3px solid #000;padding:12px 20px;text-align:center;font-weight:700;color:var(--ink);font-size:.85rem}
+    @media(max-width:720px){.game-wrap{grid-template-columns:1fr;padding:10px}.side{display:none}.dpad{display:flex}}
+  </style>
+</head>
+<body>
+<div class="topbar">
+  <a class="brand" href="/"><span>LLOBI</span><span class="dot">.com</span></a>
+  <button class="back-btn" onclick="history.back()">← Back</button>
+</div>
+<div class="game-wrap">
+  <div class="game-col">
+    <div class="game-box">
+      <div class="game-hud">
+        <div class="hud-stat"><span class="label">LEVEL</span><span class="stat-val" id="levelVal">1</span></div>
+        <div class="hud-stat"><span class="label">SCORE</span><span class="stat-val" id="scoreVal">0</span></div>
+        <div class="hud-stat"><span class="label">TIME</span><span class="stat-val" id="timeVal">0:00</span></div>
+        <div class="hud-stat"><span class="label">GEMS</span><span class="stat-val" id="gemVal">0</span></div>
+        <div class="hud-stat"><span>▶</span><span id="playCount" style="color:#aaa;font-size:.82rem">0</span></div>
+        <button class="like-btn" id="likeBtn"><span>👍</span><span id="likeCount">0</span></button>
+      </div>
+      <canvas id="gc" width="480" height="480"></canvas>
+      <div class="overlay" id="startOv">
+        <div class="ov-box">
+          <h2>🌀 MAZE RUNNER</h2>
+          <p>Navigate through the maze and reach the 🚪 exit! Collect 💎 gems for bonus points!</p>
+          <button class="play-btn" id="startBtn">START GAME</button>
+        </div>
+      </div>
+      <div class="overlay hidden" id="levelOv">
+        <div class="ov-box">
+          <h2 id="levelTitle">LEVEL 1 CLEAR!</h2>
+          <p id="levelMsg">Time bonus: +0 pts</p>
+          <button class="play-btn" id="nextBtn">NEXT LEVEL →</button>
+        </div>
+      </div>
+      <div class="overlay hidden" id="winOv">
+        <div class="ov-box">
+          <div class="hi-badge" id="hiBadge" style="display:none">🏆 NEW HIGH SCORE!</div>
+          <h2>YOU WIN! 🎉</h2>
+          <p>All 10 levels complete!<br>Final score: <strong id="finalScore">0</strong></p>
+          <button class="play-btn" id="playAgainBtn">PLAY AGAIN</button>
+        </div>
+      </div>
+    </div>
+    <div class="dpad">
+      <div class="dpad-row"><button class="dpad-btn" id="dUp">▲</button></div>
+      <div class="dpad-row">
+        <button class="dpad-btn" id="dLeft">◀</button>
+        <button class="dpad-btn" id="dDown">▼</button>
+        <button class="dpad-btn" id="dRight">▶</button>
+      </div>
+    </div>
+  </div>
+  <div class="side">
+    <div class="card">
+      <div class="card-head">HOW TO PLAY</div>
+      <div class="card-body">
+        <p>Find your way through the maze to the glowing exit door! Grab gems along the way for bonus points.</p>
+        <div class="tip"><span class="tip-icon">💎</span> Collect gems for +10 points each</div>
+        <div class="tip"><span class="tip-icon">⚡</span> Finish fast for a time bonus</div>
+        <div class="tip"><span class="tip-icon">👻</span> Ghost appears on level 5 — run!</div>
+        <div class="tip"><span class="tip-icon">🔑</span> 10 levels with bigger mazes</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head">CONTROLS</div>
+      <div class="card-body">
+        <div class="key-grid">
+          <div></div><div class="key">W▲</div><div></div>
+          <div class="key">A◀</div><div class="key">S▼</div><div class="key">D▶</div>
+        </div>
+        <p style="text-align:center;font-size:.8rem;opacity:.7">Arrow keys or WASD — or swipe on mobile</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head">HIGH SCORES</div>
+      <div class="card-body"><ul class="score-list" id="hiList"></ul></div>
+    </div>
+  </div>
+</div>
+<div class="game-footer">🌀 Maze Runner — only on <strong>LLOBI.com</strong></div>
+
+<script>
+// ── Stats ─────────────────────────────────────────────────────────────
+const GAME_ID='maze-runner';
+function getStats(){ return JSON.parse(localStorage.getItem('llobi_stats_'+GAME_ID)||'{"plays":987,"likes":234,"liked":false}'); }
+function saveStats(s){ localStorage.setItem('llobi_stats_'+GAME_ID,JSON.stringify(s)); }
+function renderStats(){
+  var s=getStats();
+  document.getElementById('playCount').textContent=s.plays.toLocaleString();
+  document.getElementById('likeCount').textContent=s.likes.toLocaleString();
+  document.getElementById('likeBtn').classList.toggle('liked',!!s.liked);
+}
+(function(){ var s=getStats(); s.plays++; saveStats(s); renderStats(); })();
+document.getElementById('likeBtn').addEventListener('click',function(){
+  var s=getStats(); s.liked=!s.liked; s.likes+=s.liked?1:-1; saveStats(s); renderStats();
+});
+function getHi(){ return JSON.parse(localStorage.getItem('llobi_hi_'+GAME_ID)||'[]'); }
+function saveHi(v){ var h=getHi(); h.push(v); h.sort((a,b)=>b-a); h=h.slice(0,5); localStorage.setItem('llobi_hi_'+GAME_ID,JSON.stringify(h)); return h; }
+function renderHi(){
+  var h=getHi();
+  document.getElementById('hiList').innerHTML=h.length
+    ? h.map((v,i)=>`<li><span class="rank">#${i+1}</span><span>${v}</span></li>`).join('')
+    : '<li style="opacity:.4">No scores yet</li>';
+}
+renderHi();
+
+// ── Canvas ─────────────────────────────────────────────────────────────
+const canvas=document.getElementById('gc');
+const ctx=canvas.getContext('2d');
+const CW=480,CH=480;
+
+// ── Level config ──────────────────────────────────────────────────────
+const LEVELS=[
+  {cols:7, rows:7},  {cols:9, rows:9},   {cols:11,rows:9},
+  {cols:11,rows:11}, {cols:13,rows:11},  {cols:13,rows:13},
+  {cols:15,rows:13}, {cols:15,rows:15},  {cols:17,rows:15},
+  {cols:19,rows:17},
+];
+
+// ── Maze generation (DFS recursive backtracking) ──────────────────────
+// Cell bitmask: N=1, E=2, S=4, W=8
+function generateMaze(cols,rows){
+  var cells=Array.from({length:rows},()=>new Uint8Array(cols));
+  var visited=Array.from({length:rows},()=>new Uint8Array(cols));
+  var stack=[[0,0]];
+  visited[0][0]=1;
+  while(stack.length){
+    var [x,y]=stack[stack.length-1];
+    var dirs=[[0,-1,1,4],[1,0,2,8],[0,1,4,1],[-1,0,8,2]];
+    // Fisher-Yates shuffle
+    for(var i=3;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); [dirs[i],dirs[j]]=[dirs[j],dirs[i]]; }
+    var moved=false;
+    for(var d of dirs){
+      var nx=x+d[0], ny=y+d[1];
+      if(nx>=0&&nx<cols&&ny>=0&&ny<rows&&!visited[ny][nx]){
+        cells[y][x]|=d[2]; cells[ny][nx]|=d[3];
+        visited[ny][nx]=1; stack.push([nx,ny]); moved=true; break;
+      }
+    }
+    if(!moved) stack.pop();
+  }
+  return cells;
+}
+
+// ── Place gems along dead-ends ─────────────────────────────────────────
+function placeGems(cells,cols,rows,count){
+  var deadEnds=[];
+  for(var y=0;y<rows;y++) for(var x=0;x<cols;x++){
+    if(x===0&&y===0) continue;
+    if(x===cols-1&&y===rows-1) continue;
+    // Count open passages
+    var bits=[1,2,4,8]; var open=bits.filter(b=>cells[y][x]&b).length;
+    if(open===1) deadEnds.push([x,y]);
+  }
+  // Shuffle and pick
+  for(var i=deadEnds.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); [deadEnds[i],deadEnds[j]]=[deadEnds[j],deadEnds[i]]; }
+  return deadEnds.slice(0,Math.min(count,deadEnds.length)).map(([x,y])=>({x,y,collected:false,pulse:Math.random()*Math.PI*2}));
+}
+
+// ── Game state ─────────────────────────────────────────────────────────
+var maze, cols, rows, cellSize;
+var player, ghost, gems;
+var level=1, score=0, elapsed=0, running=false, frame=0;
+var particles=[], floats=[];
+var touchStart=null;
+
+// Player smooth movement
+var MOVE_SPD=5; // pixels per frame
+function mkPlayer(cx,cy,cs){
+  return {cx,cy, // cell
+    px:cx*cs+cs/2, py:cy*cs+cs/2, // pixel (center)
+    tx:cx*cs+cs/2, ty:cy*cs+cs/2, // target pixel
+    moving:false, dir:0,
+    animFrame:0, lastDir:2};
+}
+
+function mkGhost(cx,cy){
+  return {cx,cy,px:cx*cellSize+cellSize/2,py:cy*cellSize+cellSize/2,
+    tx:cx*cellSize+cellSize/2,ty:cy*cellSize+cellSize/2,
+    moving:false, stepTimer:0};
+}
+
+function initLevel(lv){
+  var cfg=LEVELS[Math.min(lv-1,LEVELS.length-1)];
+  cols=cfg.cols; rows=cfg.rows;
+  cellSize=Math.floor(CW/Math.max(cols,rows));
+  maze=generateMaze(cols,rows);
+  gems=placeGems(maze,cols,rows,3+lv);
+  player=mkPlayer(0,0,cellSize);
+  ghost=(lv>=5)?mkGhost(cols-1,0):null;
+  elapsed=0; frame=0; particles=[]; floats=[];
+  document.getElementById('levelVal').textContent=lv;
+  document.getElementById('gemVal').textContent=gems.filter(g=>g.collected).length+'/'+gems.length;
+}
+
+// ── Movement ──────────────────────────────────────────────────────────
+var keys={};
+var moveQueue=null; // next direction to try
+
+function canMove(cx,cy,bit){ return !!(maze[cy]&&maze[cy][cx]&bit); }
+
+function tryMove(dir){
+  if(player.moving){ moveQueue=dir; return; }
+  var dx=0,dy=0,bit=0;
+  if(dir==='up')   {dx=0;dy=-1;bit=1;}
+  if(dir==='right'){dx=1;dy=0; bit=2;}
+  if(dir==='down') {dx=0;dy=1; bit=4;}
+  if(dir==='left') {dx=-1;dy=0;bit=8;}
+  if(!canMove(player.cx,player.cy,bit)) return;
+  player.cx+=dx; player.cy+=dy;
+  player.tx=player.cx*cellSize+cellSize/2;
+  player.ty=player.cy*cellSize+cellSize/2;
+  player.moving=true;
+  player.lastDir={up:0,right:1,down:2,left:3}[dir];
+  moveQueue=null;
+}
+
+// Ghost BFS to chase player
+function ghostBFS(){
+  if(!ghost||ghost.moving) return;
+  ghost.stepTimer++;
+  if(ghost.stepTimer<22) return; // ghost moves slower
+  ghost.stepTimer=0;
+  var gx=ghost.cx,gy=ghost.cy,tx=player.cx,ty=player.cy;
+  if(gx===tx&&gy===ty) return;
+  // BFS
+  var dist=Array.from({length:rows},()=>new Int16Array(cols).fill(-1));
+  dist[gy][gx]=0;
+  var queue=[[gx,gy]];
+  var prev=Array.from({length:rows},()=>Array(cols).fill(null));
+  var found=false;
+  outer:while(queue.length){
+    var [cx2,cy2]=queue.shift();
+    for(var [dx2,dy2,bit] of [[0,-1,1],[1,0,2],[0,1,4],[-1,0,8]]){
+      var nx=cx2+dx2,ny=cy2+dy2;
+      if(nx<0||nx>=cols||ny<0||ny>=rows) continue;
+      if(dist[ny][nx]>=0) continue;
+      if(!(maze[cy2][cx2]&bit)) continue;
+      dist[ny][nx]=dist[cy2][cx2]+1;
+      prev[ny][nx]=[cx2,cy2];
+      if(nx===tx&&ny===ty){found=true;break outer;}
+      queue.push([nx,ny]);
+    }
+  }
+  if(!found) return;
+  // Trace back one step
+  var step=[tx,ty];
+  while(prev[step[1]][step[0]]&&!(prev[step[1]][step[0]][0]===gx&&prev[step[1]][step[0]][1]===gy))
+    step=prev[step[1]][step[0]];
+  ghost.cx=step[0]; ghost.cy=step[1];
+  ghost.tx=ghost.cx*cellSize+cellSize/2;
+  ghost.ty=ghost.cy*cellSize+cellSize/2;
+  ghost.moving=true;
+}
+
+// ── Update ─────────────────────────────────────────────────────────────
+var timerAcc=0;
+function update(dt){
+  frame++;
+  timerAcc+=dt; if(timerAcc>=1000){ timerAcc-=1000; elapsed++; updateTimerUI(); }
+
+  // Input
+  var dir=null;
+  if(keys['ArrowUp']||keys['w']||keys['W']) dir='up';
+  else if(keys['ArrowRight']||keys['d']||keys['D']) dir='right';
+  else if(keys['ArrowDown']||keys['s']||keys['S']) dir='down';
+  else if(keys['ArrowLeft']||keys['a']||keys['A']) dir='left';
+  if(dir) tryMove(dir);
+  else if(moveQueue) tryMove(moveQueue);
+
+  // Smooth player movement
+  if(player.moving){
+    var dx=player.tx-player.px, dy=player.ty-player.py;
+    var dist=Math.sqrt(dx*dx+dy*dy);
+    if(dist<=MOVE_SPD){ player.px=player.tx; player.py=player.ty; player.moving=false; }
+    else { player.px+=dx/dist*MOVE_SPD; player.py+=dy/dist*MOVE_SPD; }
+    player.animFrame=(player.animFrame+0.25)%4;
+  }
+
+  // Ghost smooth movement
+  if(ghost){
+    ghostBFS();
+    if(ghost.moving){
+      var dx2=ghost.tx-ghost.px, dy2=ghost.ty-ghost.py;
+      var d2=Math.sqrt(dx2*dx2+dy2*dy2);
+      if(d2<=3){ ghost.px=ghost.tx; ghost.py=ghost.ty; ghost.moving=false; }
+      else { ghost.px+=dx2/d2*3; ghost.py+=dy2/d2*3; }
+    }
+    // Ghost catches player
+    var gdx=ghost.px-player.px, gdy=ghost.py-player.py;
+    if(Math.sqrt(gdx*gdx+gdy*gdy)<cellSize*.5){
+      // Reset player to start, lose 50 pts
+      score=Math.max(0,score-50);
+      player=mkPlayer(0,0,cellSize);
+      showFloat('-50 👻',CW/2,CH/2,'#ff4444',28);
+      document.getElementById('scoreVal').textContent=score;
+    }
+  }
+
+  // Collect gems
+  gems.forEach(g=>{
+    if(g.collected) return;
+    if(g.x===player.cx&&g.y===player.cy){
+      g.collected=true; score+=10;
+      document.getElementById('scoreVal').textContent=score;
+      document.getElementById('gemVal').textContent=gems.filter(gm=>gm.collected).length+'/'+gems.length;
+      addGemBurst(g.x*cellSize+cellSize/2,g.y*cellSize+cellSize/2);
+      showFloat('+10 💎',player.px,player.py-20,'#44ccff',22);
+    }
+    g.pulse+=0.1;
+  });
+
+  // Check exit
+  if(player.cx===cols-1&&player.cy===rows-1&&!player.moving){
+    levelComplete(); return;
+  }
+
+  // Particles & floats
+  particles.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; p.vy+=0.15; p.a-=p.dec; p.r*=0.93; });
+  particles=particles.filter(p=>p.a>0&&p.r>0.4);
+  floats.forEach(f=>{ f.y+=f.vy; f.a-=0.025; });
+  floats=floats.filter(f=>f.a>0);
+}
+
+function addGemBurst(x,y){
+  for(var i=0;i<10;i++){
+    var a=Math.random()*Math.PI*2, spd=2+Math.random()*5;
+    particles.push({x,y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd-2,r:3+Math.random()*4,a:1,col:'#44ccff',dec:.03});
+  }
+}
+
+function showFloat(txt,x,y,col,sz){
+  floats.push({txt,x,y,vy:-1.2,a:1,col,sz:sz||18});
+}
+
+function updateTimerUI(){
+  var m=Math.floor(elapsed/60), s=elapsed%60;
+  document.getElementById('timeVal').textContent=m+':'+(s<10?'0':'')+s;
+}
+
+function levelComplete(){
+  running=false;
+  var timeBonus=Math.max(0,200-elapsed*2);
+  score+=timeBonus;
+  document.getElementById('scoreVal').textContent=score;
+  document.getElementById('levelTitle').textContent='LEVEL '+level+' CLEAR! ✅';
+  document.getElementById('levelMsg').textContent='⏱️ Time bonus: +'+timeBonus+' pts';
+  document.getElementById('levelOv').classList.remove('hidden');
+}
+
+// ── Draw ───────────────────────────────────────────────────────────────
+// Off-screen maze canvas (regenerated per level)
+var mazeCanvas=null;
+function buildMazeCanvas(){
+  mazeCanvas=document.createElement('canvas');
+  mazeCanvas.width=CW; mazeCanvas.height=CH;
+  var mc=mazeCanvas.getContext('2d');
+  var ox=(CW-cols*cellSize)/2, oy=(CH-rows*cellSize)/2;
+
+  // Background
+  mc.fillStyle='#0d0d22'; mc.fillRect(0,0,CW,CH);
+  // Floor tiles
+  for(var y=0;y<rows;y++) for(var x=0;x<cols;x++){
+    var px=ox+x*cellSize, py=oy+y*cellSize;
+    mc.fillStyle=(x+y)%2===0?'#141428':'#101020';
+    mc.fillRect(px+1,py+1,cellSize-2,cellSize-2);
+  }
+
+  // Walls
+  var WC='#5566aa', WW=Math.max(3,Math.floor(cellSize*.12));
+  mc.strokeStyle=WC; mc.lineWidth=WW; mc.lineCap='square';
+
+  // Outer border
+  mc.strokeRect(ox,oy,cols*cellSize,rows*cellSize);
+
+  for(var y=0;y<rows;y++) for(var x=0;x<cols;x++){
+    var cell=maze[y][x];
+    var px=ox+x*cellSize, py=oy+y*cellSize;
+    // South wall
+    if(!(cell&4)&&y<rows-1){
+      mc.beginPath(); mc.moveTo(px,py+cellSize); mc.lineTo(px+cellSize,py+cellSize); mc.stroke();
+    }
+    // East wall
+    if(!(cell&2)&&x<cols-1){
+      mc.beginPath(); mc.moveTo(px+cellSize,py); mc.lineTo(px+cellSize,py+cellSize); mc.stroke();
+    }
+  }
+
+  // Wall glow
+  mc.shadowColor='#3344cc'; mc.shadowBlur=8;
+  mc.strokeStyle='#8899cc'; mc.lineWidth=1;
+  for(var y=0;y<rows;y++) for(var x=0;x<cols;x++){
+    var cell=maze[y][x], px=ox+x*cellSize, py=oy+y*cellSize;
+    if(!(cell&4)&&y<rows-1){ mc.beginPath(); mc.moveTo(px,py+cellSize); mc.lineTo(px+cellSize,py+cellSize); mc.stroke(); }
+    if(!(cell&2)&&x<cols-1){ mc.beginPath(); mc.moveTo(px+cellSize,py); mc.lineTo(px+cellSize,py+cellSize); mc.stroke(); }
+  }
+  mc.shadowBlur=0;
+}
+
+function draw(){
+  var ox=(CW-cols*cellSize)/2, oy=(CH-rows*cellSize)/2;
+
+  // Draw pre-rendered maze
+  if(mazeCanvas) ctx.drawImage(mazeCanvas,0,0);
+
+  // Gems
+  gems.forEach(g=>{
+    if(g.collected) return;
+    var gx=ox+g.x*cellSize+cellSize/2, gy=oy+g.y*cellSize+cellSize/2;
+    var pulse=0.85+Math.sin(g.pulse)*.15;
+    ctx.save(); ctx.translate(gx,gy); ctx.scale(pulse,pulse);
+    // Gem shape (diamond)
+    var r=cellSize*.22;
+    ctx.fillStyle='#00ddff'; ctx.shadowColor='#00ffff'; ctx.shadowBlur=12;
+    ctx.beginPath();
+    ctx.moveTo(0,-r*1.3); ctx.lineTo(r,0); ctx.lineTo(0,r); ctx.lineTo(-r,0); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.5)';
+    ctx.beginPath(); ctx.moveTo(-r*.3,-r*.9); ctx.lineTo(0,-r*.2); ctx.lineTo(-r*.6,-r*.2); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  });
+
+  // Exit portal
+  var ex=ox+(cols-1)*cellSize+cellSize/2, ey=oy+(rows-1)*cellSize+cellSize/2;
+  var pulseSz=0.9+Math.sin(frame*.05)*.1;
+  ctx.save(); ctx.translate(ex,ey);
+  ctx.shadowColor='#44ff88'; ctx.shadowBlur=20;
+  ctx.fillStyle='rgba(68,255,136,.15)';
+  ctx.beginPath(); ctx.arc(0,0,cellSize*.45*pulseSz*1.4,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='rgba(68,255,136,.3)';
+  ctx.beginPath(); ctx.arc(0,0,cellSize*.45*pulseSz,0,Math.PI*2); ctx.fill();
+  ctx.font=(cellSize*.6)+'px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('🚪',0,2);
+  ctx.restore();
+
+  // Start marker
+  ctx.font=(cellSize*.55)+'px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('🏁',ox+cellSize/2,oy+cellSize/2);
+
+  // Ghost
+  if(ghost){
+    var gx2=ox+ghost.px, gy2=oy+ghost.py;
+    ctx.save(); ctx.translate(gx2,gy2);
+    ctx.shadowColor='#aa00ff'; ctx.shadowBlur=16;
+    var bob=Math.sin(frame*.08)*3;
+    ctx.fillStyle='rgba(180,100,255,.85)';
+    ctx.beginPath();
+    ctx.arc(0,-3+bob,cellSize*.3,Math.PI,0);
+    ctx.lineTo(cellSize*.3,cellSize*.18+bob);
+    for(var i=0;i<3;i++){
+      var wx=cellSize*.3-(i+1)*cellSize*.2;
+      ctx.quadraticCurveTo(wx+cellSize*.1,cellSize*.3+bob,wx,cellSize*.18+bob);
+    }
+    ctx.closePath(); ctx.fill();
+    // Eyes
+    ctx.fillStyle='#fff'; ctx.shadowBlur=0;
+    ctx.beginPath(); ctx.ellipse(-cellSize*.1,-4+bob,cellSize*.07,cellSize*.08,0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cellSize*.1,-4+bob,cellSize*.07,cellSize*.08,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#220044';
+    ctx.beginPath(); ctx.arc(-cellSize*.1,-4+bob,cellSize*.04,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cellSize*.1,-4+bob,cellSize*.04,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+
+  // Player
+  var ppx=ox+player.px, ppy=oy+player.py;
+  ctx.save(); ctx.translate(ppx,ppy);
+
+  // Torch glow
+  var grd=ctx.createRadialGradient(0,0,cellSize*.1,0,0,cellSize*2.2);
+  grd.addColorStop(0,'rgba(255,220,100,.18)');
+  grd.addColorStop(.4,'rgba(255,180,60,.06)');
+  grd.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(0,0,cellSize*2.2,0,Math.PI*2); ctx.fill();
+
+  var r=cellSize*.28;
+  // Body glow
+  ctx.shadowColor='#ffcc44'; ctx.shadowBlur=12;
+  ctx.fillStyle='#ffdd66';
+  ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.fill();
+  ctx.shadowBlur=0;
+  // Face
+  ctx.fillStyle='#ffbb33';
+  ctx.beginPath(); ctx.arc(0,0,r*.8,0,Math.PI*2); ctx.fill();
+  // Direction indicator
+  var dirs=[[0,-1],[1,0],[0,1],[-1,0]];
+  var d=dirs[player.lastDir]||[0,-1];
+  ctx.fillStyle='#333';
+  ctx.beginPath(); ctx.arc(d[0]*r*.38,d[1]*r*.38,r*.22,0,Math.PI*2); ctx.fill();
+  // Eyes
+  var ex2=d[0]*r*.2+d[1]*r*.25, ey2=d[1]*r*.2-d[0]*r*.25;
+  ctx.fillStyle='#fff';
+  ctx.beginPath(); ctx.arc(ex2,ey2,r*.14,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(ex2+d[0]*r*.08,ey2+d[1]*r*.08,r*.07,0,Math.PI*2);
+  ctx.fillStyle='#111'; ctx.fill();
+  ctx.restore();
+
+  // Particles
+  particles.forEach(p=>{
+    ctx.save(); ctx.globalAlpha=p.a; ctx.fillStyle=p.col;
+    ctx.beginPath(); ctx.arc(ox+p.x,oy+p.y,p.r,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  });
+
+  // Float texts
+  floats.forEach(f=>{
+    ctx.save(); ctx.globalAlpha=f.a;
+    ctx.font='bold '+f.sz+'px Fredoka,Outfit,sans-serif';
+    ctx.fillStyle=f.col; ctx.textAlign='center';
+    ctx.shadowColor=f.col; ctx.shadowBlur=8;
+    ctx.fillText(f.txt,ox+f.x,oy+f.y);
+    ctx.restore();
+  });
+}
+
+// ── Game loop ──────────────────────────────────────────────────────────
+var animId=null, lastT=0;
+function loop(t){
+  animId=requestAnimationFrame(loop);
+  var dt=Math.min(t-lastT,50); lastT=t;
+  try{ update(dt); } catch(e){ console.error(e); }
+  try{ draw(); } catch(e){ console.error(e); }
+}
+
+function startGame(){
+  document.getElementById('startOv').classList.add('hidden');
+  document.getElementById('winOv').classList.add('hidden');
+  level=1; score=0;
+  document.getElementById('scoreVal').textContent=0;
+  initLevel(level); buildMazeCanvas(); running=true;
+  if(animId) cancelAnimationFrame(animId);
+  requestAnimationFrame(t=>{ lastT=t; loop(t); });
+}
+
+function nextLevel(){
+  document.getElementById('levelOv').classList.add('hidden');
+  level++;
+  if(level>10){
+    var h=saveHi(score);
+    document.getElementById('finalScore').textContent=score;
+    document.getElementById('hiBadge').style.display=score>=h[0]?'inline-block':'none';
+    document.getElementById('winOv').classList.remove('hidden');
+    renderHi(); running=false; return;
+  }
+  initLevel(level); buildMazeCanvas(); running=true;
+}
+
+// ── Input ──────────────────────────────────────────────────────────────
+document.addEventListener('keydown',e=>{ keys[e.key]=true; });
+document.addEventListener('keyup',e=>{ keys[e.key]=false; });
+
+// D-pad
+function dpadBtn(id,dir){ var el=document.getElementById(id);
+  el.addEventListener('touchstart',e=>{ e.preventDefault(); tryMove(dir); },{passive:false});
+  el.addEventListener('mousedown',()=>tryMove(dir));
+}
+dpadBtn('dUp','up'); dpadBtn('dDown','down'); dpadBtn('dLeft','left'); dpadBtn('dRight','right');
+
+// Swipe
+canvas.addEventListener('touchstart',e=>{ var t=e.touches[0]; touchStart={x:t.clientX,y:t.clientY}; },{passive:true});
+canvas.addEventListener('touchend',e=>{
+  if(!touchStart) return;
+  var t=e.changedTouches[0];
+  var dx=t.clientX-touchStart.x, dy=t.clientY-touchStart.y;
+  touchStart=null;
+  if(Math.abs(dx)<10&&Math.abs(dy)<10) return;
+  if(Math.abs(dx)>Math.abs(dy)) tryMove(dx>0?'right':'left');
+  else tryMove(dy>0?'down':'up');
+},{passive:true});
+
+document.getElementById('startBtn').addEventListener('click',startGame);
+document.getElementById('nextBtn').addEventListener('click',nextLevel);
+document.getElementById('playAgainBtn').addEventListener('click',startGame);
+</script>
+</body>
+</html>

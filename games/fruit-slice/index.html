@@ -330,7 +330,7 @@ const BOMB={name:'bomb', r:26, pts:-1,
 
 // ── Game state ─────────────────────────────────────────────────────────
 var fruits=[], halves=[], particles=[], floats=[];
-var score=0, lives=3, frame=0, running=false;
+var score=0, lives=5, frame=0, running=false;
 var spawnTimer=0, spawnInterval=90, difficulty=1;
 var blade=[], bladeActive=false;
 var comboTimer=0, comboCount=0;
@@ -344,14 +344,14 @@ function initGame(){
 }
 
 function renderLives(){
-  document.getElementById('livesHud').textContent=['❤️','❤️','❤️'].slice(0,lives).join('')||'💀';
+  document.getElementById('livesHud').textContent='❤️'.repeat(lives)||'💀';
 }
 
 // ── Spawning ──────────────────────────────────────────────────────────
 function spawnFruit(){
   var isBomb=Math.random()<0.12+difficulty*.02;
   var x=80+Math.random()*(W-160);
-  var vy=-(12+Math.random()*6+difficulty*.4);
+  var vy=-(17+Math.random()*7+difficulty*.4);
   var vx=(Math.random()-.5)*3;
   var spin=(Math.random()-.5)*.1;
   if(isBomb){
@@ -368,7 +368,7 @@ function spawnGroup(){
   var baseX=100+Math.random()*(W-200);
   for(var i=0;i<n;i++){
     var x=baseX+(i-n/2+.5)*80;
-    var vy=-(12+Math.random()*5+difficulty*.3);
+    var vy=-(17+Math.random()*6+difficulty*.3);
     var ft=FRUITS[Math.floor(Math.random()*FRUITS.length)];
     fruits.push({ft,x,y:H+40,vx:(Math.random()-.5)*2,vy,spin:(Math.random()-.5)*.08,rot:0,alive:true,sliced:false});
   }

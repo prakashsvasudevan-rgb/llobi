@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bubble Pop | LLOBI.com</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Outfit:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{--grape:#6C4AB6;--sunny:#FFC93C;--berry:#FF6B8A;--mint:#3DDC97;--sky:#36C5F0;--ink:#2B2150;--panel:#F3EFFA;--line:#E6DEF4;}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Outfit',sans-serif;background:#0a0a2e;color:#fff;min-height:100vh;display:flex;flex-direction:column;align-items:center}
+
+    .topbar{width:100%;background:#fff;border-bottom:3px solid #000;padding:10px 20px;display:flex;align-items:center;justify-content:space-between}
+    .brand{font-family:'Fredoka',sans-serif;font-size:1.5rem;font-weight:700;color:var(--grape);display:flex;align-items:center;gap:8px;text-decoration:none}
+    .brand .dot{background:var(--sunny);border-radius:10px;padding:4px 8px;box-shadow:0 3px 0 #E0A800;transform:rotate(-4deg);font-size:1rem}
+    .back-btn{font-family:'Fredoka',sans-serif;font-weight:600;background:var(--panel);border:2px solid var(--line);border-radius:10px;padding:7px 14px;cursor:pointer;color:var(--ink);font-size:.9rem}
+    .back-btn:hover{background:var(--line)}
+
+    .game-wrap{display:grid;grid-template-columns:1fr 280px;gap:20px;max-width:1000px;width:100%;padding:20px;flex:1}
+
+    .game-col{display:flex;flex-direction:column;gap:14px}
+    .game-box{background:#0d0d3b;border-radius:20px;border:3px solid #000;box-shadow:0 8px 0 #000;overflow:hidden;position:relative}
+    .game-hud{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#070720;gap:10px;flex-wrap:wrap}
+    .hud-stat{display:flex;align-items:center;gap:6px;font-weight:800;font-size:.85rem}
+    .hud-stat .lbl{opacity:.6;font-size:.72rem}
+    .stat-val{font-family:'Fredoka',sans-serif;font-size:1.2rem;color:var(--sunny)}
+    .like-btn{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.1);border:2px solid rgba(255,255,255,.2);border-radius:10px;padding:6px 12px;cursor:pointer;font-weight:800;font-size:.85rem;color:#fff;transition:.15s;margin-left:auto}
+    .like-btn:hover{background:rgba(255,201,60,.2);border-color:var(--sunny)}
+    .like-btn.liked{background:rgba(255,201,60,.25);border-color:var(--sunny);color:var(--sunny)}
+
+    canvas{display:block;width:100%;aspect-ratio:4/5}
+
+    .overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(7,7,32,.88);backdrop-filter:blur(6px);z-index:10;transition:.3s}
+    .overlay.hidden{opacity:0;pointer-events:none}
+    .ov-box{background:#0d0d3b;border:3px solid var(--sky);border-radius:20px;padding:32px 40px;text-align:center;box-shadow:0 8px 0 #000;max-width:320px}
+    .ov-box h2{font-family:'Fredoka',sans-serif;font-size:2.6rem;color:var(--sky);margin-bottom:8px}
+    .ov-box p{opacity:.85;margin-bottom:20px;font-weight:600;line-height:1.5}
+    .play-btn{font-family:'Fredoka',sans-serif;font-weight:700;font-size:1.1rem;background:var(--sky);color:#000;border:none;border-radius:14px;padding:13px 32px;cursor:pointer;box-shadow:0 5px 0 #1a8fb5;transition:.1s}
+    .play-btn:active{transform:translateY(3px);box-shadow:0 2px 0 #1a8fb5}
+    .hi-badge{display:inline-block;background:var(--berry);color:#fff;font-weight:800;font-size:.75rem;padding:4px 10px;border-radius:20px;margin-bottom:12px}
+
+    /* lives */
+    .lives{display:flex;gap:4px}
+    .heart{font-size:1rem;transition:.3s}
+    .heart.lost{opacity:.25;filter:grayscale(1)}
+
+    .side{display:flex;flex-direction:column;gap:14px}
+    .card{background:#0d0d3b;border-radius:18px;border:3px solid #000;box-shadow:0 6px 0 #000;overflow:hidden}
+    .card-head{background:var(--sky);color:#000;font-family:'Fredoka',sans-serif;font-size:1rem;font-weight:600;padding:10px 16px;letter-spacing:.5px}
+    .card-body{padding:16px}
+    .card-body p{font-weight:600;font-size:.88rem;opacity:.85;line-height:1.5;margin-bottom:10px}
+    .tip{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-weight:700;font-size:.85rem}
+    .tip-icon{font-size:1.3rem;flex-shrink:0}
+    .score-list{list-style:none}
+    .score-list li{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.08);font-weight:700;font-size:.88rem}
+    .score-list li:last-child{border:none}
+    .score-list .rank{color:var(--sunny);font-family:'Fredoka',sans-serif}
+    .score-list .you{color:var(--mint)}
+
+    .game-footer{width:100%;background:#fff;border-top:3px solid #000;padding:12px 20px;text-align:center;font-weight:700;color:var(--ink);font-size:.85rem}
+    @media(max-width:680px){.game-wrap{grid-template-columns:1fr}.side{display:none}}
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="brand" href="/"><span class="dot">🎮</span>llobi</a>
+  <button class="back-btn" onclick="window.location.href='/'">← All Games</button>
+</div>
+
+<div class="game-wrap">
+  <div class="game-col">
+    <div class="game-box">
+      <div class="game-hud">
+        <div class="hud-stat"><span class="lbl">SCORE</span><span class="stat-val" id="scoreVal">0</span></div>
+        <div class="hud-stat"><span class="lbl">BEST</span><span class="stat-val" id="bestVal">0</span></div>
+        <div class="hud-stat"><span class="lbl">LEVEL</span><span class="stat-val" id="levelVal">1</span></div>
+        <div class="lives" id="lives">
+          <span class="heart">❤️</span><span class="heart">❤️</span><span class="heart">❤️</span>
+        </div>
+        <div class="hud-stat"><span>▶</span><span id="playCount">0</span></div>
+        <button class="like-btn" id="likeBtn"><span id="likeIcon">👍</span><span id="likeCount">0</span></button>
+      </div>
+
+      <canvas id="gameCanvas" width="480" height="600"></canvas>
+
+      <div class="overlay" id="startOverlay">
+        <div class="ov-box">
+          <h2>🫧 BUBBLE POP</h2>
+          <p>Shoot bubbles to match 3 or more of the same colour. Clear the board to win!</p>
+          <button class="play-btn" id="startBtn">PLAY NOW</button>
+        </div>
+      </div>
+
+      <div class="overlay hidden" id="gameOverOverlay">
+        <div class="ov-box">
+          <div class="hi-badge" id="hiBadge" style="display:none">🏆 NEW HIGH SCORE!</div>
+          <h2 id="ovTitle">GAME OVER</h2>
+          <p id="ovMsg">You scored <strong id="finalScore">0</strong> points!</p>
+          <button class="play-btn" id="restartBtn">PLAY AGAIN</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="side">
+    <div class="card">
+      <div class="card-head">HOW TO PLAY</div>
+      <div class="card-body">
+        <p>Aim and shoot bubbles to match 3 or more of the same colour — they'll pop and you'll score!</p>
+        <div class="tip"><span class="tip-icon">🎯</span> Click or tap to aim and shoot</div>
+        <div class="tip"><span class="tip-icon">🔵🔵🔵</span> Match 3+ same colour to pop</div>
+        <div class="tip"><span class="tip-icon">❤️</span> 3 misses and it's game over</div>
+        <div class="tip"><span class="tip-icon">⬆️</span> Clear rows to level up</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head">HIGH SCORES</div>
+      <div class="card-body">
+        <ol class="score-list" id="scoreList"></ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="game-footer">🫧 Bubble Pop — llobi.com — Free games for everyone!</div>
+
+<script>
+  // ── Stats ──────────────────────────────────────────────────────────
+  const GAME_ID = 'bubble-pop';
+  function getStats(){ return JSON.parse(localStorage.getItem('llobi_stats_'+GAME_ID)||'{"plays":2190,"likes":540,"liked":false}'); }
+  function saveStats(s){ localStorage.setItem('llobi_stats_'+GAME_ID,JSON.stringify(s)); }
+  function renderStats(){
+    var s=getStats();
+    document.getElementById('playCount').innerText=s.plays.toLocaleString();
+    document.getElementById('likeCount').innerText=s.likes.toLocaleString();
+    document.getElementById('likeBtn').classList.toggle('liked',s.liked);
+    document.getElementById('likeIcon').innerText=s.liked?'💛':'👍';
+  }
+  (function(){ var s=getStats(); s.plays+=1; saveStats(s); renderStats(); })();
+  document.getElementById('likeBtn').addEventListener('click',function(){
+    var s=getStats();
+    s.liked?s.likes--:s.likes++; s.liked=!s.liked; saveStats(s); renderStats();
+  });
+
+  // ── High scores ────────────────────────────────────────────────────
+  const DEF_SCORES=[{name:'Bubbler',score:3200},{name:'Popstar',score:2400},{name:'Fizz',score:1800},{name:'Splash',score:1100},{name:'You',score:0,isPlayer:true}];
+  function getScores(){ return JSON.parse(localStorage.getItem('llobi_bubble_scores')||JSON.stringify(DEF_SCORES)); }
+  function saveScores(a){ localStorage.setItem('llobi_bubble_scores',JSON.stringify(a)); }
+  function renderScores(){
+    var a=getScores().sort((a,b)=>b.score-a.score).slice(0,5);
+    document.getElementById('scoreList').innerHTML=a.map((e,i)=>`<li><span class="rank">${i+1}.</span><span class="${e.isPlayer?'you':''}">${e.name}</span><span>${e.score}</span></li>`).join('');
+  }
+  function updatePlayerScore(s){ var a=getScores(),p=a.find(e=>e.isPlayer); if(p&&s>p.score){p.score=s;saveScores(a);} }
+  renderScores();
+
+  // ── Best ──────────────────────────────────────────────────────────
+  function getBest(){ return parseInt(localStorage.getItem('llobi_bubble_best')||'0'); }
+  function setBest(s){ localStorage.setItem('llobi_bubble_best',s); }
+  document.getElementById('bestVal').innerText=getBest();
+
+  // ── Game ──────────────────────────────────────────────────────────
+  const canvas=document.getElementById('gameCanvas');
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width, H=canvas.height;
+  const R=24; // bubble radius
+  const COLS=10;
+  const ROW_H=Math.round(R*1.75);
+  const COLORS=['#FF6B8A','#36C5F0','#3DDC97','#FFC93C','#A78BFA','#FF8C42'];
+
+  let grid=[], shooter={x:W/2,y:H-50,angle:-Math.PI/2}, bullet=null, nextColor='', lives=3, score=0, level=1, running=false, animFrame;
+  let aimX=W/2, aimY=0;
+
+  function rndColor(){ return COLORS[Math.floor(Math.random()*COLORS.length)]; }
+
+  function makeGrid(rows){
+    grid=[];
+    for(let r=0;r<rows;r++){
+      var row=[];
+      var cols = COLS - (r%2===1?1:0);
+      for(let c=0;c<cols;c++) row.push({color:rndColor(),r,c});
+      grid.push(row);
+    }
+  }
+
+  function bubbleX(r,c){ return R + c*(R*2) + (r%2===1?R:0); }
+  function bubbleY(r){ return R + r*ROW_H; }
+
+  function initGame(){
+    lives=3; score=0; level=1;
+    document.getElementById('scoreVal').innerText='0';
+    document.getElementById('levelVal').innerText='1';
+    updateLives();
+    makeGrid(6);
+    nextColor=rndColor();
+    bullet=null;
+    running=true;
+  }
+
+  function updateLives(){
+    document.querySelectorAll('.heart').forEach((h,i)=>h.classList.toggle('lost',i>=lives));
+  }
+
+  function shoot(angle){
+    if(bullet||!running) return;
+    bullet={x:shooter.x,y:shooter.y,dx:Math.cos(angle)*10,dy:Math.sin(angle)*10,color:shooter.color};
+    shooter.color=nextColor;
+    nextColor=rndColor();
+  }
+
+  function step(){
+    if(!running){animFrame=requestAnimationFrame(step);return;}
+    if(bullet){
+      bullet.x+=bullet.dx;
+      bullet.y+=bullet.dy;
+      if(bullet.x<R||bullet.x>W-R) bullet.dx*=-1;
+      if(bullet.y<R){ landBullet(0,0,true); return; }
+      // check collision with grid
+      var landed=false;
+      for(let r=0;r<grid.length;r++){
+        for(let c=0;c<grid[r].length;c++){
+          var b=grid[r][c];
+          if(!b) continue;
+          var bx=bubbleX(r,c), by=bubbleY(r);
+          var dx=bullet.x-bx, dy=bullet.y-by;
+          if(Math.sqrt(dx*dx+dy*dy)<R*1.9){ landBullet(r,c); landed=true; break; }
+        }
+        if(landed) break;
+      }
+      if(!landed && bullet.y > H+R){ missFired(); }
+    }
+    draw();
+    animFrame=requestAnimationFrame(step);
+  }
+
+  function landBullet(r,c,top){
+    var nr=top?0:r, nc=top?Math.round((bullet.x-R)/(R*2)):c;
+    // insert into grid
+    if(!grid[nr]) grid[nr]=[];
+    nc=Math.max(0,Math.min(nc,COLS-1));
+    grid[nr][nc]={color:bullet.color,r:nr,c:nc};
+    bullet=null;
+    var popped=findMatches(nr,nc,bullet?bullet.color:grid[nr][nc].color);
+    if(popped.length>=3){ popBubbles(popped); }
+    else { lives--; updateLives(); if(lives<=0){endGame(false);return;} }
+    checkWin();
+  }
+
+  function findMatches(r,c,color){
+    var visited=new Set(), stack=[`${r},${c}`], result=[];
+    var col=grid[r]&&grid[r][c]?grid[r][c].color:color;
+    while(stack.length){
+      var key=stack.pop();
+      if(visited.has(key)) continue;
+      visited.add(key);
+      var [rr,cc]=key.split(',').map(Number);
+      if(!grid[rr]||!grid[rr][cc]) continue;
+      if(grid[rr][cc].color!==col) continue;
+      result.push({r:rr,c:cc});
+      getNeighbours(rr,cc).forEach(n=>stack.push(`${n.r},${n.c}`));
+    }
+    return result;
+  }
+
+  function getNeighbours(r,c){
+    var odd=r%2===1;
+    var nb=[
+      {r:r,c:c-1},{r:r,c:c+1},
+      {r:r-1,c:c+(odd?0:-1)},{r:r-1,c:c+(odd?1:0)},
+      {r:r+1,c:c+(odd?0:-1)},{r:r+1,c:c+(odd?1:0)},
+    ];
+    return nb.filter(n=>n.r>=0&&n.c>=0&&grid[n.r]&&grid[n.r][n.c]);
+  }
+
+  function popBubbles(list){
+    var pts=list.length*10*level;
+    score+=pts;
+    document.getElementById('scoreVal').innerText=score;
+    list.forEach(({r,c})=>{ if(grid[r]) grid[r][c]=null; });
+    // drop orphans
+    var connected=findConnectedToTop();
+    for(let r=0;r<grid.length;r++)
+      for(let c=0;c<(grid[r]?grid[r].length:0);c++)
+        if(grid[r][c]&&!connected.has(`${r},${c}`)){ score+=5; grid[r][c]=null; }
+    document.getElementById('scoreVal').innerText=score;
+  }
+
+  function findConnectedToTop(){
+    var visited=new Set();
+    var stack=[];
+    if(grid[0]) grid[0].forEach((b,c)=>{ if(b) stack.push(`0,${c}`); });
+    while(stack.length){
+      var key=stack.pop();
+      if(visited.has(key)) continue;
+      visited.add(key);
+      var [r,c]=key.split(',').map(Number);
+      getNeighbours(r,c).forEach(n=>stack.push(`${n.r},${n.c}`));
+    }
+    return visited;
+  }
+
+  function missFired(){ bullet=null; lives--; updateLives(); if(lives<=0) endGame(false); }
+
+  function checkWin(){
+    var anyLeft=grid.some(row=>row&&row.some(b=>b));
+    if(!anyLeft){ score+=500*level; level++; document.getElementById('levelVal').innerText=level; makeGrid(5+level); }
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    // bg gradient
+    var g=ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,'#0a0a2e'); g.addColorStop(1,'#0d0d4a');
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+
+    // grid bubbles
+    for(let r=0;r<grid.length;r++){
+      if(!grid[r]) continue;
+      for(let c=0;c<grid[r].length;c++){
+        var b=grid[r][c];
+        if(!b) continue;
+        drawBubble(bubbleX(r,c),bubbleY(r),R,b.color);
+      }
+    }
+
+    // aim line
+    if(!bullet&&running){
+      ctx.save();
+      ctx.setLineDash([8,8]);
+      ctx.strokeStyle='rgba(255,255,255,.25)';
+      ctx.lineWidth=2;
+      ctx.beginPath();
+      ctx.moveTo(shooter.x,shooter.y);
+      ctx.lineTo(shooter.x+Math.cos(shooter.angle)*200, shooter.y+Math.sin(shooter.angle)*200);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // shooter
+    drawBubble(shooter.x,shooter.y,R,shooter.color||'#fff');
+
+    // next bubble preview
+    ctx.fillStyle='rgba(255,255,255,.5)';
+    ctx.font='700 11px Outfit';
+    ctx.textAlign='center';
+    ctx.fillText('NEXT',shooter.x+48,shooter.y-8);
+    drawBubble(shooter.x+48,shooter.y+10,R*.65,nextColor);
+
+    // bullet
+    if(bullet) drawBubble(bullet.x,bullet.y,R,bullet.color);
+  }
+
+  function drawBubble(x,y,r,color){
+    // shadow
+    ctx.beginPath(); ctx.arc(x,y+3,r,0,Math.PI*2);
+    ctx.fillStyle='rgba(0,0,0,.3)'; ctx.fill();
+    // main
+    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+    ctx.fillStyle=color; ctx.fill();
+    // shine
+    ctx.beginPath(); ctx.arc(x-r*.3,y-r*.3,r*.35,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,255,255,.35)'; ctx.fill();
+    // outline
+    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+    ctx.strokeStyle='rgba(255,255,255,.2)'; ctx.lineWidth=1.5; ctx.stroke();
+  }
+
+  function endGame(win){
+    running=false;
+    cancelAnimationFrame(animFrame);
+    var best=getBest(), isNew=score>best;
+    if(isNew){ setBest(score); document.getElementById('bestVal').innerText=score; }
+    updatePlayerScore(score);
+    renderScores();
+    document.getElementById('finalScore').innerText=score;
+    document.getElementById('ovTitle').innerText=win?'YOU WIN! 🎉':'GAME OVER';
+    document.getElementById('ovMsg').innerHTML=win?`Amazing! Level ${level}! You scored <strong>${score}</strong> points!`:`You scored <strong>${score}</strong> points!`;
+    document.getElementById('hiBadge').style.display=isNew?'inline-block':'none';
+    document.getElementById('gameOverOverlay').classList.remove('hidden');
+    draw();
+  }
+
+  function startGame(){
+    document.getElementById('startOverlay').classList.add('hidden');
+    document.getElementById('gameOverOverlay').classList.add('hidden');
+    initGame();
+    shooter.color=rndColor();
+    cancelAnimationFrame(animFrame);
+    animFrame=requestAnimationFrame(step);
+  }
+
+  document.getElementById('startBtn').addEventListener('click',startGame);
+  document.getElementById('restartBtn').addEventListener('click',startGame);
+
+  // aim on mouse move
+  canvas.addEventListener('mousemove',function(e){
+    var rect=canvas.getBoundingClientRect();
+    var scaleX=canvas.width/rect.width;
+    var scaleY=canvas.height/rect.height;
+    aimX=(e.clientX-rect.left)*scaleX;
+    aimY=(e.clientY-rect.top)*scaleY;
+    var angle=Math.atan2(aimY-shooter.y, aimX-shooter.x);
+    if(angle>-Math.PI&&angle<0) shooter.angle=angle;
+  });
+
+  canvas.addEventListener('click',function(e){
+    var rect=canvas.getBoundingClientRect();
+    var scaleX=canvas.width/rect.width;
+    var scaleY=canvas.height/rect.height;
+    var cx=(e.clientX-rect.left)*scaleX;
+    var cy=(e.clientY-rect.top)*scaleY;
+    var angle=Math.atan2(cy-shooter.y,cx-shooter.x);
+    if(angle>-Math.PI&&angle<0) shoot(angle);
+  });
+
+  canvas.addEventListener('touchstart',function(e){
+    e.preventDefault();
+    var rect=canvas.getBoundingClientRect();
+    var scaleX=canvas.width/rect.width;
+    var scaleY=canvas.height/rect.height;
+    var t=e.touches[0];
+    var cx=(t.clientX-rect.left)*scaleX;
+    var cy=(t.clientY-rect.top)*scaleY;
+    var angle=Math.atan2(cy-shooter.y,cx-shooter.x);
+    if(angle>-Math.PI&&angle<0) shoot(angle);
+  },{passive:false});
+
+  // initial draw
+  (function(){ ctx.fillStyle='#0a0a2e'; ctx.fillRect(0,0,W,H); })();
+</script>
+</body>
+</html>

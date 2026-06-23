@@ -259,7 +259,7 @@
   ];
 
   const popular=[
-    {n:"Snake Classic",e:"🐍",hot:"HOT",url:"/games/snake/",id:"snake"},{n:"Bubble Pop",e:"🫧"},
+    {n:"Snake Classic",e:"🐍",hot:"HOT",url:"/games/snake/",id:"snake"},{n:"Bubble Pop",e:"🫧",url:"/games/bubble-pop/",id:"bubble-pop"},
     {n:"Speedy Karts",e:"🏎️",hot:"HOT"},{n:"Memory Match",e:"🧠"},
     {n:"Star Hopper",e:"⭐"},{n:"Block Stack",e:"🧱"},
     {n:"Tic Tac Toe",e:"⭕"},{n:"Maze Runner",e:"🌀"},
@@ -303,7 +303,7 @@
 
   // first popular tile is the big 2x2 hero tile
   document.getElementById('gridPopular').innerHTML =
-    popular.map((g,i)=>tile(g,i,i===0)).join('');
+    popular.map((g,i)=>tile(g,i,false)).join('');
   document.getElementById('gridNew').innerHTML =
     fresh.map((g,i)=>tile(g,i,false)).join('');
 

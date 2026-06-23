@@ -1922,8 +1922,10 @@ function gameLoop(timestamp) {
 
 // Initial setup
 window.addEventListener('load', () => {
-  resizeCanvas();
-  loadLeaderboard();
-  loadLevel(1);
-  requestAnimationFrame(gameLoop);
+  setTimeout(() => {
+    resizeCanvas();
+    loadLeaderboard();
+    loadLevel(1);
+    requestAnimationFrame(gameLoop);
+  }, 100);
 });

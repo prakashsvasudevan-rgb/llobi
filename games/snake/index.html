@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Snake Classic | LLOBI.com</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Outfit:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --grape:#6C4AB6; --grape-deep:#4B2E91; --sunny:#FFC93C;
+      --berry:#FF6B8A; --mint:#3DDC97; --ink:#2B2150;
+      --panel:#F3EFFA; --line:#E6DEF4;
+    }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Outfit',sans-serif;background:#1a1a2e;color:#fff;min-height:100vh;display:flex;flex-direction:column;align-items:center}
+
+    /* TOP BAR */
+    .topbar{width:100%;background:#fff;border-bottom:3px solid #000;padding:10px 20px;display:flex;align-items:center;justify-content:space-between}
+    .brand{font-family:'Fredoka',sans-serif;font-size:1.5rem;font-weight:700;color:var(--grape);display:flex;align-items:center;gap:8px;text-decoration:none}
+    .brand .dot{background:var(--sunny);border-radius:10px;padding:4px 8px;box-shadow:0 3px 0 #E0A800;transform:rotate(-4deg);font-size:1rem}
+    .back-btn{font-family:'Fredoka',sans-serif;font-weight:600;background:var(--panel);border:2px solid var(--line);border-radius:10px;padding:7px 14px;cursor:pointer;color:var(--ink);font-size:.9rem}
+    .back-btn:hover{background:var(--line)}
+
+    /* LAYOUT */
+    .game-wrap{display:grid;grid-template-columns:1fr 280px;gap:20px;max-width:1000px;width:100%;padding:20px;flex:1}
+
+    /* GAME COLUMN */
+    .game-col{display:flex;flex-direction:column;gap:14px}
+    .game-box{background:#0f3460;border-radius:20px;border:3px solid #000;box-shadow:0 8px 0 #000;overflow:hidden;position:relative}
+    .game-hud{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#16213e}
+    .hud-stat{display:flex;align-items:center;gap:6px;font-weight:800;font-size:.9rem}
+    .hud-stat .label{opacity:.6;font-size:.75rem}
+    .stat-val{font-family:'Fredoka',sans-serif;font-size:1.3rem;color:var(--sunny)}
+
+    .like-btn{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.1);border:2px solid rgba(255,255,255,.2);border-radius:10px;padding:6px 12px;cursor:pointer;font-weight:800;font-size:.85rem;color:#fff;transition:.15s}
+    .like-btn:hover{background:rgba(255,201,60,.2);border-color:var(--sunny)}
+    .like-btn.liked{background:rgba(255,201,60,.25);border-color:var(--sunny);color:var(--sunny)}
+
+    canvas{display:block;width:100%;aspect-ratio:1}
+
+    /* OVERLAYS */
+    .overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(15,52,96,.88);backdrop-filter:blur(6px);z-index:10;transition:.3s}
+    .overlay.hidden{opacity:0;pointer-events:none}
+    .ov-box{background:#16213e;border:3px solid var(--sunny);border-radius:20px;padding:32px 40px;text-align:center;box-shadow:0 8px 0 #000}
+    .ov-box h2{font-family:'Fredoka',sans-serif;font-size:2.8rem;color:var(--sunny);margin-bottom:8px}
+    .ov-box p{opacity:.8;margin-bottom:20px;font-weight:600}
+    .play-btn{font-family:'Fredoka',sans-serif;font-weight:700;font-size:1.1rem;background:var(--mint);color:#000;border:none;border-radius:14px;padding:13px 32px;cursor:pointer;box-shadow:0 5px 0 #25B07A;transition:.1s}
+    .play-btn:active{transform:translateY(3px);box-shadow:0 2px 0 #25B07A}
+    .hi-badge{display:inline-block;background:var(--berry);color:#fff;font-weight:800;font-size:.75rem;padding:4px 10px;border-radius:20px;margin-bottom:12px}
+
+    /* SIDE PANEL */
+    .side{display:flex;flex-direction:column;gap:14px}
+    .card{background:#16213e;border-radius:18px;border:3px solid #000;box-shadow:0 6px 0 #000;overflow:hidden}
+    .card-head{background:var(--grape);font-family:'Fredoka',sans-serif;font-size:1rem;font-weight:600;padding:10px 16px;letter-spacing:.5px}
+    .card-body{padding:16px}
+    .card-body p{font-weight:600;font-size:.9rem;opacity:.85;line-height:1.5;margin-bottom:12px}
+    .tip{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-weight:700;font-size:.85rem}
+    .tip-icon{font-size:1.3rem;flex-shrink:0}
+
+    .key-row{display:flex;justify-content:center;gap:6px;margin-bottom:6px}
+    .key{background:#0f3460;border:2px solid rgba(255,255,255,.3);border-radius:8px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:800}
+
+    .score-list{list-style:none}
+    .score-list li{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.08);font-weight:700;font-size:.88rem}
+    .score-list li:last-child{border:none}
+    .score-list .rank{color:var(--sunny);font-family:'Fredoka',sans-serif}
+    .score-list .you{color:var(--mint)}
+
+    /* FOOTER */
+    .game-footer{width:100%;background:#fff;border-top:3px solid #000;padding:12px 20px;text-align:center;font-weight:700;color:var(--ink);font-size:.85rem}
+
+    @media(max-width:680px){
+      .game-wrap{grid-template-columns:1fr}
+      .side{display:none}
+    }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="brand" href="/"><span class="dot">🎮</span>llobi</a>
+  <button class="back-btn" onclick="window.location.href='/'">← All Games</button>
+</div>
+
+<div class="game-wrap">
+
+  <div class="game-col">
+    <div class="game-box">
+      <!-- HUD -->
+      <div class="game-hud">
+        <div class="hud-stat">
+          <span class="label">SCORE</span>
+          <span class="stat-val" id="scoreVal">0</span>
+        </div>
+        <div class="hud-stat">
+          <span class="label">BEST</span>
+          <span class="stat-val" id="bestVal">0</span>
+        </div>
+        <div class="hud-stat">
+          <span>▶</span>
+          <span id="playCount">0</span>
+        </div>
+        <button class="like-btn" id="likeBtn">
+          <span id="likeIcon">👍</span>
+          <span id="likeCount">0</span>
+        </button>
+      </div>
+
+      <!-- Canvas -->
+      <canvas id="gameCanvas" width="480" height="480"></canvas>
+
+      <!-- Start Overlay -->
+      <div class="overlay" id="startOverlay">
+        <div class="ov-box">
+          <h2>🐍 SNAKE</h2>
+          <p>Eat food, grow longer, don't hit the walls!</p>
+          <button class="play-btn" id="startBtn">PLAY NOW</button>
+        </div>
+      </div>
+
+      <!-- Game Over Overlay -->
+      <div class="overlay hidden" id="gameOverOverlay">
+        <div class="ov-box">
+          <div class="hi-badge" id="hiBadge" style="display:none">🏆 NEW HIGH SCORE!</div>
+          <h2>GAME OVER</h2>
+          <p>You scored <strong id="finalScore">0</strong> points!</p>
+          <button class="play-btn" id="restartBtn">PLAY AGAIN</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SIDE PANEL -->
+  <div class="side">
+    <div class="card">
+      <div class="card-head">HOW TO PLAY</div>
+      <div class="card-body">
+        <p>Guide the snake to eat the red food. Each piece makes you longer. Don't crash!</p>
+        <div class="tip"><span class="tip-icon">🍎</span> Eat food to grow and score points</div>
+        <div class="tip"><span class="tip-icon">⚡</span> Snake speeds up as you grow</div>
+        <div class="tip"><span class="tip-icon">💀</span> Hit a wall or yourself = game over</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">CONTROLS</div>
+      <div class="card-body">
+        <div class="key-row"><div class="key">▲</div></div>
+        <div class="key-row"><div class="key">◀</div><div class="key">▼</div><div class="key">▶</div></div>
+        <p style="text-align:center;margin-top:10px;font-size:.8rem;opacity:.7">Arrow keys or WASD</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">HIGH SCORES</div>
+      <div class="card-body">
+        <ol class="score-list" id="scoreList">
+          <li><span class="rank">1.</span><span>Loading…</span><span>—</span></li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="game-footer">🐍 Snake Classic — llobi.com — Free games for everyone!</div>
+
+<script>
+  // ── Stats ──────────────────────────────────────────────────────────
+  const GAME_ID = 'snake';
+  function getStats(){ return JSON.parse(localStorage.getItem('llobi_stats_'+GAME_ID)||'{"plays":3841,"likes":891,"liked":false}'); }
+  function saveStats(s){ localStorage.setItem('llobi_stats_'+GAME_ID, JSON.stringify(s)); }
+
+  function renderStats(){
+    var s = getStats();
+    document.getElementById('playCount').innerText = s.plays.toLocaleString();
+    document.getElementById('likeCount').innerText = s.likes.toLocaleString();
+    var btn = document.getElementById('likeBtn');
+    btn.classList.toggle('liked', s.liked);
+    document.getElementById('likeIcon').innerText = s.liked ? '💛' : '👍';
+  }
+
+  // increment play count
+  (function(){ var s=getStats(); s.plays+=1; saveStats(s); renderStats(); })();
+
+  document.getElementById('likeBtn').addEventListener('click', function(){
+    var s=getStats();
+    if(!s.liked){ s.likes+=1; s.liked=true; } else { s.likes-=1; s.liked=false; }
+    saveStats(s); renderStats();
+  });
+
+  // ── High scores ────────────────────────────────────────────────────
+  const DEFAULT_SCORES = [
+    {name:'Viper',score:420},{name:'Coil',score:310},
+    {name:'Slink',score:250},{name:'Zigzag',score:180},{name:'You',score:0,isPlayer:true}
+  ];
+  function getScores(){ return JSON.parse(localStorage.getItem('llobi_snake_scores')||JSON.stringify(DEFAULT_SCORES)); }
+  function saveScores(arr){ localStorage.setItem('llobi_snake_scores', JSON.stringify(arr)); }
+  function renderScores(){
+    var arr = getScores().sort((a,b)=>b.score-a.score).slice(0,5);
+    document.getElementById('scoreList').innerHTML = arr.map((e,i)=>`
+      <li>
+        <span class="rank">${i+1}.</span>
+        <span class="${e.isPlayer?'you':''}">${e.name}</span>
+        <span>${e.score}</span>
+      </li>`).join('');
+  }
+  function updatePlayerScore(s){
+    var arr = getScores();
+    var p = arr.find(e=>e.isPlayer);
+    if(p && s > p.score){ p.score=s; saveScores(arr); }
+  }
+  renderScores();
+
+  // ── Best score ─────────────────────────────────────────────────────
+  function getBest(){ return parseInt(localStorage.getItem('llobi_snake_best')||'0'); }
+  function setBest(s){ localStorage.setItem('llobi_snake_best', s); }
+  document.getElementById('bestVal').innerText = getBest();
+
+  // ── Game engine ────────────────────────────────────────────────────
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  const GRID = 20;
+  const COLS = canvas.width / GRID;
+  const ROWS = canvas.height / GRID;
+
+  let snake, dir, nextDir, food, score, speed, loop, running=false;
+
+  const COLORS = {
+    bg:'#0f3460', grid:'#132040',
+    head:'#3DDC97', body:'#2ab87a', eye:'#fff',
+    food:'#FF6B8A', foodGlow:'rgba(255,107,138,.4)',
+    wall:'#FFC93C'
+  };
+
+  function initGame(){
+    snake = [{x:10,y:10},{x:9,y:10},{x:8,y:10}];
+    dir = {x:1,y:0};
+    nextDir = {x:1,y:0};
+    score = 0;
+    speed = 150;
+    running = true;
+    document.getElementById('scoreVal').innerText = '0';
+    placeFood();
+  }
+
+  function placeFood(){
+    do {
+      food = {x:Math.floor(Math.random()*COLS), y:Math.floor(Math.random()*ROWS)};
+    } while(snake.some(s=>s.x===food.x&&s.y===food.y));
+  }
+
+  function step(){
+    if(!running) return;
+    dir = nextDir;
+    const head = {x:snake[0].x+dir.x, y:snake[0].y+dir.y};
+
+    // wall collision
+    if(head.x<0||head.x>=COLS||head.y<0||head.y>=ROWS){ endGame(); return; }
+    // self collision
+    if(snake.some(s=>s.x===head.x&&s.y===head.y)){ endGame(); return; }
+
+    snake.unshift(head);
+
+    if(head.x===food.x&&head.y===food.y){
+      score += 10;
+      document.getElementById('scoreVal').innerText = score;
+      placeFood();
+      if(speed > 70) speed -= 3;
+    } else {
+      snake.pop();
+    }
+    draw();
+  }
+
+  function draw(){
+    // Background
+    ctx.fillStyle = COLORS.bg;
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    // Subtle grid
+    ctx.strokeStyle = COLORS.grid;
+    ctx.lineWidth = 0.5;
+    for(let x=0;x<=canvas.width;x+=GRID){ ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,canvas.height);ctx.stroke(); }
+    for(let y=0;y<=canvas.height;y+=GRID){ ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(canvas.width,y);ctx.stroke(); }
+
+    // Food glow
+    ctx.fillStyle = COLORS.foodGlow;
+    ctx.beginPath();
+    ctx.arc(food.x*GRID+GRID/2, food.y*GRID+GRID/2, GRID, 0, Math.PI*2);
+    ctx.fill();
+
+    // Food
+    ctx.fillStyle = COLORS.food;
+    roundRect(ctx, food.x*GRID+2, food.y*GRID+2, GRID-4, GRID-4, 5);
+    ctx.fill();
+
+    // Snake body
+    snake.forEach((seg,i)=>{
+      const t = i/snake.length;
+      ctx.fillStyle = i===0 ? COLORS.head : `rgba(61,${Math.floor(184-t*60)},${Math.floor(151-t*60)},1)`;
+      roundRect(ctx, seg.x*GRID+1, seg.y*GRID+1, GRID-2, GRID-2, i===0?7:4);
+      ctx.fill();
+    });
+
+    // Eyes on head
+    const h = snake[0];
+    const ex = dir.x===1?12:dir.x===-1?4:8;
+    const ey = dir.y===1?12:dir.y===-1?4:8;
+    ctx.fillStyle = COLORS.eye;
+    ctx.beginPath();
+    ctx.arc(h.x*GRID+ex, h.y*GRID+ey-2, 3, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle='#000';
+    ctx.beginPath();
+    ctx.arc(h.x*GRID+ex, h.y*GRID+ey-2, 1.5, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  function roundRect(c, x, y, w, h, r){
+    c.beginPath();
+    c.moveTo(x+r,y);
+    c.lineTo(x+w-r,y);c.quadraticCurveTo(x+w,y,x+w,y+r);
+    c.lineTo(x+w,y+h-r);c.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+    c.lineTo(x+r,y+h);c.quadraticCurveTo(x,y+h,x,y+h-r);
+    c.lineTo(x,y+r);c.quadraticCurveTo(x,y,x+r,y);
+    c.closePath();
+  }
+
+  function endGame(){
+    running = false;
+    clearInterval(loop);
+    var best = getBest();
+    var isNew = score > best;
+    if(isNew){ setBest(score); document.getElementById('bestVal').innerText=score; }
+    updatePlayerScore(score);
+    renderScores();
+    document.getElementById('finalScore').innerText = score;
+    document.getElementById('hiBadge').style.display = isNew ? 'inline-block' : 'none';
+    document.getElementById('gameOverOverlay').classList.remove('hidden');
+  }
+
+  function startGame(){
+    document.getElementById('startOverlay').classList.add('hidden');
+    document.getElementById('gameOverOverlay').classList.add('hidden');
+    initGame();
+    draw();
+    clearInterval(loop);
+    loop = setInterval(step, speed);
+  }
+
+  // Speed changes need interval reset — check every step
+  let lastSpeed = speed;
+  const originalStep = step;
+
+  document.getElementById('startBtn').addEventListener('click', startGame);
+  document.getElementById('restartBtn').addEventListener('click', startGame);
+
+  // Controls
+  document.addEventListener('keydown', e=>{
+    if(!running) return;
+    switch(e.key){
+      case 'ArrowUp':case 'w':case 'W': if(dir.y!==1) nextDir={x:0,y:-1}; e.preventDefault(); break;
+      case 'ArrowDown':case 's':case 'S': if(dir.y!==-1) nextDir={x:0,y:1}; e.preventDefault(); break;
+      case 'ArrowLeft':case 'a':case 'A': if(dir.x!==1) nextDir={x:-1,y:0}; e.preventDefault(); break;
+      case 'ArrowRight':case 'd':case 'D': if(dir.x!==-1) nextDir={x:1,y:0}; e.preventDefault(); break;
+    }
+  });
+
+  // Speed update loop
+  setInterval(()=>{
+    if(running && speed !== lastSpeed){
+      lastSpeed = speed;
+      clearInterval(loop);
+      loop = setInterval(step, speed);
+    }
+  }, 200);
+
+  // Draw initial canvas
+  (function(){
+    ctx.fillStyle=COLORS.bg; ctx.fillRect(0,0,canvas.width,canvas.height);
+  })();
+</script>
+</body>
+</html>

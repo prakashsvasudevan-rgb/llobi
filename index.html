@@ -264,7 +264,8 @@
     {n:"Fruit Slice",e:"🍉"},{n:"Hoop Shot",e:"🏀"},
     {n:"Tower Build",e:"🏰"},{n:"Bug Squash",e:"🐞"},
     {n:"Paint Pop",e:"🎨"},{n:"Sky Glider",e:"🪂"},
-    {n:"Coin Dash",e:"🪙"},{n:"Robo Jump",e:"🤖"}
+    {n:"Coin Dash",e:"🪙"},{n:"Robo Jump",e:"🤖"},
+    {n:"Gobble",e:"😋",hot:"LIVE",url:"/games/gobble-game/"}
   ];
   const fresh=[
     {n:"Penguin Slide",e:"🐧",hot:"NEW"},{n:"Magic Match",e:"🔮"},
@@ -283,7 +284,7 @@
   ];
 
   const tile=(g,i,big)=>`
-    <div class="tile ${big?'big':''}" style="background:${bgs[i%bgs.length]}" onclick="playGame('${g.n}')">
+    <div class="tile ${big?'big':''}" style="background:${bgs[i%bgs.length]}" onclick="playGame('${g.n}','${g.url||''}')">
       ${g.hot?`<span class="hot">${g.hot}</span>`:''}
       <span>${g.e}</span>
       <div class="label">${g.n}</div>
@@ -306,7 +307,7 @@
     <div class="rail-tile" style="background:${bgs[i%bgs.length]}" title="${g.n}" onclick="playGame('${g.n}')">${g.e}</div>`
   ).join('');
 
-  function playGame(name){ alert("▶ Opening: "+name+"\n\n(This is where the game page will load.)"); }
+  function playGame(name,url){ if(url){ window.location.href=url; } else { alert("Coming soon: "+name); } }
   function openCat(name){ alert("Opening category: "+name+" Games"); }
   document.querySelector('.big-play').onclick=()=>playGame('Llobi Run');
 </script>

@@ -459,7 +459,7 @@ function renderHearts(){ document.getElementById('hearts').innerHTML=Array.from(
 // ── Mining with timer ─────────────────────────────────────────────
 let mineTarget=null, mineStart=0, miningMs=0, mouseDown=false, mousePos={x:0,y:0};
 canvas.addEventListener('contextmenu',e=>{ e.preventDefault(); if(openModal||!running) return; placeBlock(e.clientX,e.clientY); });
-canvas.addEventListener('mousedown',e=>{ if(openModal) return; if(e.button===2) return; mouseDown=true; startMine(e.clientX,e.clientY); });
+canvas.addEventListener('mousedown',e=>{ if(openModal) return; if(e.button===2) return; if(doAttack(e.clientX,e.clientY)) return; mouseDown=true; startMine(e.clientX,e.clientY); });
 canvas.addEventListener('mouseup',()=>{ mouseDown=false; stopMine(); });
 canvas.addEventListener('mouseleave',()=>{ mouseDown=false; stopMine(); });
 canvas.addEventListener('mousemove',e=>{ if(mouseDown&&!openModal) startMine(e.clientX,e.clientY,true); });
@@ -467,6 +467,36 @@ canvas.addEventListener('touchstart',e=>{ if(openModal) return; e.preventDefault
 canvas.addEventListener('touchend',e=>{ e.preventDefault(); mouseDown=false; stopMine(); },{passive:false});
 canvas.addEventListener('touchcancel',e=>{ mouseDown=false; stopMine(); });
 
+function inRange(tx,ty){
+  var plTX=(pl.x+PW/2)/TS, plTY=(pl.y+PH/2)/TS;
+  var dx=plTX-(tx+.5), dy=plTY-(ty+.5);
+  return Math.sqrt(dx*dx+dy*dy)<=4;
+}
+function weaponDmg(){
+  var h=hotbarTypes[activeSlot]||'';
+  if(h.includes('sword')) return 3;
+  if(h.includes('axe')||h.includes('pick')) return 2;
+  return 1;
+}
+function doAttack(cx,cy){
+  if(!pl||!running) return false;
+  var r=canvas.getBoundingClientRect();
+  var wx=(cx-r.left)*(W/r.width)+camX, wy=(cy-r.top)*(H/r.height)+camY;
+  for(var i=0;i<slimes.length;i++){
+    var s=slimes[i];
+    if(wx>=s.x&&wx<=s.x+s.w&&wy>=s.y&&wy<=s.y+s.h){
+      var sdx=(pl.x+PW/2)-(s.x+13), sdy=(pl.y+PH/2)-(s.y+11);
+      if(Math.sqrt(sdx*sdx+sdy*sdy)>4*TS){ showFloat('Too far! 👊'); return true; }
+      var dmg=weaponDmg();
+      s.hp-=dmg; s.hitFlash=8;
+      s.vx=(pl.x<s.x?1:-1)*4; s.vy=-4;
+      showFloat('-'+dmg+' 💥');
+      if(s.hp<=0){ slimes.splice(i,1); score+=5; showFloat('Slime defeated! ⭐'); }
+      return true;
+    }
+  }
+  return false;
+}
 function startMine(cx,cy,move){
   if(!running) return;
   var r=canvas.getBoundingClientRect();
@@ -474,6 +504,7 @@ function startMine(cx,cy,move){
   var tx=Math.floor((sx+camX)/TS), ty=Math.floor((sy+camY)/TS);
   var t=tileAt(tx,ty);
   if(t===T.AIR||t===T.LEAVES){ if(!move) stopMine(); return; }
+  if(!inRange(tx,ty)){ if(!move) showFloat('Too far! ✋'); stopMine(); return; }
   // Check required tool
   var req=NEED_TOOL[t];
   if(req){
@@ -501,6 +532,7 @@ function placeBlock(cx,cy){
   var ty=Math.floor(((cy-r.top)*(H/r.height)+camY)/TS);
   // Must be an air tile
   if(tileAt(tx,ty)!==T.AIR) return;
+  if(!inRange(tx,ty)){ showFloat('Too far! ✋'); return; }
   // Must be adjacent to at least one solid tile (so blocks float properly)
   var adj=[[tx-1,ty],[tx+1,ty],[tx,ty-1],[tx,ty+1]];
   if(!adj.some(([nx,ny])=>solid(tileAt(nx,ny)))) return;
@@ -538,7 +570,7 @@ function spawnSlimes(){
   [30,45,60,75,90].forEach(ax=>{
     ax=Math.min(ax,WW-2); var sy=SKY;
     for(let y=0;y<WH;y++) if(world[y][ax]===T.GRASS){sy=y;break;}
-    slimes.push({x:ax*TS,y:(sy-1)*TS,vx:0,vy:0,dir:1,wf:0,w:26,h:22,onG:false});
+    slimes.push({x:ax*TS,y:(sy-1)*TS,vx:0,vy:0,dir:1,wf:0,w:26,h:22,onG:false,hp:3,maxHp:3,hitFlash:0,dead:false});
   });
 }
 
@@ -725,6 +757,7 @@ function update(){
 
   // Slimes
   slimes.forEach(s=>{
+    if(s.hitFlash>0) s.hitFlash--;
     s.vx=s.dir*1.4; s.wf=(s.wf+.1)%2; s.w=26; s.h=22; pX(s); pY(s);
     var nx=Math.floor((s.x+(s.dir>0?s.w+2:-3))/TS), ny=Math.floor((s.y+s.h+2)/TS);
     if(!solid(tileAt(nx,ny))||solid(tileAt(Math.floor((s.x+13)/TS),Math.floor(s.y/TS)))) s.dir*=-1;
@@ -894,10 +927,13 @@ function drawAnimal(a){
 function drawSlime(s){
   var sx=s.x-camX, sy=s.y-camY, bob=Math.sin(s.wf*Math.PI)*3;
   ctx.save(); ctx.translate(sx,sy);
+  if(s.hitFlash>0){ ctx.globalAlpha=0.6; ctx.fillStyle='#ff3333'; ctx.beginPath(); ctx.ellipse(13,11+bob,13,9,0,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1; }
   ctx.fillStyle='#44bb33'; ctx.beginPath(); ctx.ellipse(13,11+bob,13,9,0,0,Math.PI*2); ctx.fill();
   ctx.fillStyle='#77dd55'; ctx.beginPath(); ctx.ellipse(11,7+bob,8,6,0,0,Math.PI*2); ctx.fill();
   ctx.fillStyle='#000'; ctx.fillRect(5,7+bob,4,4); ctx.fillRect(15,7+bob,4,4);
   ctx.fillStyle='#fff'; ctx.fillRect(6,7+bob,2,2); ctx.fillRect(16,7+bob,2,2);
+  // Health bar
+  if(s.hp<s.maxHp){ ctx.fillStyle='#333'; ctx.fillRect(0,-6,26,4); ctx.fillStyle='#44ee22'; ctx.fillRect(0,-6,26*(s.hp/s.maxHp),4); }
   ctx.restore();
 }
 

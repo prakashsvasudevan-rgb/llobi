@@ -492,58 +492,65 @@ function draw(){
   ctx.fillStyle='#3a9a33'; ctx.fillRect(0,H*.48,W,H*.06);
 
   spriteQueue=[];
-  var camZ=(playerPos%SEG_L)/SEG_L*SEG_L; // offset within current segment
-  var x=0, dx=0, prevY=H, cumH=0;
+  var camFrac=(playerPos%SEG_L)/SEG_L; // fractional offset within current segment
 
-  // Draw segments back to front
+  // Pre-compute curve offsets: from near (n=0) to far (n=DRAW-1)
+  var xOff=new Array(DRAW+1).fill(0);
+  {var xi=0,dxi=0;
+   for(var k=0;k<DRAW;k++){
+     var si=(Math.floor(playerPos/SEG_L)+k)%TOTAL_SEGS;
+     dxi+=segments[si].curve; xi+=dxi; xOff[k+1]=xi;
+   }
+  }
+
+  // Draw segments back to front (far=DRAW-1 first, near=0 last)
   for(var n=DRAW-1;n>=0;n--){
     var segIdx=(Math.floor(playerPos/SEG_L)+n)%TOTAL_SEGS;
     var seg=segments[segIdx];
-    var worldZ=(n+1)*SEG_L-camZ;
-    var worldZNext=n*SEG_L-camZ;
-    if(worldZNext<=0) continue;
 
-    // Project both edges
-    var scale1=CAM_DEPTH/worldZ;
-    var scale2=CAM_DEPTH/worldZNext;
+    // World-space depth of this strip's two edges
+    var zFar  = ((n+1)-camFrac)*SEG_L;
+    var zNear = (n    -camFrac)*SEG_L;
+    if(zFar<=0) continue;
+    if(zNear<=0) zNear=0.5;
 
-    // Screen Y using perspective
-    var cy1=H*.5-(scale1*CAM_H*H/2);
-    var cy2=H*.5-(scale2*CAM_H*H/2);
-    if(cy2>=prevY) continue; // hidden behind hill
-    prevY=cy2;
+    var scaleFar =CAM_DEPTH/zFar;
+    var scaleNear=CAM_DEPTH/zNear;
 
-    // Width
-    var w1=scale1*ROAD_W*W*.5;
-    var w2=scale2*ROAD_W*W*.5;
+    // Screen Y: camera is above road so road is BELOW center (+ sign)
+    var yFar =H/2+scaleFar *CAM_H*H/2; // top of this strip (far, smaller y)
+    var yNear=H/2+scaleNear*CAM_H*H/2; // bottom of strip (near, larger y)
+    if(yFar>=H) continue; // strip entirely off screen bottom
+    yNear=Math.min(yNear,H);
 
-    // Curve accumulates a lateral offset (road bends)
-    var cx1=W/2 - x*scale1*W*.5 - playerX*(W*.28);
-    dx+=seg.curve;
-    x+=dx;
-    var cx2=W/2 - x*scale2*W*.5 - playerX*(W*.28);
+    // Road width in pixels
+    var wFar =scaleFar *ROAD_W*W/2;
+    var wNear=scaleNear*ROAD_W*W/2;
+
+    // Road center X: n=0 (near) uses xOff[0]=0 (centered), far uses accumulated curve
+    var cxFar =W/2 - xOff[n+1]*scaleFar *W*.5 - playerX*(W*.28);
+    var cxNear=W/2 - xOff[n]  *scaleNear*W*.5 - playerX*(W*.28);
 
     var isStart=segIdx<4||segIdx>TOTAL_SEGS-4;
-    drawSegment(cx1,cy1,w1, cx2,cy2,w2, seg.alt, (Math.floor(segIdx/2)%2===0), isStart);
+    // drawSegment(bottomX,bottomY,bottomW, topX,topY,topW, ...)
+    drawSegment(cxNear,yNear,wNear, cxFar,yFar,wFar, seg.alt, (Math.floor(segIdx/2)%2===0), isStart);
 
-    // Queue sprites
+    // Queue sprites at near (bottom) edge
+    var sprY=Math.min(yNear,H);
     if(seg.cars.length>0){
       seg.cars.forEach(c=>{
-        var sx=cx2+c.x*w2;
-        spriteQueue.push({type:'car',x:sx,y:cy2,scale:scale2*.6,col:c.col,z:worldZNext});
+        var sx=cxNear+c.x*wNear;
+        spriteQueue.push({type:'car',x:sx,y:sprY,scale:scaleNear*.55,col:c.col,z:zNear});
       });
     }
     if(seg.boost&&!seg.boost.collected){
-      var bx=cx2+seg.boost.x*w2;
-      spriteQueue.push({type:'boost',x:bx,y:cy2,scale:scale2*.5,z:worldZNext});
+      var bx=cxNear+seg.boost.x*wNear;
+      spriteQueue.push({type:'boost',x:bx,y:sprY,scale:scaleNear*.45,z:zNear});
     }
-    // Roadside trees (every 4th segment in draw range)
     if(n%4===0){
       var side=(Math.floor((playerPos/SEG_L+n)/4)%2?-1:1);
-      var treeX=cx2+side*(w2*.82+20*scale2);
-      spriteQueue.push({type:'tree',x:treeX,y:cy2,scale:scale2*.7,z:worldZNext});
-      var treeX2=cx2+(-side)*(w2*.9+40*scale2);
-      spriteQueue.push({type:'tree',x:treeX2,y:cy2,scale:scale2*.65,z:worldZNext});
+      spriteQueue.push({type:'tree',x:cxNear+side*(wNear*.82+20*scaleNear),y:sprY,scale:scaleNear*.65,z:zNear});
+      spriteQueue.push({type:'tree',x:cxNear+(-side)*(wNear*.9+40*scaleNear),y:sprY,scale:scaleNear*.6,z:zNear});
     }
   }
 

@@ -453,9 +453,11 @@ function renderHearts(){ document.getElementById('hearts').innerHTML=Array.from(
 let mineTarget=null, mineStart=0, miningMs=0, mouseDown=false, mousePos={x:0,y:0};
 canvas.addEventListener('mousedown',e=>{ if(openModal) return; mouseDown=true; startMine(e.clientX,e.clientY); });
 canvas.addEventListener('mouseup',()=>{ mouseDown=false; stopMine(); });
+canvas.addEventListener('mouseleave',()=>{ mouseDown=false; stopMine(); });
 canvas.addEventListener('mousemove',e=>{ if(mouseDown&&!openModal) startMine(e.clientX,e.clientY,true); });
 canvas.addEventListener('touchstart',e=>{ if(openModal) return; e.preventDefault(); mouseDown=true; startMine(e.touches[0].clientX,e.touches[0].clientY); },{passive:false});
 canvas.addEventListener('touchend',e=>{ e.preventDefault(); mouseDown=false; stopMine(); },{passive:false});
+canvas.addEventListener('touchcancel',e=>{ mouseDown=false; stopMine(); });
 
 function startMine(cx,cy,move){
   if(!running) return;
@@ -669,10 +671,12 @@ function update(){
     moveMineBar(mineTarget.tx,mineTarget.ty);
     if(pct>=1){
       var mtx=mineTarget.tx, mty=mineTarget.ty, mt=mineTarget.t;
-      stopMine(); // clear target BEFORE modifying world to prevent stale ref
-      if(world[mty]&&world[mty][mtx]!==T.AIR){
+      mouseDown=false; // release so mouse-hold doesn't chain to next block
+      stopMine();      // clear target BEFORE modifying world
+      if(world[mty]&&world[mty][mtx]!==undefined&&world[mty][mtx]!==T.AIR){
         world[mty][mtx]=T.AIR;
-        var d=TILE_DROP[mt]; if(d){addItem(d,1);score++;showFloat((ITEMS[d]?.icon||'')+' +1');}
+        var d=TILE_DROP[mt];
+        if(d){ addItem(d,1); score++; showFloat((ITEMS[d]?.icon||'')+' +1'); }
       }
     }
   }
@@ -862,7 +866,11 @@ document.getElementById('mj').addEventListener('touchstart',e=>{e.preventDefault
 
 // ── Loop ─────────────────────────────────────────────────────────
 let animId;
-function loop(){ update(); draw(); animId=requestAnimationFrame(loop); }
+function loop(){
+  animId=requestAnimationFrame(loop); // schedule FIRST so a crash never stops the game
+  try{ update(); } catch(e){ console.error('update error:',e); }
+  try{ draw(); } catch(e){ console.error('draw error:',e); }
+}
 function endGame(){ running=false; cancelAnimationFrame(animId); document.getElementById('finalScore').innerText=score; document.getElementById('deadOv').classList.remove('hidden'); }
 function startGame(){
   ['startOv','deadOv'].forEach(id=>document.getElementById(id).classList.add('hidden'));

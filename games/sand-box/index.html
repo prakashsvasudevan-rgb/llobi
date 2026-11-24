@@ -70,13 +70,14 @@ const ACID=13,GUNPOWDER=14,CLONER=15,VOID=16,WALL=17,RUIN=18,CONCRETE=19,TERRACO
 const GOLD=21,SILVER=22,MERCURY=23,IRON=24,STEEL=25;
 const SEED=26,CACTUS=27,PALM=28,CORN=29,APPLE_T=30,ORANGE_T=31,PAPAYA_T=32;
 const BOMB=33,FAN=34,HEATER=35,COOLER=36,BASALT=37;
-const DRAGON=40,TIGER=41,SHEEP=42,HUMAN=43,FISH=44,RAT=45,FLEA=46,FIRE_DRAGON=48;
-const ANIMAL_IDS=new Set([DRAGON,TIGER,SHEEP,HUMAN,FISH,RAT,FLEA,FIRE_DRAGON]);
+const DRAGON=40,TIGER=41,SHEEP=42,HUMAN=43,FISH=44,RAT=45,FLEA=46,FIRE_DRAGON=48,EARTH_DRAGON=49;
+const ANIMAL_IDS=new Set([DRAGON,TIGER,SHEEP,HUMAN,FISH,RAT,FLEA,FIRE_DRAGON,EARTH_DRAGON]);
 
 // Animal sprite sizes in pixels
 const A_SIZE={
   [DRAGON]:{w:10*CELL,h:8*CELL},  // wyvern — biggest
-  [FIRE_DRAGON]:{w:11*CELL,h:7*CELL}, // fire dragon
+  [FIRE_DRAGON]:{w:11*CELL,h:7*CELL},
+  [EARTH_DRAGON]:{w:12*CELL,h:9*CELL}, // earth dragon — biggest, 4-legged
   [TIGER]: {w:7*CELL,h:4*CELL},
   [SHEEP]: {w:5*CELL,h:4*CELL},
   [HUMAN]: {w:3*CELL,h:7*CELL},  // tall
@@ -125,6 +126,7 @@ const ELEM={
   [BASALT]:  {name:'Basalt',  color:'#2D2D2D',colors:['#2D2D2D','#222','#383838'],fl:false},
   [DRAGON]:  {name:'Wyvern',  color:'#9B0057',colors:['#9B0057'],animal:true},
   [FIRE_DRAGON]:{name:'FireDrgn',color:'#FF1A00',colors:['#FF1A00'],animal:true},
+  [EARTH_DRAGON]:{name:'EarthDrg',color:'#1B5E20',colors:['#1B5E20'],animal:true},
   [TIGER]:   {name:'Tiger',   color:'#E65100',colors:['#E65100'],animal:true},
   [SHEEP]:   {name:'Sheep',   color:'#F5F5F5',colors:['#F5F5F5'],animal:true},
   [HUMAN]:   {name:'Human',   color:'#FFCCBC',colors:['#FFCCBC'],animal:true},
@@ -132,7 +134,7 @@ const ELEM={
   [RAT]:     {name:'Rat',     color:'#78909C',colors:['#78909C'],animal:true},
   [FLEA]:    {name:'Flea',    color:'#9C27B0',colors:['#9C27B0'],animal:true},
 };
-const A_EMOJI={[DRAGON]:'🐲',[TIGER]:'🐯',[SHEEP]:'🐑',[HUMAN]:'🧑',[FISH]:'🐟',[RAT]:'🐀',[FLEA]:'🦗',[FIRE_DRAGON]:'🐉'};
+const A_EMOJI={[DRAGON]:'🐲',[TIGER]:'🐯',[SHEEP]:'🐑',[HUMAN]:'🧑',[FISH]:'🐟',[RAT]:'🐀',[FLEA]:'🦗',[FIRE_DRAGON]:'🐉',[EARTH_DRAGON]:'🦎'};
 const A_PRED={[SHEEP]:new Set([DRAGON,TIGER,FIRE_DRAGON]),[HUMAN]:new Set([DRAGON,TIGER,FIRE_DRAGON]),[RAT]:new Set([TIGER,HUMAN,FIRE_DRAGON]),[FISH]:new Set([TIGER]),[FLEA]:new Set([DRAGON,TIGER,FIRE_DRAGON])};
 const A_PREY={[DRAGON]:new Set([HUMAN,SHEEP,RAT]),[TIGER]:new Set([SHEEP,HUMAN,RAT,FISH]),[FIRE_DRAGON]:new Set([HUMAN,SHEEP,RAT,FLEA])};
 const CATS=[
@@ -140,7 +142,7 @@ const CATS=[
   {name:'🧱 Material',  ids:[STONE,WALL,WOOD,CONCRETE,TERRACOTTA,RUIN,ICE,ASH]},
   {name:'🔩 Metal',     ids:[GOLD,SILVER,MERCURY,IRON,STEEL]},
   {name:'🌿 Plants',    ids:[SEED,PLANT,CACTUS,PALM,CORN,APPLE_T,ORANGE_T,PAPAYA_T]},
-  {name:'🦁 Animals',   ids:[DRAGON,FIRE_DRAGON,TIGER,SHEEP,HUMAN,FISH,RAT,FLEA]},
+  {name:'🦁 Animals',   ids:[DRAGON,FIRE_DRAGON,EARTH_DRAGON,TIGER,SHEEP,HUMAN,FISH,RAT,FLEA]},
   {name:'💥 Disasters', ids:[FIRE,LAVA,ACID,GUNPOWDER,BOMB,VOID]},
   {name:'⚙️ Machines',  ids:[CLONER,FAN,HEATER,COOLER]},
 ];
@@ -335,6 +337,23 @@ function uAnimals(){
         else if(nearPrey&&nyDist<250){a.vx=(nearPrey.x>a.x?1:-1)*2.8;if(nyDist<60&&Math.random()<.08){for(let fi=1;fi<=3;fi++){const fx=cx+(a.vx>0?fi:-fi);if(inB(fx,cy))set(fx,cy,FIRE);}}}
         else{a.vx=a.dir*1.6;if(a.timer%100===0)a.dir=-a.dir;}
         if(onGround&&Math.random()<.004)a.vy=-3.5;break;
+      case EARTH_DRAGON: // peaceful grazer — only attacks when disturbed
+        if(!a.state)a.state='peace';
+        // detect threat: any animal within 80px angers it
+        if(npDist<80&&nearPred)a.state='angry';
+        else if(npDist>160)a.state='peace';
+        if(a.state==='angry'){
+          // launch boulders in direction of threat
+          if(Math.random()<.04&&nearPred){
+            const bdir=nearPred.x>a.x?1:-1;
+            for(let bi=2;bi<=5;bi++){const bx=cx+bdir*bi,by=cy-1;if(inB(bx,by)&&!get(bx,by)){set(bx,by,STONE,80+Math.random()*30|0,75+Math.random()*25|0,70+Math.random()*20|0);}}
+          }
+          a.vx=a.dir*1.5;
+        } else {
+          // peaceful slow wander
+          a.vx=a.dir*0.6;if(a.timer%180===0)a.dir=-a.dir;
+        }
+        if(onGround&&a.state==='angry'&&Math.random()<.01)a.vy=-3;break;
       case TIGER:
         if(nearPred&&npDist<100){a.vx=-(nearPred.x>a.x?1:-1)*3.2;if(onGround)a.vy=-5.5;}
         else if(nearPrey&&nyDist<200){a.vx=(nearPrey.x>a.x?1:-1)*3.8;if(nyDist<14)nearPrey.hp-=0.2;}
@@ -387,6 +406,7 @@ function drawAnimal(a){
   switch(a.type){
     case DRAGON: drawWyvern(W,H,f); break;
     case FIRE_DRAGON: drawFireDragon(W,H,f); break;
+    case EARTH_DRAGON: drawEarthDragon(W,H,f,a.state==='angry'); break;
     case TIGER:  drawTiger(W,H,f); break;
     case SHEEP:  drawSheep(W,H,f); break;
     case HUMAN:  drawHuman(W,H,f); break;
@@ -539,6 +559,70 @@ function drawFireDragon(W,H,f){
   const ts=Math.sin(f*Math.PI/2)*H*.05;
   ctx.strokeStyle='#CC2200';ctx.lineWidth=C*.85;ctx.lineCap='round';
   ctx.beginPath();ctx.moveTo(W*.2,H*.65);ctx.bezierCurveTo(W*.05,H*.7+ts,W*.02,H*.85,W*.1,H*.95);ctx.stroke();
+}
+
+// ── Earth Dragon (green, 4-legged, long neck, wing, peaceful/angry states) ──
+function drawEarthDragon(W,H,f,angry){
+  const C=CELL;
+  // tail curls left behind body, animated
+  const ts=Math.sin(f*Math.PI/2)*H*.04;
+  ctx.strokeStyle='#1B5E20';ctx.lineWidth=C*1.1;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(W*.18,H*.72);ctx.bezierCurveTo(W*.05,H*.75+ts,W*.02,H*.9,W*.1,H*.97);ctx.stroke();
+  // folded wing on left side (dark green)
+  ctx.fillStyle='#1A4A1A';
+  const wFlap=f<2?-H*.08:0;
+  ctx.beginPath();ctx.moveTo(W*.28,H*.35);ctx.bezierCurveTo(W*.05,H*.2+wFlap,W*.02,H*.4+wFlap,W*.18,H*.55);ctx.bezierCurveTo(W*.24,H*.6,W*.3,H*.55,W*.28,H*.45);ctx.closePath();ctx.fill();
+  // Wing highlight
+  ctx.fillStyle='#2E7D32';
+  ctx.beginPath();ctx.moveTo(W*.28,H*.37);ctx.bezierCurveTo(W*.1,H*.25+wFlap,W*.07,H*.4+wFlap,W*.2,H*.52);ctx.bezierCurveTo(W*.25,H*.56,W*.3,H*.5,W*.28,H*.43);ctx.closePath();ctx.fill();
+  // body
+  ctx.fillStyle='#2E7D32';
+  ctx.beginPath();ctx.ellipse(W*.48,H*.65,W*.28,H*.22,0,0,Math.PI*2);ctx.fill();
+  // yellow-green belly
+  ctx.fillStyle='#8BC34A';
+  ctx.beginPath();ctx.ellipse(W*.48,H*.7,W*.16,H*.14,0,0,Math.PI*2);ctx.fill();
+  // belly scales
+  ctx.fillStyle='#9CCC65';
+  for(let i=0;i<3;i++){ctx.beginPath();ctx.arc(W*.36+i*W*.11,H*.72,C*.5,0,Math.PI,true);ctx.fill();}
+  // back spines (dark)
+  ctx.fillStyle='#1A3A1A';
+  for(let i=0;i<4;i++){const sx=W*.3+i*W*.1;ctx.beginPath();ctx.moveTo(sx,H*.5);ctx.lineTo(sx+W*.04,H*.38);ctx.lineTo(sx+W*.08,H*.5);ctx.fill();}
+  // long neck
+  ctx.fillStyle='#2E7D32';
+  ctx.beginPath();ctx.ellipse(W*.72,H*.44,W*.1,H*.22,0.5,0,Math.PI*2);ctx.fill();
+  // head
+  ctx.fillStyle='#388E3C';
+  ctx.beginPath();ctx.ellipse(W*.83,H*.3,W*.16,H*.18,0.15,0,Math.PI*2);ctx.fill();
+  // horn tips (brown, like pixel art)
+  ctx.fillStyle='#795548';
+  ctx.beginPath();ctx.moveTo(W*.78,H*.14);ctx.lineTo(W*.74,H*.03);ctx.lineTo(W*.83,H*.16);ctx.fill();
+  ctx.beginPath();ctx.moveTo(W*.88,H*.12);ctx.lineTo(W*.85,H*.01);ctx.lineTo(W*.93,H*.14);ctx.fill();
+  // snout
+  const jaw=angry&&f%2===1?H*.04:0;
+  ctx.fillStyle='#2E7D32';
+  ctx.beginPath();ctx.ellipse(W*.95,H*.35+jaw*.4,W*.07,H*.09+jaw,0.2,0,Math.PI*2);ctx.fill();
+  // teeth (small, only visible when angry/open)
+  if(angry){ctx.fillStyle='#fff';ctx.fillRect(W*.9,H*.38+jaw,C*.3,C*.5);ctx.fillRect(W*.95,H*.38+jaw,C*.3,C*.5);}
+  // eye — yellow square (like pixel art)
+  ctx.fillStyle=angry?'#FF6F00':'#FFD600';
+  ctx.fillRect(W*.86,H*.25,C*.7,C*.7);
+  ctx.fillStyle='#000';ctx.fillRect(W*.88,H*.27,C*.3,C*.5);
+  // 4 legs with brown claws
+  const lf=f%2===0?C*.7:-C*.7;
+  ctx.fillStyle='#2E7D32';
+  ctx.fillRect(W*.28,H*.8,C*.75,H*.18+lf);ctx.fillRect(W*.42,H*.8,C*.75,H*.18-lf);
+  ctx.fillRect(W*.58,H*.8,C*.75,H*.18+lf);ctx.fillRect(W*.72,H*.8,C*.75,H*.18-lf);
+  // brown feet
+  ctx.fillStyle='#795548';
+  ctx.fillRect(W*.26,H*.8+H*.18+lf,C*.9,C*.5);ctx.fillRect(W*.28,H*.8+H*.18+lf,C*.3,C*.65);ctx.fillRect(W*.35,H*.8+H*.18+lf,C*.3,C*.65);
+  ctx.fillRect(W*.4,H*.8+H*.18-lf,C*.9,C*.5);ctx.fillRect(W*.42,H*.8+H*.18-lf,C*.3,C*.65);ctx.fillRect(W*.49,H*.8+H*.18-lf,C*.3,C*.65);
+  ctx.fillRect(W*.56,H*.8+H*.18+lf,C*.9,C*.5);ctx.fillRect(W*.58,H*.8+H*.18+lf,C*.3,C*.65);ctx.fillRect(W*.65,H*.8+H*.18+lf,C*.3,C*.65);
+  ctx.fillRect(W*.7,H*.8+H*.18-lf,C*.9,C*.5);ctx.fillRect(W*.72,H*.8+H*.18-lf,C*.3,C*.65);ctx.fillRect(W*.79,H*.8+H*.18-lf,C*.3,C*.65);
+  // angry indicator: rumble lines around body
+  if(angry){
+    ctx.strokeStyle='rgba(139,195,74,.7)';ctx.lineWidth=C*.4;
+    for(let i=0;i<3;i++){ctx.beginPath();ctx.arc(W*.48,H*.65,W*.32+i*C,0,Math.PI*2);ctx.stroke();}
+  }
 }
 
 function drawTiger(W,H,f){

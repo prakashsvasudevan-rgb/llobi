@@ -462,25 +462,29 @@ function uAnimals(){
           }
         } else{a.vx=a.dir*2;if(a.timer%90===0)a.dir=-a.dir;}
         break;
-      case SOUL_DRAGON: // FLIES, breathes blue fire when prey nearby
+      case SOUL_DRAGON: // walks normally, takes off to fly when hunting/fleeing
         a.breathing=false;
-        a.vy+=-0.2;
-        if(a.y>rows*CELL*.82)a.vy-=0.6;
-        if(a.y<rows*CELL*.12)a.vy+=0.4;
-        a.vy=Math.max(-5,Math.min(5,a.vy));
-        if(nearPred&&npDist<110){a.vx=-(nearPred.x>a.x?1:-1)*2.8;a.vy=-3;}
+        if(nearPred&&npDist<120){a.vx=-(nearPred.x>a.x?1:-1)*2.5;if(onGround)a.vy=-5;} // leap away
         else if(nearPrey&&nyDist<220){
           a.vx=(nearPrey.x>a.x?1:-1)*2.8;
+          if(!onGround)a.vy+=-0.15; // hover to chase airborne prey
           if(nyDist<80){a.breathing=true;if(Math.random()<.1){const fd=a.vx>0?1:-1;for(let fi=1;fi<=4;fi++){const fx=cx+fd*fi;if(inB(fx,cy))set(fx,cy,BLUE_FIRE);}}}
-        } else{a.vx=a.dir*2;if(a.timer%100===0)a.dir=-a.dir;}
+        } else {
+          a.vx=a.dir*1.8;if(a.timer%110===0)a.dir=-a.dir;
+          if(onGround&&Math.random()<.004)a.vy=-5; // occasional leap
+        }
         break;
-      case SUN_DRAGON: // WALKS on ground, shoots LIGHT rays when attacking
+      case SUN_DRAGON: // walks normally, takes off to fly when hunting/fleeing
         a.breathing=false;
-        if(nearPred&&npDist<120){a.vx=-(nearPred.x>a.x?1:-1)*2.5;if(onGround)a.vy=-4;}
+        if(nearPred&&npDist<120){a.vx=-(nearPred.x>a.x?1:-1)*2.5;if(onGround)a.vy=-5;} // leap away
         else if(nearPrey&&nyDist<240){
           a.vx=(nearPrey.x>a.x?1:-1)*3.0;
+          if(!onGround)a.vy+=-0.15; // hover when airborne
           if(nyDist<90){a.breathing=true;if(Math.random()<.15){const fd=a.vx>0?1:-1;const lx=cx+fd*2;if(inB(lx,cy)){set(lx,cy,LIGHT);color[idx(lx,cy)*3]=fd>0?200:50;}}}
-        } else{a.vx=a.dir*2.5;if(a.timer%80===0)a.dir=-a.dir;}
+        } else {
+          a.vx=a.dir*2.2;if(a.timer%90===0)a.dir=-a.dir;
+          if(onGround&&Math.random()<.004)a.vy=-5; // occasional leap
+        }
         break;
       case EARTH_DRAGON: // peaceful — attacks when ANY animal comes within 80px
         if(!a.state)a.state='peace';
@@ -567,8 +571,8 @@ function drawAnimal(a){
     case DRAGON:      drawWyvern(W,H,f,a.breathing,resting); break;
     case FIRE_DRAGON: drawFireDragon(W,H,f,a.breathing,resting); break;
     case EARTH_DRAGON: drawEarthDragon(W,H,f,a.state==='angry',resting); break;
-    case SOUL_DRAGON:  drawSoulDragon(W,H,f,a.breathing,resting); break;
-    case SUN_DRAGON:   drawSunDragon(W,H,f,a.breathing,resting); break;
+    case SOUL_DRAGON:  {const fly=Math.abs(a.vy)>0.5||!isSolid(Math.round(a.x/CELL),Math.round(a.y/CELL)+1);drawSoulDragon(W,H,f,a.breathing,resting,fly);} break;
+    case SUN_DRAGON:   {const fly=Math.abs(a.vy)>0.5||!isSolid(Math.round(a.x/CELL),Math.round(a.y/CELL)+1);drawSunDragon(W,H,f,a.breathing,resting,fly);} break;
     case TIGER:  drawTiger(W,H,f,resting); break;
     case SHEEP:  drawSheep(W,H,f,resting); break;
     case HUMAN:  drawHuman(W,H,f,resting); break;
@@ -796,12 +800,11 @@ function drawEarthDragon(W,H,f,angry,resting){
   }
 }
 
-function drawSoulDragon(W,H,f,breathing,resting){
+function drawSoulDragon(W,H,f,breathing,resting,flying){
   const C=CELL;
-  // Soul dragon FLIES — smooth hover bob
-  const bodyBob=resting?Math.sin(f*Math.PI/2)*H*.01:[-H*.04,-H*.02,H*.02,H*.04][f];
-  // Use DOM-animated GIF so browser keeps frames running
-  drawGifNoBackground(soulGifImg,0,bodyBob,W,H,76,99,114,35);
+  // Walk on ground or hover-bob when airborne
+  const bob=flying?[-H*.04,-H*.02,H*.02,H*.04][f]:(resting?Math.sin(f*Math.PI/2)*H*.008:[H*.03,0,H*.03,0][f]);
+  drawGifNoBackground(soulGifImg,0,bob,W,H,76,99,114,35);
 
   // ── Blue fire breath (only when attacking) ──
   if(breathing){
@@ -819,12 +822,10 @@ function drawSoulDragon(W,H,f,breathing,resting){
   }
 }
 
-function drawSunDragon(W,H,f,breathing,resting){
+function drawSunDragon(W,H,f,breathing,resting,flying){
   const C=CELL;
-  // Sun dragon WALKS — step bob
-  const stepBob=resting?Math.sin(f*Math.PI/2)*H*.008:[H*.03,0,H*.03,0][f];
-  // Use DOM-animated GIF
-  drawGifNoBackground(sunGifImg,0,stepBob,W,H,160,190,207,45);
+  const bob=flying?[-H*.04,-H*.02,H*.02,H*.04][f]:(resting?Math.sin(f*Math.PI/2)*H*.008:[H*.03,0,H*.03,0][f]);
+  drawGifNoBackground(sunGifImg,0,bob,W,H,160,190,207,45);
 
   // ── Light ray (only when attacking) ──
   if(breathing){

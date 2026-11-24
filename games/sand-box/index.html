@@ -67,7 +67,7 @@ body{background:#111;display:flex;flex-direction:column;align-items:center;justi
 <script>
 // ── Constants ──────────────────────────────────────────────────────────────
 const CELL = 4;
-const EMPTY=0,SAND=1,WATER=2,FIRE=3,STONE=4,WOOD=5,LAVA=6,ICE=7,SMOKE=8,PLANT=9,OIL=10,STEAM=11,ASH=12;
+const EMPTY=0,SAND=1,WATER=2,FIRE=3,STONE=4,WOOD=5,LAVA=6,ICE=7,SMOKE=8,PLANT=9,OIL=10,STEAM=11,ASH=12,ACID=13,GUNPOWDER=14,CLONER=15,VOID=16;
 
 const ELEMENTS=[
   {id:SAND,  name:'Sand',  color:'#E8C87A',colors:['#E8C87A','#D4A853','#F0D090'],gravity:true,  liquid:false,hot:false,burns:false,flammable:false},
@@ -79,7 +79,11 @@ const ELEMENTS=[
   {id:ICE,   name:'Ice',   color:'#B0E0FF',colors:['#B0E0FF','#A0D4F5','#C5EAFF'],gravity:false, liquid:false,hot:false,burns:false,flammable:false},
   {id:SMOKE, name:'Smoke', color:'#888',   colors:['#888','#777','#999'],          gravity:false, liquid:false,hot:false,burns:false,flammable:false},
   {id:PLANT, name:'Plant', color:'#4CAF50',colors:['#4CAF50','#388E3C','#66BB6A'],gravity:false, liquid:false,hot:false,burns:false,flammable:true},
-  {id:OIL,   name:'Oil',   color:'#5D4037',colors:['#5D4037','#4E342E','#6D4C41'],gravity:true,  liquid:true, hot:false,burns:false,flammable:true},
+  {id:OIL,       name:'Oil',   color:'#5D4037',colors:['#5D4037','#4E342E','#6D4C41'],gravity:true, liquid:true, hot:false,burns:false,flammable:true},
+  {id:ACID,      name:'Acid',  color:'#A8FF3E',colors:['#A8FF3E','#88DD20','#C0FF60'],gravity:true, liquid:true, hot:false,burns:false,flammable:false},
+  {id:GUNPOWDER, name:'Powder',color:'#C0A060',colors:['#C0A060','#B09050','#D0B070'],gravity:true, liquid:false,hot:false,burns:false,flammable:true},
+  {id:CLONER,    name:'Cloner',color:'#FF69B4',colors:['#FF69B4','#FF1493','#FF85C2'],gravity:false,liquid:false,hot:false,burns:false,flammable:false},
+  {id:VOID,      name:'Void',  color:'#2a0a2a',colors:['#2a0a2a','#1a001a','#3a103a'],gravity:false,liquid:false,hot:false,burns:false,flammable:false},
 ];
 
 // ── Globals ────────────────────────────────────────────────────────────────
@@ -213,7 +217,11 @@ function simulate(){
         case PLANT: updatePlant(x,y); break;
         case OIL: updateOil(x,y); break;
         case ICE: updateIce(x,y); break;
-        case ASH: updateAsh(x,y); break;
+        case ASH:        updateAsh(x,y);        break;
+        case ACID:       updateAcid(x,y);       break;
+        case GUNPOWDER:  updateGunpowder(x,y);  break;
+        case CLONER:     updateCloner(x,y);      break;
+        case VOID:       updateVoid(x,y);        break;
       }
     }
   }
@@ -408,6 +416,117 @@ function updateAsh(x,y){
   }
 }
 
+function updateAcid(x,y){
+  const i=idx(x,y);
+  life[i]++;
+  // acid dissolves almost everything it touches (not stone, not void, not cloner)
+  const nbrs=[[0,1],[-1,0],[1,0],[0,-1]];
+  const immune=new Set([EMPTY,ACID,STONE,CLONER,VOID]);
+  for(const [dx,dy] of nbrs){
+    const nx=x+dx,ny=y+dy;
+    if(!inBounds(nx,ny))continue;
+    const nt=get(nx,ny);
+    if(!immune.has(nt)&&Math.random()<.04){
+      // dissolve neighbour — produce smoke bubble
+      set(nx,ny,SMOKE,120,180,80,0);
+      simBuf[idx(nx,ny)]=1;
+      // acid weakens too
+      if(Math.random()<.3){clear(x,y);return;}
+    }
+  }
+  // flows like water
+  if(y<rows-1&&get(x,y+1)===EMPTY){swap(x,y,x,y+1);return;}
+  const d=Math.random()<.5?1:-1;
+  const steps=Math.floor(Math.random()*3)+1;
+  for(let s=1;s<=steps;s++){
+    if(get(x+d*s,y)===EMPTY){swap(x,y,x+d*s,y);return;}
+    if(get(x+d*s,y)!==EMPTY&&get(x+d*s,y)!==ACID)break;
+  }
+  if(get(x-d,y)===EMPTY){swap(x,y,x-d,y);}
+  // slowly evaporates
+  if(life[i]>200+Math.random()*200){clear(x,y);}
+}
+
+function updateGunpowder(x,y){
+  const i=idx(x,y);
+  // falls like sand
+  if(y<rows-1){
+    const below=get(x,y+1);
+    if(below===EMPTY){swap(x,y,x,y+1);return;}
+    if(below===WATER||below===ACID){swap(x,y,x,y+1);return;}
+    const d=Math.random()<.5?1:-1;
+    if(get(x+d,y+1)===EMPTY){swap(x,y,x+d,y+1);return;}
+    if(get(x-d,y+1)===EMPTY){swap(x,y,x-d,y+1);return;}
+  }
+  // ignite near fire/lava — chain EXPLOSION
+  const nbrs=[[0,-1],[0,1],[-1,0],[1,0],[-1,-1],[1,-1],[-1,1],[1,1]];
+  for(const [dx,dy] of nbrs){
+    const nx=x+dx,ny=y+dy;
+    if(!inBounds(nx,ny))continue;
+    const nt=get(nx,ny);
+    if(nt===FIRE||nt===LAVA){
+      // explode: blast radius clears area and spawns fire
+      const R=6+Math.random()*4|0;
+      for(let ey=-R;ey<=R;ey++){
+        for(let ex=-R;ex<=R;ex++){
+          if(ex*ex+ey*ey>R*R)continue;
+          const bx=x+ex,by=y+ey;
+          if(!inBounds(bx,by))continue;
+          const bt=get(bx,by);
+          if(bt===STONE||bt===CLONER||bt===VOID)continue;
+          if(Math.random()<.6) set(bx,by,FIRE);
+          else clear(bx,by);
+          if(simBuf) simBuf[idx(bx,by)]=1;
+        }
+      }
+      return;
+    }
+  }
+}
+
+// cloner: remembers first element that touches it, then spawns copies endlessly
+function updateCloner(x,y){
+  const i=idx(x,y);
+  const stored=life[i]; // life byte stores what to clone (0=nothing yet)
+  const nbrs=[[0,-1],[0,1],[-1,0],[1,0]];
+  if(stored===0){
+    // learn from first non-empty neighbour (not cloner/void/smoke)
+    for(const [dx,dy] of nbrs){
+      const nx=x+dx,ny=y+dy;
+      if(!inBounds(nx,ny))continue;
+      const nt=get(nx,ny);
+      if(nt!==EMPTY&&nt!==CLONER&&nt!==VOID&&nt!==SMOKE&&nt!==STEAM){
+        life[i]=nt; // remember
+        return;
+      }
+    }
+  } else {
+    // spawn stored type into empty neighbours
+    for(const [dx,dy] of nbrs){
+      const nx=x+dx,ny=y+dy;
+      if(!inBounds(nx,ny))continue;
+      if(get(nx,ny)===EMPTY&&Math.random()<.15){
+        set(nx,ny,stored);
+        simBuf[idx(nx,ny)]=1;
+        return; // one per frame
+      }
+    }
+  }
+}
+
+function updateVoid(x,y){
+  // void deletes everything that touches it
+  const nbrs=[[0,-1],[0,1],[-1,0],[1,0]];
+  for(const [dx,dy] of nbrs){
+    const nx=x+dx,ny=y+dy;
+    if(!inBounds(nx,ny))continue;
+    const nt=get(nx,ny);
+    if(nt!==EMPTY&&nt!==VOID&&nt!==STONE){
+      clear(nx,ny);
+    }
+  }
+}
+
 // ── Render ─────────────────────────────────────────────────────────────────
 function render(){
   const data=pixels;
@@ -422,8 +541,16 @@ function render(){
         r=color[ci]; g=color[ci+1]; b=color[ci+2];
         // fire flicker
         if(type===FIRE){r=Math.min(255,r+Math.random()*40-20|0);g=Math.max(0,g+Math.random()*30-15|0);}
-        // smoke fade
+        // smoke/steam fade
         if(type===SMOKE||type===STEAM){const lf=life[gi]/160;a=Math.max(60,255-(lf*180|0));}
+        // acid shimmer
+        if(type===ACID){g=Math.min(255,g+Math.random()*30-10|0);r=Math.max(0,r-Math.random()*20|0);}
+        // gunpowder sparkle near ignition (just subtle)
+        if(type===GUNPOWDER&&Math.random()<.002){r=255;g=200;b=50;}
+        // void pulse — dark magenta glow
+        if(type===VOID){const p=Math.random()*30|0;r=20+p;g=0;b=20+p;}
+        // cloner shimmer pink
+        if(type===CLONER){const p=Math.random()*40|0;r=Math.min(255,r+p);b=Math.min(255,b+p);}
       }
       // draw CELL×CELL block
       const px=cx*CELL, py=cy*CELL;
@@ -466,8 +593,12 @@ function placeAt(cx,cy){
       const nx=cx+dx,ny=cy+dy;
       if(!inBounds(nx,ny))continue;
       if(erasing){clear(nx,ny);}
-      else if(get(nx,ny)===EMPTY||selectedEl===FIRE||selectedEl===LAVA){
-        set(nx,ny,selectedEl);
+      else{
+        const cur=get(nx,ny);
+        const overwrite=cur===EMPTY||selectedEl===FIRE||selectedEl===LAVA
+          ||selectedEl===VOID||selectedEl===ACID||selectedEl===CLONER;
+        if(overwrite&&cur!==VOID&&cur!==CLONER) set(nx,ny,selectedEl);
+        else if(cur===EMPTY) set(nx,ny,selectedEl);
       }
     }
   }

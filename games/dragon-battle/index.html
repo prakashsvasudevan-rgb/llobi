@@ -112,6 +112,7 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
       <div id="sc">SCORE 0</div><div id="bs">BEST 0</div>
       <div id="kl">KILLS 0</div><div id="dst">0 km</div>
       <div id="land-badge" style="display:none;font-size:.38rem;color:#88ff44;margin-top:4px">▼ LANDED · ↑ TAKE OFF</div>
+      <div id="quest-badge" style="display:none;font-size:.38rem;color:#ffdd44;margin-top:4px">⚔ QUEST: DEFEAT THE EMPEROR</div>
     </div>
   </div>
 
@@ -376,7 +377,8 @@ function spawnLightningBolt(tx,tz){
   lightningFlashT=0.18;
   // Check if lightning hits player dragon
   const ref=isHuman&&humanMesh?humanMesh.position:dragonMesh.position;
-  if(Math.abs(tx-ref.x)<20&&Math.abs(tz-ref.z)<20&&dtype.id!=='lightning'){
+  if(Math.abs(tx-ref.x)<20&&Math.abs(tz-ref.z)<20&&dtype.id==='fire'){
+    // Only fire dragons are charged by lightning and become Lightning dragons
     // Transform to lightning dragon!
     dtype=DT[0];
     const oldPos=dragonMesh.position.clone();
@@ -1047,6 +1049,21 @@ function updateFireParticles(dt){
       if(!e.userData.alive)continue;
       if(f.p.distanceTo(e.position)<hitR){hitEnemy(e,upgradedDmg());f.life=0;break;}
     }
+    // Wild dragon hit — weaken to tame
+    for(const wd of wildDragons){
+      if(!wd.userData.isWild||wd.userData.tameable)continue;
+      if(f.p.distanceTo(wd.position)<8){
+        wd.userData.hp-=upgradedDmg();f.life=0;
+        floatWorld(wd.position,'-'+~~upgradedDmg(),'#ffaa44');
+        if(wd.userData.hp<=0){
+          wd.userData.tameable=true;
+          // Drift to ground
+          wd.userData.baseY=groundY(wd.position.x,wd.position.z)+4;
+          floatWorld(wd.position,'[ F ] TAME','#44ffcc');
+        }
+        break;
+      }
+    }
     for(const b of activeBuildings){
       if(!b.userData.alive&&!b.userData.safe)continue;
       if(b.userData.safe)continue;
@@ -1243,8 +1260,9 @@ function spawnZone(cx,cz){
       rd.position.set(rdx,groundY(rdx,rdz)+40+Math.random()*20,rdz);
       rd.userData.baseX=rdx;rd.userData.baseZ=rdz;
       rd.userData.baseY=rd.position.y;
+      rd.userData.hp=80;rd.userData.maxHp=80;rd.userData.tameable=false;rd.userData.isWild=true;
       scene.add(rd);objects.push(rd);
-      roamDragons.push(rd);
+      roamDragons.push(rd);wildDragons.push(rd);
     }
   }
 
@@ -1411,7 +1429,7 @@ function spawnDragonMountain(){
   // Dragon Rider Blane — teaches team dragon selection
   const blane=makeVillagerMesh();
   blane.userData.npcName='Dragon Rider Blane';
-  blane.userData.npcText='Welcome! I train dragon riders. Once you have a team, press [B] and I will help them choose new dragons!';
+  blane.userData.npcText='Welcome! I train dragon riders. Once you have a team, press [B] to help them choose new dragons! [B] Accept my quest: defeat the Emperor at the Volcano.';
   blane.userData.isBlane=true;
   blane.position.set(DM_X+5,groundY(DM_X+5,DM_Z+2)+1.5,DM_Z+2);
   scene.add(blane);objects.push(blane);friendlyNPCs.push(blane);
@@ -1487,7 +1505,8 @@ function spawnDragonMountain(){
     const rz=DM_Z+Math.sin(ang)*(80+i*8);
     rd.position.set(rx,groundY(rx,rz)+50+i*8,rz);
     rd.userData.baseX=rx;rd.userData.baseZ=rz;rd.userData.baseY=rd.position.y;
-    scene.add(rd);objects.push(rd);roamDragons.push(rd);
+    rd.userData.hp=80;rd.userData.maxHp=80;rd.userData.tameable=false;rd.userData.isWild=true;
+    scene.add(rd);objects.push(rd);roamDragons.push(rd);wildDragons.push(rd);
   });
 
   const key=zoneKey(~~(DM_X/ZONE),~~(DM_Z/ZONE));
@@ -1615,7 +1634,17 @@ function hitEnemy(e,dmgAmt){
         scene.add(rp);friendlyNPCs.push(rp);
       }
     }
+    if(e.userData.isKingDeath){
+      blaneQuest='complete';
+      floatWorld(e.position,'👑 EMPEROR DEFEATED!','#ffdd44');
+      score+=2000; // bonus
+    }
     if(e.userData.type==='shadowDragon'){
+      shadowKills++;
+      if(shadowKills>=3&&blaneQuest==='inactive'){
+        blaneQuest='unlocked';
+        floatWorld(e.position,'💬 TALK TO BLANE!','#ffdd44');
+      }
       floatWorld(e.position,'☠ SHADOW SLAIN','#aa44ff');
       // Drop shadow dust orb
       const sdGeo=new THREE.SphereGeometry(0.6,8,8);
@@ -1684,6 +1713,9 @@ let dragonArmy=[]; // recruited ally dragons {mesh, targetPos, dtType}
 const MAX_ARMY=5;
 let blaneNPC=null; // Dragon Rider Blane — wander AI
 let blaneWanderT=0,blaneWanderTarget=null,blaneTalkT=0;
+let blaneQuest='inactive'; // 'inactive' | 'unlocked' | 'active' | 'complete'
+let shadowKills=0;
+let wildDragons=[]; // tameable wild dragons {mesh, hp, maxHp, tameable}
 let dragonMtnSpawned=false;
 let volcanoSpawned=false;
 
@@ -1769,6 +1801,22 @@ document.addEventListener('keydown',e=>{
   if(gs==='playing'){
     if(e.code==='KeyM'){toggleWorldMap();return;}
     if(e.code==='KeyC'&&!isHuman&&isLanded){isSitting=!isSitting;floatWorld(dragonMesh.position,isSitting?'🐉 SIT':'🐉 STAND','#88ff44');}
+    if(e.code==='KeyF'&&!dialogOpen){
+      // Tame a nearby defeated wild dragon
+      const ref2=isHuman&&humanMesh?humanMesh.position:dragonMesh.position;
+      let nearest=null,nearD=20;
+      for(const wd of wildDragons){if(wd.userData.tameable){const d=ref2.distanceTo(wd.position);if(d<nearD){nearD=d;nearest=wd;}}}
+      if(nearest&&dragonArmy.length<MAX_ARMY){
+        nearest.userData.isWild=false;nearest.userData.tameable=false;
+        // Pick a random rider dragon type for the tamed dragon
+        const rDT=DT.filter(d=>RIDER_DT_IDS.includes(d.id));
+        nearest.userData.dtDef=rDT[~~(Math.random()*rDT.length)];
+        nearest.userData.npcName='Wild Dragon';nearest.userData.npcText='*rumbles contentedly*';
+        dragonArmy.push({mesh:nearest,slot:dragonArmy.length});
+        floatWorld(nearest.position,'🐉 TAMED!','#44ffcc');
+        wildDragons=wildDragons.filter(w=>w!==nearest);
+      }
+    }
     if(e.code==='KeyR'&&nearNPC&&nearNPC.userData.isRecruitable&&!nearNPC.userData.recruited&&dragonArmy.length<MAX_ARMY){
       nearNPC.userData.recruited=true;
       const armyMesh=nearNPC; // the whole rider+dragon group follows you now
@@ -1852,6 +1900,13 @@ function openDialog(npc){
   dialogOpen=true;
   const isSmith=npc.userData.npcName==='Blacksmith'&&armorLevel<3;
   let txt=npc.userData.npcText;
+  // Update Blane's text based on quest state
+  if(npc.userData.isBlane){
+    if(blaneQuest==='inactive')txt='I train dragon riders. Defeat 3 shadow dragons to earn my trust, then I will give you a quest.';
+    else if(blaneQuest==='unlocked')txt='You have proven yourself! The Emperor holds the King of Death Dragon at the Volcano. Defeat him! Press [B] to accept the quest.';
+    else if(blaneQuest==='active')txt='The Emperor awaits at the Volcano. Fly far east — you will see it. Press [B] to reassign your team\'s dragons for the battle.';
+    else txt='YOU DID IT! The Emperor is defeated! Dragon Mountain is safe. You are a legend, dragonrider.';
+  }
   if(isSmith){
     const tier=ARMOR_TIERS[armorLevel];
     txt+=`\n\n[ B ] BUY ${tier.name}: ${tier.desc}`;
@@ -1866,8 +1921,15 @@ function openDialog(npc){
   const isBlane=!!npc.userData.isBlane;
   const onKey=e=>{
     if(e.code==='KeyB'&&dialogOpen&&isBlane){
-      if(dragonArmy.length===0){floatWorld(npc.position,'❌ RECRUIT A TEAM FIRST','#ff8844');}
-      else{
+      if(blaneQuest==='inactive'){
+        floatWorld(npc.position,'SLAY 3 SHADOW DRAGONS FIRST!','#ff8844');
+      } else if(blaneQuest==='unlocked'){
+        // Accept the quest
+        blaneQuest='active';
+        floatWorld(npc.position,'⚔ QUEST: DEFEAT THE EMPEROR!','#ffdd44');
+        closeDialog();document.removeEventListener('keydown',onKey);
+      } else if(blaneQuest==='active'&&dragonArmy.length>0){
+        // Reassign team dragons
         const rDT=DT.filter(d=>RIDER_DT_IDS.includes(d.id));
         dragonArmy.forEach(a=>{
           const nd=rDT[~~(Math.random()*rDT.length)];
@@ -1876,6 +1938,11 @@ function openDialog(npc){
         });
         floatWorld(npc.position,'✅ DRAGONS CHOSEN!','#44ffaa');
         closeDialog();document.removeEventListener('keydown',onKey);
+      } else if(blaneQuest==='complete'){
+        floatWorld(npc.position,'🏆 QUEST DONE! LEGEND!','#ffdd44');
+        closeDialog();document.removeEventListener('keydown',onKey);
+      } else {
+        floatWorld(npc.position,'RECRUIT A TEAM FIRST!','#ff8844');
       }
     }
     if(e.code==='KeyB'&&dialogOpen&&isFoodShop){
@@ -1969,6 +2036,7 @@ function startGame(){
   mageOrbs=0;shadowDust=0;upgrades={dmg:0,hp:0,speed:0,fuel:0,attack:0};
   dragonArmy.forEach(a=>scene.remove(a.mesh));dragonArmy=[];
   dragonMtnSpawned=false;volcanoSpawned=false;blaneNPC=null;blaneWanderT=0;blaneWanderTarget=null;blaneTalkT=0;
+  blaneQuest='inactive';shadowKills=0;wildDragons=[];
   mapOpen=false;wmEl.classList.remove('show');
   // Spawn Dragon Mountain (always at world north, zone 0,5)
   setTimeout(()=>{if(gs==='playing')spawnDragonMountain();},100);
@@ -2223,9 +2291,15 @@ function update(ts){
       }
       nearNPC=closest;
       const hint=document.getElementById('interact-hint');
+      // Check for nearby tameable wild dragon
+      const ref3=humanMesh.position;
+      let nearWild=null,nearWildD=18;
+      for(const wd of wildDragons){if(wd.userData.tameable){const d=ref3.distanceTo(wd.position);if(d<nearWildD){nearWildD=d;nearWild=wd;}}}
       if(nearNPC){
         hint.textContent='[ E ] Talk to '+nearNPC.userData.npcName;
         hint.style.display='block';
+      } else if(nearWild&&dragonArmy.length<MAX_ARMY){
+        hint.textContent='[ F ] TAME WILD DRAGON';hint.style.display='block';
       } else {
         hint.style.display='none';
       }
@@ -2416,6 +2490,11 @@ function updateHUD(){
   const tod=dayTime<0.2||dayTime>0.8?'🌙':dayTime<0.4||dayTime>0.6?'🌅':'☀';
   document.getElementById('dst').textContent=dist+' km '+tod;
   document.getElementById('land-badge').style.display=(isLanded&&!isHuman)?'block':'none';
+  const qb=document.getElementById('quest-badge');
+  if(blaneQuest==='active')qb.style.display='block',qb.textContent='⚔ QUEST: DEFEAT THE EMPEROR',qb.style.color='#ffdd44';
+  else if(blaneQuest==='complete')qb.style.display='block',qb.textContent='🏆 EMPEROR DEFEATED!',qb.style.color='#44ffaa';
+  else if(blaneQuest==='unlocked')qb.style.display='block',qb.textContent='💬 TALK TO BLANE!',qb.style.color='#ffaa44';
+  else qb.style.display='none';
   // Show orbs + upgrades
   let upStr='';
   const up=upgrades;

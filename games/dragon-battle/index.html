@@ -796,53 +796,71 @@ function spawnFire(){
   const id=dtype.id;
   const head=getBreathHead();
 
+  const fc=fireCount(); // 1 / 2 / 6 based on attack upgrade
+  const isUltra=upgrades.attack>=3;
+  const isHoming=upgrades.attack>=2;
+  const homTarget=isHoming?nearestEnemy(head):null;
+
   if(id==='fire'){
-    // Fire: dense cloud of large hot particles
-    for(let k=0;k<3;k++){
+    for(let k=0;k<3*fc;k++){
       if(fireArr.length>=FIRE_MAX)break;
-      const fwd=getBreathFwd(0.4);
-      fireArr.push({p:head.clone(),v:fwd.multiplyScalar(26+Math.random()*14),life:1,decay:.022+Math.random()*.015,size:4+Math.random()*3});
+      const spread=isUltra?0.7:0.4;
+      const fwd=getBreathFwd(spread);
+      const p={p:head.clone(),v:fwd.multiplyScalar(26+Math.random()*14),life:1,decay:.022+Math.random()*.015,size:(isUltra?7:4)+Math.random()*3};
+      if(isHoming&&homTarget)p.hom=homTarget;
+      fireArr.push(p);
     }
   } else if(id==='air'){
-    // Air: tornado — spiral outward with spin
-    for(let k=0;k<2;k++){
+    for(let k=0;k<2*fc;k++){
       const angle=fireArr.length*0.4+Date.now()*0.004;
       const r=Math.random()*2;
       const fwd=new THREE.Vector3(Math.cos(angle)*r,(0.5+Math.random()*0.5),Math.sin(angle)*r+2);
       fwd.applyQuaternion(dragonMesh.quaternion).normalize();
-      fireArr.push({p:head.clone(),v:fwd.multiplyScalar(20+Math.random()*10),life:1,decay:.018+Math.random()*.012,spin:1});
+      const p={p:head.clone(),v:fwd.multiplyScalar(20+Math.random()*10),life:1,decay:.018+Math.random()*.012,spin:1};
+      if(isHoming&&homTarget)p.hom=homTarget;
+      fireArr.push(p);
     }
   } else if(id==='earth'){
-    // Earth: single heavy boulder projectile
-    const fwd=getBreathFwd(0.08);
-    const vel=fwd.multiplyScalar(22);
-    const bGeo=new THREE.BoxGeometry(1.8,1.8,1.8);
-    const bMesh=new THREE.Mesh(bGeo,new THREE.MeshLambertMaterial({color:0x886644,flatShading:true}));
-    bMesh.position.copy(head);
-    scene.add(bMesh);
-    fireArr.push({p:head.clone(),v:vel,life:1,decay:.012,isBoulder:true,mesh:bMesh,spin:Math.random()-.5});
+    const bCount=Math.min(fc,3);
+    for(let k=0;k<bCount;k++){
+      const fwd=getBreathFwd(isUltra?0.3:0.08);
+      const vel=fwd.multiplyScalar(22);
+      const bGeo=new THREE.BoxGeometry(isUltra?2.6:1.8,isUltra?2.6:1.8,isUltra?2.6:1.8);
+      const bMesh=new THREE.Mesh(bGeo,new THREE.MeshLambertMaterial({color:0x886644,flatShading:true}));
+      bMesh.position.copy(head);
+      scene.add(bMesh);
+      const p={p:head.clone(),v:vel,life:1,decay:.012,isBoulder:true,mesh:bMesh,spin:Math.random()-.5};
+      if(isHoming&&homTarget)p.hom=homTarget;
+      fireArr.push(p);
+    }
   } else if(id==='soul'){
-    // Soul: purple gas cloud — slow drifting wide particles
-    for(let k=0;k<2;k++){
-      const fwd=getBreathFwd(0.7);
-      fireArr.push({p:head.clone(),v:fwd.multiplyScalar(10+Math.random()*6),life:1,decay:.008+Math.random()*.006,size:5+Math.random()*4});
+    for(let k=0;k<2*fc;k++){
+      const fwd=getBreathFwd(isUltra?1.0:0.7);
+      const p={p:head.clone(),v:fwd.multiplyScalar(10+Math.random()*6),life:1,decay:.008+Math.random()*.006,size:(isUltra?9:5)+Math.random()*4};
+      if(isHoming&&homTarget)p.hom=homTarget;
+      fireArr.push(p);
     }
   } else if(id==='nature'){
-    // Nature: poison cloud — green particles that linger and spread
-    for(let k=0;k<2;k++){
-      const fwd=getBreathFwd(0.5);
-      fireArr.push({p:head.clone(),v:fwd.multiplyScalar(14+Math.random()*8),life:1,decay:.006+Math.random()*.005,isPoison:true,size:4+Math.random()*3});
+    for(let k=0;k<2*fc;k++){
+      const fwd=getBreathFwd(isUltra?0.8:0.5);
+      const p={p:head.clone(),v:fwd.multiplyScalar(14+Math.random()*8),life:1,decay:.006+Math.random()*.005,isPoison:true,size:(isUltra?7:4)+Math.random()*3};
+      if(isHoming&&homTarget)p.hom=homTarget;
+      fireArr.push(p);
     }
   } else if(id==='ice'){
-    // Ice: sharp crystalline shards in a fan
-    for(let k=0;k<2;k++){
-      const fwd=getBreathFwd(0.18);
-      fireArr.push({p:head.clone(),v:fwd.multiplyScalar(32+Math.random()*8),life:1,decay:.032+Math.random()*.015,isShard:true});
+    for(let k=0;k<2*fc;k++){
+      const fwd=getBreathFwd(isUltra?0.5:0.18);
+      const p={p:head.clone(),v:fwd.multiplyScalar(32+Math.random()*8),life:1,decay:.032+Math.random()*.015,isShard:true};
+      if(isHoming&&homTarget)p.hom=homTarget;
+      fireArr.push(p);
     }
   } else {
-    // Fallback
-    const fwd=getBreathFwd(0.25);
-    fireArr.push({p:head,v:fwd.multiplyScalar(28+Math.random()*12),life:1,decay:.028+Math.random()*.02});
+    for(let k=0;k<fc;k++){
+      const fwd=getBreathFwd(0.25);
+      const p={p:head.clone(),v:fwd.multiplyScalar(28+Math.random()*12),life:1,decay:.028+Math.random()*.02};
+      if(isHoming&&homTarget)p.hom=homTarget;
+      fireArr.push(p);
+    }
   }
 }
 
@@ -851,6 +869,11 @@ function updateFireParticles(dt){
     const f=fireArr[i];
     f.p.addScaledVector(f.v,dt);
     // Physics variants
+    // Homing nudge toward target
+    if(f.hom&&f.hom.userData.alive){
+      const toTarget=f.hom.position.clone().sub(f.p).normalize();
+      f.v.addScaledVector(toTarget,22*dt);
+    }
     if(f.isBoulder){
       f.v.y-=18*dt; // heavy gravity
       if(f.mesh)f.mesh.position.copy(f.p);
@@ -1147,6 +1170,13 @@ function hitEnemy(e,dmgAmt){
     }
     if(e.userData.type==='shadowDragon'){
       floatWorld(e.position,'☠ SHADOW SLAIN','#aa44ff');
+      // Drop shadow dust orb
+      const sdGeo=new THREE.SphereGeometry(0.6,8,8);
+      const sdMesh=new THREE.Mesh(sdGeo,new THREE.MeshBasicMaterial({color:0x8800cc}));
+      sdMesh.position.copy(e.position);
+      scene.add(sdMesh);
+      orbDrops.push({mesh:sdMesh,pos:sdMesh.position.clone(),life:30,isShadow:true});
+      floatWorld(e.position,'💜 SHADOW DUST!','#cc44ff');
     }
     // Mage orb drop
     if(e.userData.type==='mage'){
@@ -1203,25 +1233,46 @@ let friendlyNPCs=[];
 let roamDragons=[];
 
 // ── Mage orb drops & upgrades ─────────────────────────────────────────────────
-let orbDrops=[];          // {mesh, pos, life}
-let mageOrbs=0;           // collected orbs
-let upgrades={dmg:0,hp:0,speed:0,fuel:0}; // upgrade levels (max 3 each)
+let orbDrops=[];          // {mesh, pos, life, isShadow}
+let mageOrbs=0;           // collected mage orbs
+let shadowDust=0;         // collected shadow dust (from shadow dragons)
+let upgrades={dmg:0,hp:0,speed:0,fuel:0,attack:0}; // upgrade levels (max 3 each)
 const ORB_RADIUS=3.5;
-const UPGRADE_COST=3; // orbs per upgrade
 
 function collectOrb(o){
-  mageOrbs++;
-  floatWorld(o.pos,'✨ ORB x'+mageOrbs,'#ff88ff');
   scene.remove(o.mesh);
   orbDrops=orbDrops.filter(x=>x!==o);
-  // Auto-apply upgrade in order: dmg → hp → speed → fuel
-  const up=upgrades;
-  if(up.dmg<3){up.dmg++;floatWorld(o.pos,'⬆ DMG LV'+(up.dmg),'#ff44ff');}
-  else if(up.hp<3){up.hp++;floatWorld(o.pos,'⬆ HP LV'+(up.hp),'#ff44ff');dmaxHp+=30;dhp+=30;}
-  else if(up.speed<3){up.speed++;floatWorld(o.pos,'⬆ SPD LV'+(up.speed),'#ff44ff');}
-  else if(up.fuel<3){up.fuel++;floatWorld(o.pos,'⬆ FUEL LV'+(up.fuel),'#ff44ff');dmaxFuel+=20;}
+  if(o.isShadow){
+    shadowDust++;
+    floatWorld(o.pos,'💜 SHADOW DUST x'+shadowDust,'#aa44ff');
+  } else {
+    mageOrbs++;
+    floatWorld(o.pos,'✨ MAGE ORB x'+mageOrbs,'#ff88ff');
+  }
+  // Auto-apply base upgrades from mage orbs: dmg → hp → speed → fuel
+  if(!o.isShadow){
+    const up=upgrades;
+    if(up.dmg<3){up.dmg++;floatWorld(o.pos,'⬆ DMG LV'+up.dmg,'#ff44ff');}
+    else if(up.hp<3){up.hp++;floatWorld(o.pos,'⬆ HP LV'+up.hp,'#ff44ff');dmaxHp+=30;dhp+=30;}
+    else if(up.speed<3){up.speed++;floatWorld(o.pos,'⬆ SPD LV'+up.speed,'#ff44ff');}
+    else if(up.fuel<3){up.fuel++;floatWorld(o.pos,'⬆ FUEL LV'+up.fuel,'#ff44ff');dmaxFuel+=20;}
+  }
+  // Ultra Dragon Orb: 1 shadow dust + 3 mage orbs → attack upgrade
+  if(shadowDust>=1&&mageOrbs>=3&&upgrades.attack<3){
+    shadowDust-=1;mageOrbs-=3;upgrades.attack++;
+    const atNames=['DOUBLE SHOT','HOMING SHOT','ULTRA BLAST'];
+    floatWorld(o.pos,'🐉 ULTRA ORB! '+atNames[upgrades.attack-1],'#ffdd00');
+  }
 }
 function upgradedDmg(){return dtype.dmg*(1+upgrades.dmg*0.4);}
+// How many particles to spawn per fire call (attack upgrade)
+function fireCount(){return upgrades.attack>=3?6:upgrades.attack>=1?2:1;}
+// Nearest enemy for homing
+function nearestEnemy(pos){
+  let best=null,bd=9999;
+  for(const e of activeEnemies){if(!e.userData.alive)continue;const d=pos.distanceTo(e.position);if(d<bd){bd=d;best=e;}}
+  return best;
+}
 
 // ── Mouse drag turning (no pointer lock needed) ───────────────────────────────
 let mouseDown=false,lastMouseX=0;
@@ -1386,7 +1437,7 @@ function startGame(){
   ddead=false;ddeathT=0;dinvT=0;fireArr=[];projectiles.forEach(p=>scene.remove(p));projectiles=[];
   activeEnemies=[];activeBuildings=[];friendlyNPCs=[];roamDragons=[];
   orbDrops.forEach(o=>scene.remove(o.mesh));orbDrops=[];
-  mageOrbs=0;upgrades={dmg:0,hp:0,speed:0,fuel:0};
+  mageOrbs=0;shadowDust=0;upgrades={dmg:0,hp:0,speed:0,fuel:0,attack:0};
   isHuman=false;humanHP=100;humanVY=0;mouseDX=0;mouseDY=0;nearNPC=null;dialogOpen=false;
   if(humanMesh){scene.remove(humanMesh);humanMesh=null;}
   document.getElementById('human-badge').style.display='none';
@@ -1643,6 +1694,15 @@ function update(ts){
       for(let i=orbDrops.length-1;i>=0;i--){
         if(humanMesh.position.distanceTo(orbDrops[i].pos)<ORB_RADIUS)collectOrb(orbDrops[i]);
       }
+      // Auto-mount: walk (W) or press E near dragon
+      const distToDragon=humanMesh.position.distanceTo(dragonMesh.position);
+      if(distToDragon<7){
+        const hint=document.getElementById('interact-hint');
+        if(!nearNPC){hint.textContent='[ W ] or [ E ] Mount Dragon';hint.style.display='block';}
+        if((hFW||keys['KeyE'])&&distToDragon<7){
+          toggleHumanMode(); // remount
+        }
+      }
       // Enemy attack on human
       if(dinvT<=0){
         for(const e of activeEnemies){
@@ -1720,12 +1780,15 @@ function updateHUD(){
   document.getElementById('land-badge').style.display=(isLanded&&!isHuman)?'block':'none';
   // Show orbs + upgrades
   let upStr='';
-  if(mageOrbs>0||upgrades.dmg+upgrades.hp+upgrades.speed+upgrades.fuel>0){
-    upStr=` ✨${mageOrbs}`;
-    if(upgrades.dmg)upStr+=` ⚔${upgrades.dmg}`;
-    if(upgrades.hp)upStr+=` ❤${upgrades.hp}`;
-    if(upgrades.speed)upStr+=` ⚡${upgrades.speed}`;
-    if(upgrades.fuel)upStr+=` 🔥${upgrades.fuel}`;
+  const up=upgrades;
+  if(mageOrbs>0||shadowDust>0||up.dmg+up.hp+up.speed+up.fuel+up.attack>0){
+    if(mageOrbs>0)upStr+=` ✨${mageOrbs}`;
+    if(shadowDust>0)upStr+=` 💜${shadowDust}`;
+    if(up.dmg)upStr+=` ⚔${up.dmg}`;
+    if(up.hp)upStr+=` ❤${up.hp}`;
+    if(up.speed)upStr+=` ⚡${up.speed}`;
+    if(up.fuel)upStr+=` 🔥${up.fuel}`;
+    if(up.attack){const atNames=['2x','HOM','ULTRA'];upStr+=` 🐉${atNames[up.attack-1]}`;}
   }
   document.getElementById('kl').textContent='KILLS '+kills+upStr;
 }

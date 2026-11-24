@@ -291,7 +291,7 @@ function uBlueFire(x,y){
     if(nt===ICE&&Math.random()<.1){set(nx,ny,WATER);simBuf[idx(nx,ny)]=1;}
     if(ANIMAL_IDS.has(nt)){const a=animals.find(a=>a.alive&&Math.round(a.x/CELL)===nx&&Math.round(a.y/CELL)===ny);if(a)a.hp-=0.2;}
   }
-  if(life[i]>35+Math.random()*25)clr(x,y);
+  if(life[i]>300+Math.random()*60)clr(x,y); // ~5 seconds
 }
 function uFire(x,y){
   const i=idx(x,y);life[i]++;
@@ -310,10 +310,11 @@ function uFire(x,y){
     if(ELEM[nt]&&ELEM[nt].fl&&Math.random()<.018){set(nx,ny,FIRE);simBuf[idx(nx,ny)]=1;}
     if(nt===WATER&&Math.random()<.12){set(nx,ny,STEAM,220,230,255,0);clr(x,y);return;}
     if(nt===ICE&&Math.random()<.1){set(nx,ny,WATER);simBuf[idx(nx,ny)]=1;}
+    if((nt===GOLD||nt===SILVER||nt===IRON||nt===STEEL)&&life[idx(x,y)]>200&&Math.random()<.004){set(nx,ny,MERCURY,160,140,100);simBuf[idx(nx,ny)]=1;}
     if(ANIMAL_IDS.has(nt)){const a=animals.find(a=>a.alive&&Math.round(a.x/CELL)===nx&&Math.round(a.y/CELL)===ny);if(a)a.hp-=0.15;}
   }
   // fire fades out without ash — just disappears
-  if(life[i]>30+Math.random()*25)clr(x,y);
+  if(life[i]>300+Math.random()*60)clr(x,y); // ~5 seconds at 60fps
 }
 function uLava(x,y){
   const i=idx(x,y);life[i]++;
@@ -322,7 +323,7 @@ function uLava(x,y){
     if(ELEM[nt]&&ELEM[nt].fl&&Math.random()<.025){set(nx,ny,FIRE);simBuf[idx(nx,ny)]=1;}
     if(nt===WATER&&Math.random()<.06){set(x,y,BASALT,45,42,40);return;}
     if(nt===ICE&&Math.random()<.1){set(nx,ny,WATER);simBuf[idx(nx,ny)]=1;}
-    if(dy===-1&&nt===EMPTY&&Math.random()<.04){set(nx,ny,FIRE);simBuf[idx(nx,ny)]=1;}
+    if((nt===GOLD||nt===SILVER||nt===IRON||nt===STEEL)&&Math.random()<.008){set(nx,ny,MERCURY,160,140,100);simBuf[idx(nx,ny)]=1;}
     if(ANIMAL_IDS.has(nt)){const a=animals.find(a=>a.alive&&Math.round(a.x/CELL)===nx&&Math.round(a.y/CELL)===ny);if(a)a.hp-=0.25;}
   }
   // cool to basalt over a very long time (1500-2500 frames)

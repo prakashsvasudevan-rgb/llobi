@@ -70,12 +70,13 @@ const ACID=13,GUNPOWDER=14,CLONER=15,VOID=16,WALL=17,RUIN=18,CONCRETE=19,TERRACO
 const GOLD=21,SILVER=22,MERCURY=23,IRON=24,STEEL=25;
 const SEED=26,CACTUS=27,PALM=28,CORN=29,APPLE_T=30,ORANGE_T=31,PAPAYA_T=32;
 const BOMB=33,FAN=34,HEATER=35,COOLER=36,BASALT=37;
-const DRAGON=40,TIGER=41,SHEEP=42,HUMAN=43,FISH=44,RAT=45,FLEA=46;
-const ANIMAL_IDS=new Set([DRAGON,TIGER,SHEEP,HUMAN,FISH,RAT,FLEA]);
+const DRAGON=40,TIGER=41,SHEEP=42,HUMAN=43,FISH=44,RAT=45,FLEA=46,FIRE_DRAGON=48;
+const ANIMAL_IDS=new Set([DRAGON,TIGER,SHEEP,HUMAN,FISH,RAT,FLEA,FIRE_DRAGON]);
 
 // Animal sprite sizes in pixels
 const A_SIZE={
-  [DRAGON]:{w:9*CELL,h:6*CELL},  // biggest
+  [DRAGON]:{w:10*CELL,h:8*CELL},  // wyvern — biggest
+  [FIRE_DRAGON]:{w:11*CELL,h:7*CELL}, // fire dragon
   [TIGER]: {w:7*CELL,h:4*CELL},
   [SHEEP]: {w:5*CELL,h:4*CELL},
   [HUMAN]: {w:3*CELL,h:7*CELL},  // tall
@@ -122,7 +123,8 @@ const ELEM={
   [HEATER]:  {name:'Heater',  color:'#FF5722',colors:['#FF5722','#E64A19','#FF8A65'],fl:false},
   [COOLER]:  {name:'Cooler',  color:'#80DEEA',colors:['#80DEEA','#4DD0E1','#B2EBF2'],fl:false},
   [BASALT]:  {name:'Basalt',  color:'#2D2D2D',colors:['#2D2D2D','#222','#383838'],fl:false},
-  [DRAGON]:  {name:'Dragon',  color:'#B71C1C',colors:['#B71C1C'],animal:true},
+  [DRAGON]:  {name:'Wyvern',  color:'#9B0057',colors:['#9B0057'],animal:true},
+  [FIRE_DRAGON]:{name:'FireDrgn',color:'#FF1A00',colors:['#FF1A00'],animal:true},
   [TIGER]:   {name:'Tiger',   color:'#E65100',colors:['#E65100'],animal:true},
   [SHEEP]:   {name:'Sheep',   color:'#F5F5F5',colors:['#F5F5F5'],animal:true},
   [HUMAN]:   {name:'Human',   color:'#FFCCBC',colors:['#FFCCBC'],animal:true},
@@ -130,15 +132,15 @@ const ELEM={
   [RAT]:     {name:'Rat',     color:'#78909C',colors:['#78909C'],animal:true},
   [FLEA]:    {name:'Flea',    color:'#9C27B0',colors:['#9C27B0'],animal:true},
 };
-const A_EMOJI={[DRAGON]:'🐉',[TIGER]:'🐯',[SHEEP]:'🐑',[HUMAN]:'🧑',[FISH]:'🐟',[RAT]:'🐀',[FLEA]:'🦗'};
-const A_PRED={[SHEEP]:new Set([DRAGON,TIGER]),[HUMAN]:new Set([DRAGON,TIGER]),[RAT]:new Set([TIGER,HUMAN]),[FISH]:new Set([TIGER]),[FLEA]:new Set([DRAGON,TIGER])};
-const A_PREY={[DRAGON]:new Set([HUMAN,SHEEP]),[TIGER]:new Set([SHEEP,HUMAN,RAT,FISH])};
+const A_EMOJI={[DRAGON]:'🐲',[TIGER]:'🐯',[SHEEP]:'🐑',[HUMAN]:'🧑',[FISH]:'🐟',[RAT]:'🐀',[FLEA]:'🦗',[FIRE_DRAGON]:'🐉'};
+const A_PRED={[SHEEP]:new Set([DRAGON,TIGER,FIRE_DRAGON]),[HUMAN]:new Set([DRAGON,TIGER,FIRE_DRAGON]),[RAT]:new Set([TIGER,HUMAN,FIRE_DRAGON]),[FISH]:new Set([TIGER]),[FLEA]:new Set([DRAGON,TIGER,FIRE_DRAGON])};
+const A_PREY={[DRAGON]:new Set([HUMAN,SHEEP,RAT]),[TIGER]:new Set([SHEEP,HUMAN,RAT,FISH]),[FIRE_DRAGON]:new Set([HUMAN,SHEEP,RAT,FLEA])};
 const CATS=[
   {name:'🌊 Basics',    ids:[SAND,WATER,OIL,SMOKE,STEAM]},
   {name:'🧱 Material',  ids:[STONE,WALL,WOOD,CONCRETE,TERRACOTTA,RUIN,ICE,ASH]},
   {name:'🔩 Metal',     ids:[GOLD,SILVER,MERCURY,IRON,STEEL]},
   {name:'🌿 Plants',    ids:[SEED,PLANT,CACTUS,PALM,CORN,APPLE_T,ORANGE_T,PAPAYA_T]},
-  {name:'🦁 Animals',   ids:[DRAGON,TIGER,SHEEP,HUMAN,FISH,RAT,FLEA]},
+  {name:'🦁 Animals',   ids:[DRAGON,FIRE_DRAGON,TIGER,SHEEP,HUMAN,FISH,RAT,FLEA]},
   {name:'💥 Disasters', ids:[FIRE,LAVA,ACID,GUNPOWDER,BOMB,VOID]},
   {name:'⚙️ Machines',  ids:[CLONER,FAN,HEATER,COOLER]},
 ];
@@ -323,11 +325,16 @@ function uAnimals(){
     const myPreds=A_PRED[a.type]||new Set(),myPrey=A_PREY[a.type]||new Set();
     for(const b of animals){if(!b.alive||b===a)continue;const d=Math.hypot(b.x-a.x,b.y-a.y);if(myPreds.has(b.type)&&d<npDist){npDist=d;nearPred=b;}if(myPrey.has(b.type)&&d<nyDist){nyDist=d;nearPrey=b;}}
     switch(a.type){
-      case DRAGON:
-        if(nearPrey&&nyDist<180){a.vx=(nearPrey.x>a.x?1:-1)*3.2;a.vy=(nearPrey.y>a.y?.6:-.6)*2;}
-        else{a.vx=a.dir*1.8;a.vy+=Math.sin(a.timer*.04)*.4;}
-        if(nearPrey&&nyDist<40&&Math.random()<.06){const fx=cx+(a.vx>0?2:-2);if(inB(fx,cy))set(fx,cy,FIRE);}
-        if(a.timer%130===0)a.dir=-a.dir;break;
+      case DRAGON: // wyvern — flies and swoops
+        if(nearPrey&&nyDist<220){a.vx=(nearPrey.x>a.x?1:-1)*3.5;a.vy=(nearPrey.y>a.y?.5:-.8)*2.2;}
+        else{a.vx=a.dir*2;a.vy+=Math.sin(a.timer*.05)*.5;}
+        if(nearPrey&&nyDist<35&&Math.random()<.05){const fx=cx+(a.vx>0?2:-2);if(inB(fx,cy))set(fx,cy,FIRE);}
+        if(a.timer%120===0)a.dir=-a.dir;break;
+      case FIRE_DRAGON: // heavy fire-breather — walks and burns
+        if(nearPred&&npDist<80){a.vx=-(nearPred.x>a.x?1:-1)*2;if(onGround)a.vy=-4;}
+        else if(nearPrey&&nyDist<250){a.vx=(nearPrey.x>a.x?1:-1)*2.8;if(nyDist<60&&Math.random()<.08){for(let fi=1;fi<=3;fi++){const fx=cx+(a.vx>0?fi:-fi);if(inB(fx,cy))set(fx,cy,FIRE);}}}
+        else{a.vx=a.dir*1.6;if(a.timer%100===0)a.dir=-a.dir;}
+        if(onGround&&Math.random()<.004)a.vy=-3.5;break;
       case TIGER:
         if(nearPred&&npDist<100){a.vx=-(nearPred.x>a.x?1:-1)*3.2;if(onGround)a.vy=-5.5;}
         else if(nearPrey&&nyDist<200){a.vx=(nearPrey.x>a.x?1:-1)*3.8;if(nyDist<14)nearPrey.hp-=0.2;}
@@ -378,7 +385,8 @@ function drawAnimal(a){
   if(flip)ctx.scale(-1,1);
 
   switch(a.type){
-    case DRAGON: drawDragon(W,H,f,a); break;
+    case DRAGON: drawWyvern(W,H,f); break;
+    case FIRE_DRAGON: drawFireDragon(W,H,f); break;
     case TIGER:  drawTiger(W,H,f); break;
     case SHEEP:  drawSheep(W,H,f); break;
     case HUMAN:  drawHuman(W,H,f); break;
@@ -397,40 +405,140 @@ function drawAnimal(a){
   }
 }
 
-function drawDragon(W,H,f,a){
+// ── Wyvern sprite (matches pixel art: crimson/magenta, big brown wing, beige belly, coiled tail) ──
+function drawWyvern(W,H,f){
   const C=CELL;
-  // wings flap: frame 0,1 up; 2,3 down
-  const wingUp=f<2;
-  const wingY=wingUp?H*0.1:H*0.5;
-  // left wing
-  ctx.fillStyle='#FF6D00';
-  ctx.beginPath();ctx.moveTo(W*.35,H*.5);ctx.lineTo(W*.05,wingY);ctx.lineTo(W*.5,H*.65);ctx.closePath();ctx.fill();
-  // right wing
-  ctx.beginPath();ctx.moveTo(W*.65,H*.5);ctx.lineTo(W*.95,wingY);ctx.lineTo(W*.5,H*.65);ctx.closePath();ctx.fill();
-  // body
-  ctx.fillStyle='#8B0000';
-  ctx.beginPath();ctx.ellipse(W*.45,H*.7,W*.3,H*.22,0,0,Math.PI*2);ctx.fill();
-  // neck
-  ctx.fillStyle='#A00000';
-  ctx.beginPath();ctx.ellipse(W*.72,H*.5,W*.12,H*.2,-.4,0,Math.PI*2);ctx.fill();
-  // head
-  ctx.fillStyle='#C00000';
-  ctx.beginPath();ctx.ellipse(W*.85,H*.38,W*.16,H*.18,0,0,Math.PI*2);ctx.fill();
-  // eye
-  ctx.fillStyle='#FFFF00';
-  ctx.beginPath();ctx.arc(W*.9,H*.32,C*.45,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#000';ctx.beginPath();ctx.arc(W*.92,H*.32,C*.22,0,Math.PI*2);ctx.fill();
-  // teeth
+  // Wing animation: flap up (f<2) vs down (f>=2)
+  const wingLift = f<2 ? -H*.18 : 0;
+  const wingTip  = f<2 ? H*.05  : H*.28;
+  // Large bat wing — behind body
+  ctx.fillStyle='#7A3B10';
+  ctx.beginPath();
+  ctx.moveTo(W*.48,H*.32+wingLift);
+  ctx.bezierCurveTo(W*.72,H*.0+wingLift,W*.99,wingTip,W*.92,H*.42+wingLift*.3);
+  ctx.bezierCurveTo(W*.8,H*.56,W*.62,H*.5,W*.48,H*.44);
+  ctx.closePath();ctx.fill();
+  // Wing membrane highlight
+  ctx.fillStyle='#A0552A';
+  ctx.beginPath();
+  ctx.moveTo(W*.5,H*.35+wingLift);
+  ctx.bezierCurveTo(W*.72,H*.1+wingLift,W*.93,H*.18+wingTip*.5,W*.85,H*.44+wingLift*.2);
+  ctx.bezierCurveTo(W*.75,H*.54,W*.6,H*.5,W*.5,H*.44);
+  ctx.closePath();ctx.fill();
+  // Wing veins
+  ctx.strokeStyle='#5C2800';ctx.lineWidth=C*.25;ctx.lineCap='round';
+  for(let i=0;i<3;i++){
+    const t=.3+i*.2;
+    ctx.beginPath();ctx.moveTo(W*.5,H*.4+wingLift*.5);
+    ctx.lineTo(W*.5+W*.4*t,H*.1+wingLift+i*H*.08);ctx.stroke();
+  }
+  // Body
+  ctx.fillStyle='#9B0057';
+  ctx.beginPath();ctx.ellipse(W*.4,H*.58,W*.26,H*.26,-.15,0,Math.PI*2);ctx.fill();
+  // Belly (beige, like pixel art)
+  ctx.fillStyle='#D4A080';
+  ctx.beginPath();ctx.ellipse(W*.38,H*.64,W*.13,H*.17,-.1,0,Math.PI*2);ctx.fill();
+  // Dark back scales
+  ctx.fillStyle='#6B003C';
+  for(let i=0;i<4;i++){ctx.beginPath();ctx.arc(W*.28+i*W*.07,H*.46,C*.5,0,Math.PI*2);ctx.fill();}
+  // Neck
+  ctx.fillStyle='#8B0048';
+  ctx.beginPath();ctx.ellipse(W*.22,H*.4,W*.11,H*.18,-0.4,0,Math.PI*2);ctx.fill();
+  // Head
+  ctx.fillStyle='#9B0057';
+  ctx.beginPath();ctx.ellipse(W*.14,H*.32,W*.16,H*.18,-0.3,0,Math.PI*2);ctx.fill();
+  // Snout / jaw (open slightly on frame 1,3)
+  const jawOpen = f%2===1 ? H*.04 : 0;
+  ctx.fillStyle='#8B0048';
+  ctx.beginPath();ctx.ellipse(W*.07,H*.38+jawOpen*.5,W*.09,H*.1+jawOpen,0.4,0,Math.PI*2);ctx.fill();
+  // Teeth
   ctx.fillStyle='#fff';
-  ctx.fillRect(W*.78,H*.45,C*.3,C*.5);ctx.fillRect(W*.85,H*.45,C*.3,C*.5);
-  // tail
-  ctx.strokeStyle='#8B0000';ctx.lineWidth=C*.8;ctx.lineCap='round';
-  ctx.beginPath();ctx.moveTo(W*.18,H*.72);ctx.quadraticCurveTo(W*.05,H*.9,W*.12,H*.98);ctx.stroke();
-  // legs
-  const legY=f%2===0?H*.92:H*.88;
-  ctx.fillStyle='#700000';
-  ctx.fillRect(W*.35,H*.82,C*.5,legY-H*.82);
-  ctx.fillRect(W*.55,H*.82,C*.5,legY-H*.82+(f%2===0?0:C*.3));
+  ctx.fillRect(W*.02,H*.4+jawOpen,C*.35,C*.55);ctx.fillRect(W*.07,H*.4+jawOpen,C*.35,C*.55);
+  // Upper jaw fang
+  ctx.fillRect(W*.04,H*.32,C*.3,C*.5);
+  // Horns
+  ctx.fillStyle='#4A002A';
+  ctx.beginPath();ctx.moveTo(W*.1,H*.18);ctx.lineTo(W*.05,H*.04);ctx.lineTo(W*.16,H*.2);ctx.fill();
+  ctx.beginPath();ctx.moveTo(W*.2,H*.16);ctx.lineTo(W*.16,H*.02);ctx.lineTo(W*.26,H*.18);ctx.fill();
+  // Eye (yellow, with slit pupil)
+  ctx.fillStyle='#FFEE00';ctx.beginPath();ctx.ellipse(W*.17,H*.28,C*.45,C*.35,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#000';ctx.fillRect(W*.17-C*.08,H*.24,C*.16,C*.7);
+  // 2 legs (wyvern — no front arms)
+  const lA=f%2===0?H*.93:H*.88,lB=f%2===0?H*.88:H*.93;
+  ctx.fillStyle='#7A0040';
+  ctx.fillRect(W*.3,H*.78,C*.7,lA-H*.78);ctx.fillRect(W*.48,H*.78,C*.7,lB-H*.78);
+  // Claws
+  ctx.fillStyle='#3A0020';
+  ctx.fillRect(W*.28,lA,C*.4,C*.6);ctx.fillRect(W*.35,lA,C*.4,C*.6);
+  ctx.fillRect(W*.46,lB,C*.4,C*.6);ctx.fillRect(W*.53,lB,C*.4,C*.6);
+  // Tail — coils outward and curls back (animated)
+  const tailSwing = Math.sin(f*Math.PI/2)*H*.04;
+  ctx.strokeStyle='#9B0057';ctx.lineWidth=C*.9;ctx.lineCap='round';
+  ctx.beginPath();
+  ctx.moveTo(W*.62,H*.7);
+  ctx.bezierCurveTo(W*.82,H*.72+tailSwing,W*.96,H*.82,W*.88,H*.92);
+  ctx.bezierCurveTo(W*.8,H*.99,W*.66,H*.97,W*.65,H*.88);
+  ctx.stroke();
+  ctx.lineWidth=C*.5;
+  ctx.beginPath();
+  ctx.moveTo(W*.65,H*.88);ctx.bezierCurveTo(W*.64,H*.8,W*.7,H*.78,W*.72,H*.82);ctx.stroke();
+}
+
+// ── Classic Fire Dragon (4-legged, red/orange, breathes fire) ──
+function drawFireDragon(W,H,f){
+  const C=CELL;
+  // wings — two side wings, flap on frames 0,1
+  const wFlap = f<2 ? -H*.2 : 0;
+  ctx.fillStyle='#CC2200';
+  // left wing
+  ctx.beginPath();ctx.moveTo(W*.35,H*.38);ctx.lineTo(W*.05,H*.15+wFlap);ctx.lineTo(W*.28,H*.55);ctx.closePath();ctx.fill();
+  // right wing
+  ctx.beginPath();ctx.moveTo(W*.65,H*.38);ctx.lineTo(W*.95,H*.15+wFlap);ctx.lineTo(W*.72,H*.55);ctx.closePath();ctx.fill();
+  // Wing membranes
+  ctx.fillStyle='#AA1A00';
+  ctx.beginPath();ctx.moveTo(W*.35,H*.38);ctx.lineTo(W*.08,H*.22+wFlap);ctx.lineTo(W*.32,H*.5);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.moveTo(W*.65,H*.38);ctx.lineTo(W*.92,H*.22+wFlap);ctx.lineTo(W*.68,H*.5);ctx.closePath();ctx.fill();
+  // Body
+  ctx.fillStyle='#CC2200';
+  ctx.beginPath();ctx.ellipse(W*.5,H*.62,W*.32,H*.24,0,0,Math.PI*2);ctx.fill();
+  // Underbelly (pale orange)
+  ctx.fillStyle='#FF8C42';
+  ctx.beginPath();ctx.ellipse(W*.5,H*.68,W*.2,H*.14,0,0,Math.PI*2);ctx.fill();
+  // Back spines
+  ctx.fillStyle='#8B0000';
+  for(let i=0;i<5;i++){const sx=W*.28+i*W*.11;ctx.beginPath();ctx.moveTo(sx,H*.44);ctx.lineTo(sx+W*.04,H*.32);ctx.lineTo(sx+W*.08,H*.44);ctx.fill();}
+  // Neck
+  ctx.fillStyle='#CC2200';
+  ctx.beginPath();ctx.ellipse(W*.72,H*.44,W*.11,H*.2,0.5,0,Math.PI*2);ctx.fill();
+  // Head
+  ctx.fillStyle='#DD2500';
+  ctx.beginPath();ctx.ellipse(W*.83,H*.3,W*.17,H*.2,0.2,0,Math.PI*2);ctx.fill();
+  // Snout — open/close animation
+  const jaw = f%2===1 ? H*.05 : 0;
+  ctx.fillStyle='#CC2200';
+  ctx.beginPath();ctx.ellipse(W*.95,H*.38+jaw*.5,W*.08,H*.1+jaw,0.3,0,Math.PI*2);ctx.fill();
+  // Fire breath on attacking frames
+  if(f===1||f===3){
+    for(let fi=0;fi<3;fi++){
+      const alpha=.9-fi*.25;ctx.fillStyle=`rgba(255,${120+fi*40},0,${alpha})`;
+      ctx.beginPath();ctx.ellipse(W+fi*C*1.5,H*.38,C*(1.5-fi*.3),C*(1-fi*.2),0,0,Math.PI*2);ctx.fill();
+    }
+  }
+  // Eye
+  ctx.fillStyle='#FFD700';ctx.beginPath();ctx.arc(W*.87,H*.25,C*.45,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#000';ctx.beginPath();ctx.arc(W*.88,H*.25,C*.22,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(W*.9,H*.23,C*.1,0,Math.PI*2);ctx.fill();
+  // Teeth
+  ctx.fillStyle='#fff';ctx.fillRect(W*.88,H*.38+jaw,C*.35,C*.6);ctx.fillRect(W*.93,H*.38+jaw,C*.35,C*.6);
+  // 4 Legs
+  const lf=f%2===0?C*.6:-C*.6;
+  ctx.fillStyle='#AA1A00';
+  ctx.fillRect(W*.24,H*.78,C*.75,H*.2+lf);ctx.fillRect(W*.38,H*.78,C*.75,H*.2-lf);
+  ctx.fillRect(W*.58,H*.78,C*.75,H*.2+lf);ctx.fillRect(W*.72,H*.78,C*.75,H*.2-lf);
+  // Tail
+  const ts=Math.sin(f*Math.PI/2)*H*.05;
+  ctx.strokeStyle='#CC2200';ctx.lineWidth=C*.85;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(W*.2,H*.65);ctx.bezierCurveTo(W*.05,H*.7+ts,W*.02,H*.85,W*.1,H*.95);ctx.stroke();
 }
 
 function drawTiger(W,H,f){

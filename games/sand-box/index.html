@@ -184,9 +184,12 @@ function makeTransparent(img,threshold=230){
   ox.putImageData(d,0,0);
   return oc;
 }
-// GIF sprites — browser animates them; drawImage captures current frame each tick
-const soulDragonImg=new Image(); soulDragonImg.src='/games/sand-box/sprites/soul_dragon_walk.gif';
-const sunDragonImg=new Image();  sunDragonImg.src='/games/sand-box/sprites/sun_dragon_fly.gif';
+const soulDragonImg=new Image(); soulDragonImg.src='/games/sand-box/sprites/soul_dragon.webp';
+const sunDragonImg=new Image();  sunDragonImg.src='/games/sand-box/sprites/sun_dragon2.webp';
+// GIF img elements added to DOM so browser animates them (used for walk cycle thumbnail only)
+const soulGifImg=document.createElement('img');soulGifImg.src='/games/sand-box/sprites/soul_dragon_walk.gif';soulGifImg.style.cssText='position:fixed;left:-9999px;top:0;width:1px;height:1px;';
+const sunGifImg=document.createElement('img');sunGifImg.src='/games/sand-box/sprites/sun_dragon_fly.gif';sunGifImg.style.cssText='position:fixed;left:-9999px;top:0;width:1px;height:1px;';
+document.addEventListener('DOMContentLoaded',()=>{document.body.appendChild(soulGifImg);document.body.appendChild(sunGifImg);});
 const fireBallImg=new Image();   fireBallImg.src='/games/sand-box/sprites/fire_ball.png';
 const blueBallImg=new Image();   blueBallImg.src='/games/sand-box/sprites/blue_fire_ball.png';
 const fireBreathImg=new Image(); fireBreathImg.src='/games/sand-box/sprites/fire_breath.png';
@@ -234,8 +237,8 @@ function drawGifNoBackground(img,dx,dy,dw,dh,br,bg,bb,tol=40){
 earthDragonImg.onload=()=>{earthDragonCanvas=makeTransparent(earthDragonImg,210);};
 fireDragonImg.onload=()=>{fireDragonCanvas=makeTransparent(fireDragonImg,210);};
 wyvernImg.onload=()=>{wyvernCanvas=makeTransparent(wyvernImg,210);};
-// GIF sprites: remove blue-grey background (~160,190,207) each frame via offscreen canvas
-// We draw them directly — background removal happens per-frame in the draw function using globalCompositeOperation
+soulDragonImg.onload=()=>{soulDragonCanvas=makeTransparentColor(soulDragonImg,76,99,114,30);};
+sunDragonImg.onload=()=>{sunDragonCanvas=makeTransparentColor(sunDragonImg,160,190,210,35);};
 fireBallImg.onload=()=>{fireBallCanvas=makeTransparent(fireBallImg,230);};
 blueBallImg.onload=()=>{blueBallCanvas=makeTransparent(blueBallImg,230);};
 fireBreathImg.onload=()=>{fireBreathCanvas=makeTransparent(fireBreathImg,230);};
@@ -459,23 +462,23 @@ function uAnimals(){
           }
         } else{a.vx=a.dir*2;if(a.timer%90===0)a.dir=-a.dir;}
         break;
-      case SOUL_DRAGON: // walks on ground, breathes blue fire when prey nearby
-        a.breathing=false;
-        if(nearPred&&npDist<120){a.vx=-(nearPred.x>a.x?1:-1)*2.5;if(onGround)a.vy=-4;}
-        else if(nearPrey&&nyDist<220){
-          a.vx=(nearPrey.x>a.x?1:-1)*2.8;
-          if(nyDist<80){a.breathing=true;if(Math.random()<.1){const fd=a.vx>0?1:-1;for(let fi=1;fi<=4;fi++){const fx=cx+fd*fi;if(inB(fx,cy))set(fx,cy,BLUE_FIRE);}}}
-        } else{a.vx=a.dir*1.5;if(a.timer%110===0)a.dir=-a.dir;}
-        if(onGround&&Math.random()<.005)a.vy=-4;break;
-      case SUN_DRAGON: // flies, shoots LIGHT rays when attacking
+      case SOUL_DRAGON: // FLIES, breathes blue fire when prey nearby
         a.breathing=false;
         a.vy+=-0.2;
         if(a.y>rows*CELL*.82)a.vy-=0.6;
         if(a.y<rows*CELL*.12)a.vy+=0.4;
         a.vy=Math.max(-5,Math.min(5,a.vy));
-        if(nearPred&&npDist<110){a.vx=-(nearPred.x>a.x?1:-1)*3.5;a.vy=-3;}
+        if(nearPred&&npDist<110){a.vx=-(nearPred.x>a.x?1:-1)*2.8;a.vy=-3;}
+        else if(nearPrey&&nyDist<220){
+          a.vx=(nearPrey.x>a.x?1:-1)*2.8;
+          if(nyDist<80){a.breathing=true;if(Math.random()<.1){const fd=a.vx>0?1:-1;for(let fi=1;fi<=4;fi++){const fx=cx+fd*fi;if(inB(fx,cy))set(fx,cy,BLUE_FIRE);}}}
+        } else{a.vx=a.dir*2;if(a.timer%100===0)a.dir=-a.dir;}
+        break;
+      case SUN_DRAGON: // WALKS on ground, shoots LIGHT rays when attacking
+        a.breathing=false;
+        if(nearPred&&npDist<120){a.vx=-(nearPred.x>a.x?1:-1)*2.5;if(onGround)a.vy=-4;}
         else if(nearPrey&&nyDist<240){
-          a.vx=(nearPrey.x>a.x?1:-1)*3.8;
+          a.vx=(nearPrey.x>a.x?1:-1)*3.0;
           if(nyDist<90){a.breathing=true;if(Math.random()<.15){const fd=a.vx>0?1:-1;const lx=cx+fd*2;if(inB(lx,cy)){set(lx,cy,LIGHT);color[idx(lx,cy)*3]=fd>0?200:50;}}}
         } else{a.vx=a.dir*2.5;if(a.timer%80===0)a.dir=-a.dir;}
         break;
@@ -795,9 +798,10 @@ function drawEarthDragon(W,H,f,angry,resting){
 
 function drawSoulDragon(W,H,f,breathing,resting){
   const C=CELL;
-  // GIF has its own walk/wing animation — just bob the whole sprite
-  const stepBob=resting?Math.sin(f*Math.PI/2)*H*.008:[H*.03,0,H*.03,0][f];
-  drawGifNoBackground(soulDragonImg,0,stepBob,W,H,160,190,207,50);
+  // Soul dragon FLIES — smooth hover bob
+  const bodyBob=resting?Math.sin(f*Math.PI/2)*H*.01:[-H*.04,-H*.02,H*.02,H*.04][f];
+  // Use DOM-animated GIF so browser keeps frames running
+  drawGifNoBackground(soulGifImg,0,bodyBob,W,H,76,99,114,35);
 
   // ── Blue fire breath (only when attacking) ──
   if(breathing){
@@ -817,9 +821,10 @@ function drawSoulDragon(W,H,f,breathing,resting){
 
 function drawSunDragon(W,H,f,breathing,resting){
   const C=CELL;
-  // GIF has its own fly/wing animation — just bob the whole sprite
-  const bodyBob=resting?Math.sin(f*Math.PI/2)*H*.01:[-H*.04,-H*.02,H*.02,H*.04][f];
-  drawGifNoBackground(sunDragonImg,0,bodyBob,W,H,160,190,207,50);
+  // Sun dragon WALKS — step bob
+  const stepBob=resting?Math.sin(f*Math.PI/2)*H*.008:[H*.03,0,H*.03,0][f];
+  // Use DOM-animated GIF
+  drawGifNoBackground(sunGifImg,0,stepBob,W,H,160,190,207,45);
 
   // ── Light ray (only when attacking) ──
   if(breathing){

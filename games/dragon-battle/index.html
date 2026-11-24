@@ -88,7 +88,7 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
     <h1>DRAGON BATTLE</h1>
     <p class="sub">CHOOSE YOUR DRAGON</p>
     <div id="cards"></div>
-    <p id="sel-hint">◀ ▶ TO CHOOSE · SPACE/TAP TO FLY · T=HUMAN · E=TALK</p>
+    <p id="sel-hint">◀ ▶ TO CHOOSE · SPACE=FLY/FIRE · T=HUMAN · SHIFT=SWORD · J=JUMP · D=CALL DRAGON</p>
     <p id="sel-best"></p>
   </div>
 
@@ -124,7 +124,7 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
   </div>
 
   <!-- Human badge -->
-  <div id="human-badge">🧍 HUMAN · T = RIDE DRAGON · WASD = WALK · MOUSE = LOOK</div>
+  <div id="human-badge">🧍 HUMAN · T=RIDE · WASD=WALK · MOUSE=TURN · SHIFT=SWORD · J=JUMP · D=CALL DRAGON · E=TALK</div>
 
   <!-- Interact hint -->
   <div id="interact-hint"></div>
@@ -599,6 +599,24 @@ function makeHumanMesh(dt){
   return g;
 }
 
+// ── Rider mesh (visible on dragon back when not in human mode) ────────────────
+function buildRiderOnDragon(dt){
+  const g=new THREE.Group();
+  const aCol=dt.body,skCol=0xE8B88A;
+  addBox(g,0.52,0.72,0.44,mat(aCol,{flatShading:true}));           // torso
+  addBox(g,0.42,0.42,0.42,mat(skCol,{flatShading:true}),0,0.6,0);  // head
+  addBox(g,0.46,0.16,0.42,mat(aCol,{flatShading:true}),-0.38,0.22,0,0,0,0.2);  // larm
+  addBox(g,0.46,0.16,0.42,mat(aCol,{flatShading:true}), 0.38,0.22,0,0,0,-0.2); // rarm
+  // Legs straddle the dragon: bent outward and down
+  addBox(g,0.2,0.56,0.22,mat(0x222244,{flatShading:true}),-0.28,-0.42,0.1,0,0, 0.32); // lleg
+  addBox(g,0.2,0.56,0.22,mat(0x222244,{flatShading:true}), 0.28,-0.42,0.1,0,0,-0.32); // rleg
+  addBox(g,0.46,0.16,0.08,mat(dt.bodyD,{flatShading:true}),0,0.6,0.22);  // visor
+  // Sit position: lean slightly forward on dragon saddle
+  g.position.set(0, 1.3, 0.8);  // on dragon back
+  g.rotation.x = -0.25;          // lean forward
+  return g;
+}
+
 // ── Shadow Dragon (elite enemy — acid/shadow attacks) ─────────────────────────
 function makeShadowDragonMesh(){
   const g=new THREE.Group();
@@ -761,51 +779,139 @@ const fMat=new THREE.PointsMaterial({size:3.5,vertexColors:true,sizeAttenuation:
 const firePoints=new THREE.Points(fGeo,fMat);scene.add(firePoints);
 let fireArr=[];
 
-function spawnFire(){
-  if(fireArr.length>=FIRE_MAX)return;
-  const dt=dtype;
-  // Head world position
-  const head=new THREE.Vector3(0,1.5,5.0);
+function getBreathHead(){
+  const head=new THREE.Vector3(0,1.5,5.5);
   head.applyQuaternion(dragonMesh.quaternion);
   head.add(dragonMesh.position);
-  // Direction: dragon forward + slight spread
-  const fwd=new THREE.Vector3((Math.random()-.5)*.25,(Math.random()-.5)*.2,1);
+  return head;
+}
+function getBreathFwd(spread=0.25){
+  const fwd=new THREE.Vector3((Math.random()-.5)*spread,(Math.random()-.5)*spread*0.8,1);
   fwd.applyQuaternion(dragonMesh.quaternion).normalize();
-  fireArr.push({p:head,v:fwd.multiplyScalar(28+Math.random()*12),life:1,decay:.028+Math.random()*.02});
+  return fwd;
+}
+
+function spawnFire(){
+  if(fireArr.length>=FIRE_MAX)return;
+  const id=dtype.id;
+  const head=getBreathHead();
+
+  if(id==='fire'){
+    // Fire: dense cloud of large hot particles
+    for(let k=0;k<3;k++){
+      if(fireArr.length>=FIRE_MAX)break;
+      const fwd=getBreathFwd(0.4);
+      fireArr.push({p:head.clone(),v:fwd.multiplyScalar(26+Math.random()*14),life:1,decay:.022+Math.random()*.015,size:4+Math.random()*3});
+    }
+  } else if(id==='air'){
+    // Air: tornado — spiral outward with spin
+    for(let k=0;k<2;k++){
+      const angle=fireArr.length*0.4+Date.now()*0.004;
+      const r=Math.random()*2;
+      const fwd=new THREE.Vector3(Math.cos(angle)*r,(0.5+Math.random()*0.5),Math.sin(angle)*r+2);
+      fwd.applyQuaternion(dragonMesh.quaternion).normalize();
+      fireArr.push({p:head.clone(),v:fwd.multiplyScalar(20+Math.random()*10),life:1,decay:.018+Math.random()*.012,spin:1});
+    }
+  } else if(id==='earth'){
+    // Earth: single heavy boulder projectile
+    const fwd=getBreathFwd(0.08);
+    const vel=fwd.multiplyScalar(22);
+    const bGeo=new THREE.BoxGeometry(1.8,1.8,1.8);
+    const bMesh=new THREE.Mesh(bGeo,new THREE.MeshLambertMaterial({color:0x886644,flatShading:true}));
+    bMesh.position.copy(head);
+    scene.add(bMesh);
+    fireArr.push({p:head.clone(),v:vel,life:1,decay:.012,isBoulder:true,mesh:bMesh,spin:Math.random()-.5});
+  } else if(id==='soul'){
+    // Soul: purple gas cloud — slow drifting wide particles
+    for(let k=0;k<2;k++){
+      const fwd=getBreathFwd(0.7);
+      fireArr.push({p:head.clone(),v:fwd.multiplyScalar(10+Math.random()*6),life:1,decay:.008+Math.random()*.006,size:5+Math.random()*4});
+    }
+  } else if(id==='nature'){
+    // Nature: poison cloud — green particles that linger and spread
+    for(let k=0;k<2;k++){
+      const fwd=getBreathFwd(0.5);
+      fireArr.push({p:head.clone(),v:fwd.multiplyScalar(14+Math.random()*8),life:1,decay:.006+Math.random()*.005,isPoison:true,size:4+Math.random()*3});
+    }
+  } else if(id==='ice'){
+    // Ice: sharp crystalline shards in a fan
+    for(let k=0;k<2;k++){
+      const fwd=getBreathFwd(0.18);
+      fireArr.push({p:head.clone(),v:fwd.multiplyScalar(32+Math.random()*8),life:1,decay:.032+Math.random()*.015,isShard:true});
+    }
+  } else {
+    // Fallback
+    const fwd=getBreathFwd(0.25);
+    fireArr.push({p:head,v:fwd.multiplyScalar(28+Math.random()*12),life:1,decay:.028+Math.random()*.02});
+  }
 }
 
 function updateFireParticles(dt){
   for(let i=fireArr.length-1;i>=0;i--){
     const f=fireArr[i];
     f.p.addScaledVector(f.v,dt);
-    f.v.y+=3*dt;f.v.x+=(Math.random()-.5)*3*dt;
+    // Physics variants
+    if(f.isBoulder){
+      f.v.y-=18*dt; // heavy gravity
+      if(f.mesh)f.mesh.position.copy(f.p);
+      if(f.spin)f.mesh&&(f.mesh.rotation.x+=f.spin*dt*3);
+    } else if(f.isPoison){
+      f.v.multiplyScalar(0.995); // slow spread
+      f.v.x+=(Math.random()-.5)*2*dt;f.v.z+=(Math.random()-.5)*2*dt;
+      f.v.y+=0.5*dt;
+    } else if(f.spin&&!f.isBoulder){
+      // Tornado spin
+      f.v.x+=Math.cos(f.p.y*0.3)*8*dt;f.v.z+=Math.sin(f.p.y*0.3)*8*dt;
+      f.v.y+=4*dt;
+    } else {
+      f.v.y+=3*dt;f.v.x+=(Math.random()-.5)*3*dt;
+    }
     f.life-=f.decay;
     // Hit check
+    const hitR=f.isBoulder?6:f.isPoison?5:f.isShard?3.5:4.5;
     for(const e of activeEnemies){
       if(!e.userData.alive)continue;
-      if(f.p.distanceTo(e.position)<4.5){hitEnemy(e);f.life=0;break;}
+      if(f.p.distanceTo(e.position)<hitR){hitEnemy(e,upgradedDmg());f.life=0;break;}
     }
     for(const b of activeBuildings){
-      if(!b.userData.alive)continue;
+      if(!b.userData.alive&&!b.userData.safe)continue;
+      if(b.userData.safe)continue;
       if(f.p.distanceTo(b.position)<b.userData.radius){hitBuilding(b);f.life=0;break;}
     }
-    if(f.life<=0){fireArr.splice(i,1);}
+    if(f.life<=0){
+      if(f.mesh){scene.remove(f.mesh);}
+      fireArr.splice(i,1);
+    }
   }
-  const count=Math.min(fireArr.length,FIRE_MAX);
-  for(let i=0;i<count;i++){
+  // Update GPU particle buffer
+  let pIdx=0;
+  const count=Math.min(fireArr.filter(f=>!f.isBoulder).length,FIRE_MAX);
+  for(let i=0;i<fireArr.length&&pIdx<FIRE_MAX;i++){
     const f=fireArr[i];
-    fPos[i*3]=f.p.x;fPos[i*3+1]=f.p.y;fPos[i*3+2]=f.p.z;
+    if(f.isBoulder)continue;
+    fPos[pIdx*3]=f.p.x;fPos[pIdx*3+1]=f.p.y;fPos[pIdx*3+2]=f.p.z;
     const t=f.life,b=dtype.breath;
     const c0=t>.6?b[0]:t>.3?b[1]:b[2];
-    const alpha=t*.8;
-    fCol[i*3]=((c0>>16)&255)/255*alpha;
-    fCol[i*3+1]=((c0>>8)&255)/255*alpha;
-    fCol[i*3+2]=(c0&255)/255*alpha;
+    const alpha=t*(f.isPoison?0.6:f.size>5?0.5:0.8);
+    fCol[pIdx*3]=((c0>>16)&255)/255*alpha;
+    fCol[pIdx*3+1]=((c0>>8)&255)/255*alpha;
+    fCol[pIdx*3+2]=(c0&255)/255*alpha;
+    pIdx++;
   }
-  for(let i=count;i<FIRE_MAX;i++)fPos[i*3+1]=-9999;
+  for(let i=pIdx;i<FIRE_MAX;i++)fPos[i*3+1]=-9999;
   fGeo.attributes.position.needsUpdate=true;
   fGeo.attributes.color.needsUpdate=true;
-  fGeo.setDrawRange(0,count);
+  fGeo.setDrawRange(0,pIdx);
+  fMat.size=dtype.id==='fire'?5:dtype.id==='soul'||dtype.id==='nature'?7:dtype.id==='ice'?2:3.5;
+
+  // Update orb drops (spin + age)
+  for(let i=orbDrops.length-1;i>=0;i--){
+    const o=orbDrops[i];
+    o.mesh.rotation.y+=dt*2;
+    o.mesh.position.y=o.pos.y+Math.sin(Date.now()*0.003)*0.5;
+    o.life-=dt;
+    if(o.life<=0){scene.remove(o.mesh);orbDrops.splice(i,1);}
+  }
 }
 
 // ── Projectile system ─────────────────────────────────────────────────────────
@@ -1042,6 +1148,15 @@ function hitEnemy(e,dmgAmt){
     if(e.userData.type==='shadowDragon'){
       floatWorld(e.position,'☠ SHADOW SLAIN','#aa44ff');
     }
+    // Mage orb drop
+    if(e.userData.type==='mage'){
+      const orbGeo=new THREE.SphereGeometry(0.5,8,8);
+      const orbMesh=new THREE.Mesh(orbGeo,new THREE.MeshBasicMaterial({color:0xff44ff}));
+      orbMesh.position.copy(e.position);
+      scene.add(orbMesh);
+      orbDrops.push({mesh:orbMesh,pos:orbMesh.position.clone(),life:20});
+      floatWorld(e.position,'✨ ORB DROP!','#ff88ff');
+    }
     scene.remove(e);activeEnemies=activeEnemies.filter(x=>x!==e);
   }
 }
@@ -1075,16 +1190,55 @@ const camPos=new THREE.Vector3(0,30,-20);
 const camTarget=new THREE.Vector3(0,20,10);
 
 // ── Human player mode ─────────────────────────────────────────────────────────
-let isHuman=false;         // true = playing as human on ground
+let isHuman=false;
 let humanMesh=null;
-let humanYaw=0,humanPitch=0; // mouse look
-let humanHP=100;
-let mouseDX=0,mouseDY=0; // accumulated mouse delta
+let riderMesh=null;
+let humanYaw=0,humanPitch=0;
+let humanHP=100,humanVY=0; // vertical velocity for jump
+let mouseDX=0,mouseDY=0;
 let pointerLocked=false;
-let nearNPC=null;          // closest NPC in range
+let nearNPC=null;
 let dialogOpen=false;
-let friendlyNPCs=[];        // rider NPCs only (safe)
-let roamDragons=[];         // roaming friendly dragons
+let friendlyNPCs=[];
+let roamDragons=[];
+
+// ── Mage orb drops & upgrades ─────────────────────────────────────────────────
+let orbDrops=[];          // {mesh, pos, life}
+let mageOrbs=0;           // collected orbs
+let upgrades={dmg:0,hp:0,speed:0,fuel:0}; // upgrade levels (max 3 each)
+const ORB_RADIUS=3.5;
+const UPGRADE_COST=3; // orbs per upgrade
+
+function collectOrb(o){
+  mageOrbs++;
+  floatWorld(o.pos,'✨ ORB x'+mageOrbs,'#ff88ff');
+  scene.remove(o.mesh);
+  orbDrops=orbDrops.filter(x=>x!==o);
+  // Auto-apply upgrade in order: dmg → hp → speed → fuel
+  const up=upgrades;
+  if(up.dmg<3){up.dmg++;floatWorld(o.pos,'⬆ DMG LV'+(up.dmg),'#ff44ff');}
+  else if(up.hp<3){up.hp++;floatWorld(o.pos,'⬆ HP LV'+(up.hp),'#ff44ff');dmaxHp+=30;dhp+=30;}
+  else if(up.speed<3){up.speed++;floatWorld(o.pos,'⬆ SPD LV'+(up.speed),'#ff44ff');}
+  else if(up.fuel<3){up.fuel++;floatWorld(o.pos,'⬆ FUEL LV'+(up.fuel),'#ff44ff');dmaxFuel+=20;}
+}
+function upgradedDmg(){return dtype.dmg*(1+upgrades.dmg*0.4);}
+
+// ── Mouse drag turning (no pointer lock needed) ───────────────────────────────
+let mouseDown=false,lastMouseX=0;
+canvas.addEventListener('mousedown',e=>{mouseDown=true;lastMouseX=e.clientX;});
+document.addEventListener('mouseup',()=>{mouseDown=false;});
+document.addEventListener('mousemove',e=>{
+  if(gs!=='playing'||dialogOpen)return;
+  const dx=e.movementX||0,dy=e.movementY||0;
+  if(pointerLocked&&isHuman){
+    mouseDX+=dx*0.003;mouseDY+=dy*0.002;
+  } else if(isHuman&&mouseDown){
+    mouseDX+=(e.clientX-lastMouseX)*0.005;lastMouseX=e.clientX;
+  } else if(!isHuman&&mouseDown){
+    // Drag to turn dragon (ground walk or fly)
+    dYawVel-=(e.clientX-lastMouseX)*0.0012;lastMouseX=e.clientX;
+  }
+});
 
 try{best=parseInt(localStorage.getItem('dragonbattle_best')||'0');}catch(e){}
 function enemyBudget(){return Math.max(1,~~(score/400));}
@@ -1101,52 +1255,66 @@ document.addEventListener('keydown',e=>{
   }
   if(gs==='dead'&&(e.code==='Enter'||e.code==='Space'))showSelect();
   if(gs==='playing'){
-    // T = toggle human/dragon
     if(e.code==='KeyT'&&!dialogOpen)toggleHumanMode();
-    // E = interact with NPC
-    if(e.code==='KeyE'){
-      if(dialogOpen){closeDialog();}
-      else if(nearNPC)openDialog(nearNPC);
+    if(e.code==='KeyE'){if(dialogOpen)closeDialog();else if(nearNPC)openDialog(nearNPC);}
+    if(e.code==='KeyJ'&&isHuman&&!dialogOpen){
+      // Jump
+      if(humanVY===0)humanVY=12;
     }
+    if(e.code==='KeyD'&&isHuman&&!dialogOpen){
+      // Call dragon to player
+      dragonMesh.position.set(
+        humanMesh.position.x+Math.sin(humanYaw)*8,
+        humanMesh.position.y+2,
+        humanMesh.position.z+Math.cos(humanYaw)*8
+      );
+      isLanded=true;landedY=dragonMesh.position.y;
+      floatWorld(dragonMesh.position,'🐉 HERE!','#88ff44');
+    }
+    if(e.code==='Space')e.preventDefault();
   }
+  if(gs==='dead'&&(e.code==='Enter'||e.code==='Space'))showSelect();
 });
 document.addEventListener('keyup',e=>{delete keys[e.code];});
 
-// Pointer lock for mouse look in human mode
+// Pointer lock on click when in human mode
 canvas.addEventListener('click',()=>{
-  if(gs==='playing'&&isHuman&&!dialogOpen)canvas.requestPointerLock();
+  if(gs==='playing'&&isHuman&&!dialogOpen&&canvas.requestPointerLock)canvas.requestPointerLock();
 });
 document.addEventListener('pointerlockchange',()=>{
   pointerLocked=document.pointerLockElement===canvas;
-});
-document.addEventListener('mousemove',e=>{
-  if(pointerLocked&&isHuman&&!dialogOpen){
-    mouseDX+=e.movementX*0.003;
-    mouseDY+=e.movementY*0.002;
-  }
 });
 
 // Dialog close on tap
 document.getElementById('dialog').addEventListener('click',()=>{if(dialogOpen)closeDialog();});
 
 function toggleHumanMode(){
-  if(!isLanded&&!isHuman)return; // must be landed to dismount
   isHuman=!isHuman;
   if(isHuman){
-    // Spawn human at dragon position
+    // Dismount — land dragon, spawn human
     if(!humanMesh){humanMesh=makeHumanMesh(dtype);scene.add(humanMesh);}
-    humanMesh.position.copy(dragonMesh.position);
-    humanMesh.position.y=groundY(dragonMesh.position.x,dragonMesh.position.z)+1.5;
-    humanYaw=dYaw;humanPitch=0;
+    const gx=dragonMesh.position.x,gz=dragonMesh.position.z;
+    const gy=groundY(gx,gz)+1.5;
+    humanMesh.position.set(gx,gy,gz);
+    humanYaw=dYaw;humanPitch=0;humanVY=0;humanHP=Math.min(humanHP||100,100);
     humanMesh.visible=true;
-    dragonMesh.visible=true; // dragon stays (waits nearby)
+    if(riderMesh)riderMesh.visible=false;
+    // Dragon lands nearby
+    isLanded=true;
+    landedY=groundY(gx,gz)+3.5;
+    dragonMesh.position.set(gx+Math.sin(dYaw)*6,landedY,gz+Math.cos(dYaw)*6);
     document.getElementById('human-badge').style.display='block';
     if(canvas.requestPointerLock)canvas.requestPointerLock();
   } else {
-    // Remount dragon
+    // Remount — human jumps onto dragon
     if(humanMesh)humanMesh.visible=false;
-    dragonMesh.position.copy(humanMesh?humanMesh.position:dragonMesh.position);
-    dragonMesh.position.y=landedY||groundY(dragonMesh.position.x,dragonMesh.position.z)+3.5;
+    if(riderMesh)riderMesh.visible=true;
+    dragonMesh.position.set(
+      humanMesh?humanMesh.position.x:dragonMesh.position.x,
+      (landedY||groundY(dragonMesh.position.x,dragonMesh.position.z))+3.5,
+      humanMesh?humanMesh.position.z:dragonMesh.position.z
+    );
+    isLanded=false;dYaw=humanYaw;dYawVel=0;dPitchVel=-0.3; // take off
     document.getElementById('human-badge').style.display='none';
     if(document.exitPointerLock)document.exitPointerLock();
     pointerLocked=false;
@@ -1217,7 +1385,9 @@ function startGame(){
   gs='playing';score=0;kills=0;frame=0;
   ddead=false;ddeathT=0;dinvT=0;fireArr=[];projectiles.forEach(p=>scene.remove(p));projectiles=[];
   activeEnemies=[];activeBuildings=[];friendlyNPCs=[];roamDragons=[];
-  isHuman=false;humanHP=100;mouseDX=0;mouseDY=0;nearNPC=null;dialogOpen=false;
+  orbDrops.forEach(o=>scene.remove(o.mesh));orbDrops=[];
+  mageOrbs=0;upgrades={dmg:0,hp:0,speed:0,fuel:0};
+  isHuman=false;humanHP=100;humanVY=0;mouseDX=0;mouseDY=0;nearNPC=null;dialogOpen=false;
   if(humanMesh){scene.remove(humanMesh);humanMesh=null;}
   document.getElementById('human-badge').style.display='none';
   document.getElementById('dialog').style.display='none';
@@ -1232,6 +1402,9 @@ function startGame(){
   if(dragonMesh)scene.remove(dragonMesh);
   dragonMesh=buildDragonMesh(dtype);
   dragonMesh.position.set(0,30,0);scene.add(dragonMesh);
+  // Attach rider mesh to dragon back
+  riderMesh=buildRiderOnDragon(dtype);
+  dragonMesh.add(riderMesh);
   // Camera
   camPos.set(0,38,-20);camTarget.set(0,28,10);
   // Ground follows
@@ -1261,7 +1434,7 @@ function update(ts){
     const rt=keys['ArrowRight']||keys['KeyD']||mk.rt;
     const up=keys['ArrowUp']||keys['KeyW']||mk.up;
     const dn=keys['ArrowDown']||keys['KeyS']||mk.dn;
-    const doFire=keys['Space']||keys['KeyZ']||mk.fire;
+    const doFire=(keys['Space']||keys['KeyZ']||mk.fire)&&!isHuman;
 
     const gy=groundY(dragonMesh.position.x,dragonMesh.position.z);
     const landThreshold=gy+3.5;
@@ -1306,6 +1479,13 @@ function update(ts){
     // Ground plane follows
     ground.position.x=~~(dragonMesh.position.x/200)*200;
     ground.position.z=~~(dragonMesh.position.z/200)*200;
+
+    // Dragon can collect orbs too
+    if(!isHuman){
+      for(let i=orbDrops.length-1;i>=0;i--){
+        if(dragonMesh.position.distanceTo(orbDrops[i].pos)<ORB_RADIUS*2)collectOrb(orbDrops[i]);
+      }
+    }
 
     // ── FIRE (hold Space = continuous) ──
     if(fireCooldown>0)fireCooldown-=dt;
@@ -1443,14 +1623,25 @@ function update(ts){
       } else {
         hint.style.display='none';
       }
-      // Human attack: Space = sword swing
-      if(keys['Space']&&!dialogOpen){
+      // Jump (J key / movementY handled above, VY applied to position)
+      humanVY-=28*dt; // gravity
+      humanMesh.position.y+=humanVY*dt;
+      const groundH=groundY(humanMesh.position.x,humanMesh.position.z)+1.5;
+      if(humanMesh.position.y<=groundH){humanMesh.position.y=groundH;humanVY=0;}
+
+      // Human attack: Shift = sword swing
+      if((keys['ShiftLeft']||keys['ShiftRight'])&&!dialogOpen){
         for(const e of activeEnemies){
           if(!e.userData.alive)continue;
-          if(humanMesh.position.distanceTo(e.position)<5){
-            hitEnemy(e,25);floatWorld(e.position,'⚔','#FFD700');
+          if(humanMesh.position.distanceTo(e.position)<5.5){
+            hitEnemy(e,25+upgradedDmg()*0.5);floatWorld(e.position,'⚔','#FFD700');
           }
         }
+      }
+
+      // Collect orb drops
+      for(let i=orbDrops.length-1;i>=0;i--){
+        if(humanMesh.position.distanceTo(orbDrops[i].pos)<ORB_RADIUS)collectOrb(orbDrops[i]);
       }
       // Enemy attack on human
       if(dinvT<=0){
@@ -1524,11 +1715,19 @@ function updateHUD(){
   document.getElementById('kl').textContent='KILLS '+kills;
   const ref=isHuman&&humanMesh?humanMesh.position:dragonMesh.position;
   const dist=~~(Math.hypot(ref.x,ref.z)/10);
-  document.getElementById('dst').textContent=dist+' km';
+  const tod=dayTime<0.2||dayTime>0.8?'🌙':dayTime<0.4||dayTime>0.6?'🌅':'☀';
+  document.getElementById('dst').textContent=dist+' km '+tod;
   document.getElementById('land-badge').style.display=(isLanded&&!isHuman)?'block':'none';
-  // Day/night badge
-  const tod=dayTime<0.2||dayTime>0.8?'🌙 NIGHT':dayTime<0.4||dayTime>0.6?'🌅 DAWN/DUSK':'☀ DAY';
-  document.getElementById('dst').textContent=dist+' km  '+tod;
+  // Show orbs + upgrades
+  let upStr='';
+  if(mageOrbs>0||upgrades.dmg+upgrades.hp+upgrades.speed+upgrades.fuel>0){
+    upStr=` ✨${mageOrbs}`;
+    if(upgrades.dmg)upStr+=` ⚔${upgrades.dmg}`;
+    if(upgrades.hp)upStr+=` ❤${upgrades.hp}`;
+    if(upgrades.speed)upStr+=` ⚡${upgrades.speed}`;
+    if(upgrades.fuel)upStr+=` 🔥${upgrades.fuel}`;
+  }
+  document.getElementById('kl').textContent='KILLS '+kills+upStr;
 }
 
 // ── 2D overlay canvas for floaters ────────────────────────────────────────────

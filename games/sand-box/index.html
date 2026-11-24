@@ -204,15 +204,20 @@ function makeTransparentColor(img,r2,g2,b2,tol=40){
 let earthDragonCanvas=null,fireDragonCanvas=null,wyvernCanvas=null;
 let soulDragonCanvas=null,sunDragonCanvas=null,fireBallCanvas=null,blueBallCanvas=null,fireBreathCanvas=null;
 // Offscreen canvas for per-frame GIF background removal
-const _gifOC=document.createElement('canvas');const _gifOX=_gifOC.getContext('2d');
-function drawGifNoBackground(img,dx,dy,dw,dh,br,bg,bb,tol=45){
-  if(!img||!(img.width||img.naturalWidth))return;
-  const iw=img.naturalWidth||img.width,ih=img.naturalHeight||img.height;
-  _gifOC.width=iw;_gifOC.height=ih;
-  _gifOX.clearRect(0,0,iw,ih);_gifOX.drawImage(img,0,0);
-  const d=_gifOX.getImageData(0,0,iw,ih);
+const _gifOC=document.createElement('canvas');const _gifOX=_gifOC.getContext('2d',{willReadFrequently:true});
+function drawGifNoBackground(img,dx,dy,dw,dh,tol=50){
+  if(!img||!img.complete||!img.naturalWidth)return;
+  const iw=img.naturalWidth,ih=img.naturalHeight;
+  if(_gifOC.width!==iw)_gifOC.width=iw;
+  if(_gifOC.height!==ih)_gifOC.height=ih;
+  _gifOX.clearRect(0,0,iw,ih);
+  try{_gifOX.drawImage(img,0,0);}catch(e){return;}
+  let d;try{d=_gifOX.getImageData(0,0,iw,ih);}catch(e){ctx.drawImage(img,dx,dy,dw,dh);return;}
+  // sample top-left corner pixel as background colour — works for any bg
+  const br=d.data[0],bg=d.data[1],bb=d.data[2];
   for(let i=0;i<d.data.length;i+=4){
-    if(Math.abs(d.data[i]-br)<tol&&Math.abs(d.data[i+1]-bg)<tol&&Math.abs(d.data[i+2]-bb)<tol)d.data[i+3]=0;
+    if(Math.abs(d.data[i]-br)<tol&&Math.abs(d.data[i+1]-bg)<tol&&Math.abs(d.data[i+2]-bb)<tol)
+      d.data[i+3]=0;
   }
   _gifOX.putImageData(d,0,0);
   ctx.drawImage(_gifOC,dx,dy,dw,dh);
@@ -648,21 +653,6 @@ function drawWyvern(W,H,f,breathing,resting){
     ctx.drawImage(src,margin,margin,cropW,cropH,0,stepBob,W,H);
   } else {ctx.fillStyle='#9B0057';ctx.fillRect(0,0,W,H);}
 
-  // ── Legs: 2-legged walk (front/back alternating) ──
-  if(!resting){
-    const legAngles=[[-.35,.25],[.25,-.35],[.35,-.25],[-.25,.35]][f]; // [frontLeg, backLeg]
-    ctx.strokeStyle='#7A0040';ctx.lineWidth=C*.8;ctx.lineCap='round';
-    // front leg
-    ctx.save();ctx.translate(W*.65,H*.75+stepBob);ctx.rotate(legAngles[0]);
-    ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,H*.28);ctx.stroke();
-    ctx.beginPath();ctx.moveTo(0,H*.28);ctx.lineTo(C*.5,H*.28+C*.4);ctx.stroke(); // foot
-    ctx.restore();
-    // back leg
-    ctx.save();ctx.translate(W*.25,H*.75+stepBob);ctx.rotate(legAngles[1]);
-    ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,H*.28);ctx.stroke();
-    ctx.beginPath();ctx.moveTo(0,H*.28);ctx.lineTo(C*.5,H*.28+C*.4);ctx.stroke();
-    ctx.restore();
-  }
 
   // ── Neck + head overlay ──
   ctx.save();ctx.translate(W*.82,H*.36+stepBob);ctx.rotate(neckTilt);
@@ -778,20 +768,6 @@ function drawEarthDragon(W,H,f,angry,resting){
     ctx.drawImage(src,margin,margin,cropW,cropH,0,stepBob,W,H);
   } else {ctx.fillStyle='#2E7D32';ctx.fillRect(0,0,W,H);}
 
-  // ── 4 legs walk cycle ──
-  if(!resting){
-    // front-left, back-right move together; front-right, back-left move together
-    const angles=[[-.3,.2,-.3,.2],[.2,-.3,.2,-.3],[.3,-.2,.3,-.2],[-.2,.3,-.2,.3]][f];
-    const legX=[W*.62,W*.45,W*.28,W*.15],legY=H*.75;
-    ctx.strokeStyle='#2E6B00';ctx.lineWidth=C*.75;ctx.lineCap='round';
-    for(let i=0;i<4;i++){
-      ctx.save();ctx.translate(legX[i],legY+stepBob);ctx.rotate(angles[i]);
-      ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,H*.25);ctx.stroke();
-      ctx.beginPath();ctx.moveTo(0,H*.25);ctx.lineTo(C*.45*(i<2?1:-1),H*.25+C*.38);ctx.stroke();
-      ctx.restore();
-    }
-  }
-
   // ── Head nod overlay ──
   ctx.save();ctx.translate(W*.82,H*.32+stepBob);ctx.rotate(headNod);
   if(angry){
@@ -810,61 +786,20 @@ function drawEarthDragon(W,H,f,angry,resting){
 
 function drawSoulDragon(W,H,f,breathing,resting){
   const C=CELL;
-  const wa=wingAngle(f,resting);
-  const stepBob=resting?Math.sin(f*Math.PI/2)*H*.01:[H*.04,0,H*.04,0][f];
-  const spineSway=resting?0:[-0.05,0.025,0.05,-0.025][f];
-  const headNod=resting?Math.sin(f*Math.PI/2)*.05:[0.08,-0.04,-0.08,0.04][f];
-
-  // ── Tail swing ──
-  const tailSwing=resting?Math.sin(f*Math.PI/2)*.12:[-0.2,0.1,0.2,-0.1][f];
-  ctx.strokeStyle='#1A237E';ctx.lineWidth=C*.9;ctx.lineCap='round';
-  ctx.save();ctx.translate(W*.05,H*.65+stepBob);ctx.rotate(tailSwing);
-  ctx.beginPath();ctx.moveTo(0,0);ctx.quadraticCurveTo(-W*.12,H*.28,-W*.02,H*.46);ctx.stroke();
-  ctx.restore();
-
-  // ── Animated wings (deep blue) ──
-  ctx.fillStyle='#1A237E';
-  ctx.save();ctx.translate(W*.35,H*.38+stepBob);ctx.rotate(wa*.9);
-  ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-W*.3,-H*.34);ctx.lineTo(-W*.17,-H*.29);ctx.lineTo(-W*.28,-H*.11);ctx.closePath();ctx.fill();
-  ctx.fillStyle='#283593';
-  ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-W*.2,-H*.2);ctx.lineTo(-W*.12,-H*.17);ctx.closePath();ctx.fill();
-  ctx.restore();
-
-  // ── Body from GIF (blue-grey bg ~160,190,207 removed per frame) ──
+  // GIF has its own walk/wing animation — just bob the whole sprite
+  const stepBob=resting?Math.sin(f*Math.PI/2)*H*.008:[H*.03,0,H*.03,0][f];
   drawGifNoBackground(soulDragonImg,0,stepBob,W,H,160,190,207,50);
-
-  // ── 4 legs walk cycle ──
-  if(!resting){
-    const angles=[[-.3,.2,-.3,.2],[.2,-.3,.2,-.3],[.3,-.2,.3,-.2],[-.2,.3,-.2,.3]][f];
-    const legX=[W*.62,W*.45,W*.28,W*.15],legY=H*.75;
-    ctx.strokeStyle='#1A237E';ctx.lineWidth=C*.75;ctx.lineCap='round';
-    for(let i=0;i<4;i++){
-      ctx.save();ctx.translate(legX[i],legY+stepBob);ctx.rotate(angles[i]);
-      ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,H*.25);ctx.stroke();
-      ctx.beginPath();ctx.moveTo(0,H*.25);ctx.lineTo(C*.45*(i<2?1:-1),H*.25+C*.38);ctx.stroke();
-      ctx.restore();
-    }
-  }
-
-  // ── Eye glow + head nod ──
-  ctx.save();ctx.translate(W*.82,H*.28+stepBob);ctx.rotate(headNod);
-  ctx.fillStyle=`rgba(100,180,255,${0.5+Math.random()*.3})`;
-  ctx.beginPath();ctx.arc(C*.3,C*.3,C*.5,0,Math.PI*2);ctx.fill();
-  ctx.restore();
 
   // ── Blue fire breath (only when attacking) ──
   if(breathing){
-    const bsrc=blueBallCanvas||blueBallImg;
-    if(bsrc&&(bsrc.width||bsrc.naturalWidth)>0){
-      ctx.save();ctx.globalAlpha=0.85;
-      ctx.drawImage(bsrc,W*.85,H*.2+stepBob,W*.7,H*.45);
-      ctx.restore();
-    } else {
-      ctx.fillStyle=`rgba(80,140,255,${0.7+Math.random()*.3})`;
-      ctx.beginPath();ctx.ellipse(W*.95,H*.3+stepBob,W*.18,H*.12,0,0,Math.PI*2);ctx.fill();
+    for(let fi=0;fi<4;fi++){
+      const flicker=(Math.random()-.5)*C;
+      ctx.fillStyle=`rgba(${fi*18},${130+fi*28},255,${.88-fi*.16})`;
+      ctx.beginPath();ctx.ellipse(W+fi*C*2+flicker,H*.45+flicker*.3,C*(1.5-fi*.22),C*(0.9-fi*.12),0,0,Math.PI*2);ctx.fill();
     }
-    // "BLUE FIRE!" label
-    ctx.save();ctx.font=`bold ${C*1.2}px sans-serif`;ctx.fillStyle='#64B5F6';
+    ctx.fillStyle='rgba(210,245,255,.9)';
+    ctx.beginPath();ctx.ellipse(W+C,H*.45,C*.8,C*.5,0,0,Math.PI*2);ctx.fill();
+    ctx.save();ctx.font=`bold ${C*1.1}px sans-serif`;ctx.fillStyle='#64B5F6';
     ctx.strokeStyle='#000';ctx.lineWidth=2;
     ctx.strokeText('💙BLUE FIRE!',-W*.1,-C*1.5);ctx.fillText('💙BLUE FIRE!',-W*.1,-C*1.5);
     ctx.restore();
@@ -873,14 +808,8 @@ function drawSoulDragon(W,H,f,breathing,resting){
 
 function drawSunDragon(W,H,f,breathing,resting){
   const C=CELL;
-  // flying bob: smooth sine up/down to simulate wing flap
-  const flyBob=[-H*.05,-H*.02,H*.02,H*.04][f];
-  const bodyBob=resting?Math.sin(f*Math.PI/2)*H*.01:flyBob;
-  // slight vertical scale pulse (wings up = body rises slightly)
-  const scaleY=resting?1:[1.04,1.02,0.97,0.99][f];
-
-  // ── Body from GIF (blue-grey bg ~160,190,207 removed per frame) ──
-  // GIF self-animates the wing flap; just bob the whole image up/down
+  // GIF has its own fly/wing animation — just bob the whole sprite
+  const bodyBob=resting?Math.sin(f*Math.PI/2)*H*.01:[-H*.04,-H*.02,H*.02,H*.04][f];
   drawGifNoBackground(sunDragonImg,0,bodyBob,W,H,160,190,207,50);
 
   // ── Light ray (only when attacking) ──

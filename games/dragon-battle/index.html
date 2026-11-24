@@ -86,6 +86,7 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
     <div id="hud-tr">
       <div id="sc">SCORE 0</div><div id="bs">BEST 0</div>
       <div id="kl">KILLS 0</div><div id="dst">0 km</div>
+      <div id="land-badge" style="display:none;font-size:.38rem;color:#88ff44;margin-top:4px">▼ LANDED · ↑ TAKE OFF</div>
     </div>
   </div>
 
@@ -148,7 +149,7 @@ renderer.shadowMap.enabled=false;
 
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x080018);
-scene.fog=new THREE.Fog(0x080018,180,900);
+scene.fog=new THREE.Fog(0x080018,250,1200);
 
 const camera=new THREE.PerspectiveCamera(70,1,.5,1200);
 
@@ -170,11 +171,13 @@ resize();window.addEventListener('resize',resize);
 // ── Ground ────────────────────────────────────────────────────────────────────
 const GROUND_SIZE=4000;
 const groundGeo=new THREE.PlaneGeometry(GROUND_SIZE,GROUND_SIZE,60,60);
-// Add gentle hills
+// Heights — inline function matching groundY definition below
 {const pos=groundGeo.attributes.position;
  for(let i=0;i<pos.count;i++){
    const x=pos.getX(i),z=pos.getY(i);
-   pos.setZ(i,Math.sin(x/80)*4+Math.sin(z/120)*6+Math.sin(x/35)*2+Math.sin(z/45)*3);
+   const hills=Math.sin(x/80)*6+Math.sin(z/120)*8+Math.sin(x/35)*3+Math.sin(z/45)*4;
+   const broad=Math.sin(x/400)*15+Math.sin(z/350)*12+Math.sin((x+z)/600)*18;
+   pos.setZ(i,hills+Math.max(0,broad-6));
  }
  groundGeo.computeVertexNormals();}
 const groundMat=new THREE.MeshLambertMaterial({color:0x1a4d08,flatShading:true});
@@ -206,13 +209,47 @@ function addBox(g,w,h,d,m,x=0,y=0,z=0,rx=0,ry=0,rz=0){
   mesh.position.set(x,y,z);mesh.rotation.set(rx,ry,rz);g.add(mesh);return mesh;
 }
 
-function makeWingGeo(flip){
+// Wing geometry — 3 styles, all much larger
+function makeWingGeo(flip,style){
   const f=flip?-1:1;
-  const v=new Float32Array([
-    0,0,0,  f*4,0.4,-0.3,  f*3,0.1,1.5,
-    0,0,0,  f*3,0.1,1.5,   f*1.2,0,2.8,
-    f*4,0.4,-0.3, f*5.5,0.2,0.5, f*3,0.1,1.5,
-  ]);
+  let v;
+  if(style==='nature'){
+    // Wide, bushy leaf-like wings
+    v=new Float32Array([
+      0,0,0, f*3.5,0.5,-1.2, f*2.5,0.1,2,
+      0,0,0, f*2.5,0.1,2,    f*0.8,0,4,
+      f*3.5,0.5,-1.2, f*6.5,0.4,-0.5, f*4.5,0.2,2,
+      f*2.5,0.1,2,    f*4.5,0.2,2,    f*2.5,0,4.5,
+      f*6.5,0.4,-0.5, f*9,0.3,0.5,    f*6.5,0.1,2.5,
+      f*4.5,0.2,2,    f*6.5,0.1,2.5,  f*4,0,4.5,
+      f*9,0.3,0.5,    f*10.5,0.2,1.5, f*8,0,3,
+    ]);
+  } else if(style==='soul'){
+    // Broad bat wings with extra flap
+    v=new Float32Array([
+      0,0,0, f*3,0.4,-2,     f*2.2,0,1.5,
+      0,0,0, f*2.2,0,1.5,    0,-0.2,3.5,
+      f*3,0.4,-2,  f*6.5,0.3,-1.5, f*4.5,0.2,1.2,
+      f*2.2,0,1.5, f*4.5,0.2,1.2,  f*2.2,-0.1,3.5,
+      f*6.5,0.3,-1.5, f*10,0.1,-0.5,  f*7.5,0.1,1.2,
+      f*4.5,0.2,1.2,  f*7.5,0.1,1.2,  f*4.5,-0.1,3,
+      f*10,0.1,-0.5,  f*11.5,0,1,     f*9,0,2,
+      // extra bottom flap
+      0,-0.2,3.5, f*2.2,-0.1,3.5, f*0.8,-0.5,5.5,
+      f*2.2,-0.1,3.5, f*4,0,4,    f*2,-0.4,5.5,
+    ]);
+  } else {
+    // Standard — fire/ice/earth/air
+    v=new Float32Array([
+      0,0,0, f*3,0.5,-0.8,   f*2.2,0.1,1.8,
+      0,0,0, f*2.2,0.1,1.8,  0,0,3.2,
+      f*3,0.5,-0.8,  f*6,0.4,0,  f*4.4,0.2,1.8,
+      f*2.2,0.1,1.8, f*4.4,0.2,1.8, f*2.5,0.1,3.8,
+      f*6,0.4,0,     f*9,0.3,0.5,   f*7,0.15,1.8,
+      f*4.4,0.2,1.8, f*7,0.15,1.8,  f*4.5,0.1,3.5,
+      f*9,0.3,0.5,   f*11,0.2,1,    f*8.5,0,2.2,
+    ]);
+  }
   const geo=new THREE.BufferGeometry();
   geo.setAttribute('position',new THREE.BufferAttribute(v,3));
   geo.computeVertexNormals();return geo;
@@ -220,63 +257,160 @@ function makeWingGeo(flip){
 
 function buildDragonMesh(dt){
   const g=new THREE.Group();
-  const mB=mat(dt.body),mL=mat(dt.bodyL),mD=mat(dt.bodyD),mV=mat(dt.belly),mH=mat(dt.horn);
-  const mW=mat(dt.wingD,{side:THREE.DoubleSide,transparent:true,opacity:.88});
-  const mWL=mat(dt.wingL,{side:THREE.DoubleSide,transparent:true,opacity:.7});
+  const FS={flatShading:true};
+  const mB=mat(dt.body,FS),mL=mat(dt.bodyL,FS),mD=mat(dt.bodyD,FS),mV=mat(dt.belly,FS),mH=mat(dt.horn,FS);
+  const mW=mat(dt.wingD,{side:THREE.DoubleSide,flatShading:true,transparent:true,opacity:.9});
   const mE=matBasic(dt.eye);
 
-  // Body
-  addBox(g,2.0,0.95,3.5,mB);
-  addBox(g,1.5,0.06,3.0,mV, 0,-0.46,0.1);
-  // Neck
-  addBox(g,0.78,0.78,1.6,mL, 0,0.28,2.4, -0.38);
-  // Head
-  addBox(g,1.15,0.92,1.5,mB, 0,0.6,3.6);
-  // Snout
-  addBox(g,0.78,0.52,0.95,mL, 0,0.44,4.5);
-  // Nostrils
-  addBox(g,0.14,0.1,0.14,mD, -0.2,0.42,5.0);
-  addBox(g,0.14,0.1,0.14,mD,  0.2,0.42,5.0);
-  // Horns
-  addBox(g,0.2,0.75,0.2,mH, -0.32,1.22,3.5, 0.0,0,0.35);
-  addBox(g,0.2,0.75,0.2,mH,  0.32,1.22,3.5, 0.0,0,-0.35);
-  // Eyes
-  const eGeo=new THREE.SphereGeometry(0.16,6,6);
-  const eL=new THREE.Mesh(eGeo,mE.clone());eL.position.set(-0.4,0.78,4.4);g.add(eL);
-  const eR=new THREE.Mesh(eGeo,mE.clone());eR.position.set( 0.4,0.78,4.4);g.add(eR);
-  // Pupils
-  const pGeo=new THREE.SphereGeometry(0.08,4,4);const pM=matBasic(0x000000);
-  const pL=new THREE.Mesh(pGeo,pM.clone());pL.position.set(-0.4,0.78,4.57);g.add(pL);
-  const pR=new THREE.Mesh(pGeo,pM.clone());pR.position.set( 0.4,0.78,4.57);g.add(pR);
-
-  // Wings (pivots for animation)
-  const lwp=new THREE.Group();lwp.position.set(-1.0,0.15,0.6);
-  lwp.add(new THREE.Mesh(makeWingGeo(false),mW.clone()));
-  lwp.add(new THREE.Mesh(makeWingGeo(false),mWL.clone()));g.add(lwp);
-  const rwp=new THREE.Group();rwp.position.set(1.0,0.15,0.6);
-  rwp.add(new THREE.Mesh(makeWingGeo(true),mW.clone()));
-  rwp.add(new THREE.Mesh(makeWingGeo(true),mWL.clone()));g.add(rwp);
-
-  // Tail segments
-  for(let i=0;i<5;i++){
-    const s=0.88-i*0.14;
-    addBox(g,s,s,1.05,i<2?mB:mD, 0,-i*0.12,-2.4-i*1.0, i*0.08);
+  // ── BODY ──
+  addBox(g,2.2,1.0,4.5,mB);
+  addBox(g,1.6,0.08,4.0,mV, 0,-0.48,0.1);
+  // Scale highlights (voxel texture suggestion)
+  for(let i=0;i<6;i++){
+    addBox(g,0.55,0.2,0.5,mL,(i%2?0.65:-0.65),0.58,-1.8+i*0.75);
   }
-  // Tail tip
-  addBox(g,0.3,0.3,0.6,mD, 0,-0.55,-7.5, 0.5);
+  // Spine ridge
+  const sh=[0.45,0.6,0.72,0.68,0.55,0.4,0.3];
+  for(let i=0;i<sh.length;i++){
+    addBox(g,0.26,sh[i],0.26,mD, 0,0.5+sh[i]/2,-2.0+i*0.75);
+  }
 
-  // Legs
-  addBox(g,0.38,0.75,0.38,mD, -0.75,-0.78, 0.65);
-  addBox(g,0.38,0.75,0.38,mD,  0.75,-0.78, 0.65);
-  addBox(g,0.38,0.75,0.38,mD, -0.75,-0.78,-0.65);
-  addBox(g,0.38,0.75,0.38,mD,  0.75,-0.78,-0.65);
-  // Feet
-  addBox(g,0.55,0.18,0.5,mD, -0.75,-1.2, 0.65);
-  addBox(g,0.55,0.18,0.5,mD,  0.75,-1.2, 0.65);
-  addBox(g,0.55,0.18,0.5,mD, -0.75,-1.2,-0.65);
-  addBox(g,0.55,0.18,0.5,mD,  0.75,-1.2,-0.65);
+  // ── NECK ──
+  addBox(g,0.85,0.85,1.9,mL, 0,0.3,3.0,-0.38);
+  addBox(g,0.7,0.7,1.1,mB,  0,0.78,4.5,-0.6);
+  // Neck scales
+  for(let i=0;i<3;i++) addBox(g,0.16,0.3,0.16,mD, 0,1.1,3.0+i*0.65);
 
-  g.userData={lwp,rwp,wingAngle:0,tailF:0,tailSegs:[]};
+  // ── HEAD ──
+  addBox(g,1.25,1.05,1.9,mB, 0,1.1,5.5);
+  addBox(g,1.15,0.42,1.7,mD, 0,0.62,5.5); // lower jaw
+  // Snout
+  addBox(g,0.95,0.68,1.35,mL, 0,0.88,6.95);
+  addBox(g,0.62,0.48,0.62,mD, 0,0.82,7.95); // tip
+  // Nostrils
+  addBox(g,0.13,0.1,0.15,mD,-0.24,0.86,8.3);
+  addBox(g,0.13,0.1,0.15,mD, 0.24,0.86,8.3);
+  // Brow ridges
+  addBox(g,0.32,0.22,0.65,mD,-0.52,1.52,5.5,0,0,-0.18);
+  addBox(g,0.32,0.22,0.65,mD, 0.52,1.52,5.5,0,0, 0.18);
+  // Horns
+  addBox(g,0.24,1.05,0.24,mH,-0.44,2.1,5.3,0,0,0.3);
+  addBox(g,0.24,1.05,0.24,mH, 0.44,2.1,5.3,0,0,-0.3);
+  addBox(g,0.16,0.62,0.16,mH,-0.62,2.0,5.0,0,0,0.5);
+  addBox(g,0.16,0.62,0.16,mH, 0.62,2.0,5.0,0,0,-0.5);
+  // Eyes
+  const eGeo=new THREE.SphereGeometry(0.19,8,8);
+  const eL=new THREE.Mesh(eGeo,mE.clone());eL.position.set(-0.52,1.2,6.1);g.add(eL);
+  const eR=new THREE.Mesh(eGeo,mE.clone());eR.position.set( 0.52,1.2,6.1);g.add(eR);
+  const pGeo=new THREE.SphereGeometry(0.1,6,6);const pM=matBasic(0x000000);
+  const pL=new THREE.Mesh(pGeo,pM.clone());pL.position.set(-0.52,1.2,6.3);g.add(pL);
+  const pR=new THREE.Mesh(pGeo,pM.clone());pR.position.set( 0.52,1.2,6.3);g.add(pR);
+
+  // ── WINGS ──
+  const lwp=new THREE.Group();lwp.position.set(-1.1,0.2,0.9);
+  const rwp=new THREE.Group();rwp.position.set( 1.1,0.2,0.9);
+  lwp.add(new THREE.Mesh(makeWingGeo(false,dt.id),mW.clone()));
+  rwp.add(new THREE.Mesh(makeWingGeo(true, dt.id),mW.clone()));
+  g.add(lwp);g.add(rwp);
+  // Wing "finger bone" boxes (voxel detail)
+  for(let i=0;i<5;i++){
+    addBox(lwp,0.22,0.22,0.22,mD,-(i+1)*1.6,0.32+i*0.04,-0.6+i*0.4);
+    addBox(rwp,0.22,0.22,0.22,mD, (i+1)*1.6,0.32+i*0.04,-0.6+i*0.4);
+  }
+  // Type-specific wing extras
+  if(dt.id==='nature'){
+    // Leaf cluster boxes on wings
+    const lM=mat(dt.bodyL,{flatShading:true});
+    for(let i=0;i<6;i++){
+      const wx=-(1.5+i*1.4),wz=-0.5+i*0.6;
+      addBox(lwp,1.1,0.3,0.7,lM,wx,0.5,wz);
+      addBox(rwp,1.1,0.3,0.7,lM,-wx,0.5,wz);
+    }
+  }
+  if(dt.id==='ice'){
+    const IM=mat(0xaaddff,{flatShading:true});
+    for(let i=0;i<5;i++){
+      addBox(lwp,0.22,0.6,0.22,IM,-(1.2+i*1.5),0.65,-0.3+i*0.35);
+      addBox(rwp,0.22,0.6,0.22,IM, (1.2+i*1.5),0.65,-0.3+i*0.35);
+    }
+  }
+  if(dt.id==='soul'){
+    const orbM=new THREE.MeshBasicMaterial({color:0xff44ff});
+    const orbG=new THREE.SphereGeometry(0.3,6,6);
+    for(let i=0;i<3;i++){
+      const o1=new THREE.Mesh(orbG,orbM.clone());o1.position.set(-(2+i*2.5),0.3,i*0.8);lwp.add(o1);
+      const o2=new THREE.Mesh(orbG,orbM.clone());o2.position.set( (2+i*2.5),0.3,i*0.8);rwp.add(o2);
+    }
+  }
+
+  // ── TAIL ──
+  for(let i=0;i<8;i++){
+    const s=0.88-i*0.09;
+    addBox(g,s*1.1,s,1.1,i<2?mB:mD, 0,-i*0.1,-3.3-i*1.0,i*0.09);
+    if(i>0&&i<5) addBox(g,0.14,0.28-i*0.04,0.14,mD, 0,s*0.5+0.14,-3.3-i*1.0);
+  }
+  addBox(g,0.3,0.3,0.65,mH, 0,-0.72,-11.6,0.5);
+
+  // ── LEGS & CLAWS ──
+  addBox(g,0.72,1.0,0.72,mD,-0.9,-0.9, 1.0);addBox(g,0.72,1.0,0.72,mD, 0.9,-0.9, 1.0);
+  addBox(g,0.88,1.1,0.88,mD,-0.9,-0.9,-0.9);addBox(g,0.88,1.1,0.88,mD, 0.9,-0.9,-0.9);
+  addBox(g,1.05,0.26,0.82,mD,-0.9,-1.5, 1.0);addBox(g,1.05,0.26,0.82,mD, 0.9,-1.5, 1.0);
+  addBox(g,1.1,0.26,0.9,mD,-0.9,-1.55,-0.9);addBox(g,1.1,0.26,0.9,mD, 0.9,-1.55,-0.9);
+  const cm=mat(dt.horn,FS);
+  for(const[bx,bz] of [[-0.9,1.0],[0.9,1.0],[-0.9,-0.9],[0.9,-0.9]]){
+    addBox(g,0.2,0.2,0.52,cm,bx-0.3,-1.74,bz+0.4);
+    addBox(g,0.2,0.2,0.52,cm,bx,    -1.74,bz+0.46);
+    addBox(g,0.2,0.2,0.52,cm,bx+0.3,-1.74,bz+0.4);
+  }
+
+  g.userData={lwp,rwp,wingAngle:0,tailF:0};
+  return g;
+}
+
+// Enemy dragon (flying)
+function makeEnemyDragonMesh(){
+  const g=new THREE.Group();
+  const FS={flatShading:true};
+  const mB=mat(0x1a0808,FS),mA=mat(0x330000,FS),mW=mat(0x2d0000,{side:THREE.DoubleSide,flatShading:true});
+  addBox(g,1.6,0.72,3.2,mB);addBox(g,0.6,0.6,1.5,mB,0,0.2,2.1,-0.3);
+  addBox(g,0.95,0.72,1.3,mA,0,0.5,3.4);addBox(g,0.6,0.46,0.8,mA,0,0.36,4.3);
+  const lw=new THREE.Group();lw.position.set(-0.8,0.1,0.5);
+  const rw=new THREE.Group();rw.position.set( 0.8,0.1,0.5);
+  lw.add(new THREE.Mesh(makeWingGeo(false,'fire'),mW.clone()));
+  rw.add(new THREE.Mesh(makeWingGeo(true,'fire'),mW.clone()));
+  g.add(lw);g.add(rw);
+  for(let i=0;i<4;i++){const s=0.65-i*0.1;addBox(g,s,s,0.9,mB,0,-i*0.08,-2.1-i*0.9,i*0.1);}
+  const eG=new THREE.SphereGeometry(0.14,6,6);
+  const eM=new THREE.MeshBasicMaterial({color:0xff2200});
+  const el=new THREE.Mesh(eG,eM.clone());el.position.set(-0.35,0.68,4.0);g.add(el);
+  const er=new THREE.Mesh(eG,eM.clone());er.position.set( 0.35,0.68,4.0);g.add(er);
+  g.userData={lwp:lw,rwp:rw,wingAngle:0,type:'dragon',alive:true,
+    hp:60,maxHp:60,shootT:2+Math.random()*3,si:3+Math.random()*2,
+    spd:10,dmg:25,pts:200,flyOrbit:Math.random()*Math.PI*2};
+  return g;
+}
+
+// Mountain mesh
+function makeMountainMesh(h){
+  const g=new THREE.Group();
+  const r=12+h*0.28;
+  const cG=new THREE.ConeGeometry(r,h,7,1);
+  // Distort vertices for rocky look
+  const p=cG.attributes.position;
+  for(let i=0;i<p.count;i++){
+    if(p.getY(i)<h*0.9){
+      p.setX(i,p.getX(i)+(Math.random()-.5)*r*0.28);
+      p.setZ(i,p.getZ(i)+(Math.random()-.5)*r*0.28);
+    }
+  }
+  cG.computeVertexNormals();
+  const mtn=new THREE.Mesh(cG,mat(0x556644,{flatShading:true}));
+  mtn.position.y=h/2;g.add(mtn);
+  // Snow cap
+  const sG=new THREE.ConeGeometry(r*0.28,h*0.28,6,1);
+  const snow=new THREE.Mesh(sG,mat(0xddeeff,{flatShading:true}));
+  snow.position.set(0,h*0.9,0);
+  g.add(snow);
   return g;
 }
 
@@ -508,20 +642,42 @@ function spawnZone(cx,cz){
       e.position.set(ex,groundY(ex,ez)+1.5,ez);
       scene.add(e);objects.push(e);activeEnemies.push(e);
     }
+
+    // Flying enemy dragon (rare, appears with score)
+    if(Math.random()<0.03*Math.max(0.3,enemyBudget()*0.4)){
+      const ed=makeEnemy3d('dragon');
+      const edx=wx0+Math.random()*ZONE,edz=wz0+Math.random()*ZONE;
+      ed.position.set(edx,groundY(edx,edz)+35+Math.random()*30,edz);
+      ed.userData.baseY=ed.position.y;
+      scene.add(ed);objects.push(ed);activeEnemies.push(ed);
+    }
+
+    // Mountains (8% chance per zone, away from origin)
+    if(dist2>9&&Math.random()<0.08){
+      const mh=50+Math.random()*90;
+      const mx=wx0+ZONE/2+(Math.random()-.5)*120;
+      const mz=wz0+ZONE/2+(Math.random()-.5)*120;
+      const mt=makeMountainMesh(mh);
+      mt.position.set(mx,groundY(mx,mz),mz);
+      scene.add(mt);objects.push(mt);
+    }
   }
 
   zoneMap.set(key,objects);
 }
 
 function groundY(x,z){
-  return Math.sin(x/80)*4+Math.sin(z/120)*6+Math.sin(x/35)*2+Math.sin(z/45)*3;
+  const hills=Math.sin(x/80)*6+Math.sin(z/120)*8+Math.sin(x/35)*3+Math.sin(z/45)*4;
+  const broad=Math.sin(x/400)*15+Math.sin(z/350)*12+Math.sin((x+z)/600)*18;
+  return hills+Math.max(0,broad-6);
 }
 
 function makeEnemy3d(type){
-  const m=type==='ogre'?makeOgreMesh():type==='mage'?makeMageMesh():makeArcherMesh();
+  const m=type==='ogre'?makeOgreMesh():type==='mage'?makeMageMesh():type==='dragon'?makeEnemyDragonMesh():makeArcherMesh();
   const cfg={archer:{hp:20,maxHp:20,si:3+Math.random()*2,spd:18,dmg:12,pts:60},
               ogre:  {hp:60,maxHp:60,si:5+Math.random()*2,spd:14,dmg:20,pts:120},
-              mage:  {hp:30,maxHp:30,si:2+Math.random()*2,spd:22,dmg:15,pts:100}};
+              mage:  {hp:30,maxHp:30,si:2+Math.random()*2,spd:22,dmg:15,pts:100},
+              dragon:{hp:60,maxHp:60,si:3+Math.random()*2,spd:10,dmg:25,pts:200}};
   Object.assign(m.userData,cfg[type]);
   m.userData.shootT=Math.random()*m.userData.si;
   return m;
@@ -585,6 +741,7 @@ let dhp=0,dmaxHp=0,dfuel=0,dmaxFuel=0,dinvT=0,ddead=false,ddeathT=0;
 let dtype=DT[0],selectedType=0;
 let dragonMesh=null;
 let dYaw=0,dPitch=0,dRoll=0,dYawVel=0,dPitchVel=0;
+let isLanded=false,landedY=0,fireCooldown=0;
 const camPos=new THREE.Vector3(0,30,-20);
 const camTarget=new THREE.Vector3(0,20,10);
 
@@ -660,7 +817,7 @@ function startGame(){
   for(const[,objs] of zoneMap)objs.forEach(o=>scene.remove(o));
   zoneMap.clear();
   // Reset dragon position
-  dYaw=0;dPitch=0;dRoll=0;dYawVel=0;dPitchVel=0;
+  dYaw=0;dPitch=0;dRoll=0;dYawVel=0;dPitchVel=0;isLanded=false;fireCooldown=0;
   dhp=dtype.hp;dmaxHp=dtype.hp;dfuel=dtype.fuel;dmaxFuel=dtype.fuel;
   // Build new dragon mesh
   if(dragonMesh)scene.remove(dragonMesh);
@@ -697,45 +854,71 @@ function update(ts){
     const dn=keys['ArrowDown']||keys['KeyS']||mk.dn;
     const doFire=keys['Space']||keys['KeyZ']||mk.fire;
 
-    // Steering
-    const turnSpd=1.6,pitchSpd=1.0,turnDrag=0.82,pitchDrag=0.78;
-    if(lf)dYawVel+=turnSpd*dt;if(rt)dYawVel-=turnSpd*dt;
-    if(up)dPitchVel-=pitchSpd*dt;if(dn)dPitchVel+=pitchSpd*dt;
-    dYawVel*=turnDrag;dPitchVel*=pitchDrag;
-    dYaw+=dYawVel;
-    dPitch=Math.max(-.55,Math.min(.4,dPitch+dPitchVel));
-    // Banking roll
-    dRoll+=(dYawVel*-2.5-dRoll)*.15;
-
-    // Apply rotation to dragon
-    dragonMesh.rotation.set(dPitch,dYaw,dRoll,'YXZ');
-
-    // Move forward in facing direction
-    const fwd=new THREE.Vector3(0,0,1);
-    fwd.applyEuler(dragonMesh.rotation);
-    dragonMesh.position.addScaledVector(fwd,dtype.speed*dt);
-
-    // Keep above ground
     const gy=groundY(dragonMesh.position.x,dragonMesh.position.z);
-    if(dragonMesh.position.y<gy+4){dragonMesh.position.y=gy+4;dPitchVel=Math.min(0,dPitchVel);}
+    const landThreshold=gy+3.5;
+
+    // ── LANDED STATE ──
+    if(isLanded){
+      // Can turn slowly on ground
+      if(lf)dYaw+=1.0*dt;if(rt)dYaw-=1.0*dt;
+      dragonMesh.position.y=landedY;
+      dragonMesh.rotation.set(0,dYaw,0,'YXZ');
+      dRoll=0;dPitchVel=0;dPitch=0;
+      // Slow ground walk
+      const gfwd=new THREE.Vector3(0,0,1).applyEuler(new THREE.Euler(0,dYaw,0));
+      dragonMesh.position.addScaledVector(gfwd,dtype.speed*0.3*dt);
+      // Wings fold
+      dragonMesh.userData.lwp.rotation.z= Math.PI*0.55;
+      dragonMesh.userData.rwp.rotation.z=-Math.PI*0.55;
+      // Press UP to take off
+      if(up){isLanded=false;dPitchVel=-0.5;}
+    } else {
+      // ── FLYING STATE ──
+      const turnSpd=1.6,pitchSpd=1.0,turnDrag=0.82,pitchDrag=0.78;
+      if(lf)dYawVel+=turnSpd*dt;if(rt)dYawVel-=turnSpd*dt;
+      if(up)dPitchVel-=pitchSpd*dt;if(dn)dPitchVel+=pitchSpd*dt;
+      dYawVel*=turnDrag;dPitchVel*=pitchDrag;
+      dYaw+=dYawVel;
+      dPitch=Math.max(-.55,Math.min(.4,dPitch+dPitchVel));
+      dRoll+=(dYawVel*-2.5-dRoll)*.15;
+      dragonMesh.rotation.set(dPitch,dYaw,dRoll,'YXZ');
+      const fwd=new THREE.Vector3(0,0,1);
+      fwd.applyEuler(dragonMesh.rotation);
+      dragonMesh.position.addScaledVector(fwd,dtype.speed*dt);
+      // Land if descend to ground
+      if(dragonMesh.position.y<=landThreshold&&dPitch>=0.1){
+        isLanded=true;landedY=landThreshold;
+        dragonMesh.position.y=landedY;dPitchVel=0;dYawVel*=0.3;
+      } else if(dragonMesh.position.y<landThreshold){
+        dragonMesh.position.y=landThreshold;dPitchVel=Math.min(0,dPitchVel);
+      }
+    }
 
     // Ground plane follows
     ground.position.x=~~(dragonMesh.position.x/200)*200;
     ground.position.z=~~(dragonMesh.position.z/200)*200;
 
-    // Fire
-    if(doFire&&dfuel>0){dfuel=Math.max(0,dfuel-70*dt);if(frame%2===0)spawnFire();}
-    else dfuel=Math.min(dmaxFuel,dfuel+dtype.rfuel*60*dt);
+    // ── FIRE (hold Space = continuous) ──
+    if(fireCooldown>0)fireCooldown-=dt;
+    if(doFire&&dfuel>0&&!isLanded){
+      dfuel=Math.max(0,dfuel-70*dt);
+      if(frame%2===0)spawnFire();
+    } else dfuel=Math.min(dmaxFuel,dfuel+dtype.rfuel*60*dt);
+
+    // fwd needed below (define if landed)
+    const fwd=new THREE.Vector3(0,0,1);fwd.applyEuler(dragonMesh.rotation);
 
     // Regen
     if(frame%240===0)dhp=Math.min(dmaxHp,dhp+(dtype.id==='nature'?8:3));
     if(dinvT>0)dinvT-=dt;
 
-    // Wing animation
-    dragonMesh.userData.wingAngle+=dt*5;
-    const wa=Math.sin(dragonMesh.userData.wingAngle)*.55;
-    dragonMesh.userData.lwp.rotation.z=wa;
-    dragonMesh.userData.rwp.rotation.z=-wa;
+    // Wing animation (only when flying)
+    if(!isLanded){
+      dragonMesh.userData.wingAngle+=dt*5;
+      const wa=Math.sin(dragonMesh.userData.wingAngle)*.55;
+      dragonMesh.userData.lwp.rotation.z=wa;
+      dragonMesh.userData.rwp.rotation.z=-wa;
+    }
     dragonMesh.userData.tailF+=dt*4;
 
     // Camera: smooth third-person follow
@@ -764,15 +947,30 @@ function update(ts){
       // Mages bob
       if(e.userData.type==='mage'){
         e.userData.orb.rotation.y+=dt*3;
-        e.position.y+= Math.sin(e.userData.animT*2)*.02;
+        e.position.y+=Math.sin(e.userData.animT*2)*.02;
+      }
+      // Enemy dragon: circle player at altitude, swoop to attack
+      if(e.userData.type==='dragon'){
+        e.userData.flyOrbit=(e.userData.flyOrbit||0)+dt*0.4;
+        const orbitR=80+Math.sin(e.userData.animT*0.3)*30;
+        const tx=dragonMesh.position.x+Math.cos(e.userData.flyOrbit)*orbitR;
+        const tz=dragonMesh.position.z+Math.sin(e.userData.flyOrbit)*orbitR;
+        const ty=e.userData.baseY||50;
+        const toT=new THREE.Vector3(tx-e.position.x,ty-e.position.y,tz-e.position.z);
+        e.position.addScaledVector(toT.normalize(),e.userData.spd*dt);
+        e.lookAt(dragonMesh.position);
+        // Animate wings
+        e.userData.wingAngle=(e.userData.wingAngle||0)+dt*4;
+        const wa=Math.sin(e.userData.wingAngle)*.5;
+        e.userData.lwp.rotation.z=wa;e.userData.rwp.rotation.z=-wa;
       }
       // Shoot
       e.userData.shootT-=dt;
       const distToDragon=e.position.distanceTo(dragonMesh.position);
       if(e.userData.shootT<=0&&distToDragon<400){
         e.userData.shootT=e.userData.si;
-        spawnProjectile(e.userData.type==='mage'?'magic':e.userData.type==='ogre'?'rock':'arrow',
-          e.position.clone(),dragonMesh.position.clone());
+        const pType=e.userData.type==='mage'?'magic':e.userData.type==='ogre'?'rock':e.userData.type==='dragon'?'magic':'arrow';
+        spawnProjectile(pType,e.position.clone(),dragonMesh.position.clone());
       }
     }
 
@@ -807,6 +1005,7 @@ function updateHUD(){
   document.getElementById('kl').textContent='KILLS '+kills;
   const dist=~~(Math.hypot(dragonMesh.position.x,dragonMesh.position.z)/10);
   document.getElementById('dst').textContent=dist+' km';
+  document.getElementById('land-badge').style.display=isLanded?'block':'none';
 }
 
 // ── 2D overlay canvas for floaters ────────────────────────────────────────────

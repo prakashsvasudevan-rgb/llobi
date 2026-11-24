@@ -115,6 +115,9 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
       <div id="kl">KILLS 0</div><div id="dst">0 km</div>
       <div id="land-badge" style="display:none;font-size:.38rem;color:#88ff44;margin-top:4px">▼ LANDED · ↑ TAKE OFF</div>
       <div id="quest-badge" style="display:none;font-size:.38rem;color:#ffdd44;margin-top:4px">⚔ QUEST: DEFEAT THE EMPEROR</div>
+      <div id="ability-bar" style="display:none;font-size:.33rem;color:#aaffcc;margin-top:4px;line-height:1.6"></div>
+      <div id="shield-badge" style="display:none;font-size:.38rem;color:#8888ff;margin-top:3px">🔮 SOUL SHIELD ACTIVE</div>
+      <div id="earth-badge" style="display:none;font-size:.38rem;color:#88cc44;margin-top:3px">🌍 INVINCIBLE</div>
     </div>
   </div>
 
@@ -1140,7 +1143,12 @@ function updateProjectiles(dt){
       const target=isHuman&&humanMesh?humanMesh:dragonMesh;
       if(p.position.distanceTo(target.position)<(isHuman?2.5:4)){
         if(isHuman){humanHP-=p.userData.dmg;if(humanHP<=0&&!ddead){ddead=true;humanHP=0;endGame();}}
-        else{dhp-=p.userData.dmg;if(dhp<=0&&!ddead){ddead=true;dhp=0;}}
+        else if(earthInvT>0){/* earth invincibility */}
+        else{
+          let dmgLeft=p.userData.dmg;
+          if(soulShieldHP>0){const absorbed=Math.min(soulShieldHP,dmgLeft);soulShieldHP-=absorbed;dmgLeft-=absorbed;if(soulShieldHP<=0)floatWorld(dragonMesh.position,'🔮 SHIELD BROKEN!','#ff88ff');}
+          if(dmgLeft>0){dhp-=dmgLeft;if(dhp<=0&&!ddead){ddead=true;dhp=0;}}
+        }
         dinvT=1.5;
         scene.remove(p);projectiles.splice(i,1);continue;
       }
@@ -1733,6 +1741,12 @@ function floatWorld(worldPos,text,col){
 // ── Game state ────────────────────────────────────────────────────────────────
 let gs='select',score=0,best=0,kills=0,frame=0;
 let dhp=0,dmaxHp=0,dfuel=0,dmaxFuel=0,dinvT=0,ddead=false,ddeathT=0;
+// Dragon abilities
+let abilityCooldown={attack:0,heal:0,ice:0,fire:0,soul:0,earth:0};
+let soulShieldHP=0; // bonus shield HP
+let earthInvT=0;    // invincibility timer
+let burnMap=new Map();  // enemy→burnT
+let freezeMap=new Map(); // enemy→freezeT
 let dtype=DT[1],selectedType=1; // 0=lightning (unlockable), start on fire
 let dragonMesh=null;
 let dYaw=0,dPitch=0,dRoll=0,dYawVel=0,dPitchVel=0;
@@ -1861,6 +1875,61 @@ document.addEventListener('keydown',e=>{
         dragonArmy.push({mesh:nearest,slot:dragonArmy.length});
         floatWorld(nearest.position,'🐉 TAMED!','#44ffcc');
         wildDragons=wildDragons.filter(w=>w!==nearest);
+      }
+    }
+    // ── DRAGON ABILITIES ────────────────────────────────────────────────────
+    if(!dialogOpen&&gs==='playing'&&!isHuman){
+      // F = Attack burst (all types) — multi-shot volley
+      if(e.code==='KeyF'&&!wildDragons.some(w=>w.userData.tameable)){
+        if(abilityCooldown.attack<=0){
+          abilityCooldown.attack=8;
+          const ref3=dragonMesh.position;
+          let hit=0;
+          for(const en of activeEnemies){if(!en.userData.alive)continue;const d=ref3.distanceTo(en.position);if(d<200){spawnProjectile('magic',ref3.clone(),en.position.clone());hit++;if(hit>=3)break;}}
+          floatWorld(ref3,'⚔ ATTACK BURST!','#ffaa44');
+        } else floatWorld(dragonMesh.position,'⏳ '+~~abilityCooldown.attack+'s','#888888');
+      }
+      // H = Heal (Nature dragon)
+      if(e.code==='KeyH'&&dtype.id==='nature'){
+        if(abilityCooldown.heal<=0){
+          abilityCooldown.heal=20;
+          const healAmt=~~(dmaxHp*0.4);dhp=Math.min(dmaxHp,dhp+healAmt);
+          floatWorld(dragonMesh.position,'🌿 HEALED +'+healAmt,'#44ff88');
+        } else floatWorld(dragonMesh.position,'⏳ '+~~abilityCooldown.heal+'s','#888888');
+      }
+      // V = Freeze arrows (Ice dragon)
+      if(e.code==='KeyV'&&dtype.id==='ice'){
+        if(abilityCooldown.ice<=0){
+          abilityCooldown.ice=12;
+          const ref3=dragonMesh.position;
+          let hit=0;
+          for(const en of activeEnemies){if(!en.userData.alive)continue;const d=ref3.distanceTo(en.position);if(d<180){spawnProjectile('arrow',ref3.clone(),en.position.clone());freezeMap.set(en,(freezeMap.get(en)||0)+5);en.userData.si=(en.userData.si||3)*1.6;hit++;if(hit>=4)break;}}
+          floatWorld(ref3,'❄ FREEZE ARROWS!','#88ddff');
+        } else floatWorld(dragonMesh.position,'⏳ '+~~abilityCooldown.ice+'s','#888888');
+      }
+      // U = Burn projectiles (Fire dragon)
+      if(e.code==='KeyU'&&dtype.id==='fire'){
+        if(abilityCooldown.fire<=0){
+          abilityCooldown.fire=10;
+          const ref3=dragonMesh.position;
+          let hit=0;
+          for(const en of activeEnemies){if(!en.userData.alive)continue;const d=ref3.distanceTo(en.position);if(d<220){spawnProjectile('bolt',ref3.clone(),en.position.clone());burnMap.set(en,(burnMap.get(en)||0)+6);hit++;if(hit>=3)break;}}
+          floatWorld(ref3,'🔥 BURN VOLLEY!','#ff6622');
+        } else floatWorld(dragonMesh.position,'⏳ '+~~abilityCooldown.fire+'s','#888888');
+      }
+      // Semicolon = Soul Shield
+      if(e.code==='Semicolon'&&dtype.id==='soul'){
+        if(abilityCooldown.soul<=0){
+          abilityCooldown.soul=25;soulShieldHP=~~(dmaxHp*0.5);
+          floatWorld(dragonMesh.position,'🔮 SOUL SHIELD!','#8888ff');
+        } else floatWorld(dragonMesh.position,'⏳ '+~~abilityCooldown.soul+'s','#888888');
+      }
+      // Equal = Earth Invincibility 10s
+      if(e.code==='Equal'&&dtype.id==='earth'){
+        if(abilityCooldown.earth<=0){
+          abilityCooldown.earth=40;earthInvT=10;
+          floatWorld(dragonMesh.position,'🌍 INVINCIBLE 10s!','#88cc44');
+        } else floatWorld(dragonMesh.position,'⏳ '+~~abilityCooldown.earth+'s','#888888');
       }
     }
     if(e.code==='KeyR'&&nearNPC&&nearNPC.userData.isRecruitable&&!nearNPC.userData.recruited&&dragonArmy.length<MAX_ARMY){
@@ -2094,6 +2163,7 @@ function startGame(){
   dtype=DT[selectedType];
   gs='playing';score=0;kills=0;frame=0;
   ddead=false;ddeathT=0;dinvT=0;fireArr=[];projectiles.forEach(p=>scene.remove(p));projectiles=[];
+  abilityCooldown={attack:0,heal:0,ice:0,fire:0,soul:0,earth:0};soulShieldHP=0;earthInvT=0;burnMap=new Map();freezeMap=new Map();
   activeEnemies=[];activeBuildings=[];friendlyNPCs=[];roamDragons=[];
   orbDrops.forEach(o=>scene.remove(o.mesh));orbDrops=[];
   mageOrbs=0;shadowDust=0;upgrades={dmg:0,hp:0,speed:0,fuel:0,attack:0};
@@ -2235,6 +2305,22 @@ function update(ts){
     // Regen
     if(frame%240===0)dhp=Math.min(dmaxHp,dhp+(dtype.id==='nature'?8:3));
     if(dinvT>0)dinvT-=dt;
+    // Ability cooldowns
+    for(const k in abilityCooldown)if(abilityCooldown[k]>0)abilityCooldown[k]-=dt;
+    if(earthInvT>0){earthInvT-=dt;dinvT=Math.max(dinvT,earthInvT);}
+    // Burn DoT
+    for(const[en,t] of burnMap){
+      if(!en.userData.alive){burnMap.delete(en);continue;}
+      burnMap.set(en,t-dt);
+      if(frame%60===0)hitEnemy(en,8);
+      if(t-dt<=0)burnMap.delete(en);
+    }
+    // Freeze slow expiry
+    for(const[en,t] of freezeMap){
+      if(!en.userData.alive){freezeMap.delete(en);continue;}
+      freezeMap.set(en,t-dt);
+      if(t-dt<=0){en.userData.si=Math.max(1,en.userData.si/1.6);freezeMap.delete(en);}
+    }
 
     // Wing animation (only when flying)
     if(!isLanded){
@@ -2535,6 +2621,26 @@ function update(ts){
       }
     }
 
+    // ── FRIENDLY NPC COMBAT (Blane + Elders fight nearby enemies) ───────────
+    for(const npc of friendlyNPCs){
+      if(!npc.userData.npcName)continue;
+      // Only combatants: Blane, Elder NPCs, Dragon Keepers — not plain recruitable villagers
+      const isCombatant=npc===blaneNPC||
+        (npc.userData.npcName&&(npc.userData.npcName.includes('Elder')||npc.userData.npcName.includes('Keeper')||npc.userData.npcName==='Dragon Keeper'));
+      if(!isCombatant)continue;
+      if(npc.userData.npcAtkT===undefined)npc.userData.npcAtkT=2+Math.random()*2;
+      npc.userData.npcAtkT-=dt;
+      if(npc.userData.npcAtkT<=0){
+        npc.userData.npcAtkT=2.5+Math.random()*1.5;
+        let be=null,bd=120;
+        for(const e of activeEnemies){if(!e.userData.alive)continue;const d=npc.position.distanceTo(e.position);if(d<bd){bd=d;be=e;}}
+        if(be){
+          spawnProjectile('magic',npc.position.clone().add(new THREE.Vector3(0,2,0)),be.position.clone());
+          npc.lookAt(be.position.x,npc.position.y,be.position.z);
+        }
+      }
+    }
+
     // ── SKY DIALOG (flying near rider) ───────────────────────────────────────
     if(!isHuman&&!dialogOpen){
       let skyNear=null,skyNearD=35;
@@ -2601,6 +2707,25 @@ function updateHUD(){
   else if(blaneQuest==='complete')qb.style.display='block',qb.textContent='🏆 EMPEROR DEFEATED!',qb.style.color='#44ffaa';
   else if(blaneQuest==='unlocked')qb.style.display='block',qb.textContent='💬 TALK TO BLANE!',qb.style.color='#ffaa44';
   else qb.style.display='none';
+  // Ability bar
+  const ab=document.getElementById('ability-bar');
+  const sb=document.getElementById('shield-badge');
+  const eb=document.getElementById('earth-badge');
+  if(!isHuman&&gs==='playing'){
+    const id=dtype.id;
+    let hints=[];
+    hints.push('[F] Burst'+(abilityCooldown.attack>0?' '+~~abilityCooldown.attack+'s':'✓'));
+    if(id==='nature')hints.push('[H] Heal'+(abilityCooldown.heal>0?' '+~~abilityCooldown.heal+'s':'✓'));
+    if(id==='ice')hints.push('[V] Freeze'+(abilityCooldown.ice>0?' '+~~abilityCooldown.ice+'s':'✓'));
+    if(id==='fire')hints.push('[U] Burn'+(abilityCooldown.fire>0?' '+~~abilityCooldown.fire+'s':'✓'));
+    if(id==='soul')hints.push('[;] Shield'+(abilityCooldown.soul>0?' '+~~abilityCooldown.soul+'s':'✓'));
+    if(id==='earth')hints.push('[=] Invincible'+(abilityCooldown.earth>0?' '+~~abilityCooldown.earth+'s':'✓'));
+    ab.textContent=hints.join('  ');ab.style.display='block';
+    sb.style.display=(soulShieldHP>0)?'block':'none';
+    eb.style.display=(earthInvT>0)?'block':'none';
+    if(earthInvT>0)eb.textContent='🌍 INVINCIBLE '+~~earthInvT+'s';
+    if(soulShieldHP>0)sb.textContent='🔮 SHIELD '+~~soulShieldHP+'HP';
+  } else {ab.style.display='none';sb.style.display='none';eb.style.display='none';}
   // Show orbs + upgrades
   let upStr='';
   const up=upgrades;

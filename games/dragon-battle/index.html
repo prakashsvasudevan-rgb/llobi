@@ -1256,6 +1256,15 @@ function groundY(x,z){
   const broad=Math.sin(x/400)*15+Math.sin(z/350)*12+Math.sin((x+z)/600)*18;
   return hills+Math.max(0,broad-6);
 }
+// Returns floor Y inside Dragon Mountain cave, or null if outside cave
+function caveFloorY(x,z){
+  if(Math.abs(x-DM_X)>9)return null;
+  const ez=DM_Z+8,rz=DM_Z+28,hz=DM_Z+78;
+  if(z<ez||z>hz)return null;
+  const entY=groundY(DM_X,DM_Z);
+  if(z<rz){const t=(z-ez)/(rz-ez);return entY-t*14;}
+  return entY-14; // flat lower hall
+}
 
 function makeKingDeathDragonMesh(){
   const g=new THREE.Group();
@@ -1342,30 +1351,63 @@ function spawnDragonMountain(){
     scene.add(v);objects.push(v);friendlyNPCs.push(v);
   });
 
-  // Dragon Mountain interior — cave entrance + inner shops/NPCs
-  // Cave arch (dark box cutout visual)
-  const caveArch=new THREE.Mesh(new THREE.BoxGeometry(16,14,8),mat(0x050505,{flatShading:true}));
-  caveArch.position.set(DM_X+2,groundY(DM_X,DM_Z)+7,DM_Z+8);
-  scene.add(caveArch);objects.push(caveArch);
-  // Glowing fire torches flanking cave entrance
-  for(const sx of[-7,7]){
+  // ── Dragon Mountain cave tunnel ──────────────────────────────────────────────
+  const baseY=groundY(DM_X,DM_Z);
+  const hallY=baseY-14; // floor of the lower hall
+  const addObj=(m)=>{scene.add(m);objects.push(m);};
+  // Entrance arch frame (visible from outside)
+  const archL=new THREE.Mesh(new THREE.BoxGeometry(2,14,4),mat(0x2a1a08,{flatShading:true}));
+  archL.position.set(DM_X-7,baseY+7,DM_Z+8);addObj(archL);
+  const archR=archL.clone();archR.position.set(DM_X+7,baseY+7,DM_Z+8);addObj(archR);
+  const archT=new THREE.Mesh(new THREE.BoxGeometry(16,3,4),mat(0x2a1a08,{flatShading:true}));
+  archT.position.set(DM_X,baseY+13.5,DM_Z+8);addObj(archT);
+  // Entrance torches
+  for(const sx of[-6,6]){
     const torch=new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.3,3,6),mat(0x442200,{flatShading:true}));
-    torch.position.set(DM_X+sx,groundY(DM_X,DM_Z)+3,DM_Z+8);
-    scene.add(torch);objects.push(torch);
+    torch.position.set(DM_X+sx,baseY+3,DM_Z+8);addObj(torch);
     const flame=new THREE.Mesh(new THREE.SphereGeometry(1,6,6),new THREE.MeshBasicMaterial({color:0xff6600}));
-    flame.position.set(DM_X+sx,groundY(DM_X,DM_Z)+5,DM_Z+8);
-    scene.add(flame);objects.push(flame);
+    flame.position.set(DM_X+sx,baseY+5,DM_Z+8);addObj(flame);
   }
-  // Interior NPCs (placed just inside the cave, slightly elevated)
+  // Left wall — full tunnel length (DM_Z+8 to DM_Z+78)
+  const wallMat=mat(0x0d0a06,{flatShading:true});
+  const lw=new THREE.Mesh(new THREE.BoxGeometry(2,24,70),wallMat);
+  lw.position.set(DM_X-9,hallY+10,DM_Z+43);addObj(lw);
+  const rw=new THREE.Mesh(new THREE.BoxGeometry(2,24,70),wallMat);
+  rw.position.set(DM_X+9,hallY+10,DM_Z+43);addObj(rw);
+  // Ceiling slab over the lower hall
+  const ceilMat=mat(0x080604,{flatShading:true});
+  const ceil=new THREE.Mesh(new THREE.BoxGeometry(20,3,52),ceilMat);
+  ceil.position.set(DM_X,hallY+13,DM_Z+52);addObj(ceil);
+  // Ramp ceiling (angled box bridging entrance to hall ceiling)
+  const rceil=new THREE.Mesh(new THREE.BoxGeometry(20,3,22),ceilMat);
+  rceil.position.set(DM_X,baseY+5,DM_Z+18);
+  rceil.rotation.x=Math.atan2(14,20);addObj(rceil);
+  // Back wall
+  const bw=new THREE.Mesh(new THREE.BoxGeometry(20,24,2),wallMat);
+  bw.position.set(DM_X,hallY+10,DM_Z+79);addObj(bw);
+  // Floor slab (stone floor of lower hall)
+  const floorSlab=new THREE.Mesh(new THREE.BoxGeometry(18,2,52),mat(0x1a1208,{flatShading:true}));
+  floorSlab.position.set(DM_X,hallY-1,DM_Z+52);addObj(floorSlab);
+  // Hall torches at regular intervals
+  for(let tz=DM_Z+32;tz<DM_Z+78;tz+=18){
+    for(const sx of[-7,7]){
+      const t2=new THREE.Mesh(new THREE.CylinderGeometry(0.25,0.25,2.5,6),mat(0x442200,{flatShading:true}));
+      t2.position.set(DM_X+sx,hallY+3,tz);addObj(t2);
+      const f2=new THREE.Mesh(new THREE.SphereGeometry(0.8,6,6),new THREE.MeshBasicMaterial({color:0xff8800}));
+      f2.position.set(DM_X+sx,hallY+4.5,tz);addObj(f2);
+    }
+  }
+  // Interior NPCs spread along the hall
+  const hallFloor=hallY+1.5;
   const interiorNPCs=[
-    {name:'Food Merchant',  text:'Hot meals for weary riders! Buy food to restore HP. Press B to eat (costs 50 score, +30 HP).', isFoodShop:true},
-    {name:'Rider Thane',    text:'I know every pass on this mountain. Rest here awhile. The Emperor... he is terrifying.',isRecruitable:true,recruited:false},
-    {name:'Alchemist',      text:'I brew potions from dragon scales and mountain herbs. Upgrade your orbs with me.'},
-    {name:'Dragon Keeper',  text:'We tend to injured dragons here. All types live in harmony on this mountain.'},
-    {name:'Elder Runa',     text:'Long ago the Emperor had no dragon. He STOLE the King of Death Dragon from its nest.'},
-    {name:'Arms Dealer',    text:'I sell weapons forged from volcano ore. Defeat the Emperor and I will upgrade your sword.'},
+    {name:'Food Merchant',  text:'Hot meals for weary riders! Press B to eat (costs 50 score, +30 HP).', isFoodShop:true, ix:DM_X-5,iz:DM_Z+35},
+    {name:'Alchemist',      text:'I brew potions from dragon scales and mountain herbs. Upgrade your orbs with me.', ix:DM_X+5,iz:DM_Z+35},
+    {name:'Dragon Keeper',  text:'We tend to injured dragons here. All types live in harmony on this mountain.', ix:DM_X-5,iz:DM_Z+50},
+    {name:'Elder Runa',     text:'Long ago the Emperor had no dragon. He STOLE the King of Death Dragon from its nest.', ix:DM_X+5,iz:DM_Z+50},
+    {name:'Rider Thane',    text:'I know every pass on this mountain. The Emperor... terrifying.',isRecruitable:true,recruited:false, ix:DM_X-5,iz:DM_Z+65},
+    {name:'Arms Dealer',    text:'Weapons forged from volcano ore. Defeat the Emperor and I will upgrade your sword.', ix:DM_X+5,iz:DM_Z+65},
   ];
-  interiorNPCs.forEach((cfg,i)=>{
+  interiorNPCs.forEach((cfg)=>{
     const npc=makeVillagerMesh();
     npc.userData.npcName=cfg.name;
     npc.userData.npcText=cfg.text;
@@ -1373,10 +1415,7 @@ function spawnDragonMountain(){
     if(cfg.isRecruitable){npc.userData.isRecruitable=true;npc.userData.recruited=false;
       const dtDef=selectableDT[~~(Math.random()*selectableDT.length)];
       npc.userData.dtDef=dtDef;npc.userData.npcText+=' I ride a '+dtDef.name+' dragon. [R] RECRUIT';}
-    // Spread around inside cave entrance
-    const ix=DM_X+(i%3-1)*12;
-    const iz=DM_Z+18+~~(i/3)*12;
-    npc.position.set(ix,groundY(DM_X,DM_Z)+1.5,iz);
+    npc.position.set(cfg.ix,hallFloor,cfg.iz);
     scene.add(npc);objects.push(npc);friendlyNPCs.push(npc);
   });
 
@@ -2104,7 +2143,8 @@ function update(ts){
       const hSpd=6;
       if(hFW)humanMesh.position.addScaledVector(gfwd, hSpd*dt);
       if(hBK)humanMesh.position.addScaledVector(gfwd,-hSpd*dt);
-      humanMesh.position.y=groundY(humanMesh.position.x,humanMesh.position.z)+1.5;
+      {const _cf=caveFloorY(humanMesh.position.x,humanMesh.position.z);
+      humanMesh.position.y=(_cf!==null?_cf:groundY(humanMesh.position.x,humanMesh.position.z))+1.5;}
       humanMesh.rotation.set(0,humanYaw,0);
       // Walk animation (bob legs/arms)
       if(hFW||hBK){humanMesh.userData.walkCycle+=dt*8;}
@@ -2131,8 +2171,9 @@ function update(ts){
       // Jump (J key / movementY handled above, VY applied to position)
       humanVY-=28*dt; // gravity
       humanMesh.position.y+=humanVY*dt;
-      const groundH=groundY(humanMesh.position.x,humanMesh.position.z)+1.5;
-      if(humanMesh.position.y<=groundH){humanMesh.position.y=groundH;humanVY=0;}
+      {const _cf2=caveFloorY(humanMesh.position.x,humanMesh.position.z);
+      const groundH=(_cf2!==null?_cf2:groundY(humanMesh.position.x,humanMesh.position.z))+1.5;
+      if(humanMesh.position.y<=groundH){humanMesh.position.y=groundH;humanVY=0;}}
 
       // Human attack: Shift = sword swing
       if((keys['ShiftLeft']||keys['ShiftRight'])&&!dialogOpen){

@@ -199,6 +199,22 @@ const DT=[
    body:0x2d0a4a,bodyL:0x6622aa,bodyD:0x120524,belly:0x9944dd,
    wingD:0x120524,wingL:0x2d0a4a,horn:0x220044,eye:0xff44ff,eyeC:'#ff44ff',
    breath:[0xff88ff,0xaa44ff,0x660088],speed:20,hp:150,fuel:95,rfuel:1.3,dmg:6,pts:1},
+  {id:'lava',  name:'LAVA',   emoji:'🌋',desc:'Molten fury',
+   body:0x3a1000,bodyL:0xcc4400,bodyD:0x1a0800,belly:0xff8822,
+   wingD:0x2a0800,wingL:0x881a00,horn:0xff4400,eye:0xff8800,eyeC:'#ff8800',
+   breath:[0xff6600,0xff2200,0xffaa00],speed:16,hp:200,fuel:75,rfuel:1.0,dmg:8,pts:1},
+  {id:'water', name:'WATER',  emoji:'🌊',desc:'Ocean depths',
+   body:0x003a6b,bodyL:0x0088cc,bodyD:0x001a40,belly:0x44ccff,
+   wingD:0x001a40,wingL:0x004488,horn:0x00ddff,eye:0x00ffff,eyeC:'#00ffff',
+   breath:[0x00ffff,0x0088ff,0x004488],speed:20,hp:180,fuel:95,rfuel:1.8,dmg:5,pts:1},
+  {id:'smoke', name:'SMOKE',  emoji:'💨',desc:'Dark exhaust',
+   body:0x2a2a2a,bodyL:0x555555,bodyD:0x111111,belly:0x888888,
+   wingD:0x111111,wingL:0x333333,horn:0x444444,eye:0xdddddd,eyeC:'#dddddd',
+   breath:[0xaaaaaa,0x777777,0x444444],speed:17,hp:175,fuel:90,rfuel:1.5,dmg:5,pts:1},
+  {id:'acid',  name:'ACID',   emoji:'🧪',desc:'Corrosive venom',
+   body:0x1a3a00,bodyL:0x44aa00,bodyD:0x0a1a00,belly:0xaaff44,
+   wingD:0x0a1a00,wingL:0x226600,horn:0x88ff00,eye:0x00ff44,eyeC:'#00ff44',
+   breath:[0x88ff00,0x44cc00,0x224400],speed:19,hp:165,fuel:85,rfuel:1.4,dmg:7,pts:1},
 ];
 
 // ── Three.js setup ────────────────────────────────────────────────────────────
@@ -1227,20 +1243,181 @@ function groundY(x,z){
   return hills+Math.max(0,broad-6);
 }
 
+function makeKingDeathDragonMesh(){
+  const g=new THREE.Group();
+  const FS={flatShading:true};
+  const mB=mat(0x0a0000,FS),mR=mat(0x880000,FS),mGold=mat(0xcc4400,FS);
+  const mW=mat(0x1a0000,{side:THREE.DoubleSide,flatShading:true,transparent:true,opacity:.9});
+  addBox(g,3.0,1.4,6.0,mB);    // massive body
+  addBox(g,1.1,1.1,2.4,mB,0,0.4,4.2,-0.4);  // neck
+  addBox(g,1.6,1.4,2.4,mR,0,0.9,6.0);       // head
+  addBox(g,1.4,0.6,0.1,mGold,0,1.6,7.0);    // crown visor
+  // Crown spikes
+  for(let i=0;i<5;i++) addBox(g,0.2,0.7,0.2,mat(0xdd2200,FS),(i-2)*0.35,2.1+Math.abs(i-2)*0.1,6.5);
+  // Lava glow on belly
+  addBox(g,2.0,0.3,5.0,mat(0xff4400,{flatShading:true,transparent:true,opacity:0.7}),0,-0.6,0);
+  const lw=new THREE.Group();lw.position.set(-1.5,0.2,1.0);
+  const rw=new THREE.Group();rw.position.set( 1.5,0.2,1.0);
+  lw.add(new THREE.Mesh(makeWingGeo(false,'nature'),mW.clone()));
+  rw.add(new THREE.Mesh(makeWingGeo(true,'nature'),mW.clone()));
+  g.add(lw);g.add(rw);
+  for(let i=0;i<8;i++){const s=1.2-i*0.1;addBox(g,s,s,1.0,mB,0,-i*0.05,-4.0-i*1.1,i*0.06);}
+  const eG=new THREE.SphereGeometry(0.22,6,6);
+  const el=new THREE.Mesh(eG,new THREE.MeshBasicMaterial({color:0xff0000}));el.position.set(-0.72,1.0,7.6);g.add(el);
+  const er=new THREE.Mesh(eG,new THREE.MeshBasicMaterial({color:0xff0000}));er.position.set( 0.72,1.0,7.6);g.add(er);
+  g.userData={lwp:lw,rwp:rw,wingAngle:0,type:'kingDeathDragon',alive:true,isKingDeath:true,
+    hp:800,maxHp:800,si:1.0,spd:12,dmg:60,pts:5000,
+    shootT:1.5,flyOrbit:0,animT:0};
+  return g;
+}
+
 function makeEnemy3d(type){
   const m=type==='ogre'?makeOgreMesh():type==='mage'?makeMageMesh():
            type==='dragon'?makeEnemyDragonMesh():type==='hunter'?makeDragonHunterMesh():
-           type==='shadowDragon'?makeShadowDragonMesh():type==='kingHunter'?makeKingHunterMesh():makeArcherMesh();
-  const cfg={archer:      {hp:20,maxHp:20,si:3+Math.random()*2,spd:18,dmg:12,pts:60},
-              ogre:        {hp:60,maxHp:60,si:5+Math.random()*2,spd:14,dmg:20,pts:120},
-              mage:        {hp:30,maxHp:30,si:2+Math.random()*2,spd:22,dmg:15,pts:100},
-              dragon:      {hp:60,maxHp:60,si:3+Math.random()*2,spd:10,dmg:25,pts:200},
-              hunter:      {hp:35,maxHp:35,si:2+Math.random()*1.5,spd:20,dmg:18,pts:80},
-              shadowDragon:{hp:120,maxHp:120,si:2+Math.random()*1.5,spd:14,dmg:35,pts:400},
-              kingHunter:  {hp:200,maxHp:200,si:1.5,spd:16,dmg:30,pts:1000}};
-  Object.assign(m.userData,cfg[type]);
-  if(!m.userData.shootT)m.userData.shootT=Math.random()*m.userData.si;
+           type==='shadowDragon'?makeShadowDragonMesh():type==='kingHunter'?makeKingHunterMesh():
+           type==='kingDeathDragon'?makeKingDeathDragonMesh():makeArcherMesh();
+  const cfg={archer:          {hp:20, maxHp:20, si:3+Math.random()*2,  spd:18,dmg:12, pts:60},
+              ogre:            {hp:60, maxHp:60, si:5+Math.random()*2,  spd:14,dmg:20, pts:120},
+              mage:            {hp:30, maxHp:30, si:2+Math.random()*2,  spd:22,dmg:15, pts:100},
+              dragon:          {hp:60, maxHp:60, si:3+Math.random()*2,  spd:10,dmg:25, pts:200},
+              hunter:          {hp:35, maxHp:35, si:2+Math.random()*1.5,spd:20,dmg:18, pts:80},
+              shadowDragon:    {hp:120,maxHp:120,si:2+Math.random()*1.5,spd:14,dmg:35, pts:400},
+              kingHunter:      {hp:200,maxHp:200,si:1.5,              spd:16,dmg:30, pts:1000},
+              kingDeathDragon: {hp:800,maxHp:800,si:1.0,              spd:12,dmg:60, pts:5000}};
+  Object.assign(m.userData,cfg[type]||{});
+  if(!m.userData.shootT)m.userData.shootT=Math.random()*(m.userData.si||2);
   return m;
+}
+
+// ── Dragon Mountain (fixed at 0,1000) ─────────────────────────────────────────
+const DM_X=100,DM_Z=1000; // Dragon Mountain world position
+const VOL_X=3000,VOL_Z=3000; // Volcano world position
+const MTN_DRAGON_TYPES=['fire','ice','earth','air','nature','soul','lava','water','smoke','lightning'];
+const RECRUIT_LINES=[
+  ['Rider Kael','My storm-blue dragon and I are ready to fight for you! [R] RECRUIT'],
+  ['Rider Yara','I ride the earth dragon — slow but unstoppable. [R] RECRUIT'],
+  ['Rider Finn','Fire and fury — my dragon breathes both! [R] RECRUIT'],
+  ['Rider Sola','Nature heals all wounds. My green dragon is at your service. [R] RECRUIT'],
+  ['Rider Vex', 'Speed is survival. My air dragon outflies anything. [R] RECRUIT'],
+];
+function spawnDragonMountain(){
+  if(dragonMtnSpawned)return;
+  dragonMtnSpawned=true;
+  const objects=[];
+  const mh=280;
+  const mt=makeMountainMesh(mh);
+  mt.position.set(DM_X,groundY(DM_X,DM_Z),DM_Z);
+  scene.add(mt);objects.push(mt);
+
+  // Blacksmith at base
+  const smith=makeVillagerMesh();
+  smith.userData.npcName='Blacksmith';
+  smith.userData.npcText='Welcome to Dragon Mountain, rider! I forge the finest armor here. Press B to browse.';
+  smith.position.set(DM_X+12,groundY(DM_X+12,DM_Z+5)+1.5,DM_Z+5);
+  scene.add(smith);objects.push(smith);friendlyNPCs.push(smith);
+
+  // Extra villagers / NPCs at base
+  const baseNPCs=[
+    ['Mountain Elder','This peak is sacred to all dragon riders. The five riders up top will join your cause.'],
+    ['Healer','Dragon Mountain folk live in peace. The storm only tests the strong.'],
+    ['Scholar','Did you know? A volcano in the far east holds the King of Death Dragon.'],
+  ];
+  baseNPCs.forEach(([name,text],i)=>{
+    const v=makeVillagerMesh();v.userData.npcName=name;v.userData.npcText=text;
+    v.position.set(DM_X-12+i*10,groundY(DM_X-12+i*10,DM_Z-8)+1.5,DM_Z-8);
+    scene.add(v);objects.push(v);friendlyNPCs.push(v);
+  });
+
+  // 5 recruitable riders on the peak + a mix of dragon types roaming
+  for(let i=0;i<5;i++){
+    const angle=i/5*Math.PI*2;
+    const dr=new THREE.Group();
+    // Pick a dragon type for this rider
+    const dtId=MTN_DRAGON_TYPES[i%MTN_DRAGON_TYPES.length];
+    const dtDef=DT.find(d=>d.id===dtId)||DT[1];
+    const riderDragon=buildDragonMesh(dtDef);
+    dr.add(riderDragon);
+    const r=RECRUIT_LINES[i];
+    dr.userData={npcName:r[0],npcText:r[1],isRecruitable:true,recruited:false,dtDef};
+    const px=DM_X+Math.cos(angle)*18,pz=DM_Z+Math.sin(angle)*18;
+    dr.position.set(px,groundY(DM_X,DM_Z)+mh+3,pz);
+    dr.rotation.y=angle+Math.PI;
+    scene.add(dr);objects.push(dr);friendlyNPCs.push(dr);
+  }
+
+  // Variety of dragon types roaming around the peak
+  MTN_DRAGON_TYPES.forEach((id,i)=>{
+    const dtDef=DT.find(d=>d.id===id)||DT[1];
+    const rd=makeRoamDragonMesh();
+    // Override colors to match type
+    const ang=i/MTN_DRAGON_TYPES.length*Math.PI*2;
+    const rx=DM_X+Math.cos(ang)*(80+i*8);
+    const rz=DM_Z+Math.sin(ang)*(80+i*8);
+    rd.position.set(rx,groundY(rx,rz)+50+i*8,rz);
+    rd.userData.baseX=rx;rd.userData.baseZ=rz;rd.userData.baseY=rd.position.y;
+    scene.add(rd);objects.push(rd);roamDragons.push(rd);
+  });
+
+  const key=zoneKey(~~(DM_X/ZONE),~~(DM_Z/ZONE));
+  if(!zoneMap.has(key))zoneMap.set(key,objects);
+  else zoneMap.get(key).push(...objects);
+}
+
+// ── Volcano + King of Death Dragon (fixed at far edge) ───────────────────────
+function spawnVolcano(){
+  if(volcanoSpawned)return;
+  volcanoSpawned=true;
+  const objects=[];
+  // Volcano cone
+  const vcone=makeMountainMesh(220);
+  vcone.position.set(VOL_X,groundY(VOL_X,VOL_Z),VOL_Z);
+  // Tint it red
+  vcone.traverse(c=>{if(c.isMesh&&c.material)c.material=mat(0x661100,{flatShading:true});});
+  scene.add(vcone);objects.push(vcone);
+
+  // Lava glow at top (orange sphere)
+  const lava=new THREE.Mesh(new THREE.SphereGeometry(18,10,8),new THREE.MeshBasicMaterial({color:0xff4400,transparent:true,opacity:0.7}));
+  lava.position.set(VOL_X,groundY(VOL_X,VOL_Z)+215,VOL_Z);
+  scene.add(lava);objects.push(lava);
+
+  // Super King's house (large castle nearby)
+  const castle=makeCastleMesh();
+  castle.position.set(VOL_X+120,groundY(VOL_X+120,VOL_Z+80),VOL_Z+80);
+  castle.scale.set(2.5,2.5,2.5);
+  scene.add(castle);objects.push(castle);activeBuildings.push(castle);
+
+  // King of Death Dragon — elite boss
+  const kdd=makeEnemy3d('kingDeathDragon');
+  kdd.position.set(VOL_X,groundY(VOL_X,VOL_Z)+200,VOL_Z);
+  kdd.userData.baseY=kdd.position.y;kdd.userData.flyOrbit=0;
+  kdd.userData.guardBuilding=castle;
+  scene.add(kdd);objects.push(kdd);activeEnemies.push(kdd);
+
+  // Acid dragons around volcano
+  for(let i=0;i<4;i++){
+    const ang=i/4*Math.PI*2;
+    const ad=makeEnemy3d('dragon');
+    ad.position.set(VOL_X+Math.cos(ang)*150,groundY(VOL_X,VOL_Z)+60,VOL_Z+Math.sin(ang)*150);
+    ad.userData.baseY=ad.position.y;ad.userData.type='dragon';
+    ad.traverse(c=>{if(c.isMesh&&c.material)c.material=mat(0x226600,{flatShading:true});});
+    scene.add(ad);objects.push(ad);activeEnemies.push(ad);
+  }
+
+  // Shadow riders — mage on shadow dragon pairs
+  for(let i=0;i<3;i++){
+    const sd=makeEnemy3d('shadowDragon');
+    const ang=i/3*Math.PI*2+1;
+    sd.position.set(VOL_X+Math.cos(ang)*200,groundY(VOL_X,VOL_Z)+80,VOL_Z+Math.sin(ang)*200);
+    sd.userData.baseY=sd.position.y;sd.userData.flyOrbit=ang;
+    // Mage rider on back (visual)
+    const mageRider=makeMageMesh();
+    mageRider.scale.set(0.5,0.5,0.5);mageRider.position.set(0,2.0,0);sd.add(mageRider);
+    scene.add(sd);objects.push(sd);activeEnemies.push(sd);
+  }
+
+  const key=zoneKey(~~(VOL_X/ZONE),~~(VOL_Z/ZONE));
+  if(!zoneMap.has(key))zoneMap.set(key,objects);
+  else zoneMap.get(key).push(...objects);
 }
 
 function despawnFarZones(){
@@ -1356,6 +1533,10 @@ let dialogOpen=false;
 let mapOpen=false;
 let friendlyNPCs=[];
 let roamDragons=[];
+let dragonArmy=[]; // recruited ally dragons {mesh, targetPos, dtType}
+const MAX_ARMY=5;
+let dragonMtnSpawned=false;
+let volcanoSpawned=false;
 
 // ── Mage orb drops & upgrades ─────────────────────────────────────────────────
 let orbDrops=[];          // {mesh, pos, life, isShadow}
@@ -1433,8 +1614,16 @@ document.addEventListener('keydown',e=>{
   if(gs==='playing'){
     if(e.code==='KeyM'){toggleWorldMap();return;}
     if(e.code==='KeyC'&&!isHuman&&isLanded){isSitting=!isSitting;floatWorld(dragonMesh.position,isSitting?'🐉 SIT':'🐉 STAND','#88ff44');}
+    if(e.code==='KeyR'&&nearNPC&&nearNPC.userData.isRecruitable&&!nearNPC.userData.recruited&&dragonArmy.length<MAX_ARMY){
+      nearNPC.userData.recruited=true;
+      const armyMesh=nearNPC; // the whole rider+dragon group follows you now
+      armyMesh.userData.npcText='Riding with you now, dragonrider!';
+      dragonArmy.push({mesh:armyMesh,slot:dragonArmy.length});
+      floatWorld(armyMesh.position,'🐉 '+nearNPC.userData.npcName+' JOINS!','#44ff44');
+    }
     if(e.code==='KeyT'&&!dialogOpen&&!mapOpen)toggleHumanMode();
-    if(e.code==='KeyE'){if(dialogOpen)closeDialog();else if(nearNPC)openDialog(nearNPC);}
+    if(e.code==='KeyE'){if(dialogOpen)closeDialog();else if(nearNPC)openDialog(nearNPC);
+      else if(!isHuman){/* sky dialog — nearNPC set in sky dialog block above */}}
     if(e.code==='KeyJ'&&isHuman&&!dialogOpen){
       // Jump
       if(humanVY===0)humanVY=12;
@@ -1500,9 +1689,9 @@ function toggleHumanMode(){
 }
 
 const ARMOR_TIERS=[
-  {name:'Iron Armor',   cost:150, hpBonus:40,  orbs:0, desc:'Basic protection. Costs 150 score.'},
-  {name:'Steel Armor',  cost:400, hpBonus:70,  orbs:3, desc:'Strong plate. Costs 400 score + 3 orbs.'},
-  {name:'Dragon Scale', cost:900, hpBonus:120, orbs:6, desc:'Legendary armor. Costs 900 score + 6 orbs.'},
+  {name:'Dragon Steel',      cost:200, hpBonus:50,  orbs:2, dust:0, desc:'Forged from dragon iron. 200pts + 2 orbs.'},
+  {name:'Gold Scale',        cost:500, hpBonus:90,  orbs:4, dust:1, desc:'Golden dragon scales. 500pts + 4 orbs + 1 shadow dust.'},
+  {name:'Elemental Crystal', cost:1200,hpBonus:160, orbs:8, dust:2, desc:'Pure elemental crystal. 1200pts + 8 orbs + 2 dust.'},
 ];
 function openDialog(npc){
   dialogOpen=true;
@@ -1521,8 +1710,8 @@ function openDialog(npc){
   const onKey=e=>{
     if(e.code==='KeyB'&&dialogOpen&&isSmith&&armorLevel<3){
       const tier=ARMOR_TIERS[armorLevel];
-      if(score>=tier.cost&&mageOrbs>=tier.orbs){
-        score-=tier.cost;mageOrbs-=tier.orbs;
+      if(score>=tier.cost&&mageOrbs>=tier.orbs&&shadowDust>=tier.dust){
+        score-=tier.cost;mageOrbs-=tier.orbs;shadowDust-=tier.dust;
         humanMaxHP+=tier.hpBonus;humanHP=humanMaxHP;armorLevel++;
         floatWorld(npc.position,'🛡 '+tier.name+'!','#88ff44');
         // Update rider color to show armor (re-apply to humanMesh)
@@ -1595,7 +1784,13 @@ function startGame(){
   activeEnemies=[];activeBuildings=[];friendlyNPCs=[];roamDragons=[];
   orbDrops.forEach(o=>scene.remove(o.mesh));orbDrops=[];
   mageOrbs=0;shadowDust=0;upgrades={dmg:0,hp:0,speed:0,fuel:0,attack:0};
+  dragonArmy.forEach(a=>scene.remove(a.mesh));dragonArmy=[];
+  dragonMtnSpawned=false;volcanoSpawned=false;
   mapOpen=false;wmEl.classList.remove('show');
+  // Spawn Dragon Mountain (always at world north, zone 0,5)
+  setTimeout(()=>{if(gs==='playing')spawnDragonMountain();},100);
+  // Spawn Volcano at edge (zone 15,15)
+  setTimeout(()=>{if(gs==='playing')spawnVolcano();},200);
   isHuman=false;humanHP=100;humanMaxHP=100;humanVY=0;armorLevel=0;mouseDX=0;mouseDY=0;nearNPC=null;dialogOpen=false;
   if(humanMesh){scene.remove(humanMesh);humanMesh=null;}
   document.getElementById('human-badge').style.display='none';
@@ -1796,7 +1991,8 @@ function update(ts){
         e.userData.shootT=e.userData.si;
         const pType=e.userData.type==='mage'?'magic':e.userData.type==='ogre'?'rock':
         e.userData.type==='dragon'||e.userData.type==='shadowDragon'?'magic':
-        e.userData.type==='kingHunter'?'bolt':'arrow';
+        e.userData.type==='kingHunter'?'bolt':
+        e.userData.type==='kingDeathDragon'?(Math.random()<0.5?'magic':'bolt'):'arrow';
         spawnProjectile(pType,e.position.clone(),dragonMesh.position.clone());
       }
     }
@@ -1902,6 +2098,43 @@ function update(ts){
       rd.userData.wingAngle+=dt*4;
       const wa=Math.sin(rd.userData.wingAngle)*.5;
       rd.userData.lwp.rotation.z=wa;rd.userData.rwp.rotation.z=-wa;
+    }
+
+    // ── DRAGON ARMY AI ───────────────────────────────────────────────────────
+    for(const a of dragonArmy){
+      if(!a.mesh)continue;
+      const ref=isHuman&&humanMesh?humanMesh.position:dragonMesh.position;
+      const offset=new THREE.Vector3(Math.sin(a.slot*1.2)*25,10+a.slot*4,Math.cos(a.slot*1.2)*25);
+      const target=ref.clone().add(offset);
+      a.mesh.position.lerp(target,dt*1.5);
+      a.mesh.lookAt(ref);
+      // Attack nearest enemy
+      if(a.mesh.userData.atkT===undefined)a.mesh.userData.atkT=2;
+      a.mesh.userData.atkT-=dt;
+      if(a.mesh.userData.atkT<=0){
+        a.mesh.userData.atkT=2+Math.random()*2;
+        let be=null,bd=600;
+        for(const e of activeEnemies){if(!e.userData.alive)continue;const d=a.mesh.position.distanceTo(e.position);if(d<bd){bd=d;be=e;}}
+        if(be)spawnProjectile('magic',a.mesh.position.clone(),be.position.clone());
+      }
+    }
+
+    // ── SKY DIALOG (flying near rider) ───────────────────────────────────────
+    if(!isHuman&&!dialogOpen){
+      let skyNear=null,skyNearD=35;
+      for(const n of friendlyNPCs){
+        const d=dragonMesh.position.distanceTo(n.position);
+        if(d<skyNearD){skyNear=n;skyNearD=d;}
+      }
+      nearNPC=skyNear;
+      const hint=document.getElementById('interact-hint');
+      if(skyNear){
+        const extra=skyNear.userData.isRecruitable&&!skyNear.userData.recruited&&dragonArmy.length<MAX_ARMY?' · [ R ] RECRUIT':'';
+        hint.textContent='[ E ] Talk · '+skyNear.userData.npcName+extra;
+        hint.style.display='block';
+      } else if(!isHuman){
+        hint.style.display='none';
+      }
     }
 
     // ── DAY/NIGHT ────────────────────────────────────────────────────────────
@@ -2060,8 +2293,9 @@ function drawWorldMap(){
   // Friendly NPCs (green)
   for(const n of friendlyNPCs){dot(n.position.x,n.position.z,'#44ff44',2);}
 
-  // Dragon mountain (always at world origin-ish — find tallest zone building)
-  dot(0,0,'#aaffcc',6,'🏔 MTN');
+  // Fixed landmarks
+  dot(DM_X,DM_Z,'#aaffcc',8,'🏔 DRAGON MTN');
+  dot(VOL_X,VOL_Z,'#ff4400',8,'🌋 VOLCANO');
 
   // Player dot + direction arrow
   wmCtx.fillStyle='#ffffff';wmCtx.beginPath();wmCtx.arc(W/2,H/2,5,0,Math.PI*2);wmCtx.fill();

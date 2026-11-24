@@ -6,48 +6,49 @@
 <title>Sand Box | LLOBI</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{background:#111;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-height:100vh;font-family:'Segoe UI',sans-serif;overflow:hidden;user-select:none}
-#topbar{width:100%;max-width:480px;display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#1a1a1a;border-bottom:2px solid #333}
-.logo{font-size:.85rem;font-weight:800;color:#fff;text-decoration:none;letter-spacing:1px}
-.logo span{color:#FFC93C}
-#stats{font-size:.75rem;color:#888;font-weight:600}
+body{background:#111;display:flex;flex-direction:column;align-items:center;min-height:100vh;font-family:'Segoe UI',sans-serif;overflow:hidden;user-select:none}
+#topbar{width:100%;max-width:480px;display:flex;align-items:center;justify-content:space-between;padding:7px 12px;background:#1a1a1a;border-bottom:2px solid #333}
+.logo{font-size:.85rem;font-weight:800;color:#fff;text-decoration:none;letter-spacing:1px}.logo span{color:#FFC93C}
+#stats{font-size:.68rem;color:#888;font-weight:600}
 #canvas{display:block;cursor:crosshair;touch-action:none;image-rendering:pixelated;image-rendering:crisp-edges}
-#toolbar{width:100%;max-width:480px;background:#1a1a1a;border-top:2px solid #333;padding:8px 10px;display:flex;flex-direction:column;gap:8px}
-#elements{display:flex;flex-wrap:nowrap;gap:5px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin;scrollbar-color:#444 #1a1a1a}
-#elements::-webkit-scrollbar{height:4px}
+#toolbar{width:100%;max-width:480px;background:#1a1a1a;border-top:2px solid #333;padding:6px 8px;display:flex;flex-direction:column;gap:5px}
+#cat-tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
+#cat-tabs::-webkit-scrollbar{display:none}
+.cat-tab{flex-shrink:0;padding:4px 9px;border-radius:7px;border:2px solid #444;background:#222;color:#aaa;font-size:.66rem;font-weight:700;cursor:pointer;transition:.12s;white-space:nowrap}
+.cat-tab:hover{border-color:#888;color:#fff}
+.cat-tab.active{border-color:#FFC93C;background:#2a2200;color:#FFC93C}
+#elements{display:flex;flex-wrap:nowrap;gap:4px;overflow-x:auto;padding-bottom:3px;scrollbar-width:thin;scrollbar-color:#444 #1a1a1a}
+#elements::-webkit-scrollbar{height:3px}
 #elements::-webkit-scrollbar-track{background:#1a1a1a}
 #elements::-webkit-scrollbar-thumb{background:#444;border-radius:2px}
-.el-btn{width:48px;height:40px;border-radius:8px;border:2px solid #444;background:#222;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;transition:.12s;flex-shrink:0}
+.el-btn{width:50px;height:40px;border-radius:7px;border:2px solid #444;background:#222;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;transition:.12s;flex-shrink:0}
 .el-btn:hover{border-color:#888;transform:scale(1.05)}
-.el-btn.active{border-color:#fff;box-shadow:0 0 8px rgba(255,255,255,.4);transform:scale(1.05)}
-.el-dot{width:14px;height:14px;border-radius:3px}
-.el-label{font-size:.5rem;font-weight:700;color:#ccc;text-transform:uppercase;letter-spacing:.5px}
-#controls{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:0 2px}
-.ctrl-label{font-size:.7rem;color:#888;font-weight:700;white-space:nowrap}
+.el-btn.active{border-color:#fff;box-shadow:0 0 8px rgba(255,255,255,.35);transform:scale(1.05)}
+.el-dot{width:13px;height:13px;border-radius:3px}
+.el-label{font-size:.46rem;font-weight:700;color:#ccc;text-transform:uppercase;letter-spacing:.4px}
+#controls{display:flex;align-items:center;gap:7px;padding:0 2px}
+.ctrl-label{font-size:.66rem;color:#888;font-weight:700;white-space:nowrap}
 #brush-slider{flex:1;accent-color:#FFC93C;cursor:pointer}
-.ctrl-btn{padding:5px 12px;border-radius:8px;border:2px solid #555;background:#2a2a2a;color:#ccc;font-size:.72rem;font-weight:700;cursor:pointer;transition:.1s}
+.ctrl-btn{padding:4px 9px;border-radius:7px;border:2px solid #555;background:#2a2a2a;color:#ccc;font-size:.68rem;font-weight:700;cursor:pointer;transition:.1s}
 .ctrl-btn:hover{background:#3a3a3a;border-color:#888}
 #pause-btn{color:#FFC93C;border-color:#FFC93C}
-#fps-display{font-size:.65rem;color:#555;min-width:48px;text-align:right}
-/* overlay */
+#fps-display{font-size:.6rem;color:#555;min-width:42px;text-align:right}
 #overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:100}
-.overlay-box{background:#1e1e1e;border:3px solid #444;border-radius:20px;padding:32px 28px;text-align:center;max-width:340px;width:90%}
-.overlay-box h2{font-size:1.6rem;color:#FFC93C;margin-bottom:8px}
-.overlay-box p{font-size:.88rem;color:#aaa;line-height:1.6;margin-bottom:20px}
-.start-btn{background:linear-gradient(135deg,#6C4AB6,#4A2C8F);color:#fff;border:none;border-radius:12px;padding:12px 32px;font-size:1rem;font-weight:800;cursor:pointer;box-shadow:0 4px 0 #2d1b69}
+.overlay-box{background:#1e1e1e;border:3px solid #444;border-radius:20px;padding:28px 24px;text-align:center;max-width:320px;width:90%}
+.overlay-box h2{font-size:1.5rem;color:#FFC93C;margin-bottom:8px}
+.overlay-box p{font-size:.84rem;color:#aaa;line-height:1.65;margin-bottom:18px}
+.start-btn{background:linear-gradient(135deg,#6C4AB6,#4A2C8F);color:#fff;border:none;border-radius:12px;padding:11px 28px;font-size:.95rem;font-weight:800;cursor:pointer;box-shadow:0 4px 0 #2d1b69}
 .start-btn:hover{transform:translateY(1px);box-shadow:0 2px 0 #2d1b69}
 </style>
 </head>
 <body>
-
 <div id="topbar">
   <a class="logo" href="/"><span>LLOBI</span>.com</a>
-  <div id="stats">Particles: <span id="pcount">0</span></div>
+  <div id="stats">Particles: <span id="pcount">0</span> &nbsp;Animals: <span id="acount">0</span></div>
 </div>
-
 <canvas id="canvas"></canvas>
-
 <div id="toolbar">
+  <div id="cat-tabs"></div>
   <div id="elements"></div>
   <div id="controls">
     <span class="ctrl-label">Brush</span>
@@ -58,59 +59,105 @@ body{background:#111;display:flex;flex-direction:column;align-items:center;justi
     <span id="fps-display">60 fps</span>
   </div>
 </div>
-
 <div id="overlay">
   <div class="overlay-box">
     <h2>🏖️ Sand Box</h2>
-    <p>Draw with sand, water, fire and more.<br>Watch them all interact!</p>
+    <p>40+ elements in 7 categories.<br>Plants grow. Animals hunt. Things explode.</p>
     <button class="start-btn" onclick="startGame()">Start Playing</button>
   </div>
 </div>
-
 <script>
-// ── Constants ──────────────────────────────────────────────────────────────
-const CELL = 4;
-const EMPTY=0,SAND=1,WATER=2,FIRE=3,STONE=4,WOOD=5,LAVA=6,ICE=7,SMOKE=8,PLANT=9,OIL=10,STEAM=11,ASH=12,ACID=13,GUNPOWDER=14,CLONER=15,VOID=16;
+const CELL=4;
+// Element IDs
+const EMPTY=0,SAND=1,WATER=2,FIRE=3,STONE=4,WOOD=5,LAVA=6,ICE=7,SMOKE=8,PLANT=9,OIL=10,STEAM=11,ASH=12;
+const ACID=13,GUNPOWDER=14,CLONER=15,VOID=16;
+const WALL=17,RUIN=18,CONCRETE=19,TERRACOTTA=20;
+const GOLD=21,SILVER=22,MERCURY=23,IRON=24,STEEL=25;
+const SEED=26,CACTUS=27,PALM=28,CORN=29,APPLE_T=30,ORANGE_T=31,PAPAYA_T=32;
+const BOMB=33,FAN=34,HEATER=35,COOLER=36;
+const DRAGON=40,TIGER=41,SHEEP=42,HUMAN=43,FISH=44,RAT=45,FLEA=46;
+const ANIMAL_IDS=new Set([DRAGON,TIGER,SHEEP,HUMAN,FISH,RAT,FLEA]);
 
-const ELEMENTS=[
-  {id:SAND,  name:'Sand',  color:'#E8C87A',colors:['#E8C87A','#D4A853','#F0D090'],gravity:true,  liquid:false,hot:false,burns:false,flammable:false},
-  {id:WATER, name:'Water', color:'#4A90D9',colors:['#4A90D9','#357ABD','#5BA3E8'],gravity:true,  liquid:true, hot:false,burns:false,flammable:false},
-  {id:FIRE,  name:'Fire',  color:'#FF6B00',colors:['#FF6B00','#FF9A00','#FF3D00'],gravity:false, liquid:false,hot:true, burns:true, flammable:false},
-  {id:STONE, name:'Stone', color:'#8A8A8A',colors:['#8A8A8A','#777','#9A9A9A'],  gravity:false, liquid:false,hot:false,burns:false,flammable:false},
-  {id:WOOD,  name:'Wood',  color:'#8B5E3C',colors:['#8B5E3C','#7A4F2E','#A06B45'],gravity:false, liquid:false,hot:false,burns:false,flammable:true},
-  {id:LAVA,  name:'Lava',  color:'#FF4500',colors:['#FF4500','#FF6600','#CC3300'],gravity:true,  liquid:true, hot:true, burns:true, flammable:false},
-  {id:ICE,   name:'Ice',   color:'#B0E0FF',colors:['#B0E0FF','#A0D4F5','#C5EAFF'],gravity:false, liquid:false,hot:false,burns:false,flammable:false},
-  {id:SMOKE, name:'Smoke', color:'#888',   colors:['#888','#777','#999'],          gravity:false, liquid:false,hot:false,burns:false,flammable:false},
-  {id:PLANT, name:'Plant', color:'#4CAF50',colors:['#4CAF50','#388E3C','#66BB6A'],gravity:false, liquid:false,hot:false,burns:false,flammable:true},
-  {id:OIL,       name:'Oil',   color:'#5D4037',colors:['#5D4037','#4E342E','#6D4C41'],gravity:true, liquid:true, hot:false,burns:false,flammable:true},
-  {id:ACID,      name:'Acid',  color:'#A8FF3E',colors:['#A8FF3E','#88DD20','#C0FF60'],gravity:true, liquid:true, hot:false,burns:false,flammable:false},
-  {id:GUNPOWDER, name:'Powder',color:'#C0A060',colors:['#C0A060','#B09050','#D0B070'],gravity:true, liquid:false,hot:false,burns:false,flammable:true},
-  {id:CLONER,    name:'Cloner',color:'#FF69B4',colors:['#FF69B4','#FF1493','#FF85C2'],gravity:false,liquid:false,hot:false,burns:false,flammable:false},
-  {id:VOID,      name:'Void',  color:'#2a0a2a',colors:['#2a0a2a','#1a001a','#3a103a'],gravity:false,liquid:false,hot:false,burns:false,flammable:false},
+const ELEM={
+  [SAND]:    {name:'Sand',    color:'#E8C87A',colors:['#E8C87A','#D4A853','#F0D090'],fl:false},
+  [WATER]:   {name:'Water',   color:'#4A90D9',colors:['#4A90D9','#357ABD','#5BA3E8'],fl:false},
+  [FIRE]:    {name:'Fire',    color:'#FF6B00',colors:['#FF6B00','#FF9A00','#FF3D00'],fl:false},
+  [OIL]:     {name:'Oil',     color:'#5D4037',colors:['#5D4037','#4E342E','#6D4C41'],fl:true},
+  [SMOKE]:   {name:'Smoke',   color:'#888888',colors:['#888','#777','#999'],fl:false},
+  [STEAM]:   {name:'Steam',   color:'#C0D8FF',colors:['#C0D8FF','#B0C8F0','#D0EAFF'],fl:false},
+  [STONE]:   {name:'Stone',   color:'#8A8A8A',colors:['#8A8A8A','#777','#9A9A9A'],fl:false},
+  [WALL]:    {name:'Wall',    color:'#555555',colors:['#555','#444','#666'],fl:false},
+  [WOOD]:    {name:'Wood',    color:'#8B5E3C',colors:['#8B5E3C','#7A4F2E','#A06B45'],fl:true},
+  [CONCRETE]:{name:'Concret', color:'#9A9A9A',colors:['#999','#888','#AAA'],fl:false},
+  [TERRACOTTA]:{name:'Terra', color:'#C1440E',colors:['#C1440E','#B03B0A','#D04D18'],fl:false},
+  [RUIN]:    {name:'Ruin',    color:'#7A6A5A',colors:['#7A6A5A','#6A5A4A','#8A7A6A'],fl:false},
+  [ICE]:     {name:'Ice',     color:'#B0E0FF',colors:['#B0E0FF','#A0D4F5','#C5EAFF'],fl:false},
+  [ASH]:     {name:'Ash',     color:'#605858',colors:['#605858','#504848','#706868'],fl:false},
+  [GOLD]:    {name:'Gold',    color:'#FFD700',colors:['#FFD700','#FFC200','#FFE55C'],fl:false},
+  [SILVER]:  {name:'Silver',  color:'#C0C0C0',colors:['#C0C0C0','#B0B0B0','#D0D0D0'],fl:false},
+  [MERCURY]: {name:'Mercury', color:'#8899BB',colors:['#8899BB','#7788A8','#99AACE'],fl:false},
+  [IRON]:    {name:'Iron',    color:'#7A7060',colors:['#7A7060','#6A6050','#8A8070'],fl:false},
+  [STEEL]:   {name:'Steel',   color:'#788899',colors:['#788899','#687788','#8899AA'],fl:false},
+  [PLANT]:   {name:'Plant',   color:'#4CAF50',colors:['#4CAF50','#388E3C','#66BB6A'],fl:true},
+  [SEED]:    {name:'Seed',    color:'#A0845C',colors:['#A0845C','#90744C','#B0946C'],fl:true},
+  [CACTUS]:  {name:'Cactus',  color:'#2E7D32',colors:['#2E7D32','#1B5E20','#388E3C'],fl:false},
+  [PALM]:    {name:'Palm',    color:'#4E342E',colors:['#4E342E','#3E2820','#5E4238'],fl:true},
+  [CORN]:    {name:'Corn',    color:'#9CCC65',colors:['#9CCC65','#7CB342','#AED581'],fl:true},
+  [APPLE_T]: {name:'Apple',   color:'#558B2F',colors:['#558B2F','#33691E','#689F38'],fl:true},
+  [ORANGE_T]:{name:'Orange',  color:'#E65100',colors:['#E65100','#BF360C','#F4511E'],fl:true},
+  [PAPAYA_T]:{name:'Papaya',  color:'#FF8F00',colors:['#FF8F00','#E65100','#FFA000'],fl:true},
+  [LAVA]:    {name:'Lava',    color:'#FF4500',colors:['#FF4500','#FF6600','#CC3300'],fl:false},
+  [GUNPOWDER]:{name:'Powder', color:'#C0A060',colors:['#C0A060','#B09050','#D0B070'],fl:true},
+  [ACID]:    {name:'Acid',    color:'#A8FF3E',colors:['#A8FF3E','#88DD20','#C0FF60'],fl:false},
+  [VOID]:    {name:'Void',    color:'#2a0a2a',colors:['#2a0a2a','#1a001a','#3a103a'],fl:false},
+  [BOMB]:    {name:'Bomb',    color:'#333333',colors:['#333','#222','#444'],fl:true},
+  [CLONER]:  {name:'Cloner',  color:'#FF69B4',colors:['#FF69B4','#FF1493','#FF85C2'],fl:false},
+  [FAN]:     {name:'Fan',     color:'#00BCD4',colors:['#00BCD4','#0097A7','#00E5FF'],fl:false},
+  [HEATER]:  {name:'Heater',  color:'#FF5722',colors:['#FF5722','#E64A19','#FF8A65'],fl:false},
+  [COOLER]:  {name:'Cooler',  color:'#80DEEA',colors:['#80DEEA','#4DD0E1','#B2EBF2'],fl:false},
+  [DRAGON]:  {name:'Dragon',  color:'#B71C1C',colors:['#B71C1C'],animal:true},
+  [TIGER]:   {name:'Tiger',   color:'#E65100',colors:['#E65100'],animal:true},
+  [SHEEP]:   {name:'Sheep',   color:'#F5F5F5',colors:['#F5F5F5'],animal:true},
+  [HUMAN]:   {name:'Human',   color:'#FFCCBC',colors:['#FFCCBC'],animal:true},
+  [FISH]:    {name:'Fish',    color:'#0288D1',colors:['#0288D1'],animal:true},
+  [RAT]:     {name:'Rat',     color:'#78909C',colors:['#78909C'],animal:true},
+  [FLEA]:    {name:'Flea',    color:'#9C27B0',colors:['#9C27B0'],animal:true},
+};
+const A_EMOJI={[DRAGON]:'🐉',[TIGER]:'🐯',[SHEEP]:'🐑',[HUMAN]:'🧑',[FISH]:'🐟',[RAT]:'🐀',[FLEA]:'🦗'};
+const A_PRED={[SHEEP]:new Set([DRAGON,TIGER]),[HUMAN]:new Set([DRAGON,TIGER]),[RAT]:new Set([TIGER,HUMAN]),[FISH]:new Set([TIGER]),[FLEA]:new Set([DRAGON,TIGER])};
+const A_PREY={[DRAGON]:new Set([HUMAN,SHEEP]),[TIGER]:new Set([SHEEP,HUMAN,RAT,FISH])};
+
+const CATS=[
+  {name:'🌊 Basics',    ids:[SAND,WATER,OIL,SMOKE,STEAM]},
+  {name:'🧱 Material',  ids:[STONE,WALL,WOOD,CONCRETE,TERRACOTTA,RUIN,ICE,ASH]},
+  {name:'🔩 Metal',     ids:[GOLD,SILVER,MERCURY,IRON,STEEL]},
+  {name:'🌿 Plants',    ids:[SEED,PLANT,CACTUS,PALM,CORN,APPLE_T,ORANGE_T,PAPAYA_T]},
+  {name:'🦁 Animals',   ids:[DRAGON,TIGER,SHEEP,HUMAN,FISH,RAT,FLEA]},
+  {name:'💥 Disasters', ids:[FIRE,LAVA,ACID,GUNPOWDER,BOMB,VOID]},
+  {name:'⚙️ Machines',  ids:[CLONER,FAN,HEATER,COOLER]},
 ];
 
-// ── Globals ────────────────────────────────────────────────────────────────
+// Globals
 const canvas=document.getElementById('canvas');
 const ctx=canvas.getContext('2d');
-let cols,rows,grid,color,life,imageData,pixels;
+let cols,rows,grid,color,life,imageData,pixels,simBuf;
 let selectedEl=SAND,brushSize=3,paused=false,erasing=false;
 let isDrawing=false,lastX=-1,lastY=-1;
-let frameCount=0,lastFpsTime=0,fps=60;
+let frameCount=0,lastFpsTime=0;
+let activeCat=0;
+let animals=[];
 
 function startGame(){
   document.getElementById('overlay').style.display='none';
-  init();
-  requestAnimationFrame(loop);
+  init(); requestAnimationFrame(loop);
 }
 
-// ── Setup ──────────────────────────────────────────────────────────────────
 function init(){
   const tb=document.getElementById('topbar').offsetHeight;
   const tl=document.getElementById('toolbar').offsetHeight;
   const W=Math.min(480,window.innerWidth);
   const H=window.innerHeight-tb-tl;
   canvas.width=W; canvas.height=H;
-  canvas.style.width=W+'px'; canvas.style.height=H+'px';
   cols=Math.floor(W/CELL); rows=Math.floor(H/CELL);
   grid=new Uint8Array(cols*rows);
   color=new Uint8Array(cols*rows*3);
@@ -120,63 +167,85 @@ function init(){
   buildUI();
 }
 
+// ── UI ────────────────────────────────────────────────────────────────────────
 function buildUI(){
-  const el=document.getElementById('elements');
-  el.innerHTML='';
-  ELEMENTS.forEach(e=>{
-    const btn=document.createElement('div');
-    btn.className='el-btn'+(e.id===selectedEl?' active':'');
-    btn.dataset.id=e.id;
-    btn.innerHTML=`<div class="el-dot" style="background:${e.color}"></div><div class="el-label">${e.name}</div>`;
-    btn.addEventListener('click',()=>{
-      erasing=false;
-      selectedEl=e.id;
-      document.getElementById('erase-btn').style.borderColor='#555';
-      document.getElementById('erase-btn').style.color='#ccc';
-      document.querySelectorAll('.el-btn').forEach(b=>b.classList.toggle('active',+b.dataset.id===e.id));
-    });
-    el.appendChild(btn);
+  const tabsEl=document.getElementById('cat-tabs');
+  tabsEl.innerHTML='';
+  CATS.forEach((cat,ci)=>{
+    const btn=document.createElement('button');
+    btn.className='cat-tab'+(ci===activeCat?' active':'');
+    btn.textContent=cat.name;
+    btn.onclick=()=>{
+      activeCat=ci;
+      tabsEl.querySelectorAll('.cat-tab').forEach((b,i)=>b.classList.toggle('active',i===ci));
+      buildElements();
+    };
+    tabsEl.appendChild(btn);
   });
+  buildElements();
   document.getElementById('brush-slider').value=brushSize;
   document.getElementById('brush-slider').oninput=e=>brushSize=+e.target.value;
   document.getElementById('erase-btn').onclick=()=>{
     erasing=!erasing;
-    const btn=document.getElementById('erase-btn');
-    btn.style.borderColor=erasing?'#FF6B8A':'#555';
-    btn.style.color=erasing?'#FF6B8A':'#ccc';
+    const b=document.getElementById('erase-btn');
+    b.style.borderColor=erasing?'#FF6B8A':'#555';
+    b.style.color=erasing?'#FF6B8A':'#ccc';
     document.querySelectorAll('.el-btn').forEach(b=>b.classList.remove('active'));
   };
-  document.getElementById('clear-btn').onclick=()=>{grid.fill(0);color.fill(0);life.fill(0);};
+  document.getElementById('clear-btn').onclick=()=>{grid.fill(0);color.fill(0);life.fill(0);animals=[];};
   document.getElementById('pause-btn').onclick=()=>{
     paused=!paused;
     document.getElementById('pause-btn').textContent=paused?'▶':'⏸';
   };
 }
+function buildElements(){
+  const el=document.getElementById('elements');
+  el.innerHTML='';
+  CATS[activeCat].ids.forEach(id=>{
+    const d=ELEM[id]; if(!d)return;
+    const btn=document.createElement('div');
+    btn.className='el-btn'+(id===selectedEl?' active':'');
+    btn.dataset.id=id;
+    btn.innerHTML=d.animal
+      ?`<div style="font-size:1.15rem">${A_EMOJI[id]}</div><div class="el-label">${d.name}</div>`
+      :`<div class="el-dot" style="background:${d.color}"></div><div class="el-label">${d.name}</div>`;
+    btn.addEventListener('click',()=>{
+      erasing=false; selectedEl=id;
+      document.getElementById('erase-btn').style.borderColor='#555';
+      document.getElementById('erase-btn').style.color='#ccc';
+      document.querySelectorAll('.el-btn').forEach(b=>b.classList.toggle('active',+b.dataset.id===id));
+    });
+    el.appendChild(btn);
+  });
+}
 
-// ── Grid helpers ───────────────────────────────────────────────────────────
+// ── Grid helpers ──────────────────────────────────────────────────────────────
 const idx=(x,y)=>y*cols+x;
-const inBounds=(x,y)=>x>=0&&x<cols&&y>=0&&y<rows;
-function get(x,y){return inBounds(x,y)?grid[idx(x,y)]:STONE;}
+const inB=(x,y)=>x>=0&&x<cols&&y>=0&&y<rows;
+function get(x,y){return inB(x,y)?grid[idx(x,y)]:STONE;}
 function set(x,y,type,r,g,b,lf){
-  if(!inBounds(x,y))return;
-  const i=idx(x,y);
-  grid[i]=type;
+  if(!inB(x,y))return;
+  const i=idx(x,y); grid[i]=type;
   const ci=i*3;
   if(r!==undefined){color[ci]=r;color[ci+1]=g;color[ci+2]=b;}
-  else pickColor(i,type);
-  life[i]=lf||0;
+  else pickCol(i,type);
+  life[i]=lf!==undefined?lf:0;
 }
-function pickColor(i,type){
-  const e=ELEMENTS.find(e=>e.id===type);
-  if(!e){color[i*3]=color[i*3+1]=color[i*3+2]=0;return;}
+function pickCol(i,type){
+  const e=ELEM[type]; if(!e||!e.colors.length)return;
   const c=e.colors[Math.random()*e.colors.length|0];
   const ci=i*3;
   color[ci]=parseInt(c.slice(1,3),16);
   color[ci+1]=parseInt(c.slice(3,5),16);
   color[ci+2]=parseInt(c.slice(5,7),16);
 }
+function clr(x,y){
+  if(!inB(x,y))return;
+  const i=idx(x,y); grid[i]=EMPTY; life[i]=0;
+  const ci=i*3; color[ci]=color[ci+1]=color[ci+2]=0;
+}
 function swap(x1,y1,x2,y2){
-  if(!inBounds(x1,y1)||!inBounds(x2,y2))return;
+  if(!inB(x1,y1)||!inB(x2,y2))return;
   const i1=idx(x1,y1),i2=idx(x2,y2);
   let t=grid[i1];grid[i1]=grid[i2];grid[i2]=t;
   const c1=i1*3,c2=i2*3;
@@ -185,187 +254,163 @@ function swap(x1,y1,x2,y2){
   t=color[c1+2];color[c1+2]=color[c2+2];color[c2+2]=t;
   t=life[i1];life[i1]=life[i2];life[i2]=t;
 }
-function clear(x,y){
-  if(!inBounds(x,y))return;
-  const i=idx(x,y);
-  grid[i]=EMPTY;life[i]=0;
-  const ci=i*3;color[ci]=color[ci+1]=color[ci+2]=0;
+function isLiq(t){return t===WATER||t===OIL||t===ACID||t===MERCURY||t===LAVA;}
+function isSolid(x,y){
+  const t=get(x,y);
+  return t!==EMPTY&&!isLiq(t)&&t!==SMOKE&&t!==STEAM&&!ANIMAL_IDS.has(t);
 }
 
-// ── Simulation ─────────────────────────────────────────────────────────────
-const updated=new Uint8Array(1);
-let simBuf;
-
+// ── Simulate ──────────────────────────────────────────────────────────────────
 function simulate(){
   if(!simBuf||simBuf.length!==cols*rows) simBuf=new Uint8Array(cols*rows);
   simBuf.fill(0);
-  let pcount=0;
-  // bottom-up for gravity particles, left/right alternating per row
+  let pc=0;
   for(let y=rows-1;y>=0;y--){
-    const leftRight=Math.random()<.5;
+    const lr=Math.random()<.5;
     for(let xi=0;xi<cols;xi++){
-      const x=leftRight?xi:cols-1-xi;
-      const i=idx(x,y);
-      const type=grid[i];
-      if(type===EMPTY||simBuf[i])continue;
-      pcount++;
-      simBuf[i]=1;
+      const x=lr?xi:cols-1-xi;
+      const i=idx(x,y),type=grid[i];
+      if(!type||simBuf[i]||ANIMAL_IDS.has(type))continue;
+      pc++; simBuf[i]=1;
       switch(type){
-        case SAND: updateSand(x,y); break;
-        case WATER: updateWater(x,y); break;
-        case FIRE: updateFire(x,y); break;
-        case LAVA: updateLava(x,y); break;
-        case SMOKE: updateSmoke(x,y); break;
-        case STEAM: updateSteam(x,y); break;
-        case PLANT: updatePlant(x,y); break;
-        case OIL: updateOil(x,y); break;
-        case ICE: updateIce(x,y); break;
-        case ASH:        updateAsh(x,y);        break;
-        case ACID:       updateAcid(x,y);       break;
-        case GUNPOWDER:  updateGunpowder(x,y);  break;
-        case CLONER:     updateCloner(x,y);      break;
-        case VOID:       updateVoid(x,y);        break;
+        case SAND:case GOLD:case SILVER: uSand(x,y); break;
+        case IRON: uIron(x,y); break;
+        case WATER: uWater(x,y); break;
+        case MERCURY: uMercury(x,y); break;
+        case OIL: uOil(x,y); break;
+        case FIRE: uFire(x,y); break;
+        case LAVA: uLava(x,y); break;
+        case SMOKE: uSmoke(x,y); break;
+        case STEAM: uSteam(x,y); break;
+        case ICE: uIce(x,y); break;
+        case ASH: uAsh(x,y); break;
+        case RUIN: uRuin(x,y); break;
+        case PLANT: uPlant(x,y); break;
+        case SEED: uSeed(x,y); break;
+        case CACTUS: uCactus(x,y); break;
+        case PALM: uPalm(x,y); break;
+        case CORN: uCorn(x,y); break;
+        case APPLE_T: uTree(x,y,'#C62828'); break;
+        case ORANGE_T: uTree(x,y,'#F4511E'); break;
+        case PAPAYA_T: uTree(x,y,'#FFA000'); break;
+        case ACID: uAcid(x,y); break;
+        case GUNPOWDER: uGunpowder(x,y); break;
+        case BOMB: uBomb(x,y); break;
+        case CLONER: uCloner(x,y); break;
+        case VOID: uVoid(x,y); break;
+        case FAN: uFan(x,y); break;
+        case HEATER: uHeater(x,y); break;
+        case COOLER: uCooler(x,y); break;
       }
     }
   }
-  document.getElementById('pcount').textContent=pcount;
+  document.getElementById('pcount').textContent=pc;
+  uAnimals();
 }
 
-function updateSand(x,y){
+// ── Basics ────────────────────────────────────────────────────────────────────
+function uSand(x,y){
   if(y>=rows-1)return;
-  const below=get(x,y+1);
-  if(below===EMPTY){swap(x,y,x,y+1);}
-  else if(below===WATER||below===OIL){
-    // sink through liquid
-    swap(x,y,x,y+1);
-  } else {
-    const d=Math.random()<.5?1:-1;
-    const bl=get(x+d,y+1);
-    if(bl===EMPTY||bl===WATER||bl===OIL){swap(x,y,x+d,y+1);}
-    else{
-      const bl2=get(x-d,y+1);
-      if(bl2===EMPTY||bl2===WATER||bl2===OIL) swap(x,y,x-d,y+1);
+  const b=get(x,y+1);
+  if(b===EMPTY||isLiq(b)){swap(x,y,x,y+1);return;}
+  const d=Math.random()<.5?1:-1;
+  if(get(x+d,y+1)===EMPTY||isLiq(get(x+d,y+1))){swap(x,y,x+d,y+1);return;}
+  if(get(x-d,y+1)===EMPTY||isLiq(get(x-d,y+1)))swap(x,y,x-d,y+1);
+}
+function uIron(x,y){
+  const nbrs=[[0,-1],[0,1],[-1,0],[1,0]];
+  for(const[dx,dy]of nbrs){
+    if(!inB(x+dx,y+dy))continue;
+    if(get(x+dx,y+dy)===WATER&&Math.random()<.0008){
+      const ci=idx(x,y)*3;
+      color[ci]=Math.min(180,color[ci]+3);
+      color[ci+1]=Math.max(20,color[ci+1]-2);
     }
   }
+  uSand(x,y);
 }
-
-function updateWater(x,y){
+function uWater(x,y){
   if(y<rows-1&&get(x,y+1)===EMPTY){swap(x,y,x,y+1);return;}
-  // spread sideways
   const d=Math.random()<.5?1:-1;
-  const steps=Math.floor(Math.random()*3)+1;
-  for(let s=1;s<=steps;s++){
+  for(let s=1;s<=3;s++){
     if(get(x+d*s,y)===EMPTY){swap(x,y,x+d*s,y);return;}
     if(get(x+d*s,y)!==EMPTY&&get(x+d*s,y)!==WATER)break;
   }
-  if(get(x-d,y)===EMPTY){swap(x,y,x-d,y);}
+  if(get(x-d,y)===EMPTY)swap(x,y,x-d,y);
 }
-
-function updateOil(x,y){
-  // oil floats on water, sinks otherwise
+function uMercury(x,y){
   if(y<rows-1){
-    const below=get(x,y+1);
-    if(below===EMPTY){swap(x,y,x,y+1);return;}
-    if(below===WATER){swap(x,y,x,y+1);return;} // oil sinks into water? no, oil floats — oil is lighter
+    const b=get(x,y+1);
+    if(b===EMPTY||b===WATER||b===OIL||b===ACID){swap(x,y,x,y+1);return;}
   }
   const d=Math.random()<.5?1:-1;
-  if(get(x+d,y)===EMPTY){swap(x,y,x+d,y);}
-  else if(get(x-d,y)===EMPTY){swap(x,y,x-d,y);}
+  if(get(x+d,y)===EMPTY||get(x+d,y)===WATER){swap(x,y,x+d,y);return;}
+  if(get(x-d,y)===EMPTY||get(x-d,y)===WATER)swap(x,y,x-d,y);
 }
-
-function updateFire(x,y){
-  const i=idx(x,y);
-  life[i]++;
-  // fire rises slightly
+function uOil(x,y){
+  if(y<rows-1&&get(x,y+1)===EMPTY){swap(x,y,x,y+1);return;}
+  const d=Math.random()<.5?1:-1;
+  if(get(x+d,y)===EMPTY){swap(x,y,x+d,y);return;}
+  if(get(x-d,y)===EMPTY)swap(x,y,x-d,y);
+}
+function uAsh(x,y){
+  if(y>=rows-1)return;
+  if(get(x,y+1)===EMPTY){swap(x,y,x,y+1);return;}
+  const d=Math.random()<.5?1:-1;
+  if(get(x+d,y+1)===EMPTY)swap(x,y,x+d,y+1);
+  else if(get(x-d,y+1)===EMPTY)swap(x,y,x-d,y+1);
+}
+function uRuin(x,y){
+  if(Math.random()>.0003)return;
+  for(const[dx,dy]of[[0,1],[-1,0],[1,0]]){
+    if(inB(x+dx,y+dy)&&get(x+dx,y+dy)===EMPTY){set(x,y,ASH);return;}
+  }
+}
+function uIce(x,y){
+  for(const[dx,dy]of[[0,-1],[0,1],[-1,0],[1,0]]){
+    if(!inB(x+dx,y+dy))continue;
+    const nt=get(x+dx,y+dy);
+    if((nt===FIRE||nt===LAVA||nt===HEATER)&&Math.random()<.05){set(x,y,WATER);return;}
+  }
+}
+function uFire(x,y){
+  const i=idx(x,y); life[i]++;
   if(y>0&&get(x,y-1)===EMPTY&&Math.random()<.3){
-    // spawn smoke above
-    set(x,y-1,SMOKE,80+Math.random()*40|0,80+Math.random()*40|0,80+Math.random()*40|0,Math.random()*40|0);
+    set(x,y-1,SMOKE,80+Math.random()*40|0,80+Math.random()*40|0,80+Math.random()*40|0,0);
     simBuf[idx(x,y-1)]=1;
   }
-  // spread to flammable neighbours
-  const nbrs=[[0,-1],[0,1],[-1,0],[1,0],[-1,-1],[1,-1],[-1,1],[1,1]];
-  for(const [dx,dy] of nbrs){
-    const nx=x+dx,ny=y+dy;
-    if(!inBounds(nx,ny))continue;
-    const ntype=get(nx,ny);
-    const nel=ELEMENTS.find(e=>e.id===ntype);
-    if(nel&&nel.flammable&&Math.random()<.015){
-      set(nx,ny,FIRE);simBuf[idx(nx,ny)]=1;
-    }
-    // fire + water = steam
-    if(ntype===WATER&&Math.random()<.1){
-      set(nx,ny,STEAM,220,220,255,0);
-      clear(x,y);
-      return;
-    }
-    // fire + ice = water
-    if(ntype===ICE&&Math.random()<.08){
-      set(nx,ny,WATER);simBuf[idx(nx,ny)]=1;
+  for(const[dx,dy]of[[0,-1],[0,1],[-1,0],[1,0],[-1,-1],[1,-1],[-1,1],[1,1]]){
+    const nx=x+dx,ny=y+dy; if(!inB(nx,ny))continue;
+    const nt=get(nx,ny);
+    if(ELEM[nt]&&ELEM[nt].fl&&Math.random()<.015){set(nx,ny,FIRE);simBuf[idx(nx,ny)]=1;}
+    if(nt===WATER&&Math.random()<.1){set(nx,ny,STEAM,220,220,255,0);clr(x,y);return;}
+    if(nt===ICE&&Math.random()<.08){set(nx,ny,WATER);simBuf[idx(nx,ny)]=1;}
+    if(ANIMAL_IDS.has(nt)){
+      const a=animals.find(a=>a.alive&&Math.round(a.x/CELL)===nx&&Math.round(a.y/CELL)===ny);
+      if(a) a.hp-=0.15;
     }
   }
-  // die out
-  if(life[i]>80+Math.random()*60){
-    set(x,y,ASH,60,55,55);
-  }
+  if(life[i]>80+Math.random()*60) set(x,y,ASH,60,55,55);
 }
-
-function updateLava(x,y){
-  const i=idx(x,y);
-  // lava flows like water but slower
+function uLava(x,y){
   if(Math.random()<.3){
     if(y<rows-1&&get(x,y+1)===EMPTY){swap(x,y,x,y+1);return;}
     const d=Math.random()<.5?1:-1;
     if(get(x+d,y)===EMPTY){swap(x,y,x+d,y);return;}
     if(get(x-d,y)===EMPTY){swap(x,y,x-d,y);return;}
   }
-  // lava ignites neighbours
-  const nbrs=[[0,-1],[0,1],[-1,0],[1,0]];
-  for(const [dx,dy] of nbrs){
-    const nx=x+dx,ny=y+dy;
-    if(!inBounds(nx,ny))continue;
-    const ntype=get(nx,ny);
-    const nel=ELEMENTS.find(e=>e.id===ntype);
-    if(nel&&nel.flammable&&Math.random()<.02){
-      set(nx,ny,FIRE);simBuf[idx(nx,ny)]=1;
-    }
-    // lava + water = stone
-    if(ntype===WATER&&Math.random()<.05){
-      set(x,y,STONE,100+Math.random()*40|0,95+Math.random()*20|0,90+Math.random()*20|0);
-      return;
-    }
-    // lava + ice = water
-    if(ntype===ICE&&Math.random()<.1){
-      set(nx,ny,WATER);simBuf[idx(nx,ny)]=1;
-    }
-    // spawn fire above
-    if(dy===-1&&ntype===EMPTY&&Math.random()<.03){
-      set(nx,ny,FIRE);simBuf[idx(nx,ny)]=1;
-    }
+  for(const[dx,dy]of[[0,-1],[0,1],[-1,0],[1,0]]){
+    const nx=x+dx,ny=y+dy; if(!inB(nx,ny))continue;
+    const nt=get(nx,ny);
+    if(ELEM[nt]&&ELEM[nt].fl&&Math.random()<.02){set(nx,ny,FIRE);simBuf[idx(nx,ny)]=1;}
+    if(nt===WATER&&Math.random()<.05){set(x,y,STONE,100,95,90);return;}
+    if(nt===ICE&&Math.random()<.1){set(nx,ny,WATER);simBuf[idx(nx,ny)]=1;}
+    if(dy===-1&&nt===EMPTY&&Math.random()<.03){set(nx,ny,FIRE);simBuf[idx(nx,ny)]=1;}
   }
 }
-
-function updateSmoke(x,y){
-  const i=idx(x,y);
-  life[i]++;
-  if(life[i]>120+Math.random()*80){clear(x,y);return;}
-  if(y>0){
-    const up=get(x,y-1);
-    if(up===EMPTY){swap(x,y,x,y-1);return;}
-    const d=Math.random()<.5?1:-1;
-    if(get(x+d,y-1)===EMPTY){swap(x,y,x+d,y-1);return;}
-    if(get(x-d,y-1)===EMPTY){swap(x,y,x-d,y-1);return;}
-    if(get(x+d,y)===EMPTY){swap(x,y,x+d,y);}
-    else if(get(x-d,y)===EMPTY){swap(x,y,x-d,y);}
-  }
-}
-
-function updateSteam(x,y){
-  const i=idx(x,y);
-  life[i]++;
-  if(life[i]>80+Math.random()*60){
-    // condenses back to water
-    set(x,y,WATER);return;
-  }
+function uSmoke(x,y){
+  const i=idx(x,y); life[i]++;
+  if(life[i]>120+Math.random()*80){clr(x,y);return;}
   if(y>0){
     if(get(x,y-1)===EMPTY){swap(x,y,x,y-1);return;}
     const d=Math.random()<.5?1:-1;
@@ -375,264 +420,389 @@ function updateSteam(x,y){
     else if(get(x-d,y)===EMPTY){swap(x,y,x-d,y);}
   }
 }
+function uSteam(x,y){
+  const i=idx(x,y); life[i]++;
+  if(life[i]>80+Math.random()*60){set(x,y,WATER);return;}
+  if(y>0){
+    if(get(x,y-1)===EMPTY){swap(x,y,x,y-1);return;}
+    const d=Math.random()<.5?1:-1;
+    if(get(x+d,y-1)===EMPTY){swap(x,y,x+d,y-1);return;}
+    if(get(x-d,y-1)===EMPTY){swap(x,y,x-d,y-1);return;}
+    if(get(x+d,y)===EMPTY)swap(x,y,x+d,y);
+    else if(get(x-d,y)===EMPTY)swap(x,y,x-d,y);
+  }
+}
 
-function updatePlant(x,y){
-  // grow toward water neighbours
-  if(Math.random()>.01)return;
-  const nbrs=[[0,-1],[0,1],[-1,0],[1,0]];
-  for(const [dx,dy] of nbrs){
-    const nx=x+dx,ny=y+dy;
-    if(!inBounds(nx,ny))continue;
-    if(get(nx,ny)===WATER&&Math.random()<.5){
-      // consume water and grow
-      set(nx,ny,PLANT,
-        ELEMENTS[8].colors[Math.random()*3|0].slice(1)
-      );
-      clear(nx,ny); // remove water
-      set(nx,ny,PLANT);
-      simBuf[idx(nx,ny)]=1;
+// ── Plants ────────────────────────────────────────────────────────────────────
+function uSeed(x,y){
+  if(y<rows-1&&(get(x,y+1)===EMPTY||isLiq(get(x,y+1)))){swap(x,y,x,y+1);return;}
+  const i=idx(x,y);
+  if(y>0&&get(x,y-1)===EMPTY){
+    life[i]++;
+    if(life[i]>50){set(x,y,PLANT);if(y>0&&get(x,y-1)===EMPTY)set(x,y-1,PLANT);}
+  }
+}
+function uPlant(x,y){
+  const i=idx(x,y); life[i]=Math.min(255,life[i]+1);
+  if(Math.random()>.004)return;
+  for(const[dx,dy]of[[0,-1],[0,1],[-1,0],[1,0]]){
+    const nx=x+dx,ny=y+dy; if(!inB(nx,ny))continue;
+    if(get(nx,ny)===WATER){
+      clr(nx,ny);
+      if(y>0&&get(x,y-1)===EMPTY&&life[i]<180){set(x,y-1,PLANT);simBuf[idx(x,y-1)]=1;}
+      if(Math.random()<.25){const sx=x+(Math.random()<.5?1:-1);if(inB(sx,y)&&get(sx,y)===EMPTY)set(sx,y,PLANT);}
       return;
     }
   }
 }
-
-function updateIce(x,y){
-  // melt near fire/lava
-  const nbrs=[[0,-1],[0,1],[-1,0],[1,0]];
-  for(const [dx,dy] of nbrs){
-    const nx=x+dx,ny=y+dy;
-    if(!inBounds(nx,ny))continue;
-    const nt=get(nx,ny);
-    if((nt===FIRE||nt===LAVA)&&Math.random()<.05){
-      set(x,y,WATER);return;
-    }
-  }
-}
-
-function updateAsh(x,y){
-  if(y>=rows-1)return;
-  if(get(x,y+1)===EMPTY){swap(x,y,x,y+1);}
-  else{
-    const d=Math.random()<.5?1:-1;
-    if(get(x+d,y+1)===EMPTY)swap(x,y,x+d,y+1);
-    else if(get(x-d,y+1)===EMPTY)swap(x,y,x-d,y+1);
-  }
-}
-
-function updateAcid(x,y){
+function uCactus(x,y){
   const i=idx(x,y);
-  life[i]++;
-  // acid dissolves almost everything it touches (not stone, not void, not cloner)
-  const nbrs=[[0,1],[-1,0],[1,0],[0,-1]];
-  const immune=new Set([EMPTY,ACID,STONE,CLONER,VOID]);
-  for(const [dx,dy] of nbrs){
-    const nx=x+dx,ny=y+dy;
-    if(!inBounds(nx,ny))continue;
-    const nt=get(nx,ny);
-    if(!immune.has(nt)&&Math.random()<.04){
-      // dissolve neighbour — produce smoke bubble
-      set(nx,ny,SMOKE,120,180,80,0);
-      simBuf[idx(nx,ny)]=1;
-      // acid weakens too
-      if(Math.random()<.3){clear(x,y);return;}
+  if(Math.random()<.004&&y>1&&get(x,y-1)===EMPTY&&life[i]<50){
+    life[i]++;
+    set(x,y-1,CACTUS); simBuf[idx(x,y-1)]=1;
+    if(life[i]%12===0){
+      const sx=x+(Math.random()<.5?1:-1);
+      if(inB(sx,y-1)&&get(sx,y-1)===EMPTY) set(sx,y-1,CACTUS);
     }
   }
-  // flows like water
+  for(const[dx,dy]of[[0,-1],[0,1],[-1,0],[1,0]]){
+    const nx=x+dx,ny=y+dy; if(!inB(nx,ny))continue;
+    if(ANIMAL_IDS.has(get(nx,ny))){
+      const a=animals.find(a=>a.alive&&Math.round(a.x/CELL)===nx&&Math.round(a.y/CELL)===ny);
+      if(a) a.hp-=0.4;
+    }
+  }
+}
+function uPalm(x,y){
+  const i=idx(x,y);
+  if(Math.random()<.003&&y>1&&get(x,y-1)===EMPTY&&life[i]<70){
+    life[i]++;
+    set(x,y-1,PALM,78,52,30); simBuf[idx(x,y-1)]=1;
+    if(life[i]>50&&Math.random()<.35){
+      for(const s of[-2,-1,1,2]){
+        if(inB(x+s,y-1)&&get(x+s,y-1)===EMPTY){
+          set(x+s,y-1,PLANT,34+Math.random()*30|0,130+Math.random()*40|0,30);
+        }
+      }
+    }
+  }
+}
+function uCorn(x,y){
+  const i=idx(x,y);
+  if(Math.random()<.004&&y>1&&get(x,y-1)===EMPTY&&life[i]<35){
+    life[i]++;
+    set(x,y-1,CORN); simBuf[idx(x,y-1)]=1;
+    if(life[i]>28){const ci=idx(x,y-1)*3;color[ci]=220;color[ci+1]=200;color[ci+2]=50;}
+    if(life[i]%7===0){const sx=x+(Math.random()<.5?1:-1);if(inB(sx,y-1)&&get(sx,y-1)===EMPTY)set(sx,y-1,CORN,100,160,50);}
+  }
+}
+function uTree(x,y,fruitHex){
+  const i=idx(x,y);
+  if(Math.random()<.003&&y>1&&get(x,y-1)===EMPTY&&life[i]<55){
+    life[i]++;
+    const type=grid[i];
+    set(x,y-1,type); simBuf[idx(x,y-1)]=1;
+    if(life[i]>18&&Math.random()<.2){
+      const bx=x+(Math.random()<.5?1:-1),by=y-1-(Math.random()*2|0);
+      if(inB(bx,by)&&get(bx,by)===EMPTY){
+        set(bx,by,type);
+        const ci=idx(bx,by)*3;color[ci]=30+Math.random()*40|0;color[ci+1]=100+Math.random()*50|0;color[ci+2]=20;
+      }
+    }
+    if(life[i]>40&&Math.random()<.001){
+      const fr=parseInt(fruitHex.slice(1,3),16),fg=parseInt(fruitHex.slice(3,5),16),fb=parseInt(fruitHex.slice(5,7),16);
+      if(inB(x,y+1)&&get(x,y+1)===EMPTY) set(x,y+1,SEED,fr,fg,fb);
+    }
+  }
+}
+
+// ── Disasters / Weapons ───────────────────────────────────────────────────────
+function uAcid(x,y){
+  const i=idx(x,y); life[i]++;
+  const immune=new Set([EMPTY,ACID,STONE,WALL,CLONER,VOID,STEEL,GOLD,CONCRETE]);
+  for(const[dx,dy]of[[0,1],[-1,0],[1,0],[0,-1]]){
+    const nx=x+dx,ny=y+dy; if(!inB(nx,ny))continue;
+    const nt=get(nx,ny);
+    if(!immune.has(nt)&&nt!==EMPTY&&Math.random()<.04){
+      set(nx,ny,SMOKE,120,180,80,0); simBuf[idx(nx,ny)]=1;
+      if(Math.random()<.3){clr(x,y);return;}
+    }
+    if(ANIMAL_IDS.has(nt)){const a=animals.find(a=>a.alive&&Math.round(a.x/CELL)===nx&&Math.round(a.y/CELL)===ny);if(a)a.hp-=0.3;}
+  }
   if(y<rows-1&&get(x,y+1)===EMPTY){swap(x,y,x,y+1);return;}
   const d=Math.random()<.5?1:-1;
-  const steps=Math.floor(Math.random()*3)+1;
-  for(let s=1;s<=steps;s++){
+  for(let s=1;s<=3;s++){
     if(get(x+d*s,y)===EMPTY){swap(x,y,x+d*s,y);return;}
     if(get(x+d*s,y)!==EMPTY&&get(x+d*s,y)!==ACID)break;
   }
-  if(get(x-d,y)===EMPTY){swap(x,y,x-d,y);}
-  // slowly evaporates
-  if(life[i]>200+Math.random()*200){clear(x,y);}
+  if(get(x-d,y)===EMPTY)swap(x,y,x-d,y);
+  if(life[i]>200+Math.random()*200)clr(x,y);
 }
-
-function updateGunpowder(x,y){
-  const i=idx(x,y);
-  // falls like sand
+function uGunpowder(x,y){
   if(y<rows-1){
-    const below=get(x,y+1);
-    if(below===EMPTY){swap(x,y,x,y+1);return;}
-    if(below===WATER||below===ACID){swap(x,y,x,y+1);return;}
+    const b=get(x,y+1);
+    if(b===EMPTY||isLiq(b)){swap(x,y,x,y+1);return;}
     const d=Math.random()<.5?1:-1;
     if(get(x+d,y+1)===EMPTY){swap(x,y,x+d,y+1);return;}
     if(get(x-d,y+1)===EMPTY){swap(x,y,x-d,y+1);return;}
   }
-  // ignite near fire/lava — chain EXPLOSION
-  const nbrs=[[0,-1],[0,1],[-1,0],[1,0],[-1,-1],[1,-1],[-1,1],[1,1]];
-  for(const [dx,dy] of nbrs){
-    const nx=x+dx,ny=y+dy;
-    if(!inBounds(nx,ny))continue;
-    const nt=get(nx,ny);
-    if(nt===FIRE||nt===LAVA){
-      // explode: blast radius clears area and spawns fire
-      const R=6+Math.random()*4|0;
-      for(let ey=-R;ey<=R;ey++){
-        for(let ex=-R;ex<=R;ex++){
-          if(ex*ex+ey*ey>R*R)continue;
-          const bx=x+ex,by=y+ey;
-          if(!inBounds(bx,by))continue;
-          const bt=get(bx,by);
-          if(bt===STONE||bt===CLONER||bt===VOID)continue;
-          if(Math.random()<.6) set(bx,by,FIRE);
-          else clear(bx,by);
-          if(simBuf) simBuf[idx(bx,by)]=1;
-        }
-      }
-      return;
-    }
+  for(const[dx,dy]of[[0,-1],[0,1],[-1,0],[1,0],[-1,-1],[1,-1],[-1,1],[1,1]]){
+    if(!inB(x+dx,y+dy))continue;
+    const nt=get(x+dx,y+dy);
+    if(nt===FIRE||nt===LAVA){explode(x,y,6+Math.random()*4|0);return;}
   }
 }
-
-// cloner: remembers first element that touches it, then spawns copies endlessly
-function updateCloner(x,y){
-  const i=idx(x,y);
-  const stored=life[i]; // life byte stores what to clone (0=nothing yet)
-  const nbrs=[[0,-1],[0,1],[-1,0],[1,0]];
-  if(stored===0){
-    // learn from first non-empty neighbour (not cloner/void/smoke)
-    for(const [dx,dy] of nbrs){
-      const nx=x+dx,ny=y+dy;
-      if(!inBounds(nx,ny))continue;
-      const nt=get(nx,ny);
-      if(nt!==EMPTY&&nt!==CLONER&&nt!==VOID&&nt!==SMOKE&&nt!==STEAM){
-        life[i]=nt; // remember
-        return;
-      }
+function uBomb(x,y){
+  if(y<rows-1){
+    const b=get(x,y+1);
+    if(b===EMPTY){swap(x,y,x,y+1);return;}
+    if(b!==BOMB&&!isLiq(b)){explode(x,y,10+Math.random()*5|0);return;}
+  }
+  for(const[dx,dy]of[[0,-1],[-1,0],[1,0]]){
+    const nt=get(x+dx,y+dy);
+    if(nt===FIRE||nt===LAVA){explode(x,y,10+Math.random()*5|0);return;}
+  }
+}
+function explode(x,y,R){
+  for(let ey=-R;ey<=R;ey++)for(let ex=-R;ex<=R;ex++){
+    if(ex*ex+ey*ey>R*R)continue;
+    const bx=x+ex,by=y+ey; if(!inB(bx,by))continue;
+    const bt=get(bx,by);
+    if(bt===STONE||bt===WALL||bt===STEEL||bt===CLONER||bt===VOID||bt===CONCRETE)continue;
+    if(ANIMAL_IDS.has(bt)){
+      const a=animals.find(a=>a.alive&&Math.round(a.x/CELL)===bx&&Math.round(a.y/CELL)===by);
+      if(a) a.hp-=5;
     }
+    if(Math.random()<.6) set(bx,by,FIRE);
+    else clr(bx,by);
+    if(simBuf) simBuf[idx(bx,by)]=1;
+  }
+}
+function uCloner(x,y){
+  const i=idx(x,y),stored=life[i];
+  const nbrs=[[0,-1],[0,1],[-1,0],[1,0]];
+  if(!stored){
+    for(const[dx,dy]of nbrs){const nt=get(x+dx,y+dy);if(nt&&nt!==CLONER&&nt!==VOID&&nt!==SMOKE&&nt!==STEAM&&!ANIMAL_IDS.has(nt)){life[i]=nt;return;}}
   } else {
-    // spawn stored type into empty neighbours
-    for(const [dx,dy] of nbrs){
-      const nx=x+dx,ny=y+dy;
-      if(!inBounds(nx,ny))continue;
-      if(get(nx,ny)===EMPTY&&Math.random()<.15){
-        set(nx,ny,stored);
-        simBuf[idx(nx,ny)]=1;
-        return; // one per frame
-      }
-    }
+    for(const[dx,dy]of nbrs){const nx=x+dx,ny=y+dy;if(inB(nx,ny)&&!get(nx,ny)&&Math.random()<.15){set(nx,ny,stored);simBuf[idx(nx,ny)]=1;return;}}
   }
 }
-
-function updateVoid(x,y){
-  // void deletes everything that touches it
-  const nbrs=[[0,-1],[0,1],[-1,0],[1,0]];
-  for(const [dx,dy] of nbrs){
-    const nx=x+dx,ny=y+dy;
-    if(!inBounds(nx,ny))continue;
+function uVoid(x,y){
+  for(const[dx,dy]of[[0,-1],[0,1],[-1,0],[1,0]]){
+    const nx=x+dx,ny=y+dy; if(!inB(nx,ny))continue;
     const nt=get(nx,ny);
-    if(nt!==EMPTY&&nt!==VOID&&nt!==STONE){
-      clear(nx,ny);
+    if(nt&&nt!==VOID&&nt!==WALL&&nt!==STONE){
+      animals=animals.filter(a=>!(Math.round(a.x/CELL)===nx&&Math.round(a.y/CELL)===ny));
+      clr(nx,ny);
     }
   }
 }
 
-// ── Render ─────────────────────────────────────────────────────────────────
-function render(){
-  const data=pixels;
-  for(let cy=0;cy<rows;cy++){
-    for(let cx=0;cx<cols;cx++){
-      const gi=idx(cx,cy);
-      const type=grid[gi];
-      let r,g,b,a=255;
-      if(type===EMPTY){r=g=b=18;}
-      else{
-        const ci=gi*3;
-        r=color[ci]; g=color[ci+1]; b=color[ci+2];
-        // fire flicker
-        if(type===FIRE){r=Math.min(255,r+Math.random()*40-20|0);g=Math.max(0,g+Math.random()*30-15|0);}
-        // smoke/steam fade
-        if(type===SMOKE||type===STEAM){const lf=life[gi]/160;a=Math.max(60,255-(lf*180|0));}
-        // acid shimmer
-        if(type===ACID){g=Math.min(255,g+Math.random()*30-10|0);r=Math.max(0,r-Math.random()*20|0);}
-        // gunpowder sparkle near ignition (just subtle)
-        if(type===GUNPOWDER&&Math.random()<.002){r=255;g=200;b=50;}
-        // void pulse — dark magenta glow
-        if(type===VOID){const p=Math.random()*30|0;r=20+p;g=0;b=20+p;}
-        // cloner shimmer pink
-        if(type===CLONER){const p=Math.random()*40|0;r=Math.min(255,r+p);b=Math.min(255,b+p);}
-      }
-      // draw CELL×CELL block
-      const px=cx*CELL, py=cy*CELL;
-      const argb=(a<<24)|(b<<16)|(g<<8)|r; // little-endian ABGR in Uint32
-      for(let dy=0;dy<CELL;dy++){
-        const row=(py+dy)*canvas.width+px;
-        for(let dx=0;dx<CELL;dx++) data[row+dx]=argb;
-      }
+// ── Machines ─────────────────────────────────────────────────────────────────
+function uFan(x,y){
+  for(let fy=Math.max(0,y-5);fy<y;fy++)for(let fx=x-1;fx<=x+1;fx++){
+    if(!inB(fx,fy))continue;
+    const ft=get(fx,fy);
+    if(ft===SMOKE||ft===STEAM||ft===FIRE){if(fy>0&&get(fx,fy-1)===EMPTY){swap(fx,fy,fx,fy-1);simBuf[idx(fx,fy)]=simBuf[idx(fx,fy-1)]=1;}}
+    if((ft===SAND||ft===ASH||ft===GUNPOWDER||ft===SEED)&&Math.random()<.3){if(fy>0&&get(fx,fy-1)===EMPTY)swap(fx,fy,fx,fy-1);}
+  }
+}
+function uHeater(x,y){
+  for(const[dx,dy]of[[0,-1],[0,1],[-1,0],[1,0],[-1,-1],[1,-1]]){
+    const nx=x+dx,ny=y+dy; if(!inB(nx,ny))continue;
+    const nt=get(nx,ny);
+    if(nt===ICE&&Math.random()<.02){set(nx,ny,WATER);simBuf[idx(nx,ny)]=1;}
+    if(nt===WATER&&Math.random()<.004){set(nx,ny,STEAM,220,220,255,0);simBuf[idx(nx,ny)]=1;}
+    if((nt===WOOD||nt===OIL||nt===PLANT||nt===PALM||nt===CORN)&&Math.random()<.003){set(nx,ny,FIRE);simBuf[idx(nx,ny)]=1;}
+  }
+  const ci=idx(x,y)*3;const p=Math.random()*20|0;color[ci]=Math.min(255,220+p);color[ci+1]=50+p;color[ci+2]=10;
+}
+function uCooler(x,y){
+  for(const[dx,dy]of[[0,-1],[0,1],[-1,0],[1,0],[-1,-1],[1,-1]]){
+    const nx=x+dx,ny=y+dy; if(!inB(nx,ny))continue;
+    const nt=get(nx,ny);
+    if(nt===WATER&&Math.random()<.01){set(nx,ny,ICE);simBuf[idx(nx,ny)]=1;}
+    if(nt===LAVA&&Math.random()<.005){set(nx,ny,STONE,100,95,90);simBuf[idx(nx,ny)]=1;}
+    if(nt===FIRE&&Math.random()<.1){clr(nx,ny);}
+    if(nt===STEAM&&Math.random()<.05){set(nx,ny,WATER);simBuf[idx(nx,ny)]=1;}
+  }
+  const ci=idx(x,y)*3;const p=Math.random()*15|0;color[ci]=80+p;color[ci+1]=190+p;color[ci+2]=215+p;
+}
+
+// ── Animals ───────────────────────────────────────────────────────────────────
+function spawnAnimal(type,cx,cy){
+  if(ANIMAL_IDS.has(get(cx,cy)))return;
+  animals.push({type,x:cx*CELL,y:cy*CELL,vx:(Math.random()-.5)*2,vy:0,hp:10,maxHp:10,timer:0,dir:1,jumpCD:0,alive:true});
+  grid[idx(cx,cy)]=type;
+}
+function uAnimals(){
+  animals=animals.filter(a=>a.alive);
+  document.getElementById('acount').textContent=animals.length;
+  for(const a of animals){
+    if(!a.alive)continue;
+    const ocx=Math.round(a.x/CELL),ocy=Math.round(a.y/CELL);
+    // gravity (dragon floats)
+    if(a.type!==DRAGON) a.vy=Math.min(a.vy+0.4,7);
+    else a.vy*=0.85;
+    a.timer++; a.jumpCD=Math.max(0,a.jumpCD-1);
+    const cx=Math.round(a.x/CELL),cy=Math.round(a.y/CELL);
+    const onGround=isSolid(cx,cy+1)||cy>=rows-1;
+    const inWater=(get(cx,cy)===WATER||get(cx,cy)===MERCURY);
+    // find nearest predator / prey
+    let nearPred=null,npDist=9999,nearPrey=null,nyDist=9999;
+    const myPreds=A_PRED[a.type]||new Set();
+    const myPrey=A_PREY[a.type]||new Set();
+    for(const b of animals){
+      if(!b.alive||b===a)continue;
+      const d=Math.hypot(b.x-a.x,b.y-a.y);
+      if(myPreds.has(b.type)&&d<npDist){npDist=d;nearPred=b;}
+      if(myPrey.has(b.type)&&d<nyDist){nyDist=d;nearPrey=b;}
     }
+    switch(a.type){
+      case DRAGON:
+        if(nearPrey&&npDist<150){a.vx=(nearPrey.x>a.x?1:-1)*3;a.vy=(nearPrey.y>a.y?.5:-.5)*2;}
+        else{a.vx=a.dir*1.5;a.vy+=Math.sin(a.timer*.05)*.3;}
+        if(nearPrey&&nyDist<40&&Math.random()<.05){
+          const fx=cx+(a.vx>0?2:-2);if(inB(fx,cy))set(fx,cy,FIRE);
+        }
+        if(a.timer%120===0)a.dir=-a.dir;
+        break;
+      case TIGER:
+        if(nearPred&&npDist<100){a.vx=-(nearPred.x>a.x?1:-1)*3;if(onGround)a.vy=-5;}
+        else if(nearPrey&&nyDist<180){a.vx=(nearPrey.x>a.x?1:-1)*3.5;if(nyDist<14)nearPrey.hp-=0.2;}
+        else{a.vx=a.dir*2;if(a.timer%90===0)a.dir=-a.dir;}
+        if(onGround&&Math.random()<.008)a.vy=-5;
+        break;
+      case SHEEP:
+        if(nearPred&&npDist<160){a.vx=-(nearPred.x>a.x?1:-1)*3;if(onGround)a.vy=-4;}
+        else{a.vx=a.dir*1.2;if(a.timer%80===0)a.dir=-a.dir;}
+        break;
+      case HUMAN:
+        if(nearPred&&npDist<180){a.vx=-(nearPred.x>a.x?1:-1)*2.8;if(onGround&&Math.random()<.06)a.vy=-5;}
+        else{a.vx=a.dir*1.5;if(a.timer%100===0)a.dir=-a.dir;}
+        break;
+      case FISH:
+        if(inWater){a.vy*=0.8;a.vx=a.dir*1.5;a.vy+=(Math.random()-.5)*.4;}
+        else{a.vx=(Math.random()-.5)*2;a.hp-=0.04;}
+        if(nearPred&&npDist<100)a.vx=-(nearPred.x>a.x?1:-1)*3;
+        if(a.timer%70===0)a.dir=-a.dir;
+        break;
+      case RAT:
+        a.vx=a.dir*2.5;
+        if(nearPred&&npDist<120){a.vx=-(nearPred.x>a.x?1:-1)*3.5;if(onGround)a.vy=-4;}
+        if(a.timer%60===0)a.dir=-a.dir;
+        break;
+      case FLEA:
+        if(onGround&&a.jumpCD<=0){a.vy=-(9+Math.random()*5);a.vx=(Math.random()-.5)*9;a.jumpCD=25+Math.random()*35|0;}
+        break;
+    }
+    a.x+=a.vx; a.y+=a.vy;
+    // wrap horizontal
+    if(a.x<0)a.x=(cols-1)*CELL; if(a.x>=(cols)*CELL)a.x=0;
+    a.y=Math.max(0,Math.min((rows-1)*CELL,a.y));
+    // solid collision
+    const ncx=Math.round(a.x/CELL),ncy=Math.round(a.y/CELL);
+    if(isSolid(ncx,ncy)){
+      if(!isSolid(ncx,ncy-1)){a.y=(ncy-1)*CELL;a.vy=0;}
+      else{a.x=ocx*CELL;a.vx*=-.5;}
+    }
+    if(a.vy>0&&isSolid(Math.round(a.x/CELL),Math.round(a.y/CELL)+1)){a.vy=0;}
+    // env damage
+    const gt=get(Math.round(a.x/CELL),Math.round(a.y/CELL));
+    if(gt===FIRE||gt===LAVA)a.hp-=0.2;
+    if(gt===ACID)a.hp-=0.3;
+    if(gt===MERCURY&&a.type!==FISH)a.hp-=0.05;
+    if(a.hp<=0){
+      a.alive=false;
+      if(inB(ocx,ocy)&&grid[idx(ocx,ocy)]===a.type)clr(ocx,ocy);
+      continue;
+    }
+    // update grid
+    if(inB(ocx,ocy)&&grid[idx(ocx,ocy)]===a.type)clr(ocx,ocy);
+    const fcx=Math.round(a.x/CELL),fcy=Math.round(a.y/CELL);
+    if(inB(fcx,fcy)&&!isSolid(fcx,fcy))grid[idx(fcx,fcy)]=a.type;
+  }
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function render(){
+  for(let cy=0;cy<rows;cy++)for(let cx=0;cx<cols;cx++){
+    const gi=idx(cx,cy),type=grid[gi];
+    let r,g,b,a=255;
+    if(!type||ANIMAL_IDS.has(type)){r=g=b=18;}
+    else{
+      const ci=gi*3; r=color[ci];g=color[ci+1];b=color[ci+2];
+      if(type===FIRE){r=Math.min(255,r+(Math.random()*40-20)|0);g=Math.max(0,g+(Math.random()*30-15)|0);}
+      if(type===SMOKE||type===STEAM){const lf=life[gi]/160;a=Math.max(55,255-(lf*180|0));}
+      if(type===ACID){g=Math.min(255,g+(Math.random()*30-10)|0);r=Math.max(0,r-10);}
+      if(type===VOID){const p=Math.random()*30|0;r=20+p;g=0;b=20+p;}
+      if(type===CLONER){const p=Math.random()*40|0;r=Math.min(255,r+p);b=Math.min(255,b+p);}
+      if(type===LAVA){r=Math.min(255,r+(Math.random()*25-8)|0);g=Math.max(0,g+(Math.random()*15-5)|0);}
+      if(type===MERCURY){const p=Math.random()*15|0;r=Math.min(255,r+p);g=Math.min(255,g+p);b=Math.min(255,b+p+5);}
+    }
+    const px=cx*CELL,py=cy*CELL,argb=(a<<24)|(b<<16)|(g<<8)|r;
+    for(let dy=0;dy<CELL;dy++){const row=(py+dy)*canvas.width+px;for(let dx=0;dx<CELL;dx++)pixels[row+dx]=argb;}
   }
   ctx.putImageData(imageData,0,0);
-}
-
-// ── Input ──────────────────────────────────────────────────────────────────
-function getCell(clientX,clientY){
-  const r=canvas.getBoundingClientRect();
-  const x=Math.floor((clientX-r.left)/CELL);
-  const y=Math.floor((clientY-r.top)/CELL);
-  return{x,y};
-}
-
-function placeLine(x0,y0,x1,y1){
-  // Bresenham line
-  let dx=Math.abs(x1-x0),dy=Math.abs(y1-y0);
-  let sx=x0<x1?1:-1,sy=y0<y1?1:-1,err=dx-dy;
-  while(true){
-    placeAt(x0,y0);
-    if(x0===x1&&y0===y1)break;
-    const e2=2*err;
-    if(e2>-dy){err-=dy;x0+=sx;}
-    if(e2<dx){err+=dx;y0+=sy;}
-  }
-}
-
-function placeAt(cx,cy){
-  const bs=brushSize;
-  for(let dy=-bs;dy<=bs;dy++){
-    for(let dx=-bs;dx<=bs;dx++){
-      if(dx*dx+dy*dy>bs*bs)continue;
-      const nx=cx+dx,ny=cy+dy;
-      if(!inBounds(nx,ny))continue;
-      if(erasing){clear(nx,ny);}
-      else{
-        const cur=get(nx,ny);
-        const overwrite=cur===EMPTY||selectedEl===FIRE||selectedEl===LAVA
-          ||selectedEl===VOID||selectedEl===ACID||selectedEl===CLONER;
-        if(overwrite&&cur!==VOID&&cur!==CLONER) set(nx,ny,selectedEl);
-        else if(cur===EMPTY) set(nx,ny,selectedEl);
-      }
+  // draw animals as emoji
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  for(const a of animals){
+    if(!a.alive)continue;
+    ctx.font=`${CELL*2.6}px serif`;
+    ctx.save();
+    if(a.vx<0){ctx.scale(-1,1);ctx.fillText(A_EMOJI[a.type],-(a.x+CELL/2),a.y+CELL/2);}
+    else ctx.fillText(A_EMOJI[a.type],a.x+CELL/2,a.y+CELL/2);
+    ctx.restore();
+    if(a.hp<a.maxHp){
+      const bw=CELL*2.5,bx=a.x+CELL/2-bw/2,by=a.y-3;
+      ctx.fillStyle='#333';ctx.fillRect(bx,by,bw,2);
+      ctx.fillStyle=a.hp>5?'#4CAF50':'#F44336';
+      ctx.fillRect(bx,by,bw*(a.hp/a.maxHp),2);
     }
   }
 }
 
-canvas.addEventListener('pointerdown',e=>{
-  e.preventDefault();
-  isDrawing=true;
-  const{x,y}=getCell(e.clientX,e.clientY);
-  lastX=x;lastY=y;
-  placeAt(x,y);
-});
-canvas.addEventListener('pointermove',e=>{
-  e.preventDefault();
-  if(!isDrawing)return;
-  const{x,y}=getCell(e.clientX,e.clientY);
-  placeLine(lastX,lastY,x,y);
-  lastX=x;lastY=y;
-});
-canvas.addEventListener('pointerup',()=>{isDrawing=false;lastX=-1;lastY=-1;});
+// ── Input ─────────────────────────────────────────────────────────────────────
+function getCell(cx,cy){
+  const r=canvas.getBoundingClientRect();
+  return{x:Math.floor((cx-r.left)/CELL),y:Math.floor((cy-r.top)/CELL)};
+}
+function placeLine(x0,y0,x1,y1){
+  let dx=Math.abs(x1-x0),dy=Math.abs(y1-y0),sx=x0<x1?1:-1,sy=y0<y1?1:-1,err=dx-dy;
+  while(true){placeAt(x0,y0);if(x0===x1&&y0===y1)break;const e2=2*err;if(e2>-dy){err-=dy;x0+=sx;}if(e2<dx){err+=dx;y0+=sy;}}
+}
+function placeAt(cx,cy){
+  if(erasing){
+    for(let dy=-brushSize;dy<=brushSize;dy++)for(let dx=-brushSize;dx<=brushSize;dx++){
+      if(dx*dx+dy*dy>brushSize*brushSize)continue;
+      clr(cx+dx,cy+dy);
+      animals=animals.filter(a=>!(Math.round(a.x/CELL)===cx+dx&&Math.round(a.y/CELL)===cy+dy));
+    }
+    return;
+  }
+  if(ANIMAL_IDS.has(selectedEl)){spawnAnimal(selectedEl,cx,cy);return;}
+  for(let dy=-brushSize;dy<=brushSize;dy++)for(let dx=-brushSize;dx<=brushSize;dx++){
+    if(dx*dx+dy*dy>brushSize*brushSize)continue;
+    const nx=cx+dx,ny=cy+dy; if(!inB(nx,ny))continue;
+    const cur=get(nx,ny);
+    if(cur===VOID||cur===WALL||ANIMAL_IDS.has(cur))continue;
+    if(cur===EMPTY||selectedEl===FIRE||selectedEl===LAVA||selectedEl===VOID||selectedEl===ACID) set(nx,ny,selectedEl);
+  }
+}
+canvas.addEventListener('pointerdown',e=>{e.preventDefault();isDrawing=true;const{x,y}=getCell(e.clientX,e.clientY);lastX=x;lastY=y;placeAt(x,y);});
+canvas.addEventListener('pointermove',e=>{e.preventDefault();if(!isDrawing)return;const{x,y}=getCell(e.clientX,e.clientY);placeLine(lastX,lastY,x,y);lastX=x;lastY=y;});
+canvas.addEventListener('pointerup',()=>{isDrawing=false;});
 canvas.addEventListener('pointerleave',()=>{isDrawing=false;});
 
-// ── Game loop ──────────────────────────────────────────────────────────────
+// ── Loop ──────────────────────────────────────────────────────────────────────
 function loop(ts){
   requestAnimationFrame(loop);
-  if(!paused) simulate();
+  if(!paused)simulate();
   render();
   frameCount++;
   if(ts-lastFpsTime>=1000){
-    fps=frameCount;frameCount=0;lastFpsTime=ts;
-    document.getElementById('fps-display').textContent=fps+' fps';
+    document.getElementById('fps-display').textContent=frameCount+' fps';
+    frameCount=0;lastFpsTime=ts;
   }
 }
 </script>

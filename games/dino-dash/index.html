@@ -114,9 +114,10 @@ function spawnObs(){
   const gy=groundY();
   const diff=Math.min(1,worldX/20000);
   const pool=['cactus_sm','cactus_sm','cactus_md'];
-  if(diff>.1)pool.push('cactus_lg','cactus_duo');
-  if(diff>.25)pool.push('ptero_lo','ptero_mid');
-  if(diff>.45)pool.push('ptero_hi','cactus_duo','cactus_duo');
+  if(diff>.2)pool.push('cactus_lg');
+  if(diff>.35)pool.push('cactus_duo','ptero_lo');
+  if(diff>.5)pool.push('ptero_mid');
+  if(diff>.7)pool.push('ptero_hi','cactus_duo');
   const type=pool[Math.floor(Math.random()*pool.length)];
   let o={type,x:cW+40};
   if(type==='cactus_sm')  {o.w=20;o.h=42;o.y=gy-o.h;}
@@ -127,7 +128,7 @@ function spawnObs(){
   else if(type==='ptero_mid'){o.w=46;o.h=28;o.y=gy-80;o.flapF=0;}
   else if(type==='ptero_hi') {o.w=46;o.h=28;o.y=gy-130;o.flapF=0;}
   obs.push(o);
-  const gap=200+Math.random()*300-diff*80;
+  const gap=350+Math.random()*350-diff*80;
   nextObs=o.x+gap;
 }
 
@@ -135,7 +136,7 @@ function spawnObs(){
 function update(){
   if(gs!=='playing')return;
   frame++;
-  speed=Math.min(18,6+frame*0.0015);
+  speed=Math.min(10,4+frame*0.0006);
   worldX+=speed;
   score=Math.floor(worldX/10);
   nightPct=(Math.sin(worldX/3000)*.5+.5); // gentle day/night cycle

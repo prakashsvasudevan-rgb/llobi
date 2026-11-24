@@ -189,7 +189,8 @@ const sunDragonImg=new Image();  sunDragonImg.src='/games/sand-box/sprites/sun_d
 // GIF img elements added to DOM so browser animates them (used for walk cycle thumbnail only)
 const soulGifImg=document.createElement('img');soulGifImg.src='/games/sand-box/sprites/soul_dragon_walk.gif';soulGifImg.style.cssText='position:fixed;left:-9999px;top:0;width:1px;height:1px;';
 const sunGifImg=document.createElement('img');sunGifImg.src='/games/sand-box/sprites/sun_dragon_fly.gif';sunGifImg.style.cssText='position:fixed;left:-9999px;top:0;width:1px;height:1px;';
-document.addEventListener('DOMContentLoaded',()=>{document.body.appendChild(soulGifImg);document.body.appendChild(sunGifImg);});
+// Append immediately — script runs after <body> exists, no need to wait
+document.body.appendChild(soulGifImg);document.body.appendChild(sunGifImg);
 const fireBallImg=new Image();   fireBallImg.src='/games/sand-box/sprites/fire_ball.png';
 const blueBallImg=new Image();   blueBallImg.src='/games/sand-box/sprites/blue_fire_ball.png';
 const fireBreathImg=new Image(); fireBreathImg.src='/games/sand-box/sprites/fire_breath.png';

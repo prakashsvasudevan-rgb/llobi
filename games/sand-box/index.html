@@ -603,35 +603,64 @@ function wingAngle(f,rest){
 function drawWyvern(W,H,f,breathing,resting){
   const C=CELL;
   const wa=wingAngle(f,resting);
-  const neckTilt=breathing?-.25:resting?0:Math.sin(f*Math.PI/2)*.12; // neck stretches forward when breathing
-  const bodyBob=resting?Math.sin(f*Math.PI/2)*H*.015:[-H*.04,-H*.02,H*.02,0][f];
+  // walk cycle: body bobs down on steps (frames 0,2 = foot strike)
+  const stepBob=resting?Math.sin(f*Math.PI/2)*H*.01:[H*.04,0,H*.04,0][f];
+  // spine sway: lean forward on stride frames
+  const spineSway=resting?0:[-0.06,0.03,0.06,-0.03][f];
+  // head nod: dips when foot strikes ground
+  const headNod=resting?Math.sin(f*Math.PI/2)*.05:[0.1,-0.05,-0.1,0.05][f];
+  const neckTilt=breathing?-0.25:headNod;
 
-  // ── Animated bat wings (crimson/maroon, behind body) ──
+  // ── Animated bat wings ──
   ctx.fillStyle='#6B0000';
-  // left wing
-  ctx.save();ctx.translate(W*.35,H*.45+bodyBob);ctx.rotate(wa);
+  ctx.save();ctx.translate(W*.35,H*.38+stepBob);ctx.rotate(wa+spineSway*.3);
   ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-W*.55,-H*.55);ctx.lineTo(-W*.3,-H*.5);ctx.lineTo(-W*.55,-H*.2);ctx.closePath();ctx.fill();
   ctx.fillStyle='#8B1A1A';
   ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-W*.4,-H*.4);ctx.lineTo(-W*.25,-H*.35);ctx.closePath();ctx.fill();
   ctx.restore();
 
-  // ── Body from PNG ──
+  // ── Tail swing (behind, drawn first) ──
+  const tailSwing=resting?Math.sin(f*Math.PI/2)*.12:[-0.2,0.1,0.2,-0.1][f];
+  ctx.strokeStyle='#7A0040';ctx.lineWidth=C*.9;ctx.lineCap='round';
+  ctx.save();ctx.translate(W*.05,H*.62+stepBob);ctx.rotate(tailSwing);
+  ctx.beginPath();ctx.moveTo(0,0);ctx.quadraticCurveTo(-W*.15,H*.3,-W*.05,H*.5);ctx.stroke();
+  ctx.restore();
+
+  // ── Body from PNG (with spine sway rotate) ──
   const src=wyvernCanvas||wyvernImg;
+  ctx.save();
+  ctx.translate(W*.5,H*.5+stepBob);ctx.rotate(spineSway);ctx.translate(-W*.5,-H*.5);
   if(src&&(src.width||src.naturalWidth)>0){
     const iw=src.width||src.naturalWidth,ih=src.height||src.naturalHeight;
     const margin=Math.round(iw*0.095);
     const cropW=iw-margin*2,cropH=ih-margin*2;
-    ctx.drawImage(src,margin,margin,cropW,cropH,0,bodyBob,W,H);
+    ctx.drawImage(src,margin,margin,cropW,cropH,0,0,W,H);
   } else {ctx.fillStyle='#9B0057';ctx.fillRect(0,0,W,H);}
+  ctx.restore();
 
-  // ── Neck + head overlay (animated) ──
-  ctx.save();ctx.translate(W*.82,H*.38+bodyBob);ctx.rotate(neckTilt);
+  // ── Legs: 2-legged walk (front/back alternating) ──
+  if(!resting){
+    const legAngles=[[-.35,.25],[.25,-.35],[.35,-.25],[-.25,.35]][f]; // [frontLeg, backLeg]
+    ctx.strokeStyle='#7A0040';ctx.lineWidth=C*.8;ctx.lineCap='round';
+    // front leg
+    ctx.save();ctx.translate(W*.65,H*.75+stepBob);ctx.rotate(legAngles[0]);
+    ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,H*.28);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(0,H*.28);ctx.lineTo(C*.5,H*.28+C*.4);ctx.stroke(); // foot
+    ctx.restore();
+    // back leg
+    ctx.save();ctx.translate(W*.25,H*.75+stepBob);ctx.rotate(legAngles[1]);
+    ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,H*.28);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(0,H*.28);ctx.lineTo(C*.5,H*.28+C*.4);ctx.stroke();
+    ctx.restore();
+  }
+
+  // ── Neck + head overlay ──
+  ctx.save();ctx.translate(W*.82,H*.36+stepBob);ctx.rotate(neckTilt);
   ctx.fillStyle='#7A0040';
-  ctx.beginPath();ctx.ellipse(0,0,C*.9,C*1.6,0,0,Math.PI*2);ctx.fill(); // neck
-  // jaw open when breathing
+  ctx.beginPath();ctx.ellipse(0,0,C*.9,C*1.6,0,0,Math.PI*2);ctx.fill();
   const jaw=breathing?(f===1||f===3?C*.5:C*.2):0;
   ctx.fillStyle='#9B0057';
-  ctx.beginPath();ctx.ellipse(C*.5,C*1.6,C*.7,C*.9,0,0,Math.PI*2);ctx.fill(); // head
+  ctx.beginPath();ctx.ellipse(C*.5,C*1.6,C*.7,C*.9,0,0,Math.PI*2);ctx.fill();
   if(jaw>0){ctx.fillStyle='#CC1155';ctx.beginPath();ctx.ellipse(C*.8,C*2.4+jaw*.5,C*.5,jaw,0,0,Math.PI*2);ctx.fill();}
   ctx.restore();
 
@@ -656,7 +685,9 @@ function drawFireDragon(W,H,f,breathing,resting){
   const C=CELL;
   const wa=wingAngle(f,resting);
   const neckTilt=breathing?-.3:resting?0:Math.sin(f*Math.PI/2)*.1;
-  const bodyBob=resting?Math.sin(f*Math.PI/2)*H*.012:[-H*.05,-H*.025,H*.025,0][f];
+  // flyer: smooth sine bob, slight scale pulse on wing beats
+  const bodyBob=resting?Math.sin(f*Math.PI/2)*H*.01:[-H*.05,-H*.025,H*.025,0][f];
+  const scaleY=resting?1:[1.04,1.01,0.97,1.0][f];
 
   // ── Animated wings (orange-red, large bat wings, behind body) ──
   ctx.fillStyle='#CC2200';
@@ -674,14 +705,17 @@ function drawFireDragon(W,H,f,breathing,resting){
   ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(W*.5,-H*.5);ctx.lineTo(W*.32,-H*.44);ctx.closePath();ctx.fill();
   ctx.restore();
 
-  // ── Body from PNG ──
+  // ── Body from PNG (scale pulse on wing beats) ──
   const src=fireDragonCanvas||fireDragonImg;
+  ctx.save();
+  ctx.translate(W*.5,H*.5+bodyBob);ctx.scale(1,scaleY);ctx.translate(-W*.5,-H*.5);
   if(src&&(src.width||src.naturalWidth)>0){
     const iw=src.width||src.naturalWidth,ih=src.height||src.naturalHeight;
     const margin=Math.round(iw*0.04);
     const cropW=iw-margin*2,cropH=ih-margin*2;
-    ctx.drawImage(src,margin,margin,cropW,cropH,0,bodyBob,W,H);
+    ctx.drawImage(src,margin,margin,cropW,cropH,0,0,W,H);
   } else {ctx.fillStyle='#4A148C';ctx.fillRect(0,0,W,H);}
+  ctx.restore();
 
   // ── Neck + head overlay ──
   ctx.save();ctx.translate(W*.8,H*.4+bodyBob);ctx.rotate(neckTilt);
@@ -713,30 +747,54 @@ function drawFireDragon(W,H,f,breathing,resting){
 function drawEarthDragon(W,H,f,angry,resting){
   const C=CELL;
   const wa=wingAngle(f,resting);
-  const bodyBob=resting?Math.sin(f*Math.PI/2)*H*.012:[-H*.03,-H*.015,H*.015,0][f];
+  const stepBob=resting?Math.sin(f*Math.PI/2)*H*.01:[H*.04,0,H*.04,0][f];
+  const spineSway=resting?0:[-0.05,0.025,0.05,-0.025][f];
+  const headNod=angry?-0.2:resting?Math.sin(f*Math.PI/2)*.05:[0.08,-0.04,-0.08,0.04][f];
 
-  // ── Animated wings (dark green) ──
+  // ── Tail swing ──
+  const tailSwing=resting?Math.sin(f*Math.PI/2)*.1:[-0.18,0.09,0.18,-0.09][f];
+  ctx.strokeStyle='#2E6B00';ctx.lineWidth=C*.95;ctx.lineCap='round';
+  ctx.save();ctx.translate(W*.05,H*.65+stepBob);ctx.rotate(tailSwing);
+  ctx.beginPath();ctx.moveTo(0,0);ctx.quadraticCurveTo(-W*.12,H*.28,-W*.02,H*.46);ctx.stroke();
+  ctx.restore();
+
+  // ── Animated wing (dark green, folds while walking) ──
   ctx.fillStyle='#1B4A00';
-  ctx.save();ctx.translate(W*.35,H*.38+bodyBob);ctx.rotate(wa*.8);
+  ctx.save();ctx.translate(W*.35,H*.38+stepBob);ctx.rotate(wa*.8+spineSway*.4);
   ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-W*.5,-H*.5);ctx.lineTo(-W*.32,-H*.44);ctx.lineTo(-W*.5,-H*.18);ctx.closePath();ctx.fill();
   ctx.restore();
 
-  // ── Body from PNG ──
+  // ── Body from PNG (spine sway) ──
   const src=earthDragonCanvas||earthDragonImg;
+  ctx.save();
+  ctx.translate(W*.5,H*.5+stepBob);ctx.rotate(spineSway);ctx.translate(-W*.5,-H*.5);
   if(src&&(src.width||src.naturalWidth)>0){
     const iw=src.width||src.naturalWidth,ih=src.height||src.naturalHeight;
     const margin=Math.round(iw*0.095);
     const cropW=iw-margin*2,cropH=ih-margin*2;
-    ctx.drawImage(src,margin,margin,cropW,cropH,0,bodyBob,W,H);
+    ctx.drawImage(src,margin,margin,cropW,cropH,0,0,W,H);
   } else {ctx.fillStyle='#2E7D32';ctx.fillRect(0,0,W,H);}
+  ctx.restore();
 
-  // ── Head bob / neck look-around ──
-  const headTilt=angry?-.2:Math.sin(f*Math.PI/2)*.08;
-  ctx.save();ctx.translate(W*.82,H*.32+bodyBob);ctx.rotate(headTilt);
-  ctx.fillStyle='rgba(27,74,0,.0)'; // transparent — just moves the neck visually via the PNG; keep for angry eye glow
+  // ── 4 legs walk cycle ──
+  if(!resting){
+    // front-left, back-right move together; front-right, back-left move together
+    const angles=[[-.3,.2,-.3,.2],[.2,-.3,.2,-.3],[.3,-.2,.3,-.2],[-.2,.3,-.2,.3]][f];
+    const legX=[W*.62,W*.45,W*.28,W*.15],legY=H*.75;
+    ctx.strokeStyle='#2E6B00';ctx.lineWidth=C*.75;ctx.lineCap='round';
+    for(let i=0;i<4;i++){
+      ctx.save();ctx.translate(legX[i],legY+stepBob);ctx.rotate(angles[i]);
+      ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,H*.25);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(0,H*.25);ctx.lineTo(C*.45*(i<2?1:-1),H*.25+C*.38);ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  // ── Head nod overlay ──
+  ctx.save();ctx.translate(W*.82,H*.32+stepBob);ctx.rotate(headNod);
   if(angry){
     ctx.fillStyle=`rgba(255,220,0,${0.3+Math.random()*.3})`;
-    ctx.beginPath();ctx.arc(C*.4,C*.4,C*.7,0,Math.PI*2);ctx.fill(); // eye glow
+    ctx.beginPath();ctx.arc(C*.4,C*.4,C*.7,0,Math.PI*2);ctx.fill();
   }
   ctx.restore();
 
@@ -744,39 +802,59 @@ function drawEarthDragon(W,H,f,angry,resting){
   if(angry){
     ctx.strokeStyle=`rgba(139,195,74,${0.35+Math.random()*.35})`;
     ctx.lineWidth=C*.7;
-    ctx.beginPath();ctx.arc(W*.5,H*.5+bodyBob,W*.52,0,Math.PI*2);ctx.stroke();
+    ctx.beginPath();ctx.arc(W*.5,H*.5+stepBob,W*.52,0,Math.PI*2);ctx.stroke();
   }
 }
 
 function drawSoulDragon(W,H,f,breathing,resting){
   const C=CELL;
   const wa=wingAngle(f,resting);
-  const bodyBob=resting?Math.sin(f*Math.PI/2)*H*.012:[-H*.03,-H*.015,H*.015,0][f];
+  const stepBob=resting?Math.sin(f*Math.PI/2)*H*.01:[H*.04,0,H*.04,0][f];
+  const spineSway=resting?0:[-0.05,0.025,0.05,-0.025][f];
+  const headNod=resting?Math.sin(f*Math.PI/2)*.05:[0.08,-0.04,-0.08,0.04][f];
+
+  // ── Tail swing ──
+  const tailSwing=resting?Math.sin(f*Math.PI/2)*.12:[-0.2,0.1,0.2,-0.1][f];
+  ctx.strokeStyle='#1A237E';ctx.lineWidth=C*.9;ctx.lineCap='round';
+  ctx.save();ctx.translate(W*.05,H*.65+stepBob);ctx.rotate(tailSwing);
+  ctx.beginPath();ctx.moveTo(0,0);ctx.quadraticCurveTo(-W*.12,H*.28,-W*.02,H*.46);ctx.stroke();
+  ctx.restore();
 
   // ── Animated wings (deep blue) ──
   ctx.fillStyle='#1A237E';
-  ctx.save();ctx.translate(W*.35,H*.38+bodyBob);ctx.rotate(wa*.9);
+  ctx.save();ctx.translate(W*.35,H*.38+stepBob);ctx.rotate(wa*.9+spineSway*.3);
   ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-W*.48,-H*.48);ctx.lineTo(-W*.30,-H*.42);ctx.lineTo(-W*.48,-H*.16);ctx.closePath();ctx.fill();
-  ctx.restore();
-  // second wing fold
   ctx.fillStyle='#283593';
-  ctx.save();ctx.translate(W*.38,H*.42+bodyBob);ctx.rotate(wa*.5);
-  ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-W*.3,-H*.28);ctx.lineTo(-W*.18,-H*.24);ctx.lineTo(-W*.28,-H*.1);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-W*.3,-H*.28);ctx.lineTo(-W*.18,-H*.24);ctx.closePath();ctx.fill();
   ctx.restore();
 
-  // ── Body from sprite ──
+  // ── Body from sprite (spine sway) ──
   const src=soulDragonCanvas||soulDragonImg;
+  ctx.save();
+  ctx.translate(W*.5,H*.5+stepBob);ctx.rotate(spineSway);ctx.translate(-W*.5,-H*.5);
   if(src&&(src.width||src.naturalWidth)>0){
     const iw=src.width||src.naturalWidth,ih=src.height||src.naturalHeight;
     const margin=Math.round(iw*0.06);
     const cropW=iw-margin*2,cropH=ih-margin*2;
-    ctx.drawImage(src,margin,margin,cropW,cropH,0,bodyBob,W,H);
+    ctx.drawImage(src,margin,margin,cropW,cropH,0,0,W,H);
   } else {ctx.fillStyle='#1565C0';ctx.fillRect(0,0,W,H);}
+  ctx.restore();
 
-  // ── Neck / head bob ──
-  const headTilt=resting?Math.sin(f*Math.PI/2)*.06:[-0.1,0.05,0.1,0][f];
-  ctx.save();ctx.translate(W*.82,H*.28+bodyBob);ctx.rotate(headTilt);
-  // eye glow always (soul dragon has glowing eyes)
+  // ── 4 legs walk cycle ──
+  if(!resting){
+    const angles=[[-.3,.2,-.3,.2],[.2,-.3,.2,-.3],[.3,-.2,.3,-.2],[-.2,.3,-.2,.3]][f];
+    const legX=[W*.62,W*.45,W*.28,W*.15],legY=H*.75;
+    ctx.strokeStyle='#1A237E';ctx.lineWidth=C*.75;ctx.lineCap='round';
+    for(let i=0;i<4;i++){
+      ctx.save();ctx.translate(legX[i],legY+stepBob);ctx.rotate(angles[i]);
+      ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,H*.25);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(0,H*.25);ctx.lineTo(C*.45*(i<2?1:-1),H*.25+C*.38);ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  // ── Eye glow + head nod ──
+  ctx.save();ctx.translate(W*.82,H*.28+stepBob);ctx.rotate(headNod);
   ctx.fillStyle=`rgba(100,180,255,${0.5+Math.random()*.3})`;
   ctx.beginPath();ctx.arc(C*.3,C*.3,C*.5,0,Math.PI*2);ctx.fill();
   ctx.restore();
@@ -786,11 +864,11 @@ function drawSoulDragon(W,H,f,breathing,resting){
     const bsrc=blueBallCanvas||blueBallImg;
     if(bsrc&&(bsrc.width||bsrc.naturalWidth)>0){
       ctx.save();ctx.globalAlpha=0.85;
-      ctx.drawImage(bsrc,W*.85,H*.2+bodyBob,W*.7,H*.45);
+      ctx.drawImage(bsrc,W*.85,H*.2+stepBob,W*.7,H*.45);
       ctx.restore();
     } else {
       ctx.fillStyle=`rgba(80,140,255,${0.7+Math.random()*.3})`;
-      ctx.beginPath();ctx.ellipse(W*.95,H*.3+bodyBob,W*.18,H*.12,0,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.ellipse(W*.95,H*.3+stepBob,W*.18,H*.12,0,0,Math.PI*2);ctx.fill();
     }
     // "BLUE FIRE!" label
     ctx.save();ctx.font=`bold ${C*1.2}px sans-serif`;ctx.fillStyle='#64B5F6';

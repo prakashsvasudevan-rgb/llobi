@@ -1361,12 +1361,20 @@ function groundY(x,z){
 }
 // Returns floor Y inside Dragon Mountain cave, or null if outside cave
 function caveFloorY(x,z){
-  if(Math.abs(x-DM_X)>9)return null;
-  const ez=DM_Z+8,rz=DM_Z+28,hz=DM_Z+78;
-  if(z<ez||z>hz)return null;
   const entY=groundY(DM_X,DM_Z);
-  if(z<rz){const t=(z-ez)/(rz-ez);return entY-t*14;}
-  return entY-14; // flat lower hall
+  // Main cave tunnel (width 18)
+  if(Math.abs(x-DM_X)<=9){
+    const ez=DM_Z+8,rz=DM_Z+28,hz=DM_Z+78;
+    if(z>=ez&&z<rz){const t=(z-ez)/(rz-ez);return entY-t*14;}
+    if(z>=rz&&z<hz)return entY-14;
+    // Staircase from hall to hatchery (DM_Z+78 → DM_Z+100)
+    if(z>=hz&&z<DM_Z+100){const t=(z-hz)/22;return entY-14-t*10;}
+  }
+  // Hatchery chamber (wider: width 32)
+  if(Math.abs(x-DM_X)<=16&&z>=DM_Z+100&&z<=DM_Z+168){
+    return entY-24; // flat hatchery floor
+  }
+  return null;
 }
 
 function makeKingDeathDragonMesh(){
@@ -1606,6 +1614,70 @@ function spawnDragonMountain(){
     scene.add(rd);objects.push(rd);roamDragons.push(rd);wildDragons.push(rd);
   });
 
+  // ── STAIRCASE (DM_Z+78 → DM_Z+100) ─────────────────────────────────────────
+  const hatchY=baseY-24; // hatchery floor
+  const stairMat=mat(0x1a1208,{flatShading:true});
+  for(let si=0;si<8;si++){
+    const sz=DM_Z+79+si*2.8;
+    const sy=baseY-14-si*1.25;
+    const step=new THREE.Mesh(new THREE.BoxGeometry(10,0.8,2.8),stairMat);
+    step.position.set(DM_X,sy,sz);addObj(step);
+  }
+  // Staircase walls
+  const stW1=new THREE.Mesh(new THREE.BoxGeometry(2,14,24),wallMat);stW1.position.set(DM_X-6,baseY-14,DM_Z+89);addObj(stW1);
+  const stW2=new THREE.Mesh(new THREE.BoxGeometry(2,14,24),wallMat);stW2.position.set(DM_X+6,baseY-14,DM_Z+89);addObj(stW2);
+
+  // ── HATCHERY ROOM (DM_Z+100 → DM_Z+168) ────────────────────────────────────
+  const hatchRoomMat=mat(0x0c0a08,{flatShading:true});
+  const hatchGlowMat=mat(0x332200,{flatShading:true});
+  // Floor slab
+  const hFloor=new THREE.Mesh(new THREE.BoxGeometry(34,2,70),hatchRoomMat);
+  hFloor.position.set(DM_X,hatchY-1,DM_Z+134);addObj(hFloor);
+  // Ceiling
+  const hCeil=new THREE.Mesh(new THREE.BoxGeometry(34,2,70),hatchRoomMat);
+  hCeil.position.set(DM_X,hatchY+16,DM_Z+134);addObj(hCeil);
+  // Side walls
+  const hWL=new THREE.Mesh(new THREE.BoxGeometry(2,18,70),wallMat);hWL.position.set(DM_X-17,hatchY+8,DM_Z+134);addObj(hWL);
+  const hWR=new THREE.Mesh(new THREE.BoxGeometry(2,18,70),wallMat);hWR.position.set(DM_X+17,hatchY+8,DM_Z+134);addObj(hWR);
+  // Back wall
+  const hWB=new THREE.Mesh(new THREE.BoxGeometry(34,18,2),wallMat);hWB.position.set(DM_X,hatchY+8,DM_Z+169);addObj(hWB);
+  // Dragon egg pedestals (5 eggs on stone plinths)
+  const eggMat=mat(0x446644,{flatShading:true});
+  const plinthMat=mat(0x2a2015,{flatShading:true});
+  for(let ei=0;ei<5;ei++){
+    const ex=DM_X-8+ei*4;
+    const ep=new THREE.Mesh(new THREE.CylinderGeometry(2,2.4,2,6),plinthMat);
+    ep.position.set(ex,hatchY+1,DM_Z+150);addObj(ep);
+    const egg=new THREE.Mesh(new THREE.SphereGeometry(1.3,6,6),mat(0x336633+(ei*0x110011),{flatShading:true}));
+    egg.scale.y=1.4;egg.position.set(ex,hatchY+3.6,DM_Z+150);addObj(egg);
+  }
+  // Lava/fire braziers for warm lighting
+  for(const bx2 of[DM_X-13,DM_X+13]){
+    for(const bz2 of[DM_Z+108,DM_Z+135,DM_Z+160]){
+      const braz=new THREE.Mesh(new THREE.CylinderGeometry(1,1.2,3,6),plinthMat);
+      braz.position.set(bx2,hatchY+1.5,bz2);addObj(braz);
+      const flame2=new THREE.Mesh(new THREE.ConeGeometry(0.7,2,6),mat(0xff6600,{flatShading:true}));
+      flame2.position.set(bx2,hatchY+4,bz2);addObj(flame2);
+    }
+  }
+  // Hatchery NPCs: Elder Runa + Caretaker (Maran)
+  const hElderY=hatchY+1.5;
+  const hElder=makeVillagerMesh();
+  hElder.userData={npcName:'Elder Runa',npcText:'Welcome, rider, to the Hatchery. Here the dragons hatch and bond. Walk among the eggs — they sense your soul.',
+    choices:[
+      {q:'How do riders bond with dragons?',a:'A rider must approach the egg with a calm mind. The hatchling senses intent. Bond is instant — or never.'},
+      {q:'Are all dragon types here?',a:'Not all. Soul and Earth dragons hatch in silence; Fire and Lightning only in storm. The bond chooses you as much as you choose.'},
+    ]};
+  hElder.position.set(DM_X-6,hElderY,DM_Z+158);addObj(hElder);friendlyNPCs.push(hElder);
+  const hCaretaker=makeVillagerMesh();
+  hCaretaker.userData={npcName:'Maran the Caretaker',
+    npcText:'I tend these eggs day and night. When a rider enters with a recruit, we watch to see which egg stirs.',
+    choices:[
+      {q:'Can any rider choose any dragon?',a:'The egg decides. A rider stands before all five — whichever egg glows is the bond. We just keep the fire burning.'},
+      {q:'What happens after bonding?',a:'The dragon grows within days once bonded. Your recruit will return here to train with me before joining your formation.'},
+    ]};
+  hCaretaker.position.set(DM_X+6,hElderY,DM_Z+158);addObj(hCaretaker);friendlyNPCs.push(hCaretaker);
+
   const key=zoneKey(~~(DM_X/ZONE),~~(DM_Z/ZONE));
   if(!zoneMap.has(key))zoneMap.set(key,objects);
   else zoneMap.get(key).push(...objects);
@@ -1823,6 +1895,9 @@ let dragonArmy=[]; // recruited ally dragons {mesh, targetPos, dtType}
 const MAX_ARMY=8;
 let blaneNPC=null; // Dragon Rider Blane — wander AI
 let blaneWanderT=0,blaneWanderTarget=null,blaneTalkT=0;
+// Hatchery tour sequence
+let hatcheryQueue=[]; // {recruit, phase:'fetch'|'lead'|'hatchery'|'done', t}
+const HATCH_X=DM_X, HATCH_Z=DM_Z+134; // hatchery room center
 let blaneQuest='inactive'; // 'inactive' | 'unlocked' | 'active' | 'complete'
 let shadowKills=0;
 let wildDragons=[]; // tameable wild dragons {mesh, hp, maxHp, tameable}
@@ -2056,13 +2131,9 @@ document.addEventListener('keydown',e=>{
     }
     if(e.code==='KeyR'&&nearNPC&&nearNPC.userData.isRecruitable&&!nearNPC.userData.recruited&&dragonArmy.length<MAX_ARMY){
       nearNPC.userData.recruited=true;
-      const armyMesh=nearNPC;
-      armyMesh.userData.npcText='I will wait outside Dragon Mountain. Call me when you are ready!';
-      const slot=dragonArmy.length;
-      // Staging position: ring outside mountain entrance
-      const sa=[DM_X-15+slot*8,DM_Z-25];
-      dragonArmy.push({mesh:armyMesh,slot,staging:true,stagingPos:sa});
-      floatWorld(armyMesh.position,'🐉 '+nearNPC.userData.npcName+' JOINS!','#44ff44');
+      nearNPC.userData.npcText='Blane is coming to take me to the Hatchery. I will meet you there!';
+      // Queue hatchery tour — Blane will lead them to the hatchery
+      hatcheryQueue.push({recruit:nearNPC,phase:'fetch',t:0});
     }
     if(e.code==='KeyT'&&!dialogOpen&&!mapOpen)toggleHumanMode();
     if(e.code==='KeyE'){if(dialogOpen)closeDialog();else if(nearNPC)openDialog(nearNPC);
@@ -2291,7 +2362,7 @@ function startGame(){
   orbDrops.forEach(o=>scene.remove(o.mesh));orbDrops=[];
   mageOrbs=0;shadowDust=0;upgrades={dmg:0,hp:0,speed:0,fuel:0,attack:0};
   dragonArmy.forEach(a=>scene.remove(a.mesh));dragonArmy=[];
-  dragonMtnSpawned=false;volcanoSpawned=false;blaneNPC=null;blaneWanderT=0;blaneWanderTarget=null;blaneTalkT=0;
+  dragonMtnSpawned=false;volcanoSpawned=false;blaneNPC=null;blaneWanderT=0;blaneWanderTarget=null;blaneTalkT=0;hatcheryQueue=[];
   blaneQuest='inactive';shadowKills=0;wildDragons=[];
   mapOpen=false;wmEl.classList.remove('show');
   // Spawn Dragon Mountain (always at world north, zone 0,5)
@@ -2694,8 +2765,62 @@ function update(ts){
       }
     }
 
+    // ── HATCHERY TOUR SEQUENCE ───────────────────────────────────────────────
+    if(blaneNPC&&hatcheryQueue.length>0){
+      const tour=hatcheryQueue[0];
+      const rec=tour.recruit;
+      const bPos=blaneNPC.position;
+      const rPos=rec.position;
+      function walkTo(mesh,tx,ty,tz,spd){
+        const toT=new THREE.Vector3(tx-mesh.position.x,0,tz-mesh.position.z);
+        const dist=toT.length();
+        if(dist>1.2){toT.normalize();mesh.position.addScaledVector(toT,spd*dt);
+          const flY=caveFloorY(mesh.position.x,mesh.position.z);
+          mesh.position.y=(flY!==null?flY:groundY(mesh.position.x,mesh.position.z))+1.5;
+          mesh.rotation.y=Math.atan2(toT.x,toT.z);}
+        return dist<2;
+      }
+      if(tour.phase==='fetch'){
+        // Blane walks to the recruit
+        const done=walkTo(blaneNPC,rPos.x,0,rPos.z,4.5);
+        if(done){tour.phase='lead';floatWorld(bPos,'Come — the Hatchery awaits!','#ffdd88');}
+      } else if(tour.phase==='lead'){
+        // Blane leads to staircase entrance
+        const done=walkTo(blaneNPC,DM_X,0,DM_Z+88,4.5);
+        // Recruit follows Blane
+        walkTo(rec,bPos.x,0,bPos.z,4.0);
+        if(done){tour.phase='stair';}
+      } else if(tour.phase==='stair'){
+        // Both descend staircase to hatchery
+        const done=walkTo(blaneNPC,HATCH_X,0,HATCH_Z,3.5);
+        walkTo(rec,bPos.x,0,bPos.z,3.5);
+        if(done){tour.phase='hatchery';tour.t=0;floatWorld(bPos,'The eggs are stirring…','#aaffcc');}
+      } else if(tour.phase==='hatchery'){
+        // Pause in hatchery — recruit "bonds" with an egg
+        tour.t+=dt;
+        // Recruit slowly walks among eggs
+        const eggZ=DM_Z+150;
+        const eggX=DM_X-8+(tour.t*0.4%16);
+        walkTo(rec,eggX,0,eggZ,1.5);
+        // Blane watches from center
+        walkTo(blaneNPC,HATCH_X,0,HATCH_Z-10,1.0);
+        if(tour.t>6){
+          // Bond complete — assign dragon, add to army
+          tour.phase='done';
+          const slot=dragonArmy.length;
+          const sa=[DM_X-15+slot*8,DM_Z-25];
+          dragonArmy.push({mesh:rec,slot,staging:true,stagingPos:sa});
+          rec.userData.npcText='I am bonded! My dragon and I will meet you outside!';
+          // Blane leads recruit back out
+          hatcheryQueue.shift();
+          blaneWanderTarget=new THREE.Vector3(DM_X,0,DM_Z-10); // back toward exit
+          floatWorld(bPos,'Bond complete! Let us return.','#ffdd44');
+        }
+      }
+    }
+
     // ── BLANE WANDER AI ──────────────────────────────────────────────────────
-    if(blaneNPC&&!dialogOpen){
+    if(blaneNPC&&!dialogOpen&&hatcheryQueue.length===0){
       blaneWanderT-=dt;
       // Pick a new wander target every 4–8s
       if(blaneWanderT<=0){

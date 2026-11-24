@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Bug Squash | LLOBI</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:#0d1f0a;overflow:hidden;user-select:none;display:flex;flex-direction:column;align-items:center;height:100dvh;font-family:'Press Start 2P',monospace}
+.topbar{width:100%;max-width:520px;display:flex;align-items:center;justify-content:space-between;padding:4px 10px;background:#0a1808;border-bottom:3px solid #1a4d0a;flex-shrink:0}
+.logo{font-family:'Press Start 2P',monospace;font-size:.55rem;color:#fff;text-decoration:none}
+.logo span{color:#4ade80}
+#wrap{width:100%;max-width:420px;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px;gap:8px}
+
+/* Menu */
+#menu{display:flex;flex-direction:column;align-items:center;gap:14px;width:100%}
+.game-title{font-size:1.1rem;color:#4ade80;text-shadow:0 0 16px #4ade80;margin-bottom:6px}
+.title-bug{font-size:2.5rem;margin-bottom:4px;animation:bounce .6s ease infinite alternate}
+@keyframes bounce{from{transform:translateY(0)}to{transform:translateY(-8px)}}
+.start-btn{width:100%;max-width:260px;padding:14px;background:#0a2208;border:3px solid #16a34a;color:#4ade80;font-family:'Press Start 2P',monospace;font-size:.6rem;cursor:pointer}
+.start-btn:hover,.start-btn:active{background:#14401a;border-color:#4ade80}
+.legend{font-size:.32rem;color:#555;text-align:center;line-height:2.6;border:2px solid #1a4d0a;padding:10px 14px;background:#0a1808;max-width:260px}
+.legend span{color:#aaa}
+
+/* HUD */
+#hud{display:flex;justify-content:space-between;width:100%;max-width:400px;gap:6px}
+.hud-box{flex:1;background:#0a1808;border:2px solid #1a4d0a;padding:6px 4px;text-align:center}
+.hud-label{font-size:.28rem;color:#555;margin-bottom:3px}
+.hud-val{font-size:.6rem;color:#4ade80}
+.hud-lives{font-size:.7rem;letter-spacing:2px}
+
+/* Game */
+#game{display:none;flex-direction:column;align-items:center;width:100%;gap:8px}
+#timer-bar-wrap{width:100%;max-width:400px;height:10px;background:#0a1808;border:2px solid #1a4d0a;border-radius:2px}
+#timer-bar{height:100%;background:#4ade80;transition:width .1s linear;border-radius:1px}
+
+/* Grid */
+#grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%;max-width:400px}
+.hole{aspect-ratio:1;position:relative;cursor:pointer;border-radius:50%;background:#0a1808;border:4px solid #1a3d0a;overflow:hidden;display:flex;align-items:flex-end;justify-content:center}
+.hole-dirt{position:absolute;bottom:0;left:0;right:0;height:40%;background:#2d1b00;border-radius:0 0 50% 50%;border-top:3px solid #3d2500;z-index:1}
+.bug{position:absolute;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);font-size:2.2rem;z-index:2;transition:transform .18s cubic-bezier(.34,1.56,.64,1);pointer-events:none;line-height:1}
+.bug.up{transform:translateX(-50%) translateY(0%)}
+.bug.squashed{transform:translateX(-50%) translateY(0%) scaleY(.25) scaleX(1.4);filter:grayscale(1);transition:transform .08s ease}
+.splat{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:1.6rem;z-index:5;pointer-events:none;animation:splatAnim .5s ease forwards}
+@keyframes splatAnim{0%{opacity:1;transform:scale(.5)}40%{transform:scale(1.2)}100%{opacity:0;transform:scale(1)}}
+.score-pop{position:absolute;top:20%;left:50%;transform:translateX(-50%);font-size:.5rem;z-index:6;pointer-events:none;animation:popAnim .7s ease forwards}
+@keyframes popAnim{0%{opacity:1;transform:translateX(-50%) translateY(0)}100%{opacity:0;transform:translateX(-50%) translateY(-30px)}}
+
+/* Overlay */
+#overlay{display:none;position:fixed;inset:0;background:rgba(13,31,10,.93);flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:20}
+#overlay.show{display:flex}
+.ov-title{font-size:1rem;color:#4ade80;text-shadow:0 0 16px #4ade80}
+.ov-score{font-size:.7rem;color:#facc15}
+.ov-best{font-size:.38rem;color:#4ade80}
+.ov-stats{font-size:.35rem;color:#888;text-align:center;line-height:2.6}
+.ov-btn{padding:11px 18px;background:#0a2208;border:2px solid #16a34a;color:#4ade80;font-family:'Press Start 2P',monospace;font-size:.5rem;cursor:pointer;margin:3px}
+.ov-btn:hover,.ov-btn:active{background:#14401a}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <a href="/" class="logo"><span>llobi</span>.com</a>
+  <span style="font-size:.42rem;color:#555">BUG SQUASH</span>
+</div>
+<div id="wrap">
+
+  <!-- Menu -->
+  <div id="menu">
+    <div class="title-bug">🐛</div>
+    <div class="game-title">BUG SQUASH</div>
+    <div class="legend">
+      <span>🐛</span> SLOW BUG · +10 PTS<br>
+      <span>🦟</span> MOSQUITO · +20 PTS<br>
+      <span>🦋</span> BUTTERFLY · +50 PTS<br>
+      <span>💣</span> BOMB · DON'T SQUASH!<br>
+      <span>❤️</span> LOSE LIFE IF BUG ESCAPES
+    </div>
+    <button class="start-btn" id="btn-start">▶ START SQUASHING</button>
+  </div>
+
+  <!-- Game -->
+  <div id="game">
+    <div id="hud">
+      <div class="hud-box"><div class="hud-label">SCORE</div><div class="hud-val" id="hud-score">0</div></div>
+      <div class="hud-box"><div class="hud-label">LIVES</div><div class="hud-val hud-lives" id="hud-lives">❤️❤️❤️</div></div>
+      <div class="hud-box"><div class="hud-label">TIME</div><div class="hud-val" id="hud-time">60</div></div>
+    </div>
+    <div id="timer-bar-wrap"><div id="timer-bar"></div></div>
+    <div id="grid"></div>
+  </div>
+
+</div>
+
+<!-- End overlay -->
+<div id="overlay">
+  <div class="ov-title" id="ov-title">TIME'S UP!</div>
+  <div class="ov-score" id="ov-score"></div>
+  <div class="ov-best" id="ov-best"></div>
+  <div class="ov-stats" id="ov-stats"></div>
+  <div>
+    <button class="ov-btn" id="btn-again">▶ PLAY AGAIN</button>
+    <button class="ov-btn" id="btn-menu">⬅ MENU</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+const BUGS=[
+  {icon:'🐛',pts:10,dur:2200,prob:50},
+  {icon:'🦟',pts:20,dur:1400,prob:28},
+  {icon:'🦋',pts:50,dur:800,prob:14},
+  {icon:'💣',pts:-1,dur:1800,prob:8}, // -1 = bomb, don't squash
+];
+const HOLES=9;
+const GAME_DUR=60;
+
+let score=0,lives=3,timeLeft=GAME_DUR,gameOver=false;
+let holes=[],spawnTimer=null,clockTimer=null,elapsed=0;
+let squashed=0,escaped=0,bombed=0;
+let spawnInterval=1200; // ms between spawns, decreases over time
+
+document.getElementById('btn-start').onclick=startGame;
+document.getElementById('btn-again').onclick=()=>{document.getElementById('overlay').classList.remove('show');startGame();};
+document.getElementById('btn-menu').onclick=()=>{
+  document.getElementById('overlay').classList.remove('show');
+  document.getElementById('game').style.display='none';
+  document.getElementById('menu').style.display='flex';
+  stopGame();
+};
+
+function buildGrid(){
+  const grid=document.getElementById('grid');
+  grid.innerHTML='';holes=[];
+  for(let i=0;i<HOLES;i++){
+    const hole=document.createElement('div');
+    hole.className='hole';
+    hole.innerHTML='<div class="hole-dirt"></div><div class="bug" id="bug'+i+'"></div>';
+    hole.dataset.i=i;
+    hole.addEventListener('click',()=>squashHole(i));
+    hole.addEventListener('touchstart',e=>{e.preventDefault();squashHole(i);},{passive:false});
+    grid.appendChild(hole);
+    holes.push({el:hole,bugEl:hole.querySelector('.bug'),active:false,type:null,timer:null});
+  }
+}
+
+function startGame(){
+  score=0;lives=3;timeLeft=GAME_DUR;gameOver=false;elapsed=0;squashed=0;escaped=0;bombed=0;
+  spawnInterval=1200;
+  document.getElementById('menu').style.display='none';
+  document.getElementById('game').style.display='flex';
+  document.getElementById('hud-score').textContent='0';
+  document.getElementById('hud-lives').textContent='❤️❤️❤️';
+  document.getElementById('hud-time').textContent=GAME_DUR;
+  document.getElementById('timer-bar').style.width='100%';
+  buildGrid();
+  stopGame();
+  scheduleSpawn();
+  clockTimer=setInterval(tick,1000);
+}
+
+function stopGame(){
+  clearInterval(spawnTimer);clearInterval(clockTimer);
+  holes.forEach(h=>{if(h.timer)clearTimeout(h.timer);retractBug(h.el.dataset.i,true);});
+}
+
+function tick(){
+  elapsed++;timeLeft--;
+  document.getElementById('hud-time').textContent=timeLeft;
+  document.getElementById('timer-bar').style.width=(timeLeft/GAME_DUR*100)+'%';
+  // Speed up over time
+  spawnInterval=Math.max(400,1200-elapsed*12);
+  if(timeLeft<=0){clearInterval(clockTimer);gameOver=true;setTimeout(endGame,400);}
+}
+
+function scheduleSpawn(){
+  clearInterval(spawnTimer);
+  spawnTimer=setInterval(()=>{
+    if(gameOver)return;
+    // Find empty holes
+    const empty=holes.map((h,i)=>h.active?null:i).filter(v=>v!=null);
+    if(empty.length===0)return;
+    // Spawn 1-2 bugs based on elapsed time
+    const count=elapsed>20?2:1;
+    for(let c=0;c<count&&empty.length>0;c++){
+      const idx=empty.splice(Math.floor(Math.random()*empty.length),1)[0];
+      spawnBug(idx);
+    }
+  },spawnInterval);
+}
+
+function pickBug(){
+  const r=Math.random()*100,pool=BUGS;
+  let acc=0;
+  for(const b of pool){acc+=b.prob;if(r<acc)return b;}
+  return BUGS[0];
+}
+
+function spawnBug(i){
+  const h=holes[i];if(h.active)return;
+  const bug=pickBug();
+  h.active=true;h.type=bug;
+  h.bugEl.textContent=bug.icon;
+  h.bugEl.className='bug up';
+  // Auto-retract after dur
+  h.timer=setTimeout(()=>{
+    if(!h.active)return;
+    if(!gameOver&&bug.pts!==-1){// escaped (not a bomb)
+      escaped++;
+      loseLife();
+    }
+    retractBug(i,false);
+  },bug.dur);
+}
+
+function retractBug(i,instant){
+  const h=holes[i];
+  if(h.timer){clearTimeout(h.timer);h.timer=null;}
+  h.active=false;h.type=null;
+  if(instant){h.bugEl.className='bug';h.bugEl.textContent='';}
+  else{h.bugEl.classList.remove('up');setTimeout(()=>{h.bugEl.textContent='';h.bugEl.className='bug';},200);}
+}
+
+function squashHole(i){
+  if(gameOver)return;
+  const h=holes[i];
+  if(!h.active)return;
+  const bug=h.type;
+  if(bug.pts===-1){// bomb!
+    bombed++;
+    showSplat(h.el,'💥');
+    showScorePop(h.el,'-LIFE','#ef4444');
+    retractBug(i,false);
+    loseLife();
+    return;
+  }
+  // Squash!
+  squashed++;
+  score+=bug.pts;
+  document.getElementById('hud-score').textContent=score;
+  h.bugEl.classList.add('squashed');
+  showSplat(h.el,'💚');
+  showScorePop(h.el,'+'+bug.pts,'#4ade80');
+  setTimeout(()=>retractBug(i,false),200);
+}
+
+function loseLife(){
+  lives--;
+  const hearts=['','❤️','❤️❤️','❤️❤️❤️'];
+  document.getElementById('hud-lives').textContent=hearts[Math.max(0,lives)];
+  if(lives<=0&&!gameOver){gameOver=true;clearInterval(clockTimer);clearInterval(spawnTimer);setTimeout(endGame,400);}
+}
+
+function showSplat(holeEl,icon){
+  const s=document.createElement('div');s.className='splat';s.textContent=icon;
+  holeEl.appendChild(s);setTimeout(()=>s.remove(),500);
+}
+function showScorePop(holeEl,text,col){
+  const p=document.createElement('div');p.className='score-pop';p.textContent=text;p.style.color=col;
+  holeEl.appendChild(p);setTimeout(()=>p.remove(),700);
+}
+
+function endGame(){
+  stopGame();
+  const isOut=lives<=0;
+  document.getElementById('ov-title').textContent=isOut?'💀 NO LIVES LEFT!':'⏱ TIME\'S UP!';
+  document.getElementById('ov-score').textContent='SCORE: '+score;
+  document.getElementById('ov-stats').innerHTML=
+    `SQUASHED: ${squashed}  ESCAPED: ${escaped}  BOMBS: ${bombed}`;
+  // Best score
+  const key='bug_squash_best';
+  let best=0;try{best=parseInt(localStorage.getItem(key)||'0');}catch(e){}
+  if(score>best){best=score;try{localStorage.setItem(key,score);}catch(e){}}
+  document.getElementById('ov-best').textContent=score>=best&&score>0?'🏆 NEW BEST: '+best:'BEST: '+best;
+  document.getElementById('overlay').classList.add('show');
+}
+</script>
+</body>
+</html>

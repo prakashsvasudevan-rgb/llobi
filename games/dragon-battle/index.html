@@ -215,7 +215,19 @@ const DT=[
    body:0x1a3a00,bodyL:0x44aa00,bodyD:0x0a1a00,belly:0xaaff44,
    wingD:0x0a1a00,wingL:0x226600,horn:0x88ff00,eye:0x00ff44,eyeC:'#00ff44',
    breath:[0x88ff00,0x44cc00,0x224400],speed:19,hp:165,fuel:85,rfuel:1.4,dmg:7,pts:1},
+  {id:'bone',  name:'BONE',   emoji:'💀',desc:'Ancient undead',
+   body:0xd4c89a,bodyL:0xfffff0,bodyD:0x8a7a5a,belly:0xfff8dc,
+   wingD:0x6a5a3a,wingL:0xaaa080,horn:0xfffff0,eye:0xff4444,eyeC:'#ff4444',
+   breath:[0xffee88,0xddcc66,0xaa9933],speed:17,hp:185,fuel:80,rfuel:1.2,dmg:6,pts:1},
+  {id:'metal', name:'METAL',  emoji:'⚙️',desc:'Iron scales',
+   body:0x556677,bodyL:0x8899aa,bodyD:0x334455,belly:0xaabbcc,
+   wingD:0x223344,wingL:0x445566,horn:0xccddee,eye:0x44aaff,eyeC:'#44aaff',
+   breath:[0xaabbcc,0x778899,0x445566],speed:15,hp:210,fuel:75,rfuel:1.0,dmg:7,pts:1},
 ];
+// Player-selectable dragon ids (shown on select screen)
+const PLAYER_DT_IDS=['fire','ice','earth','air','nature','soul'];
+// Rider army dragon pool (broader selection)
+const RIDER_DT_IDS=['fire','soul','nature','air','lava','water','ice','smoke','bone','metal','earth'];
 
 // ── Three.js setup ────────────────────────────────────────────────────────────
 const canvas=document.getElementById('c3d');
@@ -1174,12 +1186,14 @@ function spawnZone(cx,cz){
       scene.add(e);objects.push(e);activeEnemies.push(e);
     }
 
-    // Shadow Dragon (elite flying, rare, appears in deep zones)
-    if(dist2>9&&Math.random()<0.012*Math.max(0.3,enemyBudget()*0.3)){
+    // Shadow Dragon mage-rider teams — only appear once player has a dragon army
+    if(dragonArmy.length>=1&&dist2>9&&Math.random()<0.014*Math.max(0.3,enemyBudget()*0.3)){
       const sd=makeEnemy3d('shadowDragon');
       const sdx=wx0+Math.random()*ZONE,sdz=wz0+Math.random()*ZONE;
       sd.position.set(sdx,groundY(sdx,sdz)+45+Math.random()*25,sdz);
       sd.userData.baseY=sd.position.y;sd.userData.flyOrbit=Math.random()*Math.PI*2;
+      // Mage rider sitting on its back
+      const mr=makeMageMesh();mr.scale.set(0.55,0.55,0.55);mr.position.set(0,2.2,0.5);sd.add(mr);
       scene.add(sd);objects.push(sd);activeEnemies.push(sd);
     }
 
@@ -1328,17 +1342,58 @@ function spawnDragonMountain(){
     scene.add(v);objects.push(v);friendlyNPCs.push(v);
   });
 
-  // 5 recruitable riders on the peak + a mix of dragon types roaming
+  // Dragon Mountain interior — cave entrance + inner shops/NPCs
+  // Cave arch (dark box cutout visual)
+  const caveArch=new THREE.Mesh(new THREE.BoxGeometry(16,14,8),mat(0x050505,{flatShading:true}));
+  caveArch.position.set(DM_X+2,groundY(DM_X,DM_Z)+7,DM_Z+8);
+  scene.add(caveArch);objects.push(caveArch);
+  // Glowing fire torches flanking cave entrance
+  for(const sx of[-7,7]){
+    const torch=new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.3,3,6),mat(0x442200,{flatShading:true}));
+    torch.position.set(DM_X+sx,groundY(DM_X,DM_Z)+3,DM_Z+8);
+    scene.add(torch);objects.push(torch);
+    const flame=new THREE.Mesh(new THREE.SphereGeometry(1,6,6),new THREE.MeshBasicMaterial({color:0xff6600}));
+    flame.position.set(DM_X+sx,groundY(DM_X,DM_Z)+5,DM_Z+8);
+    scene.add(flame);objects.push(flame);
+  }
+  // Interior NPCs (placed just inside the cave, slightly elevated)
+  const interiorNPCs=[
+    {name:'Food Merchant',  text:'Hot meals for weary riders! Buy food to restore HP. Press B to eat (costs 50 score, +30 HP).', isFoodShop:true},
+    {name:'Rider Thane',    text:'I know every pass on this mountain. Rest here awhile. The Emperor... he is terrifying.',isRecruitable:true,recruited:false},
+    {name:'Alchemist',      text:'I brew potions from dragon scales and mountain herbs. Upgrade your orbs with me.'},
+    {name:'Dragon Keeper',  text:'We tend to injured dragons here. All types live in harmony on this mountain.'},
+    {name:'Elder Runa',     text:'Long ago the Emperor had no dragon. He STOLE the King of Death Dragon from its nest.'},
+    {name:'Arms Dealer',    text:'I sell weapons forged from volcano ore. Defeat the Emperor and I will upgrade your sword.'},
+  ];
+  interiorNPCs.forEach((cfg,i)=>{
+    const npc=makeVillagerMesh();
+    npc.userData.npcName=cfg.name;
+    npc.userData.npcText=cfg.text;
+    if(cfg.isFoodShop)npc.userData.isFoodShop=true;
+    if(cfg.isRecruitable){npc.userData.isRecruitable=true;npc.userData.recruited=false;
+      const dtDef=selectableDT[~~(Math.random()*selectableDT.length)];
+      npc.userData.dtDef=dtDef;npc.userData.npcText+=' I ride a '+dtDef.name+' dragon. [R] RECRUIT';}
+    // Spread around inside cave entrance
+    const ix=DM_X+(i%3-1)*12;
+    const iz=DM_Z+18+~~(i/3)*12;
+    npc.position.set(ix,groundY(DM_X,DM_Z)+1.5,iz);
+    scene.add(npc);objects.push(npc);friendlyNPCs.push(npc);
+  });
+
+  // 5 recruitable riders on the peak — each picks a random dragon type
+  const selectableDT=DT.filter(d=>RIDER_DT_IDS.includes(d.id));
   for(let i=0;i<5;i++){
     const angle=i/5*Math.PI*2;
     const dr=new THREE.Group();
-    // Pick a dragon type for this rider
-    const dtId=MTN_DRAGON_TYPES[i%MTN_DRAGON_TYPES.length];
-    const dtDef=DT.find(d=>d.id===dtId)||DT[1];
+    // Random dragon type per rider (re-randomized each game)
+    const dtDef=selectableDT[~~(Math.random()*selectableDT.length)];
     const riderDragon=buildDragonMesh(dtDef);
+    // Add a rider figure on its back
+    const rFig=buildRiderOnDragon(dtDef);riderDragon.add(rFig);
     dr.add(riderDragon);
     const r=RECRUIT_LINES[i];
-    dr.userData={npcName:r[0],npcText:r[1],isRecruitable:true,recruited:false,dtDef};
+    const dragonName=dtDef.name+' dragon';
+    dr.userData={npcName:r[0],npcText:r[1]+' I ride a '+dragonName+'.',isRecruitable:true,recruited:false,dtDef};
     const px=DM_X+Math.cos(angle)*18,pz=DM_Z+Math.sin(angle)*18;
     dr.position.set(px,groundY(DM_X,DM_Z)+mh+3,pz);
     dr.rotation.y=angle+Math.PI;
@@ -1386,11 +1441,26 @@ function spawnVolcano(){
   castle.scale.set(2.5,2.5,2.5);
   scene.add(castle);objects.push(castle);activeBuildings.push(castle);
 
-  // King of Death Dragon — elite boss
+  // King of Death Dragon — elite boss with Emperor rider
   const kdd=makeEnemy3d('kingDeathDragon');
   kdd.position.set(VOL_X,groundY(VOL_X,VOL_Z)+200,VOL_Z);
   kdd.userData.baseY=kdd.position.y;kdd.userData.flyOrbit=0;
   kdd.userData.guardBuilding=castle;
+  // Emperor: large armored figure on the dragon's back
+  const emperor=new THREE.Group();
+  const FS2={flatShading:true};
+  addBox(emperor,0.9,1.3,0.75,mat(0x1a0a00,FS2));        // black plate body
+  addBox(emperor,0.78,0.75,0.68,mat(0x2a1500,FS2),0,1.1,0); // helm
+  addBox(emperor,0.82,0.28,0.1,mat(0xdd2200,FS2),0,1.45,0.38); // red visor
+  addBox(emperor,0.22,0.72,0.26,mat(0x1a0a00,FS2),-0.6,-0.5,0,0,0,0.3); // lleg
+  addBox(emperor,0.22,0.72,0.26,mat(0x1a0a00,FS2), 0.6,-0.5,0,0,0,-0.3);// rleg
+  addBox(emperor,0.75,0.28,0.65,mat(0x881000,FS2),-0.72,0.4,0,0,0,0.3); // larm
+  addBox(emperor,0.75,0.28,0.65,mat(0x881000,FS2), 0.72,0.4,0,0,0,-0.3);// rarm
+  // Gold crown spikes
+  for(let i=0;i<3;i++) addBox(emperor,0.14,0.42,0.14,mat(0xdd8800,FS2),(i-1)*0.28,1.75,0.3);
+  emperor.position.set(0,2.2,0.6);emperor.rotation.x=-0.2;
+  kdd.add(emperor);
+  kdd.userData.emperorMesh=emperor;
   scene.add(kdd);objects.push(kdd);activeEnemies.push(kdd);
 
   // Acid dragons around volcano
@@ -1403,8 +1473,8 @@ function spawnVolcano(){
     scene.add(ad);objects.push(ad);activeEnemies.push(ad);
   }
 
-  // Shadow riders — mage on shadow dragon pairs
-  for(let i=0;i<3;i++){
+  // Shadow riders at volcano — only spawn once player has army
+  for(let i=0;i<3&&dragonArmy.length>=1;i++){
     const sd=makeEnemy3d('shadowDragon');
     const ang=i/3*Math.PI*2+1;
     sd.position.set(VOL_X+Math.cos(ang)*200,groundY(VOL_X,VOL_Z)+80,VOL_Z+Math.sin(ang)*200);
@@ -1606,8 +1676,14 @@ const mk={up:false,dn:false,lf:false,rt:false,fire:false};
 document.addEventListener('keydown',e=>{
   keys[e.code]=true;if(e.code==='Space')e.preventDefault();
   if(gs==='select'){
-    if(e.code==='ArrowLeft'||e.code==='KeyA'){selectedType=selectedType<=1?DT.length-1:selectedType-1;buildSelectUI();}
-    if(e.code==='ArrowRight'||e.code==='KeyD'){selectedType=selectedType>=DT.length-1?1:selectedType+1;buildSelectUI();}
+    if(e.code==='ArrowLeft'||e.code==='KeyA'){
+      let ni=selectedType-1;while(ni>=0&&!PLAYER_DT_IDS.includes(DT[ni].id))ni--;
+      if(ni<0){ni=DT.length-1;while(!PLAYER_DT_IDS.includes(DT[ni].id))ni--;}
+      selectedType=ni;buildSelectUI();}
+    if(e.code==='ArrowRight'||e.code==='KeyD'){
+      let ni=selectedType+1;while(ni<DT.length&&!PLAYER_DT_IDS.includes(DT[ni].id))ni++;
+      if(ni>=DT.length){ni=0;while(!PLAYER_DT_IDS.includes(DT[ni].id))ni++;}
+      selectedType=ni;buildSelectUI();}
     if(e.code==='Enter'||e.code==='Space')startGame();
   }
   if(gs==='dead'&&(e.code==='Enter'||e.code==='Space'))showSelect();
@@ -1706,8 +1782,19 @@ function openDialog(npc){
   document.getElementById('dialog-text').textContent=txt;
   document.getElementById('dialog').style.display='block';
   if(document.exitPointerLock)document.exitPointerLock();
-  // B key to buy armor while dialog open
+  // B key to buy food or armor while dialog open
+  const isFoodShop=!!npc.userData.isFoodShop;
   const onKey=e=>{
+    if(e.code==='KeyB'&&dialogOpen&&isFoodShop){
+      if(score>=50&&humanHP<humanMaxHP){
+        score-=50;humanHP=Math.min(humanMaxHP,humanHP+30);
+        floatWorld(npc.position,'🍖 +30 HP!','#88ff44');
+      } else if(humanHP>=humanMaxHP){
+        floatWorld(npc.position,'❤️ FULL HP','#aaaaaa');
+      } else {
+        floatWorld(npc.position,'❌ NEED 50 PTS','#ff4444');
+      }
+    }
     if(e.code==='KeyB'&&dialogOpen&&isSmith&&armorLevel<3){
       const tier=ARMOR_TIERS[armorLevel];
       if(score>=tier.cost&&mageOrbs>=tier.orbs&&shadowDust>=tier.dust){
@@ -1736,7 +1823,10 @@ canvas.addEventListener('touchstart',e=>{swipeX=e.touches[0].clientX;if(gs==='de
 canvas.addEventListener('touchend',e=>{
   if(gs!=='select')return;
   const dx=e.changedTouches[0].clientX-swipeX;
-  if(Math.abs(dx)>30){selectedType=(selectedType+(dx<0?1:-1)+DT.length)%DT.length;buildSelectUI();}
+  if(Math.abs(dx)>30){
+    const dir=dx<0?1:-1;let ni=(selectedType+dir+DT.length)%DT.length;
+    while(!PLAYER_DT_IDS.includes(DT[ni].id))ni=(ni+dir+DT.length)%DT.length;
+    selectedType=ni;buildSelectUI();}
   else startGame();
 },{passive:true});
 
@@ -1754,7 +1844,7 @@ function buildSelectUI(){
   const container=document.getElementById('cards');
   container.innerHTML='';
   DT.forEach((dt,i)=>{
-    if(i===0)return; // lightning dragon is unlockable only, not selectable at start
+    if(!PLAYER_DT_IDS.includes(dt.id))return; // only player-selectable types on select screen
     const card=document.createElement('div');
     card.className='card'+(i===selectedType?' sel':'');
     card.style.setProperty('--ec',dt.eyeC);

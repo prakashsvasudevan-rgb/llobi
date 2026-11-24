@@ -73,6 +73,15 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
 
 /* Interact hint */
 #interact-hint{position:absolute;bottom:20px;left:50%;transform:translateX(-50%) translateZ(0);font-size:.35rem;color:#FFD700;display:none;z-index:4;pointer-events:none;text-align:center}
+
+/* Full-screen world map */
+#worldmap{position:absolute;inset:0;background:rgba(0,0,0,.92);display:none;z-index:12;transform:translateZ(0);flex-direction:column;align-items:center;justify-content:center}
+#worldmap.show{display:flex}
+#worldmap canvas{border:2px solid rgba(255,255,255,.25);border-radius:4px}
+#worldmap-title{font-size:.5rem;color:#FFD700;margin-bottom:8px;letter-spacing:2px}
+#worldmap-hint{font-size:.32rem;color:#888;margin-top:8px}
+#worldmap-legend{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:6px;font-size:.3rem;color:#aaa}
+#worldmap-legend span{display:flex;align-items:center;gap:4px}
 </style>
 </head>
 <body>
@@ -88,7 +97,7 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
     <h1>DRAGON BATTLE</h1>
     <p class="sub">CHOOSE YOUR DRAGON</p>
     <div id="cards"></div>
-    <p id="sel-hint">◀ ▶ TO CHOOSE · SPACE=FLY/FIRE · T=HUMAN · SHIFT=SWORD · J=JUMP · D=CALL DRAGON</p>
+    <p id="sel-hint">◀ ▶ TO CHOOSE · SPACE=FLY/FIRE · T=HUMAN · SHIFT=SWORD · J=JUMP · D=CALL DRAGON · M=MAP</p>
     <p id="sel-best"></p>
   </div>
 
@@ -128,6 +137,22 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
 
   <!-- Interact hint -->
   <div id="interact-hint"></div>
+
+  <!-- Full-screen world map (M key) -->
+  <div id="worldmap">
+    <div id="worldmap-title">🗺 WORLD MAP · [ M ] TO CLOSE</div>
+    <canvas id="wm-canvas" width="440" height="380"></canvas>
+    <div id="worldmap-legend">
+      <span><svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="#ffffff"/></svg> You</span>
+      <span><svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="#ff4400"/></svg> Enemy</span>
+      <span><svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="#44ffff"/></svg> Roam Dragon</span>
+      <span><svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="#44ff44"/></svg> Safe / Freed</span>
+      <span><svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="#ff8800"/></svg> Village</span>
+      <span><svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="#ffdd00"/></svg> Castle</span>
+      <span><svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="#8844ff"/></svg> Shadow Dragon</span>
+    </div>
+    <div id="worldmap-hint">PRESS [ M ] TO CLOSE · GAME PAUSED</div>
+  </div>
 
   <!-- Mobile -->
   <div id="mctrl">
@@ -1229,6 +1254,7 @@ let mouseDX=0,mouseDY=0;
 let pointerLocked=false;
 let nearNPC=null;
 let dialogOpen=false;
+let mapOpen=false;
 let friendlyNPCs=[];
 let roamDragons=[];
 
@@ -1306,7 +1332,8 @@ document.addEventListener('keydown',e=>{
   }
   if(gs==='dead'&&(e.code==='Enter'||e.code==='Space'))showSelect();
   if(gs==='playing'){
-    if(e.code==='KeyT'&&!dialogOpen)toggleHumanMode();
+    if(e.code==='KeyM'){toggleWorldMap();return;}
+    if(e.code==='KeyT'&&!dialogOpen&&!mapOpen)toggleHumanMode();
     if(e.code==='KeyE'){if(dialogOpen)closeDialog();else if(nearNPC)openDialog(nearNPC);}
     if(e.code==='KeyJ'&&isHuman&&!dialogOpen){
       // Jump
@@ -1438,6 +1465,7 @@ function startGame(){
   activeEnemies=[];activeBuildings=[];friendlyNPCs=[];roamDragons=[];
   orbDrops.forEach(o=>scene.remove(o.mesh));orbDrops=[];
   mageOrbs=0;shadowDust=0;upgrades={dmg:0,hp:0,speed:0,fuel:0,attack:0};
+  mapOpen=false;wmEl.classList.remove('show');
   isHuman=false;humanHP=100;humanVY=0;mouseDX=0;mouseDY=0;nearNPC=null;dialogOpen=false;
   if(humanMesh){scene.remove(humanMesh);humanMesh=null;}
   document.getElementById('human-badge').style.display='none';
@@ -1477,7 +1505,7 @@ function endGame(){
 let last=0;
 function update(ts){
   const dt=Math.min((ts-last)/1000,.05);last=ts;
-  if(gs!=='playing')return;
+  if(gs!=='playing'||mapOpen)return;
   frame++;
 
   if(!ddead){
@@ -1823,6 +1851,101 @@ function drawOverlay(){
 const mmCanvas=document.getElementById('mm-canvas');
 const mmCtx=mmCanvas.getContext('2d');
 const MM_SIZE=110,MM_SCALE=1/8; // 1 pixel = 8 world units
+
+// ── Full-screen world map ──────────────────────────────────────────────────────
+const wmEl=document.getElementById('worldmap');
+const wmCanvas=document.getElementById('wm-canvas');
+const wmCtx=wmCanvas.getContext('2d');
+const WM_W=440,WM_H=380;
+
+function toggleWorldMap(){
+  mapOpen=!mapOpen;
+  wmEl.classList.toggle('show',mapOpen);
+  if(mapOpen)drawWorldMap();
+}
+
+function drawWorldMap(){
+  const W=WM_W,H=WM_H;
+  wmCtx.clearRect(0,0,W,H);
+  // Dark terrain background with subtle grid
+  wmCtx.fillStyle='#0a1a0a';wmCtx.fillRect(0,0,W,H);
+  const ref=isHuman&&humanMesh?humanMesh.position:dragonMesh.position;
+  const cx=ref.x,cz=ref.z;
+  // Large scale: 1px = ~12 world units
+  const scale=1/12;
+  const toMx=wx=>W/2+(wx-cx)*scale;
+  const toMz=wz=>H/2+(wz-cz)*scale;
+
+  // Grid lines
+  wmCtx.strokeStyle='rgba(255,255,255,0.05)';wmCtx.lineWidth=0.5;
+  for(let g=-20;g<=20;g++){
+    const gx=W/2+(g*ZONE-(((cx%ZONE)+ZONE)%ZONE))*scale;
+    const gz=H/2+(g*ZONE-(((cz%ZONE)+ZONE)%ZONE))*scale;
+    if(gx>=0&&gx<=W){wmCtx.beginPath();wmCtx.moveTo(gx,0);wmCtx.lineTo(gx,H);wmCtx.stroke();}
+    if(gz>=0&&gz<=H){wmCtx.beginPath();wmCtx.moveTo(0,gz);wmCtx.lineTo(W,gz);wmCtx.stroke();}
+  }
+
+  // Helper: draw dot + optional label
+  const dot=(wx,wz,col,r,label)=>{
+    const mx=toMx(wx),mz=toMz(wz);
+    if(mx<-20||mx>W+20||mz<-20||mz>H+20)return;
+    wmCtx.fillStyle=col;wmCtx.beginPath();wmCtx.arc(mx,mz,r,0,Math.PI*2);wmCtx.fill();
+    if(label){
+      wmCtx.font='6px sans-serif';wmCtx.fillStyle='rgba(255,255,255,0.75)';
+      wmCtx.textAlign='center';wmCtx.textBaseline='top';
+      wmCtx.fillText(label,mx,mz+r+1);
+    }
+  };
+
+  // Buildings
+  for(const b of activeBuildings){
+    const col=b.userData.safe?'#44ff44':b.userData.type==='castle'?'#ffdd00':'#ff8800';
+    const lbl=b.userData.type==='castle'?'STRONGHOLD':b.userData.safe?'SAFE':'VILLAGE';
+    dot(b.position.x,b.position.z,col,5,lbl);
+  }
+
+  // Shadow dragons (purple, bigger)
+  for(const e of activeEnemies){
+    if(!e.userData.alive)continue;
+    if(e.userData.type==='shadowDragon')dot(e.position.x,e.position.z,'#8844ff',4,'SHADOW');
+    else if(e.userData.type==='dragon')dot(e.position.x,e.position.z,'#ff4400',3,'DRAGON');
+    else if(e.userData.isKing)dot(e.position.x,e.position.z,'#ff0000',4,'KING');
+    else dot(e.position.x,e.position.z,'#ff3333',2.5);
+  }
+
+  // Roaming dragons (cyan)
+  for(const r of roamDragons){dot(r.position.x,r.position.z,'#44ffff',3,'ALLY');}
+
+  // Friendly NPCs (green)
+  for(const n of friendlyNPCs){dot(n.position.x,n.position.z,'#44ff44',2);}
+
+  // Dragon mountain (always at world origin-ish — find tallest zone building)
+  dot(0,0,'#aaffcc',6,'🏔 MTN');
+
+  // Player dot + direction arrow
+  wmCtx.fillStyle='#ffffff';wmCtx.beginPath();wmCtx.arc(W/2,H/2,5,0,Math.PI*2);wmCtx.fill();
+  const pYaw=isHuman?humanYaw:dYaw;
+  wmCtx.strokeStyle='#ffffff';wmCtx.lineWidth=2;
+  wmCtx.beginPath();wmCtx.moveTo(W/2,H/2);
+  wmCtx.lineTo(W/2+Math.sin(pYaw)*14,H/2+Math.cos(pYaw)*14);wmCtx.stroke();
+
+  // Distance rings
+  wmCtx.strokeStyle='rgba(255,255,255,0.08)';wmCtx.lineWidth=1;
+  for(const dist of [500,1000,2000]){
+    const r=dist*scale;
+    wmCtx.beginPath();wmCtx.arc(W/2,H/2,r,0,Math.PI*2);wmCtx.stroke();
+    wmCtx.font='6px sans-serif';wmCtx.fillStyle='rgba(255,255,255,0.3)';
+    wmCtx.textAlign='left';wmCtx.textBaseline='middle';
+    wmCtx.fillText(dist+'u',W/2+r+2,H/2);
+  }
+
+  // Compass
+  wmCtx.font='bold 10px sans-serif';wmCtx.textAlign='center';wmCtx.textBaseline='top';
+  wmCtx.fillStyle='rgba(255,255,255,0.6)';wmCtx.fillText('N',W/2,4);
+  wmCtx.textBaseline='bottom';wmCtx.fillText('S',W/2,H-4);
+  wmCtx.textAlign='left';wmCtx.textBaseline='middle';wmCtx.fillText('E',W-10,H/2);
+  wmCtx.textAlign='right';wmCtx.fillText('W',10,H/2);
+}
 
 function drawMinimap(){
   if(gs!=='playing')return;

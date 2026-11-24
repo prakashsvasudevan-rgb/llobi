@@ -57,6 +57,22 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
 .mc-btn:active{background:rgba(255,80,80,.4)}
 .mc-fire{width:76px;height:76px;background:rgba(255,100,0,.22);border:3px solid rgba(255,140,0,.5);border-radius:50%;color:#ffaa00;font-size:1.6rem;display:grid;place-items:center;cursor:pointer;pointer-events:all}
 .mc-fire:active{background:rgba(255,160,0,.5)}
+
+/* Minimap */
+#minimap{position:absolute;bottom:10px;right:10px;width:110px;height:110px;border:2px solid rgba(255,255,255,.25);border-radius:4px;overflow:hidden;display:none;z-index:4;transform:translateZ(0);background:rgba(0,0,0,.55)}
+#minimap canvas{width:100%;height:100%;display:block}
+
+/* Dialog */
+#dialog{position:absolute;bottom:60px;left:50%;transform:translateX(-50%) translateZ(0);width:92%;max-width:460px;background:rgba(0,0,0,.88);border:2px solid #FFD700;padding:12px 14px;display:none;z-index:7;pointer-events:all}
+#dialog-name{font-size:.45rem;color:#FFD700;margin-bottom:6px}
+#dialog-text{font-size:.38rem;color:#eee;line-height:1.9;margin-bottom:8px}
+#dialog-close{font-size:.35rem;color:#888;text-align:right}
+
+/* Human mode badge */
+#human-badge{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) translateZ(0);display:none;font-size:.38rem;color:#88ff44;background:rgba(0,0,0,.7);padding:6px 12px;border:1px solid #88ff44;z-index:4;pointer-events:none}
+
+/* Interact hint */
+#interact-hint{position:absolute;bottom:20px;left:50%;transform:translateX(-50%) translateZ(0);font-size:.35rem;color:#FFD700;display:none;z-index:4;pointer-events:none;text-align:center}
 </style>
 </head>
 <body>
@@ -72,7 +88,7 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
     <h1>DRAGON BATTLE</h1>
     <p class="sub">CHOOSE YOUR DRAGON</p>
     <div id="cards"></div>
-    <p id="sel-hint">◀ ▶ TO CHOOSE · SPACE/TAP TO FLY</p>
+    <p id="sel-hint">◀ ▶ TO CHOOSE · SPACE/TAP TO FLY · T=HUMAN · E=TALK</p>
     <p id="sel-best"></p>
   </div>
 
@@ -96,6 +112,22 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
     <p id="dead-score"></p><p id="dead-new" class="sub"></p>
     <p id="dead-hint" class="hint">SPACE / TAP TO CONTINUE</p>
   </div>
+
+  <!-- Minimap -->
+  <div id="minimap"><canvas id="mm-canvas" width="110" height="110"></canvas></div>
+
+  <!-- Dialog -->
+  <div id="dialog">
+    <div id="dialog-name"></div>
+    <div id="dialog-text"></div>
+    <div id="dialog-close">[ E / TAP TO CLOSE ]</div>
+  </div>
+
+  <!-- Human badge -->
+  <div id="human-badge">🧍 HUMAN · T = RIDE DRAGON · WASD = WALK · MOUSE = LOOK</div>
+
+  <!-- Interact hint -->
+  <div id="interact-hint"></div>
 
   <!-- Mobile -->
   <div id="mctrl">
@@ -153,8 +185,35 @@ scene.fog=new THREE.Fog(0x080018,250,1200);
 
 const camera=new THREE.PerspectiveCamera(70,1,.5,1200);
 
+// ── Day/Night cycle ───────────────────────────────────────────────────────────
+let dayTime=0.25; // 0=midnight 0.25=dawn 0.5=noon 0.75=dusk 1=midnight
+const DAY_SPEED=0.004; // full cycle in ~250s
+const SKY_COLS={
+  night:new THREE.Color(0x080018),
+  dawn: new THREE.Color(0x1a1040),
+  day:  new THREE.Color(0x1a3a6b),
+  noon: new THREE.Color(0x2255aa),
+  dusk: new THREE.Color(0x3a1a0a),
+};
+function getDayColor(t){
+  // t: 0=midnight, 0.5=noon
+  const c=new THREE.Color();
+  if(t<0.2)      c.lerpColors(SKY_COLS.night,SKY_COLS.dawn, t/0.2);
+  else if(t<0.3) c.lerpColors(SKY_COLS.dawn, SKY_COLS.day,  (t-0.2)/0.1);
+  else if(t<0.5) c.lerpColors(SKY_COLS.day,  SKY_COLS.noon, (t-0.3)/0.2);
+  else if(t<0.7) c.lerpColors(SKY_COLS.noon, SKY_COLS.day,  (t-0.5)/0.2);
+  else if(t<0.8) c.lerpColors(SKY_COLS.day,  SKY_COLS.dusk, (t-0.7)/0.1);
+  else if(t<0.9) c.lerpColors(SKY_COLS.dusk, SKY_COLS.night,(t-0.8)/0.1);
+  else           c.copy(SKY_COLS.night);
+  return c;
+}
+function getDayBrightness(t){ // 0=dark 1=bright
+  return Math.max(0,Math.sin(t*Math.PI));
+}
+
 // Lights
-scene.add(new THREE.AmbientLight(0x442255,0.7));
+const ambient=new THREE.AmbientLight(0x442255,0.7);
+scene.add(ambient);
 const sun=new THREE.DirectionalLight(0xffaa66,1.3);
 sun.position.set(0.4,1,-0.5);scene.add(sun);
 const fillLight=new THREE.DirectionalLight(0x2244aa,0.4);
@@ -194,10 +253,28 @@ ground.rotation.x=-Math.PI/2;scene.add(ground);
  sg.setAttribute('position',new THREE.BufferAttribute(sv,3));
  scene.add(new THREE.Points(sg,new THREE.PointsMaterial({color:0xfff8e0,size:2,sizeAttenuation:false})));}
 
-// Moon
-{const moonGeo=new THREE.SphereGeometry(30,8,8);
- const moonMesh=new THREE.Mesh(moonGeo,new THREE.MeshBasicMaterial({color:0xffe0a0}));
- moonMesh.position.set(300,400,-500);scene.add(moonMesh);}
+// Sun and Moon (orbit)
+const sunMesh=new THREE.Mesh(new THREE.SphereGeometry(28,8,8),new THREE.MeshBasicMaterial({color:0xFFEE88}));
+scene.add(sunMesh);
+const moonMesh=new THREE.Mesh(new THREE.SphereGeometry(20,8,8),new THREE.MeshBasicMaterial({color:0xddddcc}));
+scene.add(moonMesh);
+function updateDayNight(dt){
+  dayTime=(dayTime+DAY_SPEED*dt)%1;
+  const angle=dayTime*Math.PI*2;
+  const orbitR=700,orbitY=350;
+  sunMesh.position.set(Math.cos(angle)*orbitR,Math.sin(angle)*orbitY,-500);
+  moonMesh.position.set(-Math.cos(angle)*orbitR,-Math.sin(angle)*orbitY,-500);
+  const sky=getDayColor(dayTime);
+  scene.background=sky;
+  scene.fog.color.copy(sky);
+  const br=getDayBrightness(dayTime);
+  sun.intensity=0.3+br*1.4;
+  ambient.intensity=0.2+br*0.7;
+  // Sun color: dawn/dusk orange, noon white
+  const noon=dayTime>0.35&&dayTime<0.65;
+  sun.color.set(noon?0xffffff:0xffaa44);
+  sun.position.set(Math.cos(angle)*0.8,Math.sin(angle)*0.8,-0.5);
+}
 
 // ── Dragon model builder ──────────────────────────────────────────────────────
 function hex(c){return parseInt(typeof c==='string'?c.replace('#',''):c.toString(16).padStart(6,'0'),16);}
@@ -414,6 +491,182 @@ function makeMountainMesh(h){
   return g;
 }
 
+// ── Friendly NPC (villager) ───────────────────────────────────────────────────
+const NPC_LINES=[
+  ['Village Elder','The dragons once protected these lands. We remember.'],
+  ['Farmer','Strange lights in the sky last night. Fire or stars?'],
+  ['Child','Wow, a real dragon! Can I ride it someday?'],
+  ['Blacksmith','If you find iron ore near the mountains, bring it back!'],
+  ['Merchant','I trade dragon scales for healing potions. Good deal!'],
+  ['Guard','Stay away from the tall mountain. Dragon riders live there.'],
+  ['Healer','Your dragon looks tired. Rest here awhile.'],
+  ['Scholar','The Soul dragon is said to have lived a thousand years.'],
+  ['Inn Keeper','Safe travels, dragonrider! Beware the dark valleys.'],
+];
+function makeVillagerMesh(){
+  const g=new THREE.Group();
+  const skinCol=[0xE8B88A,0xB87A5A,0xF5CFA0,0xCC9966];
+  const shirtCols=[0x2255aa,0xaa2222,0x228844,0x885522,0x553388];
+  const sk=skinCol[~~(Math.random()*skinCol.length)];
+  const sh=shirtCols[~~(Math.random()*shirtCols.length)];
+  addBox(g,0.6,0.9,0.5,mat(sh));            // body
+  addBox(g,0.52,0.52,0.52,mat(sk), 0,0.72,0); // head
+  addBox(g,0.14,0.75,0.14,mat(sh), -0.4,0.1,0, 0,0,0.3); // larm
+  addBox(g,0.14,0.75,0.14,mat(sh),  0.4,0.1,0, 0,0,-0.3); // rarm
+  addBox(g,0.22,0.72,0.22,mat(0x333344),-0.17,-0.82,0); // lleg
+  addBox(g,0.22,0.72,0.22,mat(0x333344), 0.17,-0.82,0); // rleg
+  // random hair
+  const hC=[0x1a0a00,0xaa6622,0xddcc88,0x220022];
+  addBox(g,0.55,0.18,0.55,mat(hC[~~(Math.random()*hC.length)]), 0,1.0,0);
+  const npc=NPC_LINES[~~(Math.random()*NPC_LINES.length)];
+  g.userData={type:'villager',alive:true,animT:0,
+    npcName:npc[0],npcText:npc[1],walkDir:Math.random()*Math.PI*2,walkT:3+Math.random()*4};
+  return g;
+}
+
+// ── Dragon rider (on tall mountain) ──────────────────────────────────────────
+const RIDER_LINES=[
+  ['Rider Aela','We were chosen by dragons before birth. The mountain breathes with them.'],
+  ['Rider Kael','To earn a dragon\'s trust, you must first earn your own.'],
+  ['Rider Soma','The night sky is clearer from dragonback than from any tower.'],
+  ['Elder Rider','Long ago all humans could speak to dragons. We remembered.'],
+];
+function makeDragonRiderMesh(){
+  const g=new THREE.Group();
+  // Dragon (compact roost pose, wings folded)
+  const drG=new THREE.Group();
+  const FS={flatShading:true};
+  addBox(drG,1.8,0.8,3.5,mat(0x1a3a6b,FS)); // body
+  addBox(drG,0.7,0.7,1.5,mat(0x2255aa,FS), 0,0.3,2.5,-0.3); // neck
+  addBox(drG,1.0,0.8,1.5,mat(0x1a3a6b,FS), 0,0.6,3.5); // head
+  // folded wings
+  addBox(drG,2.2,0.15,2.0,mat(0x0d2040,{side:THREE.DoubleSide,flatShading:true}), -1.5,0.5,0,0,0,0.5);
+  addBox(drG,2.2,0.15,2.0,mat(0x0d2040,{side:THREE.DoubleSide,flatShading:true}),  1.5,0.5,0,0,0,-0.5);
+  g.add(drG);
+  // Rider on back
+  addBox(g,0.55,0.9,0.5,mat(0x2a1a4a), 0,1.6,0.3); // body
+  addBox(g,0.5,0.5,0.5,mat(0xE8B88A),  0,2.6,0.3); // head
+  addBox(g,0.6,0.25,0.5,mat(0x1a0d30), -0.5,0.9,0.3,0,0, 0.3); // larm
+  addBox(g,0.6,0.25,0.5,mat(0x1a0d30),  0.5,0.9,0.3,0,0,-0.3); // rarm
+  const rnd=RIDER_LINES[~~(Math.random()*RIDER_LINES.length)];
+  g.userData={type:'rider',alive:true,
+    npcName:rnd[0],npcText:rnd[1]};
+  return g;
+}
+
+// ── Roaming friendly dragon ───────────────────────────────────────────────────
+function makeRoamDragonMesh(){
+  const g=new THREE.Group();
+  const FS={flatShading:true};
+  const cols=[[0x2a6b18,0x1a4a0a],[0x6b1a1a,0x4a0a0a],[0x1a1a6b,0x0a0a4a],[0x6b6b1a,0x4a4a0a]];
+  const ci=~~(Math.random()*cols.length);
+  const mB=mat(cols[ci][0],FS),mD=mat(cols[ci][1],FS);
+  const mW=mat(cols[ci][1],{side:THREE.DoubleSide,flatShading:true,transparent:true,opacity:.85});
+  addBox(g,2.0,0.9,4.0,mB);
+  addBox(g,0.8,0.8,1.6,mB,0,0.25,2.8,-0.3);
+  addBox(g,1.1,0.9,1.6,mB,0,0.5,4.1);
+  const lw=new THREE.Group();lw.position.set(-1.0,0.2,0.8);
+  const rw=new THREE.Group();rw.position.set( 1.0,0.2,0.8);
+  lw.add(new THREE.Mesh(makeWingGeo(false,'standard'),mW.clone()));
+  rw.add(new THREE.Mesh(makeWingGeo(true,'standard'),mW.clone()));
+  g.add(lw);g.add(rw);
+  for(let i=0;i<6;i++){const s=0.8-i*0.08;addBox(g,s,s,0.9,mD,0,-i*0.08,-2.8-i*0.85,i*0.08);}
+  // Eyes
+  const eG=new THREE.SphereGeometry(0.14,6,6);
+  const eM=new THREE.MeshBasicMaterial({color:0x88ff44});
+  const el=new THREE.Mesh(eG,eM.clone());el.position.set(-0.42,0.72,5.0);g.add(el);
+  const er=new THREE.Mesh(eG,eM.clone());er.position.set( 0.42,0.72,5.0);g.add(er);
+  g.userData={lwp:lw,rwp:rw,wingAngle:0,type:'roamDragon',alive:true,animT:0,
+    roamAngle:Math.random()*Math.PI*2,roamR:60+Math.random()*80,
+    baseX:0,baseZ:0,baseY:30+Math.random()*20};
+  return g;
+}
+
+// ── Human player mesh ─────────────────────────────────────────────────────────
+function makeHumanMesh(dt){
+  const g=new THREE.Group();
+  // Armor colored by dragon type
+  const aCol=dt.body,skCol=0xE8B88A;
+  addBox(g,0.68,0.95,0.58,mat(aCol,{flatShading:true}));        // body
+  addBox(g,0.55,0.55,0.55,mat(skCol,{flatShading:true}), 0,0.78,0); // head
+  addBox(g,0.62,0.22,0.55,mat(aCol,{flatShading:true}), -0.5,0.3,0,0,0, 0.25); // larm
+  addBox(g,0.62,0.22,0.55,mat(aCol,{flatShading:true}),  0.5,0.3,0,0,0,-0.25); // rarm
+  addBox(g,0.26,0.8,0.28,mat(0x222244,{flatShading:true}),-0.2,-0.9,0); // lleg
+  addBox(g,0.26,0.8,0.28,mat(0x222244,{flatShading:true}), 0.2,-0.9,0); // rleg
+  // Helmet visor
+  addBox(g,0.6,0.22,0.1,mat(dt.bodyD,{flatShading:true}), 0,0.78,0.3);
+  g.userData={animT:0,walkCycle:0};
+  return g;
+}
+
+// ── Shadow Dragon (elite enemy — acid/shadow attacks) ─────────────────────────
+function makeShadowDragonMesh(){
+  const g=new THREE.Group();
+  const FS={flatShading:true};
+  const mB=mat(0x0a000a,FS),mA=mat(0x1a0028,FS),mW=mat(0x0d001a,{side:THREE.DoubleSide,flatShading:true,transparent:true,opacity:.85});
+  addBox(g,2.0,0.9,3.8,mB);
+  addBox(g,0.72,0.72,1.6,mB,0,0.25,2.5,-0.3);
+  addBox(g,1.1,0.9,1.5,mA,0,0.55,3.8);
+  addBox(g,0.7,0.5,0.9,mA,0,0.42,4.8);
+  // Spiky acid spines along back
+  for(let i=0;i<5;i++) addBox(g,0.2,0.5+i*0.08,0.2,mat(0x44ff44,{flatShading:true}),0,0.9+i*0.05,-1+i*0.7);
+  const lw=new THREE.Group();lw.position.set(-1.0,0.15,0.6);
+  const rw=new THREE.Group();rw.position.set( 1.0,0.15,0.6);
+  lw.add(new THREE.Mesh(makeWingGeo(false,'soul'),mW.clone()));
+  rw.add(new THREE.Mesh(makeWingGeo(true,'soul'),mW.clone()));
+  g.add(lw);g.add(rw);
+  for(let i=0;i<6;i++){const s=0.75-i*0.09;addBox(g,s,s,0.85,mB,0,-i*0.07,-2.5-i*0.9,i*0.09);}
+  const eG=new THREE.SphereGeometry(0.16,6,6);
+  const eM=new THREE.MeshBasicMaterial({color:0x44ff44});
+  const el=new THREE.Mesh(eG,eM.clone());el.position.set(-0.42,0.72,5.0);g.add(el);
+  const er=new THREE.Mesh(eG,eM.clone());er.position.set( 0.42,0.72,5.0);g.add(er);
+  g.userData={lwp:lw,rwp:rw,wingAngle:0,type:'shadowDragon',alive:true,animT:0,
+    hp:120,maxHp:120,shootT:2+Math.random()*2,si:2.5+Math.random()*1.5,
+    spd:14,dmg:35,pts:400,flyOrbit:Math.random()*Math.PI*2};
+  return g;
+}
+
+// ── King Hunter (boss) ────────────────────────────────────────────────────────
+function makeKingHunterMesh(){
+  const g=new THREE.Group();
+  // Large, gold-armored boss
+  addBox(g,1.0,1.4,0.85,mat(0x1a1430,{flatShading:true}));  // black plate body
+  addBox(g,0.85,0.85,0.75,mat(0x2a2050,{flatShading:true}),  0,1.1,0);  // helm
+  addBox(g,0.95,0.3,0.0,mat(0xFFD700,{flatShading:true}), 0,1.4,0.38);  // gold visor
+  // Cape
+  addBox(g,0.9,1.4,0.1,mat(0x660000,{flatShading:true}), 0,0.3,-0.5);
+  // Arms
+  addBox(g,0.9,0.3,0.7,mat(0x1a1430,{flatShading:true}), -0.95,0.55,0,0,0, 0.3);
+  addBox(g,0.9,0.3,0.7,mat(0x1a1430,{flatShading:true}),  0.95,0.55,0,0,0,-0.3);
+  // Sword (right hand)
+  addBox(g,0.1,2.2,0.08,mat(0xaaaacc,{flatShading:true}), 1.6,-0.1,0.3, 0,0,-0.5);
+  addBox(g,0.6,0.1,0.08,mat(0xFFD700,{flatShading:true}), 1.5,0.75,0.3);  // crossguard
+  // Legs
+  addBox(g,0.38,1.0,0.42,mat(0x1a1430,{flatShading:true}),-0.3,-1.2,0);
+  addBox(g,0.38,1.0,0.42,mat(0x1a1430,{flatShading:true}), 0.3,-1.2,0);
+  g.userData={type:'kingHunter',alive:true,isKing:true,
+    hp:200,maxHp:200,si:1.5+Math.random(),spd:16,dmg:30,pts:1000,shootT:1.5};
+  return g;
+}
+
+// ── Dragon Hunter ─────────────────────────────────────────────────────────────
+function makeDragonHunterMesh(){
+  const g=new THREE.Group();
+  // Dark armored human with crossbow
+  addBox(g,0.72,1.0,0.6,mat(0x1a1a2a,{flatShading:true}));  // black armor body
+  addBox(g,0.6,0.6,0.6,mat(0xcc8844,{flatShading:true}),  0,0.8,0);  // head
+  addBox(g,0.6,0.22,0.5,mat(0x0a0a1a),  -0.5,0.3,0,0,0, 0.25);     // larm
+  addBox(g,0.6,0.22,0.5,mat(0x0a0a1a),   0.5,0.3,0,0,0,-0.25);     // rarm
+  addBox(g,0.26,0.8,0.28,mat(0x1a1a2a), -0.2,-0.9,0); // lleg
+  addBox(g,0.26,0.8,0.28,mat(0x1a1a2a),  0.2,-0.9,0); // rleg
+  // Crossbow
+  addBox(g,0.08,0.08,0.9,mat(0x5a3a0a),  0.6,0.3,0.4);
+  addBox(g,0.6,0.1,0.08,mat(0x5a3a0a),   0.6,0.3,0.42);
+  // Skull badge (orange detail = dragon scale trophy)
+  addBox(g,0.3,0.14,0.08,mat(0xff8800),  0,0.2,0.32);
+  g.userData={type:'hunter',alive:true};return g;
+}
+
 // Enemy models
 function makeArcherMesh(){
   const g=new THREE.Group();
@@ -560,7 +813,7 @@ let projectiles=[];
 const projGeo=new THREE.SphereGeometry(0.3,4,4);
 
 function spawnProjectile(type,pos,target){
-  const col=type==='magic'?0xff44ff:type==='rock'?0x886644:0xcc8844;
+  const col=type==='magic'?0xff44ff:type==='rock'?0x886644:type==='bolt'?0xFFD700:type==='acid'?0x44ff44:0xcc8844;
   const mesh=new THREE.Mesh(projGeo,new THREE.MeshBasicMaterial({color:col}));
   mesh.position.copy(pos);
   const dir=new THREE.Vector3().subVectors(target,pos).normalize();
@@ -576,13 +829,14 @@ function updateProjectiles(dt){
     p.userData.vel.y-=5*dt; // gravity
     p.userData.life-=dt;
     if(p.userData.life<=0){scene.remove(p);projectiles.splice(i,1);continue;}
-    // Hit dragon
+    // Hit dragon or human
     if(!ddead&&dinvT<=0){
-      if(p.position.distanceTo(dragonMesh.position)<4){
-        dhp-=p.userData.dmg;dinvT=1.5;
-        scene.remove(p);projectiles.splice(i,1);
-        if(dhp<=0&&!ddead){ddead=true;dhp=0;}
-        continue;
+      const target=isHuman&&humanMesh?humanMesh:dragonMesh;
+      if(p.position.distanceTo(target.position)<(isHuman?2.5:4)){
+        if(isHuman){humanHP-=p.userData.dmg;if(humanHP<=0&&!ddead){ddead=true;humanHP=0;endGame();}}
+        else{dhp-=p.userData.dmg;if(dhp<=0&&!ddead){ddead=true;dhp=0;}}
+        dinvT=1.5;
+        scene.remove(p);projectiles.splice(i,1);continue;
       }
     }
   }
@@ -612,7 +866,7 @@ function spawnZone(cx,cz){
       scene.add(t);objects.push(t);
     }
 
-    // Building
+    // Building — villages are HOSTILE (dragon hunters live here)
     if(Math.random()<0.07){
       const isC=Math.random()<.3;
       const b=isC?makeCastleMesh():makeVillageMesh();
@@ -622,12 +876,21 @@ function spawnZone(cx,cz){
       b.position.set(bx,gy,bz);
       scene.add(b);objects.push(b);activeBuildings.push(b);
 
-      // Enemies near building
-      const ne=isC?2:1;
+      // King Hunter boss in castles; dragon hunters + archers guard villages
+      if(isC){
+        // Spawn King Hunter (boss) inside castle
+        const king=makeEnemy3d('kingHunter');
+        king.position.set(bx,gy+3,bz);
+        king.userData.guardBuilding=b; // when king dies, village becomes safe
+        scene.add(king);objects.push(king);activeEnemies.push(king);
+      }
+      const ne=isC?3:2;
       for(let i=0;i<ne;i++){
-        const eType=enemyBudget()<2?'archer':Math.random()<.4?'mage':Math.random()<.5?'ogre':'archer';
+        const roll=Math.random();
+        const eType=isC?(roll<0.5?'hunter':roll<0.75?'archer':'mage')
+                       :(roll<0.45?'hunter':roll<0.75?'archer':'ogre');
         const e=makeEnemy3d(eType);
-        const eH=isC?12:6;
+        const eH=isC?3:2;
         e.position.set(bx+(Math.random()-.5)*20,gy+eH,bz+(Math.random()-.5)*20);
         scene.add(e);objects.push(e);activeEnemies.push(e);
       }
@@ -641,6 +904,15 @@ function spawnZone(cx,cz){
       const ex=wx0+Math.random()*ZONE,ez=wz0+Math.random()*ZONE;
       e.position.set(ex,groundY(ex,ez)+1.5,ez);
       scene.add(e);objects.push(e);activeEnemies.push(e);
+    }
+
+    // Shadow Dragon (elite flying, rare, appears in deep zones)
+    if(dist2>9&&Math.random()<0.012*Math.max(0.3,enemyBudget()*0.3)){
+      const sd=makeEnemy3d('shadowDragon');
+      const sdx=wx0+Math.random()*ZONE,sdz=wz0+Math.random()*ZONE;
+      sd.position.set(sdx,groundY(sdx,sdz)+45+Math.random()*25,sdz);
+      sd.userData.baseY=sd.position.y;sd.userData.flyOrbit=Math.random()*Math.PI*2;
+      scene.add(sd);objects.push(sd);activeEnemies.push(sd);
     }
 
     // Flying enemy dragon (rare, appears with score)
@@ -661,6 +933,37 @@ function spawnZone(cx,cz){
       mt.position.set(mx,groundY(mx,mz),mz);
       scene.add(mt);objects.push(mt);
     }
+
+    // Tall Dragon Rider Mountain (rare, far zones)
+    if(dist2>16&&Math.random()<0.015){
+      const mh=200+Math.random()*100;
+      const rx=wx0+ZONE/2+(Math.random()-.5)*60;
+      const rz=wz0+ZONE/2+(Math.random()-.5)*60;
+      const rmt=makeMountainMesh(mh);
+      rmt.position.set(rx,groundY(rx,rz),rz);
+      scene.add(rmt);objects.push(rmt);
+      // Add 2-3 dragon riders on the peak
+      const nRiders=2+~~(Math.random()*2);
+      for(let i=0;i<nRiders;i++){
+        const dr=makeDragonRiderMesh();
+        const angle=i/nRiders*Math.PI*2;
+        dr.position.set(rx+Math.cos(angle)*8, groundY(rx,rz)+mh+2, rz+Math.sin(angle)*8);
+        dr.rotation.y=angle+Math.PI;
+        scene.add(dr);objects.push(dr);
+        friendlyNPCs.push(dr);
+      }
+    }
+
+    // Roaming friendly dragon (rare)
+    if(dist2>4&&Math.random()<0.012){
+      const rdx=wx0+ZONE/2,rdz=wz0+ZONE/2;
+      const rd=makeRoamDragonMesh();
+      rd.position.set(rdx,groundY(rdx,rdz)+40+Math.random()*20,rdz);
+      rd.userData.baseX=rdx;rd.userData.baseZ=rdz;
+      rd.userData.baseY=rd.position.y;
+      scene.add(rd);objects.push(rd);
+      roamDragons.push(rd);
+    }
   }
 
   zoneMap.set(key,objects);
@@ -673,18 +976,24 @@ function groundY(x,z){
 }
 
 function makeEnemy3d(type){
-  const m=type==='ogre'?makeOgreMesh():type==='mage'?makeMageMesh():type==='dragon'?makeEnemyDragonMesh():makeArcherMesh();
-  const cfg={archer:{hp:20,maxHp:20,si:3+Math.random()*2,spd:18,dmg:12,pts:60},
-              ogre:  {hp:60,maxHp:60,si:5+Math.random()*2,spd:14,dmg:20,pts:120},
-              mage:  {hp:30,maxHp:30,si:2+Math.random()*2,spd:22,dmg:15,pts:100},
-              dragon:{hp:60,maxHp:60,si:3+Math.random()*2,spd:10,dmg:25,pts:200}};
+  const m=type==='ogre'?makeOgreMesh():type==='mage'?makeMageMesh():
+           type==='dragon'?makeEnemyDragonMesh():type==='hunter'?makeDragonHunterMesh():
+           type==='shadowDragon'?makeShadowDragonMesh():type==='kingHunter'?makeKingHunterMesh():makeArcherMesh();
+  const cfg={archer:      {hp:20,maxHp:20,si:3+Math.random()*2,spd:18,dmg:12,pts:60},
+              ogre:        {hp:60,maxHp:60,si:5+Math.random()*2,spd:14,dmg:20,pts:120},
+              mage:        {hp:30,maxHp:30,si:2+Math.random()*2,spd:22,dmg:15,pts:100},
+              dragon:      {hp:60,maxHp:60,si:3+Math.random()*2,spd:10,dmg:25,pts:200},
+              hunter:      {hp:35,maxHp:35,si:2+Math.random()*1.5,spd:20,dmg:18,pts:80},
+              shadowDragon:{hp:120,maxHp:120,si:2+Math.random()*1.5,spd:14,dmg:35,pts:400},
+              kingHunter:  {hp:200,maxHp:200,si:1.5,spd:16,dmg:30,pts:1000}};
   Object.assign(m.userData,cfg[type]);
-  m.userData.shootT=Math.random()*m.userData.si;
+  if(!m.userData.shootT)m.userData.shootT=Math.random()*m.userData.si;
   return m;
 }
 
 function despawnFarZones(){
-  const pcx=~~(dragonMesh.position.x/ZONE),pcz=~~(dragonMesh.position.z/ZONE);
+  const ref=isHuman&&humanMesh?humanMesh.position:dragonMesh.position;
+  const pcx=~~(ref.x/ZONE),pcz=~~(ref.z/ZONE);
   for(const[key,objs] of zoneMap){
     const[cx,cz]=key.split(',').map(Number);
     if(Math.abs(cx-pcx)>RD+2||Math.abs(cz-pcz)>RD+2){
@@ -692,7 +1001,8 @@ function despawnFarZones(){
         scene.remove(o);
         activeEnemies=activeEnemies.filter(e=>e!==o);
         activeBuildings=activeBuildings.filter(b=>b!==o);
-        // Clean up associated projectiles
+        friendlyNPCs=friendlyNPCs.filter(n=>n!==o);
+        roamDragons=roamDragons.filter(r=>r!==o);
       });
       zoneMap.delete(key);
     }
@@ -700,19 +1010,38 @@ function despawnFarZones(){
 }
 
 function updateZones(){
-  const pcx=~~(dragonMesh.position.x/ZONE),pcz=~~(dragonMesh.position.z/ZONE);
+  const ref=isHuman&&humanMesh?humanMesh.position:dragonMesh.position;
+  const pcx=~~(ref.x/ZONE),pcz=~~(ref.z/ZONE);
   for(let dz=-RD;dz<=RD+2;dz++)for(let dx=-RD;dx<=RD;dx++)spawnZone(pcx+dx,pcz+dz);
   if(gs==='playing'&&frame%180===0)despawnFarZones();
 }
 
 // ── Hit logic ─────────────────────────────────────────────────────────────────
-function hitEnemy(e){
+function hitEnemy(e,dmgAmt){
   if(!e.userData.alive)return;
-  e.userData.hp-=dtype.dmg;
+  const dmg=dmgAmt||dtype.dmg;
+  e.userData.hp-=dmg;
   if(dtype.id==='ice')e.userData.shootT+=3;
   if(e.userData.hp<=0){
     e.userData.alive=false;score+=e.userData.pts;kills++;
     floatWorld(e.position,'+'+ e.userData.pts,'#ff8888');
+    // King Hunter death → liberate guarded building
+    if(e.userData.isKing&&e.userData.guardBuilding){
+      e.userData.guardBuilding.userData.safe=true;
+      floatWorld(e.userData.guardBuilding.position,'⚔ LIBERATED!','#44ff44');
+      // Spawn rider NPCs to signal safety
+      const b=e.userData.guardBuilding;
+      for(let i=0;i<2;i++){
+        const rp=makeVillagerMesh();
+        rp.userData.npcName='Freed Villager';
+        rp.userData.npcText='You defeated the King Hunter! This place is free now. Thank you, dragonrider!';
+        rp.position.set(b.position.x+(Math.random()-.5)*12,b.position.y+1.5,b.position.z+(Math.random()-.5)*12);
+        scene.add(rp);friendlyNPCs.push(rp);
+      }
+    }
+    if(e.userData.type==='shadowDragon'){
+      floatWorld(e.position,'☠ SHADOW SLAIN','#aa44ff');
+    }
     scene.remove(e);activeEnemies=activeEnemies.filter(x=>x!==e);
   }
 }
@@ -745,6 +1074,18 @@ let isLanded=false,landedY=0,fireCooldown=0;
 const camPos=new THREE.Vector3(0,30,-20);
 const camTarget=new THREE.Vector3(0,20,10);
 
+// ── Human player mode ─────────────────────────────────────────────────────────
+let isHuman=false;         // true = playing as human on ground
+let humanMesh=null;
+let humanYaw=0,humanPitch=0; // mouse look
+let humanHP=100;
+let mouseDX=0,mouseDY=0; // accumulated mouse delta
+let pointerLocked=false;
+let nearNPC=null;          // closest NPC in range
+let dialogOpen=false;
+let friendlyNPCs=[];        // rider NPCs only (safe)
+let roamDragons=[];         // roaming friendly dragons
+
 try{best=parseInt(localStorage.getItem('dragonbattle_best')||'0');}catch(e){}
 function enemyBudget(){return Math.max(1,~~(score/400));}
 
@@ -759,8 +1100,71 @@ document.addEventListener('keydown',e=>{
     if(e.code==='Enter'||e.code==='Space')startGame();
   }
   if(gs==='dead'&&(e.code==='Enter'||e.code==='Space'))showSelect();
+  if(gs==='playing'){
+    // T = toggle human/dragon
+    if(e.code==='KeyT'&&!dialogOpen)toggleHumanMode();
+    // E = interact with NPC
+    if(e.code==='KeyE'){
+      if(dialogOpen){closeDialog();}
+      else if(nearNPC)openDialog(nearNPC);
+    }
+  }
 });
 document.addEventListener('keyup',e=>{delete keys[e.code];});
+
+// Pointer lock for mouse look in human mode
+canvas.addEventListener('click',()=>{
+  if(gs==='playing'&&isHuman&&!dialogOpen)canvas.requestPointerLock();
+});
+document.addEventListener('pointerlockchange',()=>{
+  pointerLocked=document.pointerLockElement===canvas;
+});
+document.addEventListener('mousemove',e=>{
+  if(pointerLocked&&isHuman&&!dialogOpen){
+    mouseDX+=e.movementX*0.003;
+    mouseDY+=e.movementY*0.002;
+  }
+});
+
+// Dialog close on tap
+document.getElementById('dialog').addEventListener('click',()=>{if(dialogOpen)closeDialog();});
+
+function toggleHumanMode(){
+  if(!isLanded&&!isHuman)return; // must be landed to dismount
+  isHuman=!isHuman;
+  if(isHuman){
+    // Spawn human at dragon position
+    if(!humanMesh){humanMesh=makeHumanMesh(dtype);scene.add(humanMesh);}
+    humanMesh.position.copy(dragonMesh.position);
+    humanMesh.position.y=groundY(dragonMesh.position.x,dragonMesh.position.z)+1.5;
+    humanYaw=dYaw;humanPitch=0;
+    humanMesh.visible=true;
+    dragonMesh.visible=true; // dragon stays (waits nearby)
+    document.getElementById('human-badge').style.display='block';
+    if(canvas.requestPointerLock)canvas.requestPointerLock();
+  } else {
+    // Remount dragon
+    if(humanMesh)humanMesh.visible=false;
+    dragonMesh.position.copy(humanMesh?humanMesh.position:dragonMesh.position);
+    dragonMesh.position.y=landedY||groundY(dragonMesh.position.x,dragonMesh.position.z)+3.5;
+    document.getElementById('human-badge').style.display='none';
+    if(document.exitPointerLock)document.exitPointerLock();
+    pointerLocked=false;
+  }
+}
+
+function openDialog(npc){
+  dialogOpen=true;
+  document.getElementById('dialog-name').textContent=npc.userData.npcName;
+  document.getElementById('dialog-text').textContent=npc.userData.npcText;
+  document.getElementById('dialog').style.display='block';
+  if(document.exitPointerLock)document.exitPointerLock();
+}
+function closeDialog(){
+  dialogOpen=false;
+  document.getElementById('dialog').style.display='none';
+  if(isHuman&&canvas.requestPointerLock)canvas.requestPointerLock();
+}
 
 function isMob(){return'ontouchstart'in window||navigator.maxTouchPoints>0;}
 let swipeX=null;
@@ -812,7 +1216,12 @@ function startGame(){
   dtype=DT[selectedType];
   gs='playing';score=0;kills=0;frame=0;
   ddead=false;ddeathT=0;dinvT=0;fireArr=[];projectiles.forEach(p=>scene.remove(p));projectiles=[];
-  activeEnemies=[];activeBuildings=[];
+  activeEnemies=[];activeBuildings=[];friendlyNPCs=[];roamDragons=[];
+  isHuman=false;humanHP=100;mouseDX=0;mouseDY=0;nearNPC=null;dialogOpen=false;
+  if(humanMesh){scene.remove(humanMesh);humanMesh=null;}
+  document.getElementById('human-badge').style.display='none';
+  document.getElementById('dialog').style.display='none';
+  document.getElementById('minimap').style.display='block';
   // Clear world
   for(const[,objs] of zoneMap)objs.forEach(o=>scene.remove(o));
   zoneMap.clear();
@@ -950,29 +1359,134 @@ function update(ts){
         e.position.y+=Math.sin(e.userData.animT*2)*.02;
       }
       // Enemy dragon: circle player at altitude, swoop to attack
-      if(e.userData.type==='dragon'){
-        e.userData.flyOrbit=(e.userData.flyOrbit||0)+dt*0.4;
-        const orbitR=80+Math.sin(e.userData.animT*0.3)*30;
-        const tx=dragonMesh.position.x+Math.cos(e.userData.flyOrbit)*orbitR;
-        const tz=dragonMesh.position.z+Math.sin(e.userData.flyOrbit)*orbitR;
+      if(e.userData.type==='dragon'||e.userData.type==='shadowDragon'){
+        e.userData.flyOrbit=(e.userData.flyOrbit||0)+dt*(e.userData.type==='shadowDragon'?0.6:0.4);
+        const orbitR=(e.userData.type==='shadowDragon'?50:80)+Math.sin(e.userData.animT*0.3)*30;
+        const ref=isHuman&&humanMesh?humanMesh.position:dragonMesh.position;
+        const tx=ref.x+Math.cos(e.userData.flyOrbit)*orbitR;
+        const tz=ref.z+Math.sin(e.userData.flyOrbit)*orbitR;
         const ty=e.userData.baseY||50;
         const toT=new THREE.Vector3(tx-e.position.x,ty-e.position.y,tz-e.position.z);
         e.position.addScaledVector(toT.normalize(),e.userData.spd*dt);
-        e.lookAt(dragonMesh.position);
+        e.lookAt(ref);
         // Animate wings
         e.userData.wingAngle=(e.userData.wingAngle||0)+dt*4;
         const wa=Math.sin(e.userData.wingAngle)*.5;
-        e.userData.lwp.rotation.z=wa;e.userData.rwp.rotation.z=-wa;
+        if(e.userData.lwp){e.userData.lwp.rotation.z=wa;e.userData.rwp.rotation.z=-wa;}
+        // Shadow dragon: acid pulse visual (green spine flash)
+        if(e.userData.type==='shadowDragon'&&frame%30===0){
+          floatWorld(e.position,'☠','#44ff44');
+        }
+      }
+      // King Hunter: charges player on ground, big swings
+      if(e.userData.type==='kingHunter'){
+        const ref=isHuman&&humanMesh?humanMesh.position:dragonMesh.position;
+        const toP=new THREE.Vector3().subVectors(ref,e.position);
+        toP.y=0;const dist=toP.length();
+        if(dist>5&&dist<300){
+          toP.normalize().multiplyScalar(e.userData.spd*dt);
+          e.position.add(toP);
+        }
+        e.position.y=groundY(e.position.x,e.position.z)+3;
+        e.lookAt(ref.x,e.position.y,ref.z);
       }
       // Shoot
       e.userData.shootT-=dt;
       const distToDragon=e.position.distanceTo(dragonMesh.position);
       if(e.userData.shootT<=0&&distToDragon<400){
         e.userData.shootT=e.userData.si;
-        const pType=e.userData.type==='mage'?'magic':e.userData.type==='ogre'?'rock':e.userData.type==='dragon'?'magic':'arrow';
+        const pType=e.userData.type==='mage'?'magic':e.userData.type==='ogre'?'rock':
+        e.userData.type==='dragon'||e.userData.type==='shadowDragon'?'magic':
+        e.userData.type==='kingHunter'?'bolt':'arrow';
         spawnProjectile(pType,e.position.clone(),dragonMesh.position.clone());
       }
     }
+
+    // ── HUMAN MODE ──────────────────────────────────────────────────────────────
+    if(isHuman&&humanMesh&&!dialogOpen){
+      // Apply mouse look
+      humanYaw-=mouseDX;
+      humanPitch=Math.max(-0.5,Math.min(0.5,humanPitch-mouseDY));
+      mouseDX=0;mouseDY=0;
+      const hLF=keys['ArrowLeft']||keys['KeyA'];
+      const hRT=keys['ArrowRight']||keys['KeyD'];
+      const hFW=keys['ArrowUp']||keys['KeyW'];
+      const hBK=keys['ArrowDown']||keys['KeyS'];
+      if(hLF)humanYaw+=1.2*dt;
+      if(hRT)humanYaw-=1.2*dt;
+      const gfwd=new THREE.Vector3(0,0,1).applyEuler(new THREE.Euler(0,humanYaw,0));
+      const gright=new THREE.Vector3(1,0,0).applyEuler(new THREE.Euler(0,humanYaw,0));
+      const hSpd=6;
+      if(hFW)humanMesh.position.addScaledVector(gfwd, hSpd*dt);
+      if(hBK)humanMesh.position.addScaledVector(gfwd,-hSpd*dt);
+      humanMesh.position.y=groundY(humanMesh.position.x,humanMesh.position.z)+1.5;
+      humanMesh.rotation.set(0,humanYaw,0);
+      // Walk animation (bob legs/arms)
+      if(hFW||hBK){humanMesh.userData.walkCycle+=dt*8;}
+      // Camera: first-person in human mode
+      const eyeH=new THREE.Vector3(0,0.6,0);
+      const eyePos=humanMesh.position.clone().add(eyeH);
+      const lookDir=new THREE.Vector3(0,0,1).applyEuler(new THREE.Euler(humanPitch,humanYaw,0));
+      camera.position.copy(eyePos);
+      camera.lookAt(eyePos.clone().add(lookDir));
+      // NPC proximity check
+      let closest=null,closestD=12;
+      for(const npc of friendlyNPCs){
+        const d=humanMesh.position.distanceTo(npc.position);
+        if(d<closestD){closest=npc;closestD=d;}
+      }
+      nearNPC=closest;
+      const hint=document.getElementById('interact-hint');
+      if(nearNPC){
+        hint.textContent='[ E ] Talk to '+nearNPC.userData.npcName;
+        hint.style.display='block';
+      } else {
+        hint.style.display='none';
+      }
+      // Human attack: Space = sword swing
+      if(keys['Space']&&!dialogOpen){
+        for(const e of activeEnemies){
+          if(!e.userData.alive)continue;
+          if(humanMesh.position.distanceTo(e.position)<5){
+            hitEnemy(e,25);floatWorld(e.position,'⚔','#FFD700');
+          }
+        }
+      }
+      // Enemy attack on human
+      if(dinvT<=0){
+        for(const e of activeEnemies){
+          if(!e.userData.alive)continue;
+          if(humanMesh.position.distanceTo(e.position)<4){
+            humanHP-=e.userData.dmg*dt*2;dinvT=1.0;
+            if(humanHP<=0&&!ddead){ddead=true;humanHP=0;endGame();}
+          }
+        }
+      }
+    } else if(!isHuman){
+      document.getElementById('interact-hint').style.display='none';
+    }
+
+    // ── ROAMING DRAGONS AI ───────────────────────────────────────────────────
+    for(let i=roamDragons.length-1;i>=0;i--){
+      const rd=roamDragons[i];
+      if(!rd.userData.alive)continue;
+      rd.userData.animT+=dt;
+      rd.userData.roamAngle+=dt*0.25;
+      const orbitR=rd.userData.roamR;
+      const tx=rd.userData.baseX+Math.cos(rd.userData.roamAngle)*orbitR;
+      const tz=rd.userData.baseZ+Math.sin(rd.userData.roamAngle)*orbitR;
+      const ty=rd.userData.baseY;
+      const toT=new THREE.Vector3(tx-rd.position.x,ty-rd.position.y,tz-rd.position.z);
+      rd.position.addScaledVector(toT.normalize(),8*dt);
+      rd.lookAt(new THREE.Vector3(tx,ty,tz));
+      // Wing flap
+      rd.userData.wingAngle+=dt*4;
+      const wa=Math.sin(rd.userData.wingAngle)*.5;
+      rd.userData.lwp.rotation.z=wa;rd.userData.rwp.rotation.z=-wa;
+    }
+
+    // ── DAY/NIGHT ────────────────────────────────────────────────────────────
+    updateDayNight(dt);
 
     updateZones();
     updateFireParticles(dt);
@@ -995,17 +1509,26 @@ function update(ts){
 
 // ── HUD ───────────────────────────────────────────────────────────────────────
 function updateHUD(){
-  document.getElementById('type-badge').textContent=dtype.emoji+' '+dtype.name;
-  document.getElementById('type-badge').style.color=dtype.eyeC;
-  document.getElementById('hp-fill').style.width=~~(100*Math.max(0,dhp)/dmaxHp)+'%';
-  document.getElementById('fuel-fill').style.background='#'+dtype.breath[0].toString(16).padStart(6,'0');
-  document.getElementById('fuel-fill').style.width=~~(100*dfuel/dmaxFuel)+'%';
+  document.getElementById('type-badge').textContent=dtype.emoji+' '+(isHuman?'HUMAN':dtype.name);
+  document.getElementById('type-badge').style.color=isHuman?'#88ff44':dtype.eyeC;
+  if(isHuman){
+    document.getElementById('hp-fill').style.width=~~(100*Math.max(0,humanHP)/100)+'%';
+    document.getElementById('fuel-fill').style.width='0%';
+  } else {
+    document.getElementById('hp-fill').style.width=~~(100*Math.max(0,dhp)/dmaxHp)+'%';
+    document.getElementById('fuel-fill').style.background='#'+dtype.breath[0].toString(16).padStart(6,'0');
+    document.getElementById('fuel-fill').style.width=~~(100*dfuel/dmaxFuel)+'%';
+  }
   document.getElementById('sc').textContent='SCORE '+score;
   document.getElementById('bs').textContent='BEST '+best;
   document.getElementById('kl').textContent='KILLS '+kills;
-  const dist=~~(Math.hypot(dragonMesh.position.x,dragonMesh.position.z)/10);
+  const ref=isHuman&&humanMesh?humanMesh.position:dragonMesh.position;
+  const dist=~~(Math.hypot(ref.x,ref.z)/10);
   document.getElementById('dst').textContent=dist+' km';
-  document.getElementById('land-badge').style.display=isLanded?'block':'none';
+  document.getElementById('land-badge').style.display=(isLanded&&!isHuman)?'block':'none';
+  // Day/night badge
+  const tod=dayTime<0.2||dayTime>0.8?'🌙 NIGHT':dayTime<0.4||dayTime>0.6?'🌅 DAWN/DUSK':'☀ DAY';
+  document.getElementById('dst').textContent=dist+' km  '+tod;
 }
 
 // ── 2D overlay canvas for floaters ────────────────────────────────────────────
@@ -1024,6 +1547,68 @@ function drawOverlay(){
     oc.fillStyle=f.col;oc.fillText(f.text,f.sx,f.sy);
   }
   oc.globalAlpha=1;
+  // Crosshair in human mode
+  if(isHuman&&gs==='playing'&&!dialogOpen){
+    oc.strokeStyle='rgba(255,255,255,0.7)';oc.lineWidth=1;
+    const cx2=cW/2,cy2=cH/2;
+    oc.beginPath();oc.moveTo(cx2-8,cy2);oc.lineTo(cx2+8,cy2);
+    oc.moveTo(cx2,cy2-8);oc.lineTo(cx2,cy2+8);
+    oc.stroke();
+  }
+}
+
+// ── Minimap ───────────────────────────────────────────────────────────────────
+const mmCanvas=document.getElementById('mm-canvas');
+const mmCtx=mmCanvas.getContext('2d');
+const MM_SIZE=110,MM_SCALE=1/8; // 1 pixel = 8 world units
+
+function drawMinimap(){
+  if(gs!=='playing')return;
+  const W=MM_SIZE,H=MM_SIZE;
+  mmCtx.clearRect(0,0,W,H);
+  // Background
+  mmCtx.fillStyle='rgba(0,0,0,0.6)';mmCtx.fillRect(0,0,W,H);
+  const ref=isHuman&&humanMesh?humanMesh.position:dragonMesh.position;
+  const cx=ref.x,cz=ref.z;
+  // Draw zone dots for enemies (red), friendly NPCs (green), roam dragons (cyan)
+  const dot=(wx,wz,col,r)=>{
+    const mx=W/2+(wx-cx)*MM_SCALE;
+    const mz=H/2+(wz-cz)*MM_SCALE;
+    if(mx<0||mx>W||mz<0||mz>H)return;
+    mmCtx.fillStyle=col;mmCtx.beginPath();
+    mmCtx.arc(mx,mz,r,0,Math.PI*2);mmCtx.fill();
+  };
+  // Draw ground grid hint
+  mmCtx.strokeStyle='rgba(255,255,255,0.08)';mmCtx.lineWidth=0.5;
+  for(let g2=-3;g2<=3;g2++){
+    const gx=W/2+(g2*ZONE-((cx%ZONE+ZONE)%ZONE))*MM_SCALE;
+    const gz=H/2+(g2*ZONE-((cz%ZONE+ZONE)%ZONE))*MM_SCALE;
+    mmCtx.beginPath();mmCtx.moveTo(gx,0);mmCtx.lineTo(gx,H);mmCtx.stroke();
+    mmCtx.beginPath();mmCtx.moveTo(0,gz);mmCtx.lineTo(W,gz);mmCtx.stroke();
+  }
+  for(const e of activeEnemies){if(e.userData.alive)dot(e.position.x,e.position.z,e.userData.type==='dragon'?'#ff4400':'#ff2222',2);}
+  for(const n of friendlyNPCs){dot(n.position.x,n.position.z,'#44ff44',2.5);}
+  for(const r of roamDragons){dot(r.position.x,r.position.z,'#44ffff',2);}
+  for(const b of activeBuildings){
+    const col=b.userData.safe?'#44ff44':b.userData.type==='castle'?'#ffaa00':'#ff8800';
+    dot(b.position.x,b.position.z,col,3.5);
+  }
+  // Player dot
+  const br=getDayBrightness(dayTime);
+  mmCtx.fillStyle='#ffffff';mmCtx.beginPath();
+  mmCtx.arc(W/2,H/2,3.5,0,Math.PI*2);mmCtx.fill();
+  // Player direction arrow
+  const pYaw=isHuman?humanYaw:dYaw;
+  mmCtx.strokeStyle='#ffffff';mmCtx.lineWidth=1.5;
+  mmCtx.beginPath();mmCtx.moveTo(W/2,H/2);
+  mmCtx.lineTo(W/2+Math.sin(pYaw)*10,H/2+Math.cos(pYaw)*10);mmCtx.stroke();
+  // Day/night tint
+  mmCtx.fillStyle=`rgba(0,0,20,${0.6-br*0.5})`;
+  mmCtx.fillRect(0,0,W,H);
+  // Compass
+  mmCtx.font='7px sans-serif';mmCtx.fillStyle='rgba(255,255,255,0.5)';
+  mmCtx.textAlign='center';mmCtx.textBaseline='top';
+  mmCtx.fillText('N',W/2,2);
 }
 
 // ── Main loop ─────────────────────────────────────────────────────────────────
@@ -1032,6 +1617,7 @@ function loop(ts){
   update(ts);
   renderer.render(scene,camera);
   drawOverlay();
+  drawMinimap();
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────

@@ -203,24 +203,33 @@ function makeTransparentColor(img,r2,g2,b2,tol=40){
 }
 let earthDragonCanvas=null,fireDragonCanvas=null,wyvernCanvas=null;
 let soulDragonCanvas=null,sunDragonCanvas=null,fireBallCanvas=null,blueBallCanvas=null,fireBreathCanvas=null;
-// Offscreen canvas for per-frame GIF background removal
+// GIF sprite renderer — strips solid bg colour, caches result, re-processes at ~12fps
 const _gifOC=document.createElement('canvas');const _gifOX=_gifOC.getContext('2d',{willReadFrequently:true});
-function drawGifNoBackground(img,dx,dy,dw,dh,tol=50){
+const _gifCache=new Map(); // src -> {canvas, lastMs, br,bg,bb}
+function drawGifNoBackground(img,dx,dy,dw,dh,br,bg,bb,tol=40){
   if(!img||!img.complete||!img.naturalWidth)return;
-  const iw=img.naturalWidth,ih=img.naturalHeight;
-  if(_gifOC.width!==iw)_gifOC.width=iw;
-  if(_gifOC.height!==ih)_gifOC.height=ih;
-  _gifOX.clearRect(0,0,iw,ih);
-  try{_gifOX.drawImage(img,0,0);}catch(e){return;}
-  let d;try{d=_gifOX.getImageData(0,0,iw,ih);}catch(e){ctx.drawImage(img,dx,dy,dw,dh);return;}
-  // sample top-left corner pixel as background colour — works for any bg
-  const br=d.data[0],bg=d.data[1],bb=d.data[2];
-  for(let i=0;i<d.data.length;i+=4){
-    if(Math.abs(d.data[i]-br)<tol&&Math.abs(d.data[i+1]-bg)<tol&&Math.abs(d.data[i+2]-bb)<tol)
-      d.data[i+3]=0;
+  const now=performance.now();
+  const key=img.src;
+  let cached=_gifCache.get(key);
+  if(!cached||now-cached.lastMs>80){  // re-process every 80ms (~12fps)
+    const iw=img.naturalWidth,ih=img.naturalHeight;
+    _gifOC.width=iw;_gifOC.height=ih;
+    _gifOX.clearRect(0,0,iw,ih);
+    try{_gifOX.drawImage(img,0,0);}catch(e){return;}
+    let d;try{d=_gifOX.getImageData(0,0,iw,ih);}catch(e){return;}
+    // use passed bg colour (or sample corner pixel if not passed)
+    const r=br??d.data[0],g=bg??d.data[1],b=bb??d.data[2];
+    for(let i=0;i<d.data.length;i+=4){
+      if(Math.abs(d.data[i]-r)<tol&&Math.abs(d.data[i+1]-g)<tol&&Math.abs(d.data[i+2]-b)<tol)
+        d.data[i+3]=0;
+    }
+    _gifOX.putImageData(d,0,0);
+    if(!cached){const oc=document.createElement('canvas');oc.width=iw;oc.height=ih;cached={canvas:oc,cx:oc.getContext('2d'),lastMs:0};_gifCache.set(key,cached);}
+    cached.canvas.width=iw;cached.canvas.height=ih;
+    cached.cx.drawImage(_gifOC,0,0);
+    cached.lastMs=now;
   }
-  _gifOX.putImageData(d,0,0);
-  ctx.drawImage(_gifOC,dx,dy,dw,dh);
+  ctx.drawImage(cached.canvas,dx,dy,dw,dh);
 }
 earthDragonImg.onload=()=>{earthDragonCanvas=makeTransparent(earthDragonImg,210);};
 fireDragonImg.onload=()=>{fireDragonCanvas=makeTransparent(fireDragonImg,210);};

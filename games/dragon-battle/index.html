@@ -1879,14 +1879,59 @@ document.addEventListener('keydown',e=>{
     }
     // ── DRAGON ABILITIES ────────────────────────────────────────────────────
     if(!dialogOpen&&gs==='playing'&&!isHuman){
-      // F = Attack burst (all types) — multi-shot volley
+      // F = Type special ability
       if(e.code==='KeyF'&&!wildDragons.some(w=>w.userData.tameable)){
         if(abilityCooldown.attack<=0){
-          abilityCooldown.attack=8;
           const ref3=dragonMesh.position;
-          let hit=0;
-          for(const en of activeEnemies){if(!en.userData.alive)continue;const d=ref3.distanceTo(en.position);if(d<200){spawnProjectile('magic',ref3.clone(),en.position.clone());hit++;if(hit>=3)break;}}
-          floatWorld(ref3,'⚔ ATTACK BURST!','#ffaa44');
+          if(dtype.id==='nature'){
+            // Poison Cloud — applies poison DoT to all enemies in 60u radius
+            abilityCooldown.attack=14;
+            let hit=0;
+            for(const en of activeEnemies){if(!en.userData.alive)continue;if(ref3.distanceTo(en.position)<60){burnMap.set(en,(burnMap.get(en)||0)+8);hit++;}}
+            floatWorld(ref3,'☠ POISON CLOUD'+(hit?' ('+hit+'!)':''),'#88ff44');
+          } else if(dtype.id==='fire'){
+            // Fire Cloud — burst of fire projectiles in all directions
+            abilityCooldown.attack=10;
+            for(let a=0;a<8;a++){
+              const ang=a/8*Math.PI*2;
+              const tgt=ref3.clone().add(new THREE.Vector3(Math.sin(ang)*80,0,Math.cos(ang)*80));
+              spawnProjectile('bolt',ref3.clone(),tgt);
+            }
+            // Also burn nearby enemies
+            for(const en of activeEnemies){if(!en.userData.alive)continue;if(ref3.distanceTo(en.position)<50)burnMap.set(en,(burnMap.get(en)||0)+5);}
+            floatWorld(ref3,'🔥 FIRE CLOUD!','#ff6622');
+          } else if(dtype.id==='ice'){
+            // Ice Shards — 6 freeze arrows fanning out forward
+            abilityCooldown.attack=10;
+            const fwd3=new THREE.Vector3(0,0,1).applyEuler(dragonMesh.rotation);
+            for(let a=-2;a<=3;a++){
+              const ang=a*0.22;
+              const tgt=ref3.clone().add(new THREE.Vector3(Math.sin(ang)*120+fwd3.x*120,-5,Math.cos(ang)*120+fwd3.z*120));
+              spawnProjectile('arrow',ref3.clone(),tgt);
+            }
+            for(const en of activeEnemies){if(!en.userData.alive)continue;if(ref3.distanceTo(en.position)<80){freezeMap.set(en,(freezeMap.get(en)||0)+6);en.userData.si=(en.userData.si||3)*1.5;}}
+            floatWorld(ref3,'❄ ICE SHARDS!','#88ddff');
+          } else if(dtype.id==='soul'){
+            // Soul Beam — concentrated beam, high damage to nearest enemy
+            abilityCooldown.attack=8;
+            let be=null,bd=250;
+            for(const en of activeEnemies){if(!en.userData.alive)continue;const d=ref3.distanceTo(en.position);if(d<bd){bd=d;be=en;}}
+            if(be){hitEnemy(be,120);spawnProjectile('magic',ref3.clone(),be.position.clone());floatWorld(ref3,'✨ SOUL BEAM! -120','#aaaaff');}
+            else floatWorld(ref3,'✨ SOUL BEAM — no target','#aaaaff');
+          } else if(dtype.id==='earth'){
+            // Boulder — heavy slow rock lobbed at nearest enemy
+            abilityCooldown.attack=9;
+            let be=null,bd=200;
+            for(const en of activeEnemies){if(!en.userData.alive)continue;const d=ref3.distanceTo(en.position);if(d<bd){bd=d;be=en;}}
+            if(be){spawnProjectile('rock',ref3.clone(),be.position.clone());hitEnemy(be,50);floatWorld(ref3,'🪨 BOULDER! -50','#aa8844');}
+            else floatWorld(ref3,'🪨 BOULDER — no target','#aa8844');
+          } else {
+            // Air / other — gust burst, knockback-style spread
+            abilityCooldown.attack=8;
+            let hit=0;
+            for(const en of activeEnemies){if(!en.userData.alive)continue;const d=ref3.distanceTo(en.position);if(d<150){spawnProjectile('magic',ref3.clone(),en.position.clone());hit++;if(hit>=4)break;}}
+            floatWorld(ref3,'💨 GUST BURST!','#aaffee');
+          }
         } else floatWorld(dragonMesh.position,'⏳ '+~~abilityCooldown.attack+'s','#888888');
       }
       // H = Heal (Nature dragon)
@@ -2714,7 +2759,8 @@ function updateHUD(){
   if(!isHuman&&gs==='playing'){
     const id=dtype.id;
     let hints=[];
-    hints.push('[F] Burst'+(abilityCooldown.attack>0?' '+~~abilityCooldown.attack+'s':'✓'));
+    const fName={fire:'Fire Cloud',nature:'Poison Cloud',ice:'Ice Shards',soul:'Soul Beam',earth:'Boulder',air:'Gust Burst'}[id]||'Special';
+    hints.push('[F] '+fName+(abilityCooldown.attack>0?' '+~~abilityCooldown.attack+'s':'✓'));
     if(id==='nature')hints.push('[H] Heal'+(abilityCooldown.heal>0?' '+~~abilityCooldown.heal+'s':'✓'));
     if(id==='ice')hints.push('[V] Freeze'+(abilityCooldown.ice>0?' '+~~abilityCooldown.ice+'s':'✓'));
     if(id==='fire')hints.push('[U] Burn'+(abilityCooldown.fire>0?' '+~~abilityCooldown.fire+'s':'✓'));

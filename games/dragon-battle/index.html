@@ -67,6 +67,8 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
 #dialog-name{font-size:.45rem;color:#FFD700;margin-bottom:6px}
 #dialog-text{font-size:.38rem;color:#eee;line-height:1.9;margin-bottom:8px}
 #dialog-close{font-size:.35rem;color:#888;text-align:right}
+.d-choice{font-size:.35rem;color:#88ddff;background:rgba(0,80,120,.35);border:1px solid #446688;padding:5px 10px;cursor:pointer;text-align:left}
+.d-choice:hover{background:rgba(0,120,180,.5);color:#fff}
 
 /* Human mode badge */
 #human-badge{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) translateZ(0);display:none;font-size:.38rem;color:#88ff44;background:rgba(0,0,0,.7);padding:6px 12px;border:1px solid #88ff44;z-index:4;pointer-events:none}
@@ -130,6 +132,7 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
   <div id="dialog">
     <div id="dialog-name"></div>
     <div id="dialog-text"></div>
+    <div id="dialog-choices" style="display:flex;flex-direction:column;gap:5px;margin-bottom:6px"></div>
     <div id="dialog-close">[ E / TAP TO CLOSE ]</div>
   </div>
 
@@ -1108,14 +1111,20 @@ function updateFireParticles(dt){
 // ── Projectile system ─────────────────────────────────────────────────────────
 let projectiles=[];
 const projGeo=new THREE.SphereGeometry(0.3,4,4);
+const arrowGeo=new THREE.CylinderGeometry(0.1,0.1,1.4,4);
 
 function spawnProjectile(type,pos,target){
-  const col=type==='magic'?0xff44ff:type==='rock'?0x886644:type==='bolt'?0xFFD700:type==='acid'?0x44ff44:0xcc8844;
-  const mesh=new THREE.Mesh(projGeo,new THREE.MeshBasicMaterial({color:col}));
+  const col=type==='magic'?0xff44ff:type==='rock'?0x886644:type==='bolt'?0xFFD700:type==='acid'?0x44ff44:0x8b5a1a;
+  const geo=(type==='arrow'||type==='bolt')?arrowGeo:projGeo;
+  const mesh=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:col}));
   mesh.position.copy(pos);
   const dir=new THREE.Vector3().subVectors(target,pos).normalize();
-  const spd=type==='magic'?22:type==='rock'?16:18;
-  mesh.userData={vel:dir.multiplyScalar(spd),dmg:type==='rock'?20:type==='magic'?15:12,life:4};
+  const spd=type==='magic'?22:type==='rock'?16:type==='bolt'?26:18;
+  if(type==='arrow'||type==='bolt'){
+    // Rotate cylinder to point along travel direction
+    mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir);
+  }
+  mesh.userData={vel:dir.multiplyScalar(spd),dmg:type==='rock'?20:type==='magic'?15:type==='bolt'?28:14,life:3.5,projType:type};
   scene.add(mesh);projectiles.push(mesh);
 }
 
@@ -1175,16 +1184,33 @@ function spawnZone(cx,cz){
 
       // King Hunter boss in castles; dragon hunters + archers guard villages
       if(isC){
-        // Spawn King Hunter (boss) inside castle
+        // King Hunter boss inside castle
         const king=makeEnemy3d('kingHunter');
         king.position.set(bx,gy+3,bz);
-        king.userData.guardBuilding=b; // when king dies, village becomes safe
+        king.userData.guardBuilding=b;
         scene.add(king);objects.push(king);activeEnemies.push(king);
+        // Ballista towers — stationary high-HP siege weapons
+        for(let bi=0;bi<2;bi++){
+          const bal=makeEnemy3d('archer'); // reuse archer stats but rename
+          bal.userData.type='ballista';bal.userData.hp=80;bal.userData.maxHp=80;
+          bal.userData.si=3;bal.userData.dmg=25;bal.userData.pts=200;bal.userData.spd=0; // stationary
+          bal.scale.set(1.6,1.6,1.6);
+          bal.position.set(bx+(bi===0?-12:12),gy+2,bz+(Math.random()-.5)*10);
+          scene.add(bal);objects.push(bal);activeEnemies.push(bal);
+        }
+        // Golem guards — slow, very tough
+        const golem=makeEnemy3d('ogre');
+        golem.userData.hp=180;golem.userData.maxHp=180;golem.userData.si=4;
+        golem.userData.dmg=35;golem.userData.pts=300;golem.userData.type='golem';
+        golem.userData.spd=4; // very slow
+        golem.scale.set(2,2,2);
+        golem.position.set(bx,gy+2,bz+8);
+        scene.add(golem);objects.push(golem);activeEnemies.push(golem);
       }
-      const ne=isC?3:2;
+      const ne=isC?4:2;
       for(let i=0;i<ne;i++){
         const roll=Math.random();
-        const eType=isC?(roll<0.5?'hunter':roll<0.75?'archer':'mage')
+        const eType=isC?(roll<0.4?'hunter':roll<0.65?'archer':roll<0.82?'mage':'ogre')
                        :(roll<0.45?'hunter':roll<0.75?'archer':'ogre');
         const e=makeEnemy3d(eType);
         const eH=isC?3:2;
@@ -1431,6 +1457,12 @@ function spawnDragonMountain(){
   blane.userData.npcName='Dragon Rider Blane';
   blane.userData.npcText='Welcome! I train dragon riders. Once you have a team, press [B] to help them choose new dragons! [B] Accept my quest: defeat the Emperor at the Volcano.';
   blane.userData.isBlane=true;
+  blane.userData.choices=[
+    {q:'How do I build my team?',       a:'Talk to the villagers on Floor 1 and Floor 2 of the mountain. Press [R] to recruit. They will wait outside until you fly out.'},
+    {q:'What is the first battle?',     a:'Fly north from here. You will find a castle held by the King Hunter. Defeat him to free the village. The freed folk will remember you!'},
+    {q:'How do I become Lightning?',    a:'Only a Fire dragon can absorb a lightning strike and transform. Fly into a storm on your fire dragon and hope lightning finds you!'},
+    {q:'How do I tame a wild dragon?',  a:'Attack a roaming wild dragon with your breath until it is defeated. It will land. Then press [F] to tame it — no rider needed!'},
+  ];
   blane.position.set(DM_X+5,groundY(DM_X+5,DM_Z+2)+1.5,DM_Z+2);
   scene.add(blane);objects.push(blane);friendlyNPCs.push(blane);
   blaneNPC=blane;
@@ -1459,8 +1491,12 @@ function spawnDragonMountain(){
   const interiorNPCs=[
     {name:'Food Merchant',  text:'Hot meals for weary riders! Press B to eat (costs 50 score, +30 HP).', isFoodShop:true, ix:DM_X-5,iz:DM_Z+35},
     {name:'Alchemist',      text:'I brew potions from dragon scales and mountain herbs. Upgrade your orbs with me.', ix:DM_X+5,iz:DM_Z+35},
-    {name:'Dragon Keeper',  text:'We tend to injured dragons here. All types live in harmony on this mountain.', ix:DM_X-5,iz:DM_Z+50},
-    {name:'Elder Runa',     text:'Long ago the Emperor had no dragon. He STOLE the King of Death Dragon from its nest.', ix:DM_X+5,iz:DM_Z+50},
+    {name:'Dragon Keeper',  text:'We tend to injured dragons here. All types live in harmony on this mountain.',
+     choices:[{q:'What type of dragon is strongest?',a:'Earth dragons tank the most damage. Lightning dragons are the fastest attackers. Soul dragons have the best magic range.'},
+              {q:'Can any dragon enter the cave?',a:'Yes! Land at the entrance and walk in. The cave floor descends — it is deeper than it looks.'}], ix:DM_X-5,iz:DM_Z+50},
+    {name:'Elder Runa',     text:'Long ago the Emperor had no dragon. He STOLE the King of Death Dragon from its nest.',
+     choices:[{q:'Tell me about the Emperor.',a:'He commands shadow mages and death dragons. He fears the Lightning Dragon — only one forged in a storm can truly hurt him.'},
+              {q:'What rewards will freed villages give?',a:'Every village you free will send warriors to the final battle at the Volcano. The more you free, the stronger the army!'}], ix:DM_X+5,iz:DM_Z+50},
     {name:'Rider Thane',    text:'I know every pass on this mountain. The Emperor... terrifying.',isRecruitable:true, ix:DM_X-5,iz:DM_Z+65},
     {name:'Arms Dealer',    text:'Weapons forged from volcano ore. Defeat the Emperor and I will upgrade your sword.', ix:DM_X+5,iz:DM_Z+65},
   ];
@@ -1468,6 +1504,7 @@ function spawnDragonMountain(){
     const npc=makeVillagerMesh();
     npc.userData.npcName=cfg.name;npc.userData.npcText=cfg.text;
     if(cfg.isFoodShop)npc.userData.isFoodShop=true;
+    if(cfg.choices)npc.userData.choices=cfg.choices;
     if(cfg.isRecruitable){
       const dtDef=selectableDT[~~(Math.random()*selectableDT.length)];
       npc.userData.isRecruitable=true;npc.userData.recruited=false;npc.userData.dtDef=dtDef;
@@ -1506,6 +1543,7 @@ function spawnDragonMountain(){
     rd.position.set(rx,groundY(rx,rz)+50+i*8,rz);
     rd.userData.baseX=rx;rd.userData.baseZ=rz;rd.userData.baseY=rd.position.y;
     rd.userData.hp=80;rd.userData.maxHp=80;rd.userData.tameable=false;rd.userData.isWild=true;
+    rd.userData.guardDM=true; // patrols Dragon Mountain, attacks enemies nearby
     scene.add(rd);objects.push(rd);roamDragons.push(rd);wildDragons.push(rd);
   });
 
@@ -1593,11 +1631,15 @@ function despawnFarZones(){
     const[cx,cz]=key.split(',').map(Number);
     if(Math.abs(cx-pcx)>RD+2||Math.abs(cz-pcz)>RD+2){
       objs.forEach(o=>{
+        // Never despawn recruited army members or Blane
+        if(dragonArmy.some(a=>a.mesh===o))return;
+        if(o===blaneNPC)return;
         scene.remove(o);
         activeEnemies=activeEnemies.filter(e=>e!==o);
         activeBuildings=activeBuildings.filter(b=>b!==o);
         friendlyNPCs=friendlyNPCs.filter(n=>n!==o);
         roamDragons=roamDragons.filter(r=>r!==o);
+        wildDragons=wildDragons.filter(w=>w!==o);
       });
       zoneMap.delete(key);
     }
@@ -1623,7 +1665,8 @@ function hitEnemy(e,dmgAmt){
     // King Hunter death → liberate guarded building
     if(e.userData.isKing&&e.userData.guardBuilding){
       e.userData.guardBuilding.userData.safe=true;
-      floatWorld(e.userData.guardBuilding.position,'⚔ LIBERATED!','#44ff44');
+      liberatedVillages++;
+      floatWorld(e.userData.guardBuilding.position,'⚔ LIBERATED! ('+liberatedVillages+' freed)','#44ff44');
       // Spawn rider NPCs to signal safety
       const b=e.userData.guardBuilding;
       for(let i=0;i<2;i++){
@@ -1636,8 +1679,10 @@ function hitEnemy(e,dmgAmt){
     }
     if(e.userData.isKingDeath){
       blaneQuest='complete';
-      floatWorld(e.position,'👑 EMPEROR DEFEATED!','#ffdd44');
-      score+=2000; // bonus
+      const bonus=2000+liberatedVillages*500;
+      score+=bonus;
+      floatWorld(e.position,'👑 EMPEROR DEFEATED! +'+bonus,'#ffdd44');
+      if(liberatedVillages>0)floatWorld(e.position,'🏘 '+liberatedVillages+' VILLAGES ANSWERED THE CALL!','#44ffcc');
     }
     if(e.userData.type==='shadowDragon'){
       shadowKills++;
@@ -1710,12 +1755,13 @@ let mapOpen=false;
 let friendlyNPCs=[];
 let roamDragons=[];
 let dragonArmy=[]; // recruited ally dragons {mesh, targetPos, dtType}
-const MAX_ARMY=5;
+const MAX_ARMY=8;
 let blaneNPC=null; // Dragon Rider Blane — wander AI
 let blaneWanderT=0,blaneWanderTarget=null,blaneTalkT=0;
 let blaneQuest='inactive'; // 'inactive' | 'unlocked' | 'active' | 'complete'
 let shadowKills=0;
 let wildDragons=[]; // tameable wild dragons {mesh, hp, maxHp, tameable}
+let liberatedVillages=0; // freed villages contribute to final battle
 let dragonMtnSpawned=false;
 let volcanoSpawned=false;
 
@@ -1819,9 +1865,12 @@ document.addEventListener('keydown',e=>{
     }
     if(e.code==='KeyR'&&nearNPC&&nearNPC.userData.isRecruitable&&!nearNPC.userData.recruited&&dragonArmy.length<MAX_ARMY){
       nearNPC.userData.recruited=true;
-      const armyMesh=nearNPC; // the whole rider+dragon group follows you now
-      armyMesh.userData.npcText='Riding with you now, dragonrider!';
-      dragonArmy.push({mesh:armyMesh,slot:dragonArmy.length});
+      const armyMesh=nearNPC;
+      armyMesh.userData.npcText='I will wait outside Dragon Mountain. Call me when you are ready!';
+      const slot=dragonArmy.length;
+      // Staging position: ring outside mountain entrance
+      const sa=[DM_X-15+slot*8,DM_Z-25];
+      dragonArmy.push({mesh:armyMesh,slot,staging:true,stagingPos:sa});
       floatWorld(armyMesh.position,'🐉 '+nearNPC.userData.npcName+' JOINS!','#44ff44');
     }
     if(e.code==='KeyT'&&!dialogOpen&&!mapOpen)toggleHumanMode();
@@ -1914,6 +1963,19 @@ function openDialog(npc){
   }
   document.getElementById('dialog-name').textContent=npc.userData.npcName;
   document.getElementById('dialog-text').textContent=txt;
+  // Render conversation choices
+  const choicesEl=document.getElementById('dialog-choices');
+  choicesEl.innerHTML='';
+  const choices=npc.userData.choices||[];
+  choices.forEach(c=>{
+    const btn=document.createElement('button');btn.className='d-choice';
+    btn.textContent='▶ '+c.q;
+    btn.onclick=()=>{
+      document.getElementById('dialog-text').textContent=c.a;
+      choicesEl.innerHTML=''; // hide choices after selection
+    };
+    choicesEl.appendChild(btn);
+  });
   document.getElementById('dialog').style.display='block';
   if(document.exitPointerLock)document.exitPointerLock();
   // B key to buy food / armor / Blane dragon reassign while dialog open
@@ -1975,6 +2037,7 @@ function openDialog(npc){
 function closeDialog(){
   dialogOpen=false;
   document.getElementById('dialog').style.display='none';
+  document.getElementById('dialog-choices').innerHTML='';
   if(isHuman&&canvas.requestPointerLock)canvas.requestPointerLock();
 }
 function isMob(){return'ontouchstart'in window||navigator.maxTouchPoints>0;}
@@ -2249,7 +2312,8 @@ function update(ts){
         e.userData.shootT=e.userData.si;
         const pType=e.userData.type==='mage'?'magic':e.userData.type==='ogre'?'rock':
         e.userData.type==='dragon'||e.userData.type==='shadowDragon'?'magic':
-        e.userData.type==='kingHunter'?'bolt':
+        e.userData.type==='kingHunter'?'bolt':e.userData.type==='ballista'?'bolt':
+        e.userData.type==='golem'?'rock':
         e.userData.type==='kingDeathDragon'?(Math.random()<0.5?'magic':'bolt'):'arrow';
         spawnProjectile(pType,e.position.clone(),dragonMesh.position.clone());
       }
@@ -2352,6 +2416,30 @@ function update(ts){
       const rd=roamDragons[i];
       if(!rd.userData.alive)continue;
       rd.userData.animT+=dt;
+      // Guard DM dragons: circle the mountain and shoot at nearby enemies
+      if(rd.userData.guardDM){
+        rd.userData.roamAngle+=dt*0.18;
+        const guardR=90+rd.userData.roamR*0.3;
+        const gtx=DM_X+Math.cos(rd.userData.roamAngle)*guardR;
+        const gtz=DM_Z+Math.sin(rd.userData.roamAngle)*guardR;
+        const gty=groundY(DM_X,DM_Z)+60;
+        const gToT=new THREE.Vector3(gtx-rd.position.x,gty-rd.position.y,gtz-rd.position.z);
+        rd.position.addScaledVector(gToT.normalize(),10*dt);
+        rd.lookAt(new THREE.Vector3(gtx,gty,gtz));
+        // Attack any active enemy within 150 units
+        if(rd.userData.shootT===undefined)rd.userData.shootT=3+Math.random()*2;
+        rd.userData.shootT-=dt;
+        if(rd.userData.shootT<=0){
+          rd.userData.shootT=3+Math.random()*2;
+          let be=null,bd=150;
+          for(const e of activeEnemies){if(!e.userData.alive)continue;const d=rd.position.distanceTo(e.position);if(d<bd){bd=d;be=e;}}
+          if(be)spawnProjectile('magic',rd.position.clone(),be.position.clone());
+        }
+        rd.userData.wingAngle+=dt*4;
+        const wa2=Math.sin(rd.userData.wingAngle)*.5;
+        rd.userData.lwp.rotation.z=wa2;rd.userData.rwp.rotation.z=-wa2;
+        continue;
+      }
       rd.userData.roamAngle+=dt*0.25;
       const orbitR=rd.userData.roamR;
       const tx=rd.userData.baseX+Math.cos(rd.userData.roamAngle)*orbitR;
@@ -2367,11 +2455,23 @@ function update(ts){
     }
 
     // ── DRAGON ARMY AI ───────────────────────────────────────────────────────
+    const playerDistFromDM=dragonMesh.position.distanceTo(new THREE.Vector3(DM_X,dragonMesh.position.y,DM_Z));
     for(const a of dragonArmy){
       if(!a.mesh)continue;
+      // Switch from staging to formation when player leaves Dragon Mountain area
+      if(a.staging&&playerDistFromDM>200)a.staging=false;
       const ref=isHuman&&humanMesh?humanMesh.position:dragonMesh.position;
+      let target;
+      if(a.staging){
+        // Wait at staging position outside Dragon Mountain
+        const sy=groundY(a.stagingPos[0],a.stagingPos[1])+2;
+        target=new THREE.Vector3(a.stagingPos[0],sy,a.stagingPos[1]);
+        a.mesh.position.lerp(target,dt*1.5);
+        a.mesh.rotation.y=Math.atan2(DM_X-a.stagingPos[0],DM_Z-a.stagingPos[1]);
+        continue;
+      }
       const offset=new THREE.Vector3(Math.sin(a.slot*1.2)*25,10+a.slot*4,Math.cos(a.slot*1.2)*25);
-      const target=ref.clone().add(offset);
+      target=ref.clone().add(offset);
       a.mesh.position.lerp(target,dt*1.5);
       a.mesh.lookAt(ref);
       // Attack nearest enemy
@@ -2388,16 +2488,22 @@ function update(ts){
     // ── BLANE WANDER AI ──────────────────────────────────────────────────────
     if(blaneNPC&&!dialogOpen){
       blaneWanderT-=dt;
-      // Pick a new wander target every 4–8s: either a random army member or a nearby point
+      // Pick a new wander target every 4–8s
       if(blaneWanderT<=0){
         blaneWanderT=4+Math.random()*4;
-        if(dragonArmy.length>0&&Math.random()<0.6){
-          // Walk toward a random army member's last known ground projection
+        // If army is ready and no castle cleared yet, guide toward nearest castle
+        const nearCastle=activeBuildings.find(b=>b.userData.type==='castle'&&!b.userData.safe);
+        if(dragonArmy.length>=1&&nearCastle&&blaneQuest!=='complete'&&Math.random()<0.5){
+          blaneWanderTarget=new THREE.Vector3(nearCastle.position.x+(Math.random()-0.5)*20,0,nearCastle.position.z+(Math.random()-0.5)*20);
+          if(blaneTalkT<=0){
+            floatWorld(blaneNPC.position,'Follow me — castle ahead!','#ffdd44');
+            blaneTalkT=8;
+          }
+        } else if(dragonArmy.length>0&&Math.random()<0.6){
           const a=dragonArmy[~~(Math.random()*dragonArmy.length)];
           const ap=a.mesh.position;
           blaneWanderTarget=new THREE.Vector3(ap.x+(Math.random()-0.5)*6,0,ap.z+(Math.random()-0.5)*6);
         } else {
-          // Wander near Dragon Mountain base
           blaneWanderTarget=new THREE.Vector3(DM_X+(Math.random()-0.5)*40,0,DM_Z+(Math.random()-0.5)*20);
         }
       }

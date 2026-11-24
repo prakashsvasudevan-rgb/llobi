@@ -389,10 +389,16 @@ function uAnimals(){
         if(npDist<80&&nearPred)a.state='angry';
         else if(npDist>160)a.state='peace';
         if(a.state==='angry'){
-          // launch boulders in direction of threat
-          if(Math.random()<.04&&nearPred){
+          // launch boulder cluster arcing toward threat
+          if(Math.random()<.025&&nearPred){
             const bdir=nearPred.x>a.x?1:-1;
-            for(let bi=2;bi<=5;bi++){const bx=cx+bdir*bi,by=cy-1;if(inB(bx,by)&&!get(bx,by)){set(bx,by,STONE,80+Math.random()*30|0,75+Math.random()*25|0,70+Math.random()*20|0);}}
+            const dist=Math.abs(nearPred.x-a.x)/CELL;
+            const arc=Math.max(4,Math.min(12,dist/4|0));
+            // place a 2x2 boulder at launch point, elevated
+            for(let br=0;br<2;br++)for(let bc=0;bc<2;bc++){
+              const bx=cx+bdir*(3+bc),by=cy-arc-br;
+              if(inB(bx,by))set(bx,by,STONE,80+Math.random()*30|0,75+Math.random()*25|0,65+Math.random()*20|0);
+            }
           }
           a.vx=a.dir*1.5;
         } else {

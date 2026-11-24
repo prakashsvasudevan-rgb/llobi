@@ -159,6 +159,8 @@ let activeCat=0,animals=[];
 // Preload sprite images
 const earthDragonImg=new Image();
 earthDragonImg.src='/games/sand-box/sprites/earth_dragon.png';
+const wyvernImg=new Image();
+wyvernImg.src='/games/sand-box/sprites/wyvern.png';
 
 function startGame(){document.getElementById('overlay').style.display='none';init();requestAnimationFrame(loop);}
 
@@ -458,107 +460,18 @@ function drawPixelSprite(grid,pal,W,H){
   }
 }
 
-// Wyvern colour palette (matches the pixel art image)
-const WYV_PAL={
-  '1':'#200015','2':'#500030','3':'#800050','4':'#9B0057',
-  '5':'#C2185B','6':'#E91E8C','a':'#5A1A00','b':'#8B4010',
-  'c':'#B06030','d':'#D09060','e':'#EAC090','f':'#E8D0B0',
-  'g':'#9B8070','Y':'#FFEE00','K':'#111'
-};
-
-// Wyvern pixel grids — 20 cols × 16 rows — facing right (wing on LEFT, head on RIGHT)
-// Frame 0: wing neutral  Frame 1: wing raised
-const WYV_F=[
-  // Frame 0 — wing down / neutral
- ["    aa              ",
-  "   ab b   22        ",
-  "   abcb  2442       ",
-  "  abbcb  24442      ",
-  " aabbcb  244342     ",
-  " aabbcb  24433 2    ",
-  "aabbbcb  244332     ",
-  "aabbbc  1 244332    ",
-  "aaabb   1g 24332    ",
-  " aabb   1gff24332   ",
-  "  abb   1gff 4442  2",
-  "   bb    gff  443 32",
-  "    b    ff   43 2 2",
-  "         ff   322 2 ",
-  "          f   32    ",
-  "               2    "],
-  // Frame 1 — wing raised / attack
- ["  aa                ",
-  " ab b               ",
-  " abcb  22           ",
-  "abbcb 2442          ",
-  "aabbcb24442         ",
-  "aabbcb2443 2        ",
-  "aabbbcb44332        ",
-  "aabbbc  1 44332     ",
-  "aaabb   1g24332     ",
-  " aabb   1gff4332    ",
-  "  abb   1gff4442  2 ",
-  "   bb    gff 433 32 ",
-  "    b    ff  43 2 2 ",
-  "         ff  322 2  ",
-  "          f  32     ",
-  "              2     "],
-];
-
-// ── Wyvern sprite drawn from pixel-art grid ──
+// ── Wyvern sprite — exact PNG from user ──
 function drawWyvern(W,H,f){
-  const C=CELL;const grid=WYV_F[f<2?0:1];
-  const cols=20,rows=16,pw=W/cols,ph=H/rows;
-  // draw body/wing grid
-  drawPixelSprite(grid,WYV_PAL,W,H);
-  // HEAD (always on right side, rows 3-9, cols 14-19)
-  const headPal={'4':'#9B0057','3':'#800050','2':'#500030','5':'#C2185B','6':'#E91E8C'};
-  const headRows=[
-    "    43  ",  // row 3: col 12-19
-    "   4442 ",  // row 4
-    "  44332 ",  // row 5
-    "  44332 ",  // row 6
-    " 444332 ",  // row 7
-    " 444332 ",  // row 8
-    "  44433 ",  // row 9
-  ];
-  // Eye
-  ctx.fillStyle='#FFEE00';ctx.fillRect(W*.82,H*.28,pw,ph);
-  ctx.fillStyle='#000';ctx.fillRect(W*.83,H*.29,pw*.5,ph*.7);
-  // Horns (top of head)
-  ctx.fillStyle='#200015';
-  ctx.fillRect(W*.75,H*.12,pw,ph*2);
-  ctx.fillRect(W*.80,H*.08,pw,ph*2.5);
-  // Snout
-  ctx.fillStyle='#9B0057';ctx.fillRect(W*.92,H*.35,pw*1.5,ph*2);
-  ctx.fillStyle='#C2185B';ctx.fillRect(W*.93,H*.37,pw,ph*1.5);
-  // Jaw (open on frame 1,3)
-  const j=f%2===1?ph:0;
-  ctx.fillStyle='#500030';ctx.fillRect(W*.88,H*.44+j,pw*2,ph);
-  ctx.fillStyle='#fff';ctx.fillRect(W*.88,H*.45+j,pw*.8,ph*.7);ctx.fillRect(W*.91,H*.45+j,pw*.8,ph*.7);
-  // Legs
-  const lA=f%2===0?H*.92:H*.86,lB=f%2===0?H*.86:H*.92;
-  ctx.fillStyle='#500030';
-  ctx.fillRect(W*.58,H*.78,pw*1.5,lA-H*.78);ctx.fillRect(W*.65,H*.78,pw*1.5,lB-H*.78);
-  ctx.fillStyle='#200015';
-  ctx.fillRect(W*.56,lA,pw,ph);ctx.fillRect(W*.60,lA,pw,ph);
-  ctx.fillRect(W*.63,lB,pw,ph);ctx.fillRect(W*.67,lB,pw,ph);
-  // Coiled tail (bottom-right ring, crimson)
-  const tr=[
-    [H*.68,W*.72, W*.79,H*.02,0],  // top of coil
-    [H*.68,W*.80, W*.04,H*.10,0],  // right
-    [H*.70,W*.80, W*.04,H*.08,0],
-    [H*.72,W*.80, W*.04,H*.06,0],
-    [H*.74,W*.79, W*.04,H*.06,0],
-    [H*.76,W*.77, W*.06,H*.04,0],
-    [H*.76,W*.72, W*.06,H*.04,0],  // bottom
-    [H*.74,W*.68, W*.04,H*.06,0],  // left side
-    [H*.72,W*.67, W*.04,H*.06,0],
-    [H*.70,W*.68, W*.04,H*.04,0],
-  ];
-  ctx.fillStyle='#9B0057';
-  for(const[row,col,w2,h2]of tr)ctx.fillRect(col,row,pw*2,ph*1.5);
-  ctx.fillStyle='#500030';ctx.fillRect(W*.74,H*.74,pw,ph);// inner shadow
+  if(wyvernImg.complete&&wyvernImg.naturalWidth>0){
+    const iw=wyvernImg.naturalWidth,ih=wyvernImg.naturalHeight;
+    const margin=Math.round(iw*0.095); // crop pink border + white margin
+    const cropW=iw-margin*2,cropH=ih-margin*2;
+    // Gentle vertical bob for wing-flap animation (whole sprite moves slightly)
+    const bob=f<2?-H*.04:0;
+    ctx.drawImage(wyvernImg,margin,margin,cropW,cropH,0,bob,W,H);
+  } else {
+    ctx.fillStyle='#9B0057';ctx.fillRect(0,0,W,H);
+  }
 }
 
 // ── Classic Fire Dragon (4-legged, red/orange, breathes fire) ──
@@ -624,23 +537,18 @@ function drawEarthDragon(W,H,f,angry){
   // Draw the user's exact pixel art, cropping the pink border (sprite is in center ~92% of image)
   if(earthDragonImg.complete&&earthDragonImg.naturalWidth>0){
     const iw=earthDragonImg.naturalWidth,ih=earthDragonImg.naturalHeight;
-    // crop out the ~20px hot-pink border and white margin (~50px each side of 1092px image)
-    const margin=Math.round(iw*0.095); // ~104px: skip border+white margin
+    const margin=Math.round(iw*0.095);
     const cropW=iw-margin*2,cropH=ih-margin*2;
-    // leg animation: shift the bottom 30% of the sprite up/down slightly
-    const legShift=(f%2===0?C*.5:-C*.5);
-    // draw top 70% (body/wing/head) — exact sprite
-    ctx.drawImage(earthDragonImg,margin,margin,cropW,cropH*0.75,0,0,W,H*0.78);
-    // draw bottom 30% (legs) with walk offset
-    ctx.drawImage(earthDragonImg,margin,margin+cropH*0.75,cropW,cropH*0.25,0,H*0.78+legShift,W,H*0.22);
+    // Gentle bob animation (whole sprite)
+    const bob=(f%2===0?-H*.03:0);
+    ctx.drawImage(earthDragonImg,margin,margin,cropW,cropH,0,bob,W,H);
     // angry pulse: green ring
     if(angry){
       ctx.strokeStyle=`rgba(139,195,74,${0.4+Math.random()*.4})`;
       ctx.lineWidth=C*.8;
-      ctx.beginPath();ctx.arc(W*.5,H*.55,W*.48,0,Math.PI*2);ctx.stroke();
+      ctx.beginPath();ctx.arc(W*.5,H*.5,W*.5,0,Math.PI*2);ctx.stroke();
     }
   } else {
-    // fallback simple green rect while image loads
     ctx.fillStyle='#2E7D32';ctx.fillRect(0,0,W,H);
   }
 }

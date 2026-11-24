@@ -1415,6 +1415,7 @@ function spawnDragonMountain(){
   blane.userData.isBlane=true;
   blane.position.set(DM_X+5,groundY(DM_X+5,DM_Z+2)+1.5,DM_Z+2);
   scene.add(blane);objects.push(blane);friendlyNPCs.push(blane);
+  blaneNPC=blane;
 
   // Floor 1 — 10 recruitable villagers around the mountain base (outside)
   const f1=[['Tara','I will ride with you to the ends of the world.'],['Orin','My bones ache but my spirit is strong.'],
@@ -1681,6 +1682,8 @@ let friendlyNPCs=[];
 let roamDragons=[];
 let dragonArmy=[]; // recruited ally dragons {mesh, targetPos, dtType}
 const MAX_ARMY=5;
+let blaneNPC=null; // Dragon Rider Blane — wander AI
+let blaneWanderT=0,blaneWanderTarget=null,blaneTalkT=0;
 let dragonMtnSpawned=false;
 let volcanoSpawned=false;
 
@@ -1965,7 +1968,7 @@ function startGame(){
   orbDrops.forEach(o=>scene.remove(o.mesh));orbDrops=[];
   mageOrbs=0;shadowDust=0;upgrades={dmg:0,hp:0,speed:0,fuel:0,attack:0};
   dragonArmy.forEach(a=>scene.remove(a.mesh));dragonArmy=[];
-  dragonMtnSpawned=false;volcanoSpawned=false;
+  dragonMtnSpawned=false;volcanoSpawned=false;blaneNPC=null;blaneWanderT=0;blaneWanderTarget=null;blaneTalkT=0;
   mapOpen=false;wmEl.classList.remove('show');
   // Spawn Dragon Mountain (always at world north, zone 0,5)
   setTimeout(()=>{if(gs==='playing')spawnDragonMountain();},100);
@@ -2017,8 +2020,11 @@ function update(ts){
   if(!ddead){
     const lf=keys['ArrowLeft']||keys['KeyA']||mk.lf;
     const rt=keys['ArrowRight']||keys['KeyD']||mk.rt;
-    const up=keys['ArrowUp']||keys['KeyW']||mk.up;
-    const dn=keys['ArrowDown']||keys['KeyS']||mk.dn;
+    // ArrowUp/Space = take off (fly); W/S = walk forward/back when landed
+    const up=keys['ArrowUp']||keys['Space']||mk.up;
+    const dn=keys['ArrowDown']||mk.dn;
+    const fw=keys['KeyW']||mk.up; // forward walk (ground only)
+    const bk=keys['KeyS']||mk.dn; // backward walk (ground only)
     const doFire=(keys['Space']||keys['KeyZ']||mk.fire)&&!isHuman;
 
     const gy=groundY(dragonMesh.position.x,dragonMesh.position.z);
@@ -2035,18 +2041,22 @@ function update(ts){
         dRoll=0;dPitchVel=0;dPitch=0;
         if(up){isSitting=false;isLanded=false;dPitchVel=-0.5;} // UP cancels sit and takes off
       } else {
-        // Can turn slowly on ground
-        if(lf)dYaw+=1.0*dt;if(rt)dYaw-=1.0*dt;
+        // Ground walk — W/S moves, A/D turns, ArrowUp/Space takes off
+        if(lf)dYaw+=1.2*dt;if(rt)dYaw-=1.2*dt;
+        const gfwd=new THREE.Vector3(0,0,1).applyEuler(new THREE.Euler(0,dYaw,0));
+        if(fw)dragonMesh.position.addScaledVector(gfwd, dtype.speed*0.35*dt);
+        if(bk)dragonMesh.position.addScaledVector(gfwd,-dtype.speed*0.25*dt);
+        // Snap to terrain (or cave floor)
+        const _cfy=caveFloorY(dragonMesh.position.x,dragonMesh.position.z);
+        landedY=(_cfy!==null?_cfy:groundY(dragonMesh.position.x,dragonMesh.position.z))+3.5;
         dragonMesh.position.y=landedY;
         dragonMesh.rotation.set(0,dYaw,0,'YXZ');
         dRoll=0;dPitchVel=0;dPitch=0;
-        // Slow ground walk
-        const gfwd=new THREE.Vector3(0,0,1).applyEuler(new THREE.Euler(0,dYaw,0));
-        dragonMesh.position.addScaledVector(gfwd,dtype.speed*0.3*dt);
-        // Wings fold
-        dragonMesh.userData.lwp.rotation.z= Math.PI*0.55;
-        dragonMesh.userData.rwp.rotation.z=-Math.PI*0.55;
-        if(up){isLanded=false;dPitchVel=-0.5;}
+        // Walk animation — bob wings gently while moving
+        const wFold=Math.PI*0.55+(fw||bk?Math.sin(frame*0.18)*0.12:0);
+        dragonMesh.userData.lwp.rotation.z= wFold;
+        dragonMesh.userData.rwp.rotation.z=-wFold;
+        if(up){isLanded=false;dPitchVel=-0.5;} // take off
       }
     } else {
       // ── FLYING STATE ──
@@ -2298,6 +2308,50 @@ function update(ts){
         let be=null,bd=600;
         for(const e of activeEnemies){if(!e.userData.alive)continue;const d=a.mesh.position.distanceTo(e.position);if(d<bd){bd=d;be=e;}}
         if(be)spawnProjectile('magic',a.mesh.position.clone(),be.position.clone());
+      }
+    }
+
+    // ── BLANE WANDER AI ──────────────────────────────────────────────────────
+    if(blaneNPC&&!dialogOpen){
+      blaneWanderT-=dt;
+      // Pick a new wander target every 4–8s: either a random army member or a nearby point
+      if(blaneWanderT<=0){
+        blaneWanderT=4+Math.random()*4;
+        if(dragonArmy.length>0&&Math.random()<0.6){
+          // Walk toward a random army member's last known ground projection
+          const a=dragonArmy[~~(Math.random()*dragonArmy.length)];
+          const ap=a.mesh.position;
+          blaneWanderTarget=new THREE.Vector3(ap.x+(Math.random()-0.5)*6,0,ap.z+(Math.random()-0.5)*6);
+        } else {
+          // Wander near Dragon Mountain base
+          blaneWanderTarget=new THREE.Vector3(DM_X+(Math.random()-0.5)*40,0,DM_Z+(Math.random()-0.5)*20);
+        }
+      }
+      if(blaneWanderTarget){
+        const bPos=blaneNPC.position;
+        const ty=groundY(blaneWanderTarget.x,blaneWanderTarget.z)+1.5;
+        blaneWanderTarget.y=ty;
+        const toT=blaneWanderTarget.clone().sub(bPos);toT.y=0;
+        const dist=toT.length();
+        if(dist>1.5){
+          toT.normalize();
+          bPos.addScaledVector(toT,4*dt);
+          bPos.y=groundY(bPos.x,bPos.z)+1.5;
+          blaneNPC.rotation.y=Math.atan2(toT.x,toT.z);
+        }
+        // When close to an army member, show a talk float
+        blaneTalkT-=dt;
+        if(blaneTalkT<=0){
+          for(const a of dragonArmy){
+            if(bPos.distanceTo(a.mesh.position)<18){
+              const lines=['Good formation!','Watch your wing!','Stay in line!','Eyes up!','Nice work!'];
+              floatWorld(bPos,lines[~~(Math.random()*lines.length)],'#aaffcc');
+              blaneTalkT=5+Math.random()*4;
+              break;
+            }
+          }
+          if(blaneTalkT<=0)blaneTalkT=3;
+        }
       }
     }
 

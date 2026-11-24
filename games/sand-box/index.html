@@ -161,6 +161,27 @@ const earthDragonImg=new Image();
 earthDragonImg.src='/games/sand-box/sprites/earth_dragon.png';
 const wyvernImg=new Image();
 wyvernImg.src='/games/sand-box/sprites/wyvern.png';
+const fireDragonImg=new Image();
+fireDragonImg.src='/games/sand-box/sprites/fire_dragon.png';
+
+// Pre-process a sprite image: remove white/near-white background → transparent canvas
+function makeTransparent(img,threshold=230){
+  const oc=document.createElement('canvas');
+  oc.width=img.naturalWidth;oc.height=img.naturalHeight;
+  const ox=oc.getContext('2d');
+  ox.drawImage(img,0,0);
+  const d=ox.getImageData(0,0,oc.width,oc.height);
+  for(let i=0;i<d.data.length;i+=4){
+    const r=d.data[i],g=d.data[i+1],b=d.data[i+2];
+    if(r>threshold&&g>threshold&&b>threshold)d.data[i+3]=0;
+  }
+  ox.putImageData(d,0,0);
+  return oc;
+}
+let earthDragonCanvas=null,fireDragonCanvas=null,wyvernCanvas=null;
+earthDragonImg.onload=()=>{earthDragonCanvas=makeTransparent(earthDragonImg,210);};
+fireDragonImg.onload=()=>{fireDragonCanvas=makeTransparent(fireDragonImg,210);};
+wyvernImg.onload=()=>{wyvernCanvas=makeTransparent(wyvernImg,210);};
 
 function startGame(){document.getElementById('overlay').style.display='none';init();requestAnimationFrame(loop);}
 
@@ -352,11 +373,15 @@ function uAnimals(){
         else{a.vx=a.dir*2;a.vy+=Math.sin(a.timer*.05)*.5;}
         if(nearPrey&&nyDist<60&&Math.random()<.07){const fd=a.vx>0?1:-1;for(let fi=1;fi<=3;fi++){const fx=cx+fd*fi;if(inB(fx,cy))set(fx,cy,BLUE_FIRE);}}
         if(a.timer%120===0)a.dir=-a.dir;break;
-      case FIRE_DRAGON: // heavy fire-breather — walks and burns
-        if(nearPred&&npDist<80){a.vx=-(nearPred.x>a.x?1:-1)*2;if(onGround)a.vy=-4;}
-        else if(nearPrey&&nyDist<250){a.vx=(nearPrey.x>a.x?1:-1)*2.8;if(nyDist<60&&Math.random()<.08){for(let fi=1;fi<=3;fi++){const fx=cx+(a.vx>0?fi:-fi);if(inB(fx,cy))set(fx,cy,FIRE);}}}
-        else{a.vx=a.dir*1.6;if(a.timer%100===0)a.dir=-a.dir;}
-        if(onGround&&Math.random()<.004)a.vy=-3.5;break;
+      case FIRE_DRAGON: // flying fire-breather — soars and breathes fire
+        a.vy+=-0.18; // hover thrust
+        if(a.y>rows*CELL*.8)a.vy-=0.5; // push up near floor
+        if(a.y<rows*CELL*.15)a.vy+=0.3; // push down near ceiling
+        a.vy=Math.max(-4,Math.min(4,a.vy));
+        if(nearPred&&npDist<100){a.vx=-(nearPred.x>a.x?1:-1)*3;a.vy=-2.5;}
+        else if(nearPrey&&nyDist<220){a.vx=(nearPrey.x>a.x?1:-1)*3.2;if(nyDist<70&&Math.random()<.1){for(let fi=1;fi<=4;fi++){const fx=cx+(a.vx>0?fi:-fi);if(inB(fx,cy))set(fx,cy,FIRE);}}}
+        else{a.vx=a.dir*2;if(a.timer%90===0)a.dir=-a.dir;}
+        break;
       case EARTH_DRAGON: // peaceful grazer — only attacks when disturbed
         if(!a.state)a.state='peace';
         // detect threat: any animal within 80px angers it
@@ -460,89 +485,44 @@ function drawPixelSprite(grid,pal,W,H){
   }
 }
 
-// ── Wyvern sprite — exact PNG from user ──
+// ── Wyvern sprite — exact PNG from user, white bg removed ──
 function drawWyvern(W,H,f){
-  if(wyvernImg.complete&&wyvernImg.naturalWidth>0){
-    const iw=wyvernImg.naturalWidth,ih=wyvernImg.naturalHeight;
-    const margin=Math.round(iw*0.095); // crop pink border + white margin
+  const src=wyvernCanvas||wyvernImg;
+  if(src&&(src.width||src.naturalWidth)>0){
+    const iw=src.width||src.naturalWidth,ih=src.height||src.naturalHeight;
+    const margin=Math.round(iw*0.095);
     const cropW=iw-margin*2,cropH=ih-margin*2;
-    // Gentle vertical bob for wing-flap animation (whole sprite moves slightly)
     const bob=f<2?-H*.04:0;
-    ctx.drawImage(wyvernImg,margin,margin,cropW,cropH,0,bob,W,H);
+    ctx.drawImage(src,margin,margin,cropW,cropH,0,bob,W,H);
   } else {
     ctx.fillStyle='#9B0057';ctx.fillRect(0,0,W,H);
   }
 }
 
-// ── Classic Fire Dragon (4-legged, red/orange, breathes fire) ──
+// ── Fire Dragon — exact PNG sprite, white bg removed, bob animation ──
 function drawFireDragon(W,H,f){
-  const C=CELL;
-  // wings — two side wings, flap on frames 0,1
-  const wFlap = f<2 ? -H*.2 : 0;
-  ctx.fillStyle='#CC2200';
-  // left wing
-  ctx.beginPath();ctx.moveTo(W*.35,H*.38);ctx.lineTo(W*.05,H*.15+wFlap);ctx.lineTo(W*.28,H*.55);ctx.closePath();ctx.fill();
-  // right wing
-  ctx.beginPath();ctx.moveTo(W*.65,H*.38);ctx.lineTo(W*.95,H*.15+wFlap);ctx.lineTo(W*.72,H*.55);ctx.closePath();ctx.fill();
-  // Wing membranes
-  ctx.fillStyle='#AA1A00';
-  ctx.beginPath();ctx.moveTo(W*.35,H*.38);ctx.lineTo(W*.08,H*.22+wFlap);ctx.lineTo(W*.32,H*.5);ctx.closePath();ctx.fill();
-  ctx.beginPath();ctx.moveTo(W*.65,H*.38);ctx.lineTo(W*.92,H*.22+wFlap);ctx.lineTo(W*.68,H*.5);ctx.closePath();ctx.fill();
-  // Body
-  ctx.fillStyle='#CC2200';
-  ctx.beginPath();ctx.ellipse(W*.5,H*.62,W*.32,H*.24,0,0,Math.PI*2);ctx.fill();
-  // Underbelly (pale orange)
-  ctx.fillStyle='#FF8C42';
-  ctx.beginPath();ctx.ellipse(W*.5,H*.68,W*.2,H*.14,0,0,Math.PI*2);ctx.fill();
-  // Back spines
-  ctx.fillStyle='#8B0000';
-  for(let i=0;i<5;i++){const sx=W*.28+i*W*.11;ctx.beginPath();ctx.moveTo(sx,H*.44);ctx.lineTo(sx+W*.04,H*.32);ctx.lineTo(sx+W*.08,H*.44);ctx.fill();}
-  // Neck
-  ctx.fillStyle='#CC2200';
-  ctx.beginPath();ctx.ellipse(W*.72,H*.44,W*.11,H*.2,0.5,0,Math.PI*2);ctx.fill();
-  // Head
-  ctx.fillStyle='#DD2500';
-  ctx.beginPath();ctx.ellipse(W*.83,H*.3,W*.17,H*.2,0.2,0,Math.PI*2);ctx.fill();
-  // Snout — open/close animation
-  const jaw = f%2===1 ? H*.05 : 0;
-  ctx.fillStyle='#CC2200';
-  ctx.beginPath();ctx.ellipse(W*.95,H*.38+jaw*.5,W*.08,H*.1+jaw,0.3,0,Math.PI*2);ctx.fill();
-  // Fire breath on attacking frames
-  if(f===1||f===3){
-    for(let fi=0;fi<3;fi++){
-      const alpha=.9-fi*.25;ctx.fillStyle=`rgba(255,${120+fi*40},0,${alpha})`;
-      ctx.beginPath();ctx.ellipse(W+fi*C*1.5,H*.38,C*(1.5-fi*.3),C*(1-fi*.2),0,0,Math.PI*2);ctx.fill();
-    }
+  const src=fireDragonCanvas||fireDragonImg;
+  if(src&&(src.width||src.naturalWidth)>0){
+    const iw=src.width||src.naturalWidth,ih=src.height||src.naturalHeight;
+    const margin=Math.round(iw*0.04); // small crop, mostly real content near edge
+    const cropW=iw-margin*2,cropH=ih-margin*2;
+    const bob=f<2?-H*.05:0; // wing-flap bob
+    ctx.drawImage(src,margin,margin,cropW,cropH,0,bob,W,H);
+  } else {
+    ctx.fillStyle='#4A148C';ctx.fillRect(0,0,W,H);
   }
-  // Eye
-  ctx.fillStyle='#FFD700';ctx.beginPath();ctx.arc(W*.87,H*.25,C*.45,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#000';ctx.beginPath();ctx.arc(W*.88,H*.25,C*.22,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(W*.9,H*.23,C*.1,0,Math.PI*2);ctx.fill();
-  // Teeth
-  ctx.fillStyle='#fff';ctx.fillRect(W*.88,H*.38+jaw,C*.35,C*.6);ctx.fillRect(W*.93,H*.38+jaw,C*.35,C*.6);
-  // 4 Legs
-  const lf=f%2===0?C*.6:-C*.6;
-  ctx.fillStyle='#AA1A00';
-  ctx.fillRect(W*.24,H*.78,C*.75,H*.2+lf);ctx.fillRect(W*.38,H*.78,C*.75,H*.2-lf);
-  ctx.fillRect(W*.58,H*.78,C*.75,H*.2+lf);ctx.fillRect(W*.72,H*.78,C*.75,H*.2-lf);
-  // Tail
-  const ts=Math.sin(f*Math.PI/2)*H*.05;
-  ctx.strokeStyle='#CC2200';ctx.lineWidth=C*.85;ctx.lineCap='round';
-  ctx.beginPath();ctx.moveTo(W*.2,H*.65);ctx.bezierCurveTo(W*.05,H*.7+ts,W*.02,H*.85,W*.1,H*.95);ctx.stroke();
 }
 
-// ── Earth Dragon — drawn from the actual PNG sprite the user provided ──
+// ── Earth Dragon — exact PNG sprite, white/pink bg removed, bob+angry animations ──
 function drawEarthDragon(W,H,f,angry){
   const C=CELL;
-  // Draw the user's exact pixel art, cropping the pink border (sprite is in center ~92% of image)
-  if(earthDragonImg.complete&&earthDragonImg.naturalWidth>0){
-    const iw=earthDragonImg.naturalWidth,ih=earthDragonImg.naturalHeight;
+  const src=earthDragonCanvas||earthDragonImg;
+  if(src&&(src.width||src.naturalWidth)>0){
+    const iw=src.width||src.naturalWidth,ih=src.height||src.naturalHeight;
     const margin=Math.round(iw*0.095);
     const cropW=iw-margin*2,cropH=ih-margin*2;
-    // Gentle bob animation (whole sprite)
     const bob=(f%2===0?-H*.03:0);
-    ctx.drawImage(earthDragonImg,margin,margin,cropW,cropH,0,bob,W,H);
-    // angry pulse: green ring
+    ctx.drawImage(src,margin,margin,cropW,cropH,0,bob,W,H);
     if(angry){
       ctx.strokeStyle=`rgba(139,195,74,${0.4+Math.random()*.4})`;
       ctx.lineWidth=C*.8;

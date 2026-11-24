@@ -682,17 +682,13 @@ function drawWyvern(W,H,f,breathing,resting){
 
   // ── Blue fire ONLY when attacking ──
   if(breathing){
-    for(let fi=0;fi<4;fi++){
-      const flicker=(Math.random()-.5)*C;
-      ctx.fillStyle=`rgba(${fi*18},${130+fi*28},255,${.88-fi*.16})`;
-      ctx.beginPath();ctx.ellipse(W+fi*C*2+flicker,H*.45+flicker*.3,C*(1.5-fi*.22),C*(0.9-fi*.12),0,0,Math.PI*2);ctx.fill();
+    for(let fi=0;fi<3;fi++){
+      const flicker=(Math.random()-.5)*C*.5;
+      ctx.fillStyle=`rgba(${fi*18},${130+fi*28},255,${.85-fi*.18})`;
+      ctx.beginPath();ctx.ellipse(W+fi*C*1.1+flicker,H*.45+flicker*.3,C*(.7-fi*.1),C*(.42-fi*.05),0,0,Math.PI*2);ctx.fill();
     }
     ctx.fillStyle='rgba(210,245,255,.9)';
-    ctx.beginPath();ctx.ellipse(W+C,H*.45,C*.8,C*.5,0,0,Math.PI*2);ctx.fill();
-    for(let s=0;s<5;s++){
-      ctx.fillStyle='rgba(80,180,255,.85)';
-      ctx.beginPath();ctx.arc(W+Math.random()*C*9,H*.45+(Math.random()-.5)*H*.35,C*(.1+Math.random()*.22),0,Math.PI*2);ctx.fill();
-    }
+    ctx.beginPath();ctx.ellipse(W+C*.5,H*.45,C*.38,C*.22,0,0,Math.PI*2);ctx.fill();
   }
 }
 
@@ -738,19 +734,15 @@ function drawFireDragon(W,H,f,breathing,resting){
   if(jaw>0){ctx.fillStyle='#5A0A99';ctx.beginPath();ctx.ellipse(C*.9,C*2.8+jaw*.5,C*.6,jaw,0,0,Math.PI*2);ctx.fill();}
   ctx.restore();
 
-  // ── Fire breath ONLY when attacking — smaller than before ──
+  // ── Fire breath ONLY when attacking ──
   if(breathing){
-    for(let fi=0;fi<4;fi++){
-      const flicker=(Math.random()-.5)*C*.9;
-      ctx.fillStyle=`rgba(255,${55+fi*38},0,${.9-fi*.16})`;
-      ctx.beginPath();ctx.ellipse(W+fi*C*1.8+flicker,H*.52+flicker*.4,C*(1.6-fi*.22),C*(0.95-fi*.14),-.12,0,Math.PI*2);ctx.fill();
+    for(let fi=0;fi<3;fi++){
+      const flicker=(Math.random()-.5)*C*.5;
+      ctx.fillStyle=`rgba(255,${55+fi*38},0,${.88-fi*.18})`;
+      ctx.beginPath();ctx.ellipse(W+fi*C*1.0+flicker,H*.52+flicker*.3,C*(.75-fi*.1),C*(.44-fi*.06),-.12,0,Math.PI*2);ctx.fill();
     }
-    ctx.fillStyle='rgba(255,255,180,.85)';
-    ctx.beginPath();ctx.ellipse(W+C*.8,H*.52,C*.75,C*.45,-.12,0,Math.PI*2);ctx.fill();
-    for(let s=0;s<5;s++){
-      ctx.fillStyle=`rgba(255,${100+Math.random()*140|0},0,.85)`;
-      ctx.beginPath();ctx.arc(W+Math.random()*C*8,H*.52+(Math.random()-.5)*H*.35,C*(.1+Math.random()*.2),0,Math.PI*2);ctx.fill();
-    }
+    ctx.fillStyle='rgba(255,255,180,.88)';
+    ctx.beginPath();ctx.ellipse(W+C*.4,H*.52,C*.35,C*.2,-.12,0,Math.PI*2);ctx.fill();
   }
 }
 
@@ -808,13 +800,13 @@ function drawSoulDragon(W,H,f,breathing,resting,flying){
 
   // ── Blue fire breath (only when attacking) ──
   if(breathing){
-    for(let fi=0;fi<4;fi++){
-      const flicker=(Math.random()-.5)*C;
-      ctx.fillStyle=`rgba(${fi*18},${130+fi*28},255,${.88-fi*.16})`;
-      ctx.beginPath();ctx.ellipse(W+fi*C*2+flicker,H*.45+flicker*.3,C*(1.5-fi*.22),C*(0.9-fi*.12),0,0,Math.PI*2);ctx.fill();
+    for(let fi=0;fi<3;fi++){
+      const flicker=(Math.random()-.5)*C*.5;
+      ctx.fillStyle=`rgba(${fi*18},${130+fi*28},255,${.85-fi*.18})`;
+      ctx.beginPath();ctx.ellipse(W+fi*C*1.1+flicker,H*.45+flicker*.3,C*(.7-fi*.1),C*(.42-fi*.05),0,0,Math.PI*2);ctx.fill();
     }
     ctx.fillStyle='rgba(210,245,255,.9)';
-    ctx.beginPath();ctx.ellipse(W+C,H*.45,C*.8,C*.5,0,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(W+C*.5,H*.45,C*.35,C*.2,0,0,Math.PI*2);ctx.fill();
     ctx.save();ctx.font=`bold ${C*1.1}px sans-serif`;ctx.fillStyle='#64B5F6';
     ctx.strokeStyle='#000';ctx.lineWidth=2;
     ctx.strokeText('💙BLUE FIRE!',-W*.1,-C*1.5);ctx.fillText('💙BLUE FIRE!',-W*.1,-C*1.5);

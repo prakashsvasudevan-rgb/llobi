@@ -1397,30 +1397,67 @@ function spawnDragonMountain(){
       f2.position.set(DM_X+sx,hallY+4.5,tz);addObj(f2);
     }
   }
-  // Interior NPCs spread along the hall
+  // selectableDT used by all recruitable NPCs below
+  const selectableDT=DT.filter(d=>RIDER_DT_IDS.includes(d.id));
   const hallFloor=hallY+1.5;
+  function mkRecruit(name,flavor,pos,yPos){
+    const dtDef=selectableDT[~~(Math.random()*selectableDT.length)];
+    const v=makeVillagerMesh();
+    v.userData={npcName:name,npcText:flavor+' I ride a '+dtDef.name+' dragon. [R] RECRUIT',isRecruitable:true,recruited:false,dtDef};
+    v.position.set(pos[0],yPos,pos[1]);
+    scene.add(v);objects.push(v);friendlyNPCs.push(v);
+  }
+
+  // Dragon Rider Blane — teaches team dragon selection
+  const blane=makeVillagerMesh();
+  blane.userData.npcName='Dragon Rider Blane';
+  blane.userData.npcText='Welcome! I train dragon riders. Once you have a team, press [B] and I will help them choose new dragons!';
+  blane.userData.isBlane=true;
+  blane.position.set(DM_X+5,groundY(DM_X+5,DM_Z+2)+1.5,DM_Z+2);
+  scene.add(blane);objects.push(blane);friendlyNPCs.push(blane);
+
+  // Floor 1 — 10 recruitable villagers around the mountain base (outside)
+  const f1=[['Tara','I will ride with you to the ends of the world.'],['Orin','My bones ache but my spirit is strong.'],
+    ['Mika','I have always wanted to fly.'],['Sera','They say the King of Death Dragon cannot be beaten. Want to try?'],
+    ['Davan','Heard about the volcano? Dangerous stuff.'],['Kael','Pick me and I will never leave your side.'],
+    ['Lira','My mother was a dragon rider. Now it is my turn.'],['Bron','I am the strongest person on this mountain.'],
+    ['Zyna','Magic runs in my blood. And a little fire too.'],['Fenn','I know every cave on this mountain.']];
+  const f1Pos=[[DM_X-20,DM_Z-15],[DM_X+20,DM_Z-15],[DM_X-25,DM_Z+5],[DM_X+25,DM_Z+5],
+    [DM_X-18,DM_Z+15],[DM_X+18,DM_Z+15],[DM_X-8,DM_Z-20],[DM_X+8,DM_Z-20],[DM_X-15,DM_Z-5],[DM_X+15,DM_Z-5]];
+  f1.forEach(([n,t],i)=>mkRecruit(n,t,f1Pos[i],groundY(f1Pos[i][0],f1Pos[i][1])+1.5));
+
+  // Floor 2 — 10 recruitable villagers inside the cave hall
+  const f2=[['Voss','The cave is my home. I know its every stone.'],['Rhea','I train underground so my dragon breathes cold.'],
+    ['Talor','Blane taught me everything about riding.'],['Cynn','I am fast and quiet — good for scouting.'],
+    ['Aeva','My dragon can smell an enemy from miles away.'],['Dorn','Stone walls and iron will.'],
+    ['Plia','I am a healer but I fight when I must.'],['Skye','I want to see the sky from dragon back.'],
+    ['Breck','Every scar on me is from a battle I won.'],['Nori','I joined the mountain people after the Emperor attacked my village.']];
+  const f2Pos=[[DM_X-6,DM_Z+33],[DM_X+6,DM_Z+33],[DM_X-6,DM_Z+42],[DM_X+6,DM_Z+42],
+    [DM_X-6,DM_Z+54],[DM_X+6,DM_Z+54],[DM_X-6,DM_Z+62],[DM_X+6,DM_Z+62],[DM_X-6,DM_Z+71],[DM_X+6,DM_Z+71]];
+  f2.forEach(([n,t],i)=>mkRecruit(n,t,f2Pos[i],hallFloor));
+
+  // Interior flavor NPCs (shops/lore) in the lower hall
   const interiorNPCs=[
     {name:'Food Merchant',  text:'Hot meals for weary riders! Press B to eat (costs 50 score, +30 HP).', isFoodShop:true, ix:DM_X-5,iz:DM_Z+35},
     {name:'Alchemist',      text:'I brew potions from dragon scales and mountain herbs. Upgrade your orbs with me.', ix:DM_X+5,iz:DM_Z+35},
     {name:'Dragon Keeper',  text:'We tend to injured dragons here. All types live in harmony on this mountain.', ix:DM_X-5,iz:DM_Z+50},
     {name:'Elder Runa',     text:'Long ago the Emperor had no dragon. He STOLE the King of Death Dragon from its nest.', ix:DM_X+5,iz:DM_Z+50},
-    {name:'Rider Thane',    text:'I know every pass on this mountain. The Emperor... terrifying.',isRecruitable:true,recruited:false, ix:DM_X-5,iz:DM_Z+65},
+    {name:'Rider Thane',    text:'I know every pass on this mountain. The Emperor... terrifying.',isRecruitable:true, ix:DM_X-5,iz:DM_Z+65},
     {name:'Arms Dealer',    text:'Weapons forged from volcano ore. Defeat the Emperor and I will upgrade your sword.', ix:DM_X+5,iz:DM_Z+65},
   ];
   interiorNPCs.forEach((cfg)=>{
     const npc=makeVillagerMesh();
-    npc.userData.npcName=cfg.name;
-    npc.userData.npcText=cfg.text;
+    npc.userData.npcName=cfg.name;npc.userData.npcText=cfg.text;
     if(cfg.isFoodShop)npc.userData.isFoodShop=true;
-    if(cfg.isRecruitable){npc.userData.isRecruitable=true;npc.userData.recruited=false;
+    if(cfg.isRecruitable){
       const dtDef=selectableDT[~~(Math.random()*selectableDT.length)];
-      npc.userData.dtDef=dtDef;npc.userData.npcText+=' I ride a '+dtDef.name+' dragon. [R] RECRUIT';}
+      npc.userData.isRecruitable=true;npc.userData.recruited=false;npc.userData.dtDef=dtDef;
+      npc.userData.npcText+=' I ride a '+dtDef.name+' dragon. [R] RECRUIT';}
     npc.position.set(cfg.ix,hallFloor,cfg.iz);
     scene.add(npc);objects.push(npc);friendlyNPCs.push(npc);
   });
 
-  // 5 recruitable riders on the peak — each picks a random dragon type
-  const selectableDT=DT.filter(d=>RIDER_DT_IDS.includes(d.id));
+  // 5 recruitable dragon riders on the peak (with visible mounts)
   for(let i=0;i<5;i++){
     const angle=i/5*Math.PI*2;
     const dr=new THREE.Group();
@@ -1821,9 +1858,23 @@ function openDialog(npc){
   document.getElementById('dialog-text').textContent=txt;
   document.getElementById('dialog').style.display='block';
   if(document.exitPointerLock)document.exitPointerLock();
-  // B key to buy food or armor while dialog open
+  // B key to buy food / armor / Blane dragon reassign while dialog open
   const isFoodShop=!!npc.userData.isFoodShop;
+  const isBlane=!!npc.userData.isBlane;
   const onKey=e=>{
+    if(e.code==='KeyB'&&dialogOpen&&isBlane){
+      if(dragonArmy.length===0){floatWorld(npc.position,'❌ RECRUIT A TEAM FIRST','#ff8844');}
+      else{
+        const rDT=DT.filter(d=>RIDER_DT_IDS.includes(d.id));
+        dragonArmy.forEach(a=>{
+          const nd=rDT[~~(Math.random()*rDT.length)];
+          a.mesh.userData.dtDef=nd;
+          floatWorld(a.mesh.position,'🐉 '+nd.name,'#aaffaa');
+        });
+        floatWorld(npc.position,'✅ DRAGONS CHOSEN!','#44ffaa');
+        closeDialog();document.removeEventListener('keydown',onKey);
+      }
+    }
     if(e.code==='KeyB'&&dialogOpen&&isFoodShop){
       if(score>=50&&humanHP<humanMaxHP){
         score-=50;humanHP=Math.min(humanMaxHP,humanHP+30);

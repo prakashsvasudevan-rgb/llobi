@@ -69,15 +69,15 @@ const EMPTY=0,SAND=1,WATER=2,FIRE=3,STONE=4,WOOD=5,LAVA=6,ICE=7,SMOKE=8,PLANT=9,
 const ACID=13,GUNPOWDER=14,CLONER=15,VOID=16,WALL=17,RUIN=18,CONCRETE=19,TERRACOTTA=20;
 const GOLD=21,SILVER=22,MERCURY=23,IRON=24,STEEL=25;
 const SEED=26,CACTUS=27,PALM=28,CORN=29,APPLE_T=30,ORANGE_T=31,PAPAYA_T=32;
-const BOMB=33,FAN=34,HEATER=35,COOLER=36,BASALT=37;
+const BOMB=33,FAN=34,HEATER=35,COOLER=36,BASALT=37,BLUE_FIRE=38;
 const DRAGON=40,TIGER=41,SHEEP=42,HUMAN=43,FISH=44,RAT=45,FLEA=46,FIRE_DRAGON=48,EARTH_DRAGON=49;
 const ANIMAL_IDS=new Set([DRAGON,TIGER,SHEEP,HUMAN,FISH,RAT,FLEA,FIRE_DRAGON,EARTH_DRAGON]);
 
 // Animal sprite sizes in pixels
 const A_SIZE={
-  [DRAGON]:{w:10*CELL,h:8*CELL},  // wyvern — biggest
+  [DRAGON]:{w:20*CELL,h:16*CELL},  // wyvern — biggest
   [FIRE_DRAGON]:{w:11*CELL,h:7*CELL},
-  [EARTH_DRAGON]:{w:12*CELL,h:9*CELL}, // earth dragon — biggest, 4-legged
+  [EARTH_DRAGON]:{w:20*CELL,h:16*CELL}, // earth dragon — full size
   [TIGER]: {w:7*CELL,h:4*CELL},
   [SHEEP]: {w:5*CELL,h:4*CELL},
   [HUMAN]: {w:3*CELL,h:7*CELL},  // tall
@@ -123,7 +123,8 @@ const ELEM={
   [FAN]:     {name:'Fan',     color:'#00BCD4',colors:['#00BCD4','#0097A7','#00E5FF'],fl:false},
   [HEATER]:  {name:'Heater',  color:'#FF5722',colors:['#FF5722','#E64A19','#FF8A65'],fl:false},
   [COOLER]:  {name:'Cooler',  color:'#80DEEA',colors:['#80DEEA','#4DD0E1','#B2EBF2'],fl:false},
-  [BASALT]:  {name:'Basalt',  color:'#2D2D2D',colors:['#2D2D2D','#222','#383838'],fl:false},
+  [BASALT]:   {name:'Basalt',  color:'#2D2D2D',colors:['#2D2D2D','#222','#383838'],fl:false},
+  [BLUE_FIRE]:{name:'BluFire', color:'#00AAFF',colors:['#00AAFF','#0088EE','#44CCFF'],fl:false},
   [DRAGON]:  {name:'Wyvern',  color:'#9B0057',colors:['#9B0057'],animal:true},
   [FIRE_DRAGON]:{name:'FireDrgn',color:'#FF1A00',colors:['#FF1A00'],animal:true},
   [EARTH_DRAGON]:{name:'EarthDrg',color:'#1B5E20',colors:['#1B5E20'],animal:true},
@@ -154,6 +155,10 @@ let selectedEl=SAND,brushSize=3,paused=false,erasing=false;
 let isDrawing=false,lastX=-1,lastY=-1;
 let frameCount=0,lastFpsTime=0;
 let activeCat=0,animals=[];
+
+// Preload sprite images
+const earthDragonImg=new Image();
+earthDragonImg.src='/games/sand-box/sprites/earth_dragon.png';
 
 function startGame(){document.getElementById('overlay').style.display='none';init();requestAnimationFrame(loop);}
 
@@ -236,7 +241,7 @@ function simulate(){
         case APPLE_T:uTree(x,y,'#C62828');break;case ORANGE_T:uTree(x,y,'#F4511E');break;case PAPAYA_T:uTree(x,y,'#FFA000');break;
         case ACID:uAcid(x,y);break;case GUNPOWDER:uGunpowder(x,y);break;case BOMB:uBomb(x,y);break;
         case CLONER:uCloner(x,y);break;case VOID:uVoid(x,y);break;
-        case FAN:uFan(x,y);break;case HEATER:uHeater(x,y);break;case COOLER:uCooler(x,y);break;case BASALT:break;
+        case FAN:uFan(x,y);break;case HEATER:uHeater(x,y);break;case COOLER:uCooler(x,y);break;case BASALT:break;case BLUE_FIRE:uBlueFire(x,y);break;
       }
     }
   }
@@ -252,6 +257,19 @@ function uOil(x,y){if(y<rows-1&&get(x,y+1)===EMPTY){swap(x,y,x,y+1);return;}cons
 function uAsh(x,y){if(y>=rows-1)return;if(get(x,y+1)===EMPTY){swap(x,y,x,y+1);return;}const d=Math.random()<.5?1:-1;if(get(x+d,y+1)===EMPTY)swap(x,y,x+d,y+1);else if(get(x-d,y+1)===EMPTY)swap(x,y,x-d,y+1);}
 function uRuin(x,y){if(Math.random()>.0003)return;for(const[dx,dy]of[[0,1],[-1,0],[1,0]]){if(inB(x+dx,y+dy)&&get(x+dx,y+dy)===EMPTY){set(x,y,ASH);return;}}}
 function uIce(x,y){for(const[dx,dy]of[[0,-1],[0,1],[-1,0],[1,0]]){if(!inB(x+dx,y+dy))continue;const nt=get(x+dx,y+dy);if((nt===FIRE||nt===LAVA||nt===HEATER)&&Math.random()<.05){set(x,y,WATER);return;}}}
+function uBlueFire(x,y){
+  const i=idx(x,y);life[i]++;
+  if(y>0){const up=get(x,y-1);if(up===EMPTY&&Math.random()<.75){set(x,y-1,BLUE_FIRE);simBuf[idx(x,y-1)]=1;}if(up===SMOKE&&Math.random()<.4){set(x,y-1,BLUE_FIRE);simBuf[idx(x,y-1)]=1;}}
+  if(y>0&&Math.random()<.25){const sx=x+(Math.random()<.5?1:-1);if(inB(sx,y-1)&&get(sx,y-1)===EMPTY){set(sx,y-1,BLUE_FIRE);simBuf[idx(sx,y-1)]=1;}}
+  if(Math.random()<.12){const sx=x+(Math.random()<.5?1:-1);if(inB(sx,y)&&get(sx,y)===EMPTY){set(sx,y,BLUE_FIRE);simBuf[idx(sx,y)]=1;}}
+  for(const[dx,dy]of[[0,-1],[0,1],[-1,0],[1,0],[-1,-1],[1,-1]]){
+    const nx=x+dx,ny=y+dy;if(!inB(nx,ny))continue;const nt=get(nx,ny);
+    if(nt===WATER&&Math.random()<.1){set(nx,ny,STEAM,220,230,255,0);clr(x,y);return;}
+    if(nt===ICE&&Math.random()<.1){set(nx,ny,WATER);simBuf[idx(nx,ny)]=1;}
+    if(ANIMAL_IDS.has(nt)){const a=animals.find(a=>a.alive&&Math.round(a.x/CELL)===nx&&Math.round(a.y/CELL)===ny);if(a)a.hp-=0.2;}
+  }
+  if(life[i]>35+Math.random()*25)clr(x,y);
+}
 function uFire(x,y){
   const i=idx(x,y);life[i]++;
   // rise upward aggressively (neal.fun style)
@@ -327,10 +345,10 @@ function uAnimals(){
     const myPreds=A_PRED[a.type]||new Set(),myPrey=A_PREY[a.type]||new Set();
     for(const b of animals){if(!b.alive||b===a)continue;const d=Math.hypot(b.x-a.x,b.y-a.y);if(myPreds.has(b.type)&&d<npDist){npDist=d;nearPred=b;}if(myPrey.has(b.type)&&d<nyDist){nyDist=d;nearPrey=b;}}
     switch(a.type){
-      case DRAGON: // wyvern — flies and swoops
+      case DRAGON: // wyvern — flies and swoops, breathes blue fire
         if(nearPrey&&nyDist<220){a.vx=(nearPrey.x>a.x?1:-1)*3.5;a.vy=(nearPrey.y>a.y?.5:-.8)*2.2;}
         else{a.vx=a.dir*2;a.vy+=Math.sin(a.timer*.05)*.5;}
-        if(nearPrey&&nyDist<35&&Math.random()<.05){const fx=cx+(a.vx>0?2:-2);if(inB(fx,cy))set(fx,cy,FIRE);}
+        if(nearPrey&&nyDist<60&&Math.random()<.07){const fd=a.vx>0?1:-1;for(let fi=1;fi<=3;fi++){const fx=cx+fd*fi;if(inB(fx,cy))set(fx,cy,BLUE_FIRE);}}
         if(a.timer%120===0)a.dir=-a.dir;break;
       case FIRE_DRAGON: // heavy fire-breather — walks and burns
         if(nearPred&&npDist<80){a.vx=-(nearPred.x>a.x?1:-1)*2;if(onGround)a.vy=-4;}
@@ -425,83 +443,122 @@ function drawAnimal(a){
   }
 }
 
-// ── Wyvern sprite (matches pixel art: crimson/magenta, big brown wing, beige belly, coiled tail) ──
-function drawWyvern(W,H,f){
-  const C=CELL;
-  // Wing animation: flap up (f<2) vs down (f>=2)
-  const wingLift = f<2 ? -H*.18 : 0;
-  const wingTip  = f<2 ? H*.05  : H*.28;
-  // Large bat wing — behind body
-  ctx.fillStyle='#7A3B10';
-  ctx.beginPath();
-  ctx.moveTo(W*.48,H*.32+wingLift);
-  ctx.bezierCurveTo(W*.72,H*.0+wingLift,W*.99,wingTip,W*.92,H*.42+wingLift*.3);
-  ctx.bezierCurveTo(W*.8,H*.56,W*.62,H*.5,W*.48,H*.44);
-  ctx.closePath();ctx.fill();
-  // Wing membrane highlight
-  ctx.fillStyle='#A0552A';
-  ctx.beginPath();
-  ctx.moveTo(W*.5,H*.35+wingLift);
-  ctx.bezierCurveTo(W*.72,H*.1+wingLift,W*.93,H*.18+wingTip*.5,W*.85,H*.44+wingLift*.2);
-  ctx.bezierCurveTo(W*.75,H*.54,W*.6,H*.5,W*.5,H*.44);
-  ctx.closePath();ctx.fill();
-  // Wing veins
-  ctx.strokeStyle='#5C2800';ctx.lineWidth=C*.25;ctx.lineCap='round';
-  for(let i=0;i<3;i++){
-    const t=.3+i*.2;
-    ctx.beginPath();ctx.moveTo(W*.5,H*.4+wingLift*.5);
-    ctx.lineTo(W*.5+W*.4*t,H*.1+wingLift+i*H*.08);ctx.stroke();
+// ── Pixel-art sprite helpers ──────────────────────────────────────────────────
+function drawPixelSprite(grid,pal,W,H){
+  const cols=grid[0].length,rows=grid.length;
+  const pw=W/cols,ph=H/rows;
+  for(let r=0;r<rows;r++){
+    const row=grid[r];
+    for(let c=0;c<cols;c++){
+      const ch=row[c];
+      if(ch===' '||ch==='.') continue;
+      ctx.fillStyle=pal[ch]||'#000';
+      ctx.fillRect(c*pw,r*ph,Math.ceil(pw),Math.ceil(ph));
+    }
   }
-  // Body
+}
+
+// Wyvern colour palette (matches the pixel art image)
+const WYV_PAL={
+  '1':'#200015','2':'#500030','3':'#800050','4':'#9B0057',
+  '5':'#C2185B','6':'#E91E8C','a':'#5A1A00','b':'#8B4010',
+  'c':'#B06030','d':'#D09060','e':'#EAC090','f':'#E8D0B0',
+  'g':'#9B8070','Y':'#FFEE00','K':'#111'
+};
+
+// Wyvern pixel grids — 20 cols × 16 rows — facing right (wing on LEFT, head on RIGHT)
+// Frame 0: wing neutral  Frame 1: wing raised
+const WYV_F=[
+  // Frame 0 — wing down / neutral
+ ["    aa              ",
+  "   ab b   22        ",
+  "   abcb  2442       ",
+  "  abbcb  24442      ",
+  " aabbcb  244342     ",
+  " aabbcb  24433 2    ",
+  "aabbbcb  244332     ",
+  "aabbbc  1 244332    ",
+  "aaabb   1g 24332    ",
+  " aabb   1gff24332   ",
+  "  abb   1gff 4442  2",
+  "   bb    gff  443 32",
+  "    b    ff   43 2 2",
+  "         ff   322 2 ",
+  "          f   32    ",
+  "               2    "],
+  // Frame 1 — wing raised / attack
+ ["  aa                ",
+  " ab b               ",
+  " abcb  22           ",
+  "abbcb 2442          ",
+  "aabbcb24442         ",
+  "aabbcb2443 2        ",
+  "aabbbcb44332        ",
+  "aabbbc  1 44332     ",
+  "aaabb   1g24332     ",
+  " aabb   1gff4332    ",
+  "  abb   1gff4442  2 ",
+  "   bb    gff 433 32 ",
+  "    b    ff  43 2 2 ",
+  "         ff  322 2  ",
+  "          f  32     ",
+  "              2     "],
+];
+
+// ── Wyvern sprite drawn from pixel-art grid ──
+function drawWyvern(W,H,f){
+  const C=CELL;const grid=WYV_F[f<2?0:1];
+  const cols=20,rows=16,pw=W/cols,ph=H/rows;
+  // draw body/wing grid
+  drawPixelSprite(grid,WYV_PAL,W,H);
+  // HEAD (always on right side, rows 3-9, cols 14-19)
+  const headPal={'4':'#9B0057','3':'#800050','2':'#500030','5':'#C2185B','6':'#E91E8C'};
+  const headRows=[
+    "    43  ",  // row 3: col 12-19
+    "   4442 ",  // row 4
+    "  44332 ",  // row 5
+    "  44332 ",  // row 6
+    " 444332 ",  // row 7
+    " 444332 ",  // row 8
+    "  44433 ",  // row 9
+  ];
+  // Eye
+  ctx.fillStyle='#FFEE00';ctx.fillRect(W*.82,H*.28,pw,ph);
+  ctx.fillStyle='#000';ctx.fillRect(W*.83,H*.29,pw*.5,ph*.7);
+  // Horns (top of head)
+  ctx.fillStyle='#200015';
+  ctx.fillRect(W*.75,H*.12,pw,ph*2);
+  ctx.fillRect(W*.80,H*.08,pw,ph*2.5);
+  // Snout
+  ctx.fillStyle='#9B0057';ctx.fillRect(W*.92,H*.35,pw*1.5,ph*2);
+  ctx.fillStyle='#C2185B';ctx.fillRect(W*.93,H*.37,pw,ph*1.5);
+  // Jaw (open on frame 1,3)
+  const j=f%2===1?ph:0;
+  ctx.fillStyle='#500030';ctx.fillRect(W*.88,H*.44+j,pw*2,ph);
+  ctx.fillStyle='#fff';ctx.fillRect(W*.88,H*.45+j,pw*.8,ph*.7);ctx.fillRect(W*.91,H*.45+j,pw*.8,ph*.7);
+  // Legs
+  const lA=f%2===0?H*.92:H*.86,lB=f%2===0?H*.86:H*.92;
+  ctx.fillStyle='#500030';
+  ctx.fillRect(W*.58,H*.78,pw*1.5,lA-H*.78);ctx.fillRect(W*.65,H*.78,pw*1.5,lB-H*.78);
+  ctx.fillStyle='#200015';
+  ctx.fillRect(W*.56,lA,pw,ph);ctx.fillRect(W*.60,lA,pw,ph);
+  ctx.fillRect(W*.63,lB,pw,ph);ctx.fillRect(W*.67,lB,pw,ph);
+  // Coiled tail (bottom-right ring, crimson)
+  const tr=[
+    [H*.68,W*.72, W*.79,H*.02,0],  // top of coil
+    [H*.68,W*.80, W*.04,H*.10,0],  // right
+    [H*.70,W*.80, W*.04,H*.08,0],
+    [H*.72,W*.80, W*.04,H*.06,0],
+    [H*.74,W*.79, W*.04,H*.06,0],
+    [H*.76,W*.77, W*.06,H*.04,0],
+    [H*.76,W*.72, W*.06,H*.04,0],  // bottom
+    [H*.74,W*.68, W*.04,H*.06,0],  // left side
+    [H*.72,W*.67, W*.04,H*.06,0],
+    [H*.70,W*.68, W*.04,H*.04,0],
+  ];
   ctx.fillStyle='#9B0057';
-  ctx.beginPath();ctx.ellipse(W*.4,H*.58,W*.26,H*.26,-.15,0,Math.PI*2);ctx.fill();
-  // Belly (beige, like pixel art)
-  ctx.fillStyle='#D4A080';
-  ctx.beginPath();ctx.ellipse(W*.38,H*.64,W*.13,H*.17,-.1,0,Math.PI*2);ctx.fill();
-  // Dark back scales
-  ctx.fillStyle='#6B003C';
-  for(let i=0;i<4;i++){ctx.beginPath();ctx.arc(W*.28+i*W*.07,H*.46,C*.5,0,Math.PI*2);ctx.fill();}
-  // Neck
-  ctx.fillStyle='#8B0048';
-  ctx.beginPath();ctx.ellipse(W*.22,H*.4,W*.11,H*.18,-0.4,0,Math.PI*2);ctx.fill();
-  // Head
-  ctx.fillStyle='#9B0057';
-  ctx.beginPath();ctx.ellipse(W*.14,H*.32,W*.16,H*.18,-0.3,0,Math.PI*2);ctx.fill();
-  // Snout / jaw (open slightly on frame 1,3)
-  const jawOpen = f%2===1 ? H*.04 : 0;
-  ctx.fillStyle='#8B0048';
-  ctx.beginPath();ctx.ellipse(W*.07,H*.38+jawOpen*.5,W*.09,H*.1+jawOpen,0.4,0,Math.PI*2);ctx.fill();
-  // Teeth
-  ctx.fillStyle='#fff';
-  ctx.fillRect(W*.02,H*.4+jawOpen,C*.35,C*.55);ctx.fillRect(W*.07,H*.4+jawOpen,C*.35,C*.55);
-  // Upper jaw fang
-  ctx.fillRect(W*.04,H*.32,C*.3,C*.5);
-  // Horns
-  ctx.fillStyle='#4A002A';
-  ctx.beginPath();ctx.moveTo(W*.1,H*.18);ctx.lineTo(W*.05,H*.04);ctx.lineTo(W*.16,H*.2);ctx.fill();
-  ctx.beginPath();ctx.moveTo(W*.2,H*.16);ctx.lineTo(W*.16,H*.02);ctx.lineTo(W*.26,H*.18);ctx.fill();
-  // Eye (yellow, with slit pupil)
-  ctx.fillStyle='#FFEE00';ctx.beginPath();ctx.ellipse(W*.17,H*.28,C*.45,C*.35,0,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#000';ctx.fillRect(W*.17-C*.08,H*.24,C*.16,C*.7);
-  // 2 legs (wyvern — no front arms)
-  const lA=f%2===0?H*.93:H*.88,lB=f%2===0?H*.88:H*.93;
-  ctx.fillStyle='#7A0040';
-  ctx.fillRect(W*.3,H*.78,C*.7,lA-H*.78);ctx.fillRect(W*.48,H*.78,C*.7,lB-H*.78);
-  // Claws
-  ctx.fillStyle='#3A0020';
-  ctx.fillRect(W*.28,lA,C*.4,C*.6);ctx.fillRect(W*.35,lA,C*.4,C*.6);
-  ctx.fillRect(W*.46,lB,C*.4,C*.6);ctx.fillRect(W*.53,lB,C*.4,C*.6);
-  // Tail — coils outward and curls back (animated)
-  const tailSwing = Math.sin(f*Math.PI/2)*H*.04;
-  ctx.strokeStyle='#9B0057';ctx.lineWidth=C*.9;ctx.lineCap='round';
-  ctx.beginPath();
-  ctx.moveTo(W*.62,H*.7);
-  ctx.bezierCurveTo(W*.82,H*.72+tailSwing,W*.96,H*.82,W*.88,H*.92);
-  ctx.bezierCurveTo(W*.8,H*.99,W*.66,H*.97,W*.65,H*.88);
-  ctx.stroke();
-  ctx.lineWidth=C*.5;
-  ctx.beginPath();
-  ctx.moveTo(W*.65,H*.88);ctx.bezierCurveTo(W*.64,H*.8,W*.7,H*.78,W*.72,H*.82);ctx.stroke();
+  for(const[row,col,w2,h2]of tr)ctx.fillRect(col,row,pw*2,ph*1.5);
+  ctx.fillStyle='#500030';ctx.fillRect(W*.74,H*.74,pw,ph);// inner shadow
 }
 
 // ── Classic Fire Dragon (4-legged, red/orange, breathes fire) ──
@@ -561,67 +618,30 @@ function drawFireDragon(W,H,f){
   ctx.beginPath();ctx.moveTo(W*.2,H*.65);ctx.bezierCurveTo(W*.05,H*.7+ts,W*.02,H*.85,W*.1,H*.95);ctx.stroke();
 }
 
-// ── Earth Dragon (green, 4-legged, long neck, wing, peaceful/angry states) ──
+// ── Earth Dragon — drawn from the actual PNG sprite the user provided ──
 function drawEarthDragon(W,H,f,angry){
   const C=CELL;
-  // tail curls left behind body, animated
-  const ts=Math.sin(f*Math.PI/2)*H*.04;
-  ctx.strokeStyle='#1B5E20';ctx.lineWidth=C*1.1;ctx.lineCap='round';
-  ctx.beginPath();ctx.moveTo(W*.18,H*.72);ctx.bezierCurveTo(W*.05,H*.75+ts,W*.02,H*.9,W*.1,H*.97);ctx.stroke();
-  // folded wing on left side (dark green)
-  ctx.fillStyle='#1A4A1A';
-  const wFlap=f<2?-H*.08:0;
-  ctx.beginPath();ctx.moveTo(W*.28,H*.35);ctx.bezierCurveTo(W*.05,H*.2+wFlap,W*.02,H*.4+wFlap,W*.18,H*.55);ctx.bezierCurveTo(W*.24,H*.6,W*.3,H*.55,W*.28,H*.45);ctx.closePath();ctx.fill();
-  // Wing highlight
-  ctx.fillStyle='#2E7D32';
-  ctx.beginPath();ctx.moveTo(W*.28,H*.37);ctx.bezierCurveTo(W*.1,H*.25+wFlap,W*.07,H*.4+wFlap,W*.2,H*.52);ctx.bezierCurveTo(W*.25,H*.56,W*.3,H*.5,W*.28,H*.43);ctx.closePath();ctx.fill();
-  // body
-  ctx.fillStyle='#2E7D32';
-  ctx.beginPath();ctx.ellipse(W*.48,H*.65,W*.28,H*.22,0,0,Math.PI*2);ctx.fill();
-  // yellow-green belly
-  ctx.fillStyle='#8BC34A';
-  ctx.beginPath();ctx.ellipse(W*.48,H*.7,W*.16,H*.14,0,0,Math.PI*2);ctx.fill();
-  // belly scales
-  ctx.fillStyle='#9CCC65';
-  for(let i=0;i<3;i++){ctx.beginPath();ctx.arc(W*.36+i*W*.11,H*.72,C*.5,0,Math.PI,true);ctx.fill();}
-  // back spines (dark)
-  ctx.fillStyle='#1A3A1A';
-  for(let i=0;i<4;i++){const sx=W*.3+i*W*.1;ctx.beginPath();ctx.moveTo(sx,H*.5);ctx.lineTo(sx+W*.04,H*.38);ctx.lineTo(sx+W*.08,H*.5);ctx.fill();}
-  // long neck
-  ctx.fillStyle='#2E7D32';
-  ctx.beginPath();ctx.ellipse(W*.72,H*.44,W*.1,H*.22,0.5,0,Math.PI*2);ctx.fill();
-  // head
-  ctx.fillStyle='#388E3C';
-  ctx.beginPath();ctx.ellipse(W*.83,H*.3,W*.16,H*.18,0.15,0,Math.PI*2);ctx.fill();
-  // horn tips (brown, like pixel art)
-  ctx.fillStyle='#795548';
-  ctx.beginPath();ctx.moveTo(W*.78,H*.14);ctx.lineTo(W*.74,H*.03);ctx.lineTo(W*.83,H*.16);ctx.fill();
-  ctx.beginPath();ctx.moveTo(W*.88,H*.12);ctx.lineTo(W*.85,H*.01);ctx.lineTo(W*.93,H*.14);ctx.fill();
-  // snout
-  const jaw=angry&&f%2===1?H*.04:0;
-  ctx.fillStyle='#2E7D32';
-  ctx.beginPath();ctx.ellipse(W*.95,H*.35+jaw*.4,W*.07,H*.09+jaw,0.2,0,Math.PI*2);ctx.fill();
-  // teeth (small, only visible when angry/open)
-  if(angry){ctx.fillStyle='#fff';ctx.fillRect(W*.9,H*.38+jaw,C*.3,C*.5);ctx.fillRect(W*.95,H*.38+jaw,C*.3,C*.5);}
-  // eye — yellow square (like pixel art)
-  ctx.fillStyle=angry?'#FF6F00':'#FFD600';
-  ctx.fillRect(W*.86,H*.25,C*.7,C*.7);
-  ctx.fillStyle='#000';ctx.fillRect(W*.88,H*.27,C*.3,C*.5);
-  // 4 legs with brown claws
-  const lf=f%2===0?C*.7:-C*.7;
-  ctx.fillStyle='#2E7D32';
-  ctx.fillRect(W*.28,H*.8,C*.75,H*.18+lf);ctx.fillRect(W*.42,H*.8,C*.75,H*.18-lf);
-  ctx.fillRect(W*.58,H*.8,C*.75,H*.18+lf);ctx.fillRect(W*.72,H*.8,C*.75,H*.18-lf);
-  // brown feet
-  ctx.fillStyle='#795548';
-  ctx.fillRect(W*.26,H*.8+H*.18+lf,C*.9,C*.5);ctx.fillRect(W*.28,H*.8+H*.18+lf,C*.3,C*.65);ctx.fillRect(W*.35,H*.8+H*.18+lf,C*.3,C*.65);
-  ctx.fillRect(W*.4,H*.8+H*.18-lf,C*.9,C*.5);ctx.fillRect(W*.42,H*.8+H*.18-lf,C*.3,C*.65);ctx.fillRect(W*.49,H*.8+H*.18-lf,C*.3,C*.65);
-  ctx.fillRect(W*.56,H*.8+H*.18+lf,C*.9,C*.5);ctx.fillRect(W*.58,H*.8+H*.18+lf,C*.3,C*.65);ctx.fillRect(W*.65,H*.8+H*.18+lf,C*.3,C*.65);
-  ctx.fillRect(W*.7,H*.8+H*.18-lf,C*.9,C*.5);ctx.fillRect(W*.72,H*.8+H*.18-lf,C*.3,C*.65);ctx.fillRect(W*.79,H*.8+H*.18-lf,C*.3,C*.65);
-  // angry indicator: rumble lines around body
-  if(angry){
-    ctx.strokeStyle='rgba(139,195,74,.7)';ctx.lineWidth=C*.4;
-    for(let i=0;i<3;i++){ctx.beginPath();ctx.arc(W*.48,H*.65,W*.32+i*C,0,Math.PI*2);ctx.stroke();}
+  // Draw the user's exact pixel art, cropping the pink border (sprite is in center ~92% of image)
+  if(earthDragonImg.complete&&earthDragonImg.naturalWidth>0){
+    const iw=earthDragonImg.naturalWidth,ih=earthDragonImg.naturalHeight;
+    // crop out the ~20px hot-pink border and white margin (~50px each side of 1092px image)
+    const margin=Math.round(iw*0.095); // ~104px: skip border+white margin
+    const cropW=iw-margin*2,cropH=ih-margin*2;
+    // leg animation: shift the bottom 30% of the sprite up/down slightly
+    const legShift=(f%2===0?C*.5:-C*.5);
+    // draw top 70% (body/wing/head) — exact sprite
+    ctx.drawImage(earthDragonImg,margin,margin,cropW,cropH*0.75,0,0,W,H*0.78);
+    // draw bottom 30% (legs) with walk offset
+    ctx.drawImage(earthDragonImg,margin,margin+cropH*0.75,cropW,cropH*0.25,0,H*0.78+legShift,W,H*0.22);
+    // angry pulse: green ring
+    if(angry){
+      ctx.strokeStyle=`rgba(139,195,74,${0.4+Math.random()*.4})`;
+      ctx.lineWidth=C*.8;
+      ctx.beginPath();ctx.arc(W*.5,H*.55,W*.48,0,Math.PI*2);ctx.stroke();
+    }
+  } else {
+    // fallback simple green rect while image loads
+    ctx.fillStyle='#2E7D32';ctx.fillRect(0,0,W,H);
   }
 }
 
@@ -801,9 +821,12 @@ function render(){
     else{
       const ci=gi*3;r=color[ci];g=color[ci+1];b=color[ci+2];
       if(type===FIRE){
-        // bright yellow core fading to orange/red tips — like neal.fun
         const age=life[gi]/30;const hot=Math.max(0,1-age);
         r=255;g=Math.min(255,255*hot*hot+(Math.random()*60)|0);b=Math.max(0,(Math.random()*15)|0);
+      }
+      if(type===BLUE_FIRE){
+        const age=life[gi]/35;const hot=Math.max(0,1-age);
+        r=Math.max(0,(Math.random()*30)|0);g=Math.min(255,120+hot*120+(Math.random()*40)|0);b=255;
       }
       if(type===SMOKE||type===STEAM){const lf=life[gi]/160;a=Math.max(55,255-(lf*180|0));}
       if(type===ACID){g=Math.min(255,g+(Math.random()*30-10)|0);r=Math.max(0,r-10);}

@@ -76,7 +76,7 @@ const ANIMAL_IDS=new Set([DRAGON,TIGER,SHEEP,HUMAN,FISH,RAT,FLEA,FIRE_DRAGON,EAR
 // Animal sprite sizes in pixels
 const A_SIZE={
   [DRAGON]:{w:20*CELL,h:16*CELL},  // wyvern — biggest
-  [FIRE_DRAGON]:{w:22*CELL,h:14*CELL},
+  [FIRE_DRAGON]:{w:28*CELL,h:18*CELL},
   [EARTH_DRAGON]:{w:20*CELL,h:16*CELL}, // earth dragon — full size
   [TIGER]: {w:7*CELL,h:4*CELL},
   [SHEEP]: {w:5*CELL,h:4*CELL},
@@ -369,19 +369,29 @@ function uAnimals(){
     const myPreds=A_PRED[a.type]||new Set(),myPrey=A_PREY[a.type]||new Set();
     for(const b of animals){if(!b.alive||b===a)continue;const d=Math.hypot(b.x-a.x,b.y-a.y);if(myPreds.has(b.type)&&d<npDist){npDist=d;nearPred=b;}if(myPrey.has(b.type)&&d<nyDist){nyDist=d;nearPrey=b;}}
     switch(a.type){
-      case DRAGON: // wyvern — flies and swoops, breathes blue fire
+      case DRAGON: // wyvern — flies and swoops, breathes blue fire ONLY when attacking
+        a.breathing=false;
         if(nearPrey&&nyDist<220){a.vx=(nearPrey.x>a.x?1:-1)*3.5;a.vy=(nearPrey.y>a.y?.5:-.8)*2.2;}
         else{a.vx=a.dir*2;a.vy+=Math.sin(a.timer*.05)*.5;}
-        if(nearPrey&&nyDist<60&&Math.random()<.07){const fd=a.vx>0?1:-1;for(let fi=1;fi<=3;fi++){const fx=cx+fd*fi;if(inB(fx,cy))set(fx,cy,BLUE_FIRE);}}
+        if(nearPrey&&nyDist<70){
+          a.breathing=true;
+          if(Math.random()<.07){const fd=a.vx>0?1:-1;for(let fi=1;fi<=3;fi++){const fx=cx+fd*fi;if(inB(fx,cy))set(fx,cy,BLUE_FIRE);}}
+        }
         if(a.timer%120===0)a.dir=-a.dir;break;
-      case FIRE_DRAGON: // flying fire-breather — soars and breathes fire
-        a.vy+=-0.18; // hover thrust
-        if(a.y>rows*CELL*.8)a.vy-=0.5; // push up near floor
-        if(a.y<rows*CELL*.15)a.vy+=0.3; // push down near ceiling
+      case FIRE_DRAGON: // flying fire-breather — soars, only breathes fire when attacking
+        a.vy+=-0.18;
+        if(a.y>rows*CELL*.8)a.vy-=0.5;
+        if(a.y<rows*CELL*.15)a.vy+=0.3;
         a.vy=Math.max(-4,Math.min(4,a.vy));
+        a.breathing=false;
         if(nearPred&&npDist<100){a.vx=-(nearPred.x>a.x?1:-1)*3;a.vy=-2.5;}
-        else if(nearPrey&&nyDist<220){a.vx=(nearPrey.x>a.x?1:-1)*3.2;if(nyDist<70&&Math.random()<.1){for(let fi=1;fi<=4;fi++){const fx=cx+(a.vx>0?fi:-fi);if(inB(fx,cy))set(fx,cy,FIRE);}}}
-        else{a.vx=a.dir*2;if(a.timer%90===0)a.dir=-a.dir;}
+        else if(nearPrey&&nyDist<220){
+          a.vx=(nearPrey.x>a.x?1:-1)*3.2;
+          if(nyDist<80){
+            a.breathing=true;
+            if(Math.random()<.12){for(let fi=1;fi<=5;fi++){const fx=cx+(a.vx>0?fi:-fi);if(inB(fx,cy))set(fx,cy,FIRE);}}
+          }
+        } else{a.vx=a.dir*2;if(a.timer%90===0)a.dir=-a.dir;}
         break;
       case EARTH_DRAGON: // peaceful grazer — only attacks when disturbed
         if(!a.state)a.state='peace';
@@ -456,8 +466,8 @@ function drawAnimal(a){
   if(flip)ctx.scale(-1,1);
 
   switch(a.type){
-    case DRAGON: drawWyvern(W,H,f); break;
-    case FIRE_DRAGON: drawFireDragon(W,H,f); break;
+    case DRAGON: drawWyvern(W,H,f,a.breathing); break;
+    case FIRE_DRAGON: drawFireDragon(W,H,f,a.breathing); break;
     case EARTH_DRAGON: drawEarthDragon(W,H,f,a.state==='angry'); break;
     case TIGER:  drawTiger(W,H,f); break;
     case SHEEP:  drawSheep(W,H,f); break;
@@ -492,66 +502,77 @@ function drawPixelSprite(grid,pal,W,H){
   }
 }
 
-// ── Wyvern — PNG sprite + blue fire breath on attack frames ──
-function drawWyvern(W,H,f){
+// ── Wyvern — PNG sprite, wing-flap cycle, blue fire ONLY when attacking ──
+function drawWyvern(W,H,f,breathing){
   const C=CELL;
   const src=wyvernCanvas||wyvernImg;
-  // blue fire breath behind sprite on frames 1 and 3
-  if(f===1||f===3){
-    for(let fi=0;fi<4;fi++){
-      const alpha=.85-fi*.18;const flicker=(Math.random()-.5)*C*1.5;
-      ctx.fillStyle=`rgba(0,${150+fi*25},255,${alpha})`;
-      ctx.beginPath();ctx.ellipse(W+fi*C*2.5+flicker,H*.5+flicker*.4,C*(2-fi*.3),C*(1.2-fi*.2),0,0,Math.PI*2);ctx.fill();
+  const wingBob=[-H*.07,-H*.03,H*.03,H*.01][f];
+
+  // blue fire ONLY when actually hunting prey
+  if(breathing){
+    for(let fi=0;fi<5;fi++){
+      const flicker=(Math.random()-.5)*C*1.5;
+      const alpha=.9-fi*.14;
+      ctx.fillStyle=`rgba(${fi*20},${140+fi*22},255,${alpha})`;
+      ctx.beginPath();ctx.ellipse(W+fi*C*2.8+flicker,H*.52+flicker*.4,C*(2.2-fi*.28),C*(1.3-fi*.16),0,0,Math.PI*2);ctx.fill();
     }
-    ctx.fillStyle='rgba(180,240,255,.8)';
-    ctx.beginPath();ctx.ellipse(W+C,H*.5,C*.8,C*.5,0,0,Math.PI*2);ctx.fill();
+    // bright blue-white core
+    ctx.fillStyle='rgba(200,240,255,.9)';
+    ctx.beginPath();ctx.ellipse(W+C*1.2,H*.52,C*1.2,C*.7,0,0,Math.PI*2);ctx.fill();
+    // sparks
+    for(let s=0;s<6;s++){
+      const sx=W+Math.random()*C*14,sy=H*.52+(Math.random()-.5)*H*.4;
+      ctx.fillStyle=`rgba(100,200,255,.9)`;
+      ctx.beginPath();ctx.arc(sx,sy,C*(.12+Math.random()*.3),0,Math.PI*2);ctx.fill();
+    }
   }
   if(src&&(src.width||src.naturalWidth)>0){
     const iw=src.width||src.naturalWidth,ih=src.height||src.naturalHeight;
     const margin=Math.round(iw*0.095);
     const cropW=iw-margin*2,cropH=ih-margin*2;
-    const bob=f<2?-H*.05:H*.01;
-    ctx.drawImage(src,margin,margin,cropW,cropH,0,bob,W,H);
+    ctx.drawImage(src,margin,margin,cropW,cropH,0,wingBob,W,H);
   } else {
     ctx.fillStyle='#9B0057';ctx.fillRect(0,0,W,H);
   }
 }
 
-// ── Fire Dragon — PNG sprite + animated fire breath overlay ──
-function drawFireDragon(W,H,f){
+// ── Fire Dragon — PNG sprite, proper wing-flap cycle, fire only when attacking ──
+function drawFireDragon(W,H,f,breathing){
   const C=CELL;
   const src=fireDragonCanvas||fireDragonImg;
-  // animated fire breath: drawn BEHIND sprite on frames 1 and 3
-  if(f===1||f===3){
-    for(let fi=0;fi<5;fi++){
-      const alpha=(.9-fi*.15);
-      const flicker=(Math.random()-.5)*C*2;
-      ctx.fillStyle=`rgba(255,${80+fi*35},0,${alpha})`;
+  // wing flap: frame 0=wings up, 1=mid-up, 2=wings down, 3=mid-down
+  // bob reflects this: up on 0-1, down on 2-3
+  const wingBob=[-H*.08,-H*.04,H*.04,H*.01][f];
+
+  // fire breath ONLY when actually attacking — behind sprite
+  if(breathing){
+    // 6 overlapping fireballs streaking forward (to the right, before flip)
+    for(let fi=0;fi<6;fi++){
+      const flicker=(Math.random()-.5)*C*1.8;
+      const alpha=.95-fi*.12;
+      ctx.fillStyle=`rgba(255,${60+fi*32},0,${alpha})`;
       ctx.beginPath();
-      ctx.ellipse(-fi*C*2.2+flicker, H*.62+flicker*.5, C*(2.2-fi*.3), C*(1.4-fi*.2), -.2, 0, Math.PI*2);
+      ctx.ellipse(W+fi*C*3.2+flicker, H*.52+flicker*.4, C*(2.8-fi*.3), C*(1.6-fi*.18), -.15, 0, Math.PI*2);
       ctx.fill();
     }
-    // inner hot core white/yellow
-    ctx.fillStyle='rgba(255,255,180,.7)';
-    ctx.beginPath();ctx.ellipse(-C*1,H*.62,C*.9,C*.6,-.2,0,Math.PI*2);ctx.fill();
+    // bright core
+    ctx.fillStyle='rgba(255,255,200,.85)';
+    ctx.beginPath();ctx.ellipse(W+C*1.5,H*.52,C*1.4,C*.8,-.15,0,Math.PI*2);ctx.fill();
+    // sparks flying out
+    for(let s=0;s<8;s++){
+      const sx=W+Math.random()*C*18,sy=H*.52+(Math.random()-.5)*H*.5;
+      ctx.fillStyle=`rgba(255,${100+Math.random()*155|0},0,.9)`;
+      ctx.beginPath();ctx.arc(sx,sy,C*(.15+Math.random()*.35),0,Math.PI*2);ctx.fill();
+    }
   }
+
   if(src&&(src.width||src.naturalWidth)>0){
     const iw=src.width||src.naturalWidth,ih=src.height||src.naturalHeight;
     const margin=Math.round(iw*0.04);
     const cropW=iw-margin*2,cropH=ih-margin*2;
-    // wing bob: up on frames 0-1, down on 2-3
-    const bob=f<2?-H*.06:H*.02;
-    ctx.drawImage(src,margin,margin,cropW,cropH,0,bob,W,H);
+    ctx.drawImage(src,margin,margin,cropW,cropH,0,wingBob,W,H);
   } else {
     ctx.fillStyle='#4A148C';ctx.fillRect(0,0,W,H);
-  }
-  // ember sparks overlay
-  if(f===1||f===3){
-    for(let s=0;s<5;s++){
-      const sx=-Math.random()*C*8,sy=H*.5+Math.random()*H*.3-H*.15;
-      ctx.fillStyle=`rgba(255,${120+Math.random()*100|0},0,.8)`;
-      ctx.beginPath();ctx.arc(sx,sy,C*(0.2+Math.random()*.4),0,Math.PI*2);ctx.fill();
-    }
   }
 }
 

@@ -607,7 +607,7 @@ function drawPlayer(){
   ctx.fillStyle='#2B2150';ctx.fillRect(x+w*.5,y+h*.45,w*.3,2);
 
   // Legs (walking animation)
-  const legOff=player.onGround?[H*.04,0,H*.04,0]:[0,0,0,0];
+  const legOff=player.onGround?[h*.04,0,h*.04,0]:[0,0,0,0];
   const lf=player.walkFrame;
   ctx.fillStyle='#1565C0';
   const legY=y+h*.85;

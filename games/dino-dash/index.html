@@ -52,7 +52,7 @@ const DINO_W=44,DINO_H=52,DINO_H_DUCK=28;
 const DINO_X=80;
 
 // ── State ──────────────────────────────────────────────────────────────────────
-let gs='menu',score=0,best=0,frame=0,speed=0;
+let gs='menu',score=0,best=0,frame=0,speed=0,obsCount=0;
 let dino={},obs=[],clouds=[],particles=[],nightPct=0;
 let nextObs=0,worldX=0;
 try{best=parseInt(localStorage.getItem('dino_dash_best')||'0');}catch(e){}
@@ -99,10 +99,10 @@ function calcGround(){
 
 // ── Game init ──────────────────────────────────────────────────────────────────
 function startGame(){
-  gs='playing';frame=0;score=0;speed=6;worldX=0;nightPct=0;
+  gs='playing';frame=0;score=0;speed=6;worldX=0;nightPct=0;obsCount=0;
   obs=[];particles=[];
   dino={x:DINO_X,y:groundY()-DINO_H,vy:0,h:DINO_H,onGround:true,jumpsLeft:2,duckTimer:0,dead:false,walkF:0,walkT:0,deathT:0};
-  nextObs=cW+200;
+  nextObs=cW+600;
   // Clouds
   clouds=[];for(let i=0;i<6;i++)clouds.push({x:Math.random()*cW*2,y:30+Math.random()*80,w:60+Math.random()*80,spd:.4+Math.random()*.4});
 }
@@ -112,12 +112,13 @@ const OBS_TYPES=['cactus_sm','cactus_md','cactus_lg','cactus_duo','ptero_lo','pt
 
 function spawnObs(){
   const gy=groundY();
+  obsCount++;
   const diff=Math.min(1,worldX/20000);
-  const pool=['cactus_sm','cactus_sm','cactus_md'];
-  if(diff>.2)pool.push('cactus_lg');
-  if(diff>.35)pool.push('cactus_duo','ptero_lo');
-  if(diff>.5)pool.push('ptero_mid');
-  if(diff>.7)pool.push('ptero_hi','cactus_duo');
+  const pool=obsCount<=5?['cactus_sm']:['cactus_sm','cactus_sm','cactus_md'];
+  if(obsCount>5&&diff>.2)pool.push('cactus_lg');
+  if(obsCount>8&&diff>.35)pool.push('cactus_duo','ptero_lo');
+  if(obsCount>10&&diff>.5)pool.push('ptero_mid');
+  if(obsCount>14&&diff>.7)pool.push('ptero_hi','cactus_duo');
   const type=pool[Math.floor(Math.random()*pool.length)];
   let o={type,x:cW+40};
   if(type==='cactus_sm')  {o.w=20;o.h=42;o.y=gy-o.h;}

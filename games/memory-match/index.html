@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Memory Match | LLOBI</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:#060612;overflow:hidden;user-select:none;display:flex;flex-direction:column;align-items:center;height:100dvh;font-family:'Press Start 2P',monospace}
+.topbar{width:100%;max-width:520px;display:flex;align-items:center;justify-content:space-between;padding:4px 10px;background:#0a0918;border-bottom:3px solid #1e1456;flex-shrink:0}
+.logo{font-family:'Press Start 2P',monospace;font-size:.55rem;color:#fff;text-decoration:none}
+.logo span{color:#818cf8}
+#wrap{width:100%;max-width:480px;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px;overflow:hidden}
+
+/* Mode select */
+#mode-screen{display:flex;flex-direction:column;align-items:center;gap:12px;width:100%}
+.game-title{font-size:1.1rem;color:#818cf8;text-shadow:0 0 16px #818cf8,0 0 32px #4f46e5;margin-bottom:8px}
+.mode-btn{width:100%;max-width:280px;padding:13px 10px;background:#0d0b1e;border:3px solid #4f46e5;color:#818cf8;font-family:'Press Start 2P',monospace;font-size:.55rem;cursor:pointer}
+.mode-btn:hover,.mode-btn:active{background:#1e1a3a;border-color:#818cf8}
+.mode-sub{font-size:.35rem;color:#555;margin-top:4px}
+
+/* Game screen */
+#game-screen{display:none;flex-direction:column;align-items:center;width:100%;gap:8px}
+
+/* HUD */
+.hud{display:flex;justify-content:space-between;width:100%;max-width:420px;gap:6px}
+.hud-box{flex:1;background:#0d0b1e;border:2px solid #1e1456;padding:6px 4px;text-align:center}
+.hud-label{font-size:.3rem;color:#555;margin-bottom:3px}
+.hud-val{font-size:.6rem;color:#818cf8}
+
+/* Grid */
+#grid{display:grid;gap:6px;width:100%;max-width:420px}
+
+/* Cards */
+.card{aspect-ratio:1;cursor:pointer;perspective:600px}
+.card-inner{width:100%;height:100%;position:relative;transform-style:preserve-3d;transition:transform .35s cubic-bezier(.4,0,.2,1)}
+.card.flipped .card-inner,.card.matched .card-inner{transform:rotateY(180deg)}
+.card-front,.card-back{position:absolute;inset:0;backface-visibility:hidden;border-radius:4px;display:flex;align-items:center;justify-content:center}
+.card-back{background:#0d0b1e;border:3px solid #2e2a6b;font-size:1.4em}
+.card-back::after{content:'?';font-family:'Press Start 2P',monospace;color:#2e2a6b;font-size:.7em}
+.card-front{background:#1a1740;border:3px solid #4f46e5;transform:rotateY(180deg);font-size:1.6em}
+.card.matched .card-front{border-color:#22c55e;background:#0f2d1a;animation:matchGlow .4s ease}
+@keyframes matchGlow{0%{box-shadow:0 0 0 #22c55e}50%{box-shadow:0 0 20px #22c55e}100%{box-shadow:0 0 6px #22c55e}}
+.card.wrong .card-inner{animation:shake .3s ease}
+@keyframes shake{0%,100%{transform:rotateY(180deg)}25%{transform:rotateY(180deg) translateX(-4px)}75%{transform:rotateY(180deg) translateX(4px)}}
+
+/* Result */
+#result-banner{display:none;position:fixed;inset:0;background:rgba(6,6,18,.92);flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:10}
+#result-banner.show{display:flex}
+.result-title{font-size:1.1rem;color:#818cf8;text-shadow:0 0 16px #818cf8}
+.result-stats{font-size:.42rem;color:#ccc;text-align:center;line-height:2.6}
+.result-best{font-size:.38rem;color:#22c55e}
+.r-btn{padding:11px 18px;background:#0d0b1e;border:2px solid #4f46e5;color:#818cf8;font-family:'Press Start 2P',monospace;font-size:.5rem;cursor:pointer;margin:4px}
+.r-btn:hover,.r-btn:active{background:#1e1a3a}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+
+/* Pairs left indicator */
+.pairs-left{font-size:.38rem;color:#555}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <a href="/" class="logo"><span>llobi</span>.com</a>
+  <span style="font-size:.42rem;color:#555">MEMORY MATCH</span>
+</div>
+<div id="wrap">
+
+  <div id="mode-screen">
+    <div class="game-title">MEMORY MATCH</div>
+    <button class="mode-btn" id="btn-easy">🟢 EASY<div class="mode-sub">3×4 · 6 PAIRS</div></button>
+    <button class="mode-btn" id="btn-med">🟡 MEDIUM<div class="mode-sub">4×4 · 8 PAIRS</div></button>
+    <button class="mode-btn" id="btn-hard">🔴 HARD<div class="mode-sub">4×5 · 10 PAIRS</div></button>
+  </div>
+
+  <div id="game-screen">
+    <div class="hud">
+      <div class="hud-box"><div class="hud-label">TIME</div><div class="hud-val" id="hud-time">0:00</div></div>
+      <div class="hud-box"><div class="hud-label">MOVES</div><div class="hud-val" id="hud-moves">0</div></div>
+      <div class="hud-box"><div class="hud-label">PAIRS</div><div class="hud-val" id="hud-pairs">0/0</div></div>
+    </div>
+    <div id="grid"></div>
+    <div class="btn-row" style="margin-top:4px">
+      <button class="r-btn" id="btn-restart">↺ RESTART</button>
+      <button class="r-btn" id="btn-menu2">⬅ MENU</button>
+    </div>
+  </div>
+
+</div>
+
+<div id="result-banner">
+  <div class="result-title">YOU WIN! 🎉</div>
+  <div class="result-stats" id="result-stats"></div>
+  <div class="result-best" id="result-best"></div>
+  <div class="btn-row">
+    <button class="r-btn" id="btn-again">▶ PLAY AGAIN</button>
+    <button class="r-btn" id="btn-menu3">⬅ MENU</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+const ICONS=[
+  '🤖','🌍','🪙','⭕','🏖️','⚡','🛡️','🔮',
+  '🎮','👾','🌟','💎','🎯','🦊','🐉','🚀',
+  '🍕','🎸','🧪','🏆'
+];
+
+const MODES={
+  easy:{cols:3,rows:4,pairs:6},
+  med:{cols:4,rows:4,pairs:8},
+  hard:{cols:4,rows:5,pairs:10},
+};
+
+let mode,cards=[],flipped=[],matched=0,moves=0,pairs=0;
+let lock=false,timerID=null,elapsed=0,started=false;
+
+// ── Mode buttons ──────────────────────────────────────────────────────────────
+document.getElementById('btn-easy').onclick=()=>startGame('easy');
+document.getElementById('btn-med').onclick=()=>startGame('med');
+document.getElementById('btn-hard').onclick=()=>startGame('hard');
+document.getElementById('btn-restart').onclick=()=>startGame(mode);
+document.getElementById('btn-menu2').onclick=showMenu;
+document.getElementById('btn-again').onclick=()=>{document.getElementById('result-banner').classList.remove('show');startGame(mode);};
+document.getElementById('btn-menu3').onclick=()=>{document.getElementById('result-banner').classList.remove('show');showMenu();};
+
+function showMenu(){
+  clearInterval(timerID);
+  document.getElementById('mode-screen').style.display='flex';
+  document.getElementById('game-screen').style.display='none';
+}
+
+function startGame(m){
+  mode=m;
+  clearInterval(timerID);elapsed=0;started=false;moves=0;matched=0;flipped=[];lock=false;
+  document.getElementById('mode-screen').style.display='none';
+  document.getElementById('game-screen').style.display='flex';
+  document.getElementById('hud-time').textContent='0:00';
+  document.getElementById('hud-moves').textContent='0';
+  const cfg=MODES[m];pairs=cfg.pairs;
+  document.getElementById('hud-pairs').textContent='0/'+pairs;
+
+  // Build card data
+  const pool=ICONS.slice(0,pairs);
+  const deck=[...pool,...pool].sort(()=>Math.random()-.5);
+
+  // Grid
+  const grid=document.getElementById('grid');
+  grid.innerHTML='';
+  grid.style.gridTemplateColumns=`repeat(${cfg.cols},1fr)`;
+
+  cards=deck.map((icon,i)=>{
+    const card=document.createElement('div');
+    card.className='card';
+    card.innerHTML=`<div class="card-inner"><div class="card-back"></div><div class="card-front">${icon}</div></div>`;
+    card.dataset.icon=icon;card.dataset.i=i;
+    card.addEventListener('click',()=>onCardClick(card));
+    grid.appendChild(card);
+    return card;
+  });
+}
+
+function onCardClick(card){
+  if(lock||card.classList.contains('flipped')||card.classList.contains('matched'))return;
+  if(!started){started=true;timerID=setInterval(tick,1000);}
+  card.classList.add('flipped');
+  flipped.push(card);
+  if(flipped.length===2){
+    lock=true;moves++;
+    document.getElementById('hud-moves').textContent=moves;
+    checkMatch();
+  }
+}
+
+function checkMatch(){
+  const[a,b]=flipped;
+  if(a.dataset.icon===b.dataset.icon){
+    // Match!
+    setTimeout(()=>{
+      a.classList.add('matched');b.classList.add('matched');
+      a.classList.remove('flipped');b.classList.remove('flipped');
+      matched++;
+      document.getElementById('hud-pairs').textContent=matched+'/'+pairs;
+      flipped=[];lock=false;
+      if(matched===pairs)setTimeout(winGame,400);
+    },300);
+  } else {
+    // No match — shake and flip back
+    a.classList.add('wrong');b.classList.add('wrong');
+    setTimeout(()=>{
+      a.classList.remove('flipped','wrong');b.classList.remove('flipped','wrong');
+      flipped=[];lock=false;
+    },800);
+  }
+}
+
+function tick(){
+  elapsed++;
+  const m=Math.floor(elapsed/60),s=elapsed%60;
+  document.getElementById('hud-time').textContent=m+':'+(s<10?'0':'')+s;
+}
+
+function winGame(){
+  clearInterval(timerID);
+  const key='mm_best_'+mode;
+  let best=null;try{best=JSON.parse(localStorage.getItem(key));}catch(e){}
+  const isNew=!best||elapsed<best.time||(elapsed===best.time&&moves<best.moves);
+  if(isNew){try{localStorage.setItem(key,JSON.stringify({time:elapsed,moves}));}catch(e){}}
+  const m=Math.floor(elapsed/60),s=elapsed%60;
+  document.getElementById('result-stats').innerHTML=
+    `TIME: ${m}:${s<10?'0':''}${s}\nMOVES: ${moves}`;
+  document.getElementById('result-best').textContent=
+    isNew?'🏆 NEW BEST!':(best?`BEST: ${Math.floor(best.time/60)}:${(best.time%60<10?'0':'')+best.time%60} · ${best.moves} MOVES`:'');
+  document.getElementById('result-banner').classList.add('show');
+}
+</script>
+</body>
+</html>

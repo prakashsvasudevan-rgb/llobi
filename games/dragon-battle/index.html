@@ -97,7 +97,7 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
     <h1>DRAGON BATTLE</h1>
     <p class="sub">CHOOSE YOUR DRAGON</p>
     <div id="cards"></div>
-    <p id="sel-hint">◀ ▶ TO CHOOSE · SPACE=FLY/FIRE · T=HUMAN · SHIFT=SWORD · J=JUMP · D=CALL DRAGON · M=MAP</p>
+    <p id="sel-hint">◀ ▶ · SPACE=FIRE · T=HUMAN · C=SIT · M=MAP · SHIFT=SWORD · J=JUMP · D=CALL · E=TALK · B=ARMOR</p>
     <p id="sel-best"></p>
   </div>
 
@@ -133,7 +133,7 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
   </div>
 
   <!-- Human badge -->
-  <div id="human-badge">🧍 HUMAN · T=RIDE · WASD=WALK · MOUSE=TURN · SHIFT=SWORD · J=JUMP · D=CALL DRAGON · E=TALK</div>
+  <div id="human-badge">🧍 HUMAN · T=RIDE · WASD=WALK · SHIFT=SWORD · J=JUMP · D=CALL · E=TALK/MOUNT · B=BUY ARMOR</div>
 
   <!-- Interact hint -->
   <div id="interact-hint"></div>
@@ -171,6 +171,10 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
 'use strict';
 // ── Dragon types ──────────────────────────────────────────────────────────────
 const DT=[
+  {id:'lightning',name:'LIGHTNING',emoji:'⚡',desc:'Born from storm',
+   body:0x1a1a40,bodyL:0x4444cc,bodyD:0x08082a,belly:0xaaaaff,
+   wingD:0x08082a,wingL:0x2222aa,horn:0xffff88,eye:0xffff00,eyeC:'#ffff00',
+   breath:[0xffffff,0xffff88,0x8888ff],speed:28,hp:160,fuel:100,rfuel:2.0,dmg:9,pts:1},
   {id:'fire',  name:'FIRE',   emoji:'🔥',desc:'Fast & fierce',
    body:0x8B0000,bodyL:0xCC2222,bodyD:0x5a0000,belly:0xCC7744,
    wingD:0x3d0000,wingL:0x660000,horn:0x1a1a1a,eye:0xFFD700,eyeC:'#FFD700',
@@ -299,6 +303,100 @@ function updateDayNight(dt){
   const noon=dayTime>0.35&&dayTime<0.65;
   sun.color.set(noon?0xffffff:0xffaa44);
   sun.position.set(Math.cos(angle)*0.8,Math.sin(angle)*0.8,-0.5);
+}
+
+// ── Storm system ─────────────────────────────────────────────────────────────
+let stormState='clear'; // 'clear' | 'storm'
+let stormT=0;           // time in current weather
+let lightningT=0;       // countdown to next bolt
+let lightningFlashT=0;  // white flash duration
+let rainArr=[];         // rain drop positions
+const RAIN_COUNT=320;
+// Rain particle system
+const rainGeo=new THREE.BufferGeometry();
+const rainPos=new Float32Array(RAIN_COUNT*3);
+rainGeo.setAttribute('position',new THREE.BufferAttribute(rainPos,3));
+const rainMat=new THREE.PointsMaterial({color:0x8899cc,size:0.4,transparent:true,opacity:0.55,depthWrite:false});
+const rainPoints=new THREE.Points(rainGeo,rainMat);
+rainPoints.visible=false;
+scene.add(rainPoints);
+// Initialize rain drop offsets around player
+function initRain(ref){
+  for(let i=0;i<RAIN_COUNT;i++){
+    rainPos[i*3]=(Math.random()-.5)*200+ref.x;
+    rainPos[i*3+1]=Math.random()*80+ref.y+5;
+    rainPos[i*3+2]=(Math.random()-.5)*200+ref.z;
+  }
+  rainGeo.attributes.position.needsUpdate=true;
+}
+// Lightning bolt mesh (line segments)
+let boltMesh=null;
+function spawnLightningBolt(tx,tz){
+  if(boltMesh){scene.remove(boltMesh);boltMesh=null;}
+  const pts=[];
+  let x=tx,y=120,z=tz;
+  pts.push(new THREE.Vector3(x,y,z));
+  while(y>0){
+    y-=12+Math.random()*10;
+    x+=(Math.random()-.5)*8;
+    z+=(Math.random()-.5)*8;
+    pts.push(new THREE.Vector3(x,y,z));
+  }
+  const geo=new THREE.BufferGeometry().setFromPoints(pts);
+  boltMesh=new THREE.Line(geo,new THREE.LineBasicMaterial({color:0xffffff,linewidth:2}));
+  scene.add(boltMesh);
+  lightningFlashT=0.18;
+  // Check if lightning hits player dragon
+  const ref=isHuman&&humanMesh?humanMesh.position:dragonMesh.position;
+  if(Math.abs(tx-ref.x)<20&&Math.abs(tz-ref.z)<20&&dtype.id!=='lightning'){
+    // Transform to lightning dragon!
+    dtype=DT[0];
+    const oldPos=dragonMesh.position.clone();
+    scene.remove(dragonMesh);
+    dragonMesh=buildDragonMesh(dtype);
+    dragonMesh.position.copy(oldPos);
+    dragonMesh.rotation.set(dPitch,dYaw,dRoll,'YXZ');
+    if(riderMesh){riderMesh=buildRiderOnDragon(dtype);dragonMesh.add(riderMesh);}
+    scene.add(dragonMesh);
+    if(isHuman&&riderMesh)riderMesh.visible=false;
+    floatWorld(oldPos,'⚡ LIGHTNING DRAGON!','#ffff44');
+  }
+}
+function updateStorm(dt,ref){
+  stormT-=dt;
+  if(stormT<=0){
+    if(stormState==='clear'){stormState='storm';stormT=40+Math.random()*30;lightningT=3+Math.random()*4;rainPoints.visible=true;initRain(ref);}
+    else{stormState='clear';stormT=60+Math.random()*60;rainPoints.visible=false;if(boltMesh){scene.remove(boltMesh);boltMesh=null;}}
+  }
+  if(stormState==='storm'){
+    // Update rain
+    for(let i=0;i<RAIN_COUNT;i++){
+      rainPos[i*3+1]-=60*dt;
+      if(rainPos[i*3+1]<ref.y-5){
+        rainPos[i*3]=(Math.random()-.5)*200+ref.x;
+        rainPos[i*3+1]=ref.y+70+Math.random()*20;
+        rainPos[i*3+2]=(Math.random()-.5)*200+ref.z;
+      }
+    }
+    rainGeo.attributes.position.needsUpdate=true;
+    // Lightning timer
+    lightningT-=dt;
+    if(lightningT<=0){
+      const tx=ref.x+(Math.random()-.5)*180;
+      const tz=ref.z+(Math.random()-.5)*180;
+      spawnLightningBolt(tx,tz);
+      lightningT=4+Math.random()*6;
+    }
+    // Fade bolt
+    if(lightningFlashT>0){
+      lightningFlashT-=dt;
+      if(lightningFlashT<=0&&boltMesh){scene.remove(boltMesh);boltMesh=null;}
+    }
+    // Darken sky slightly during storm
+    const sky=getDayColor(dayTime);sky.lerp(new THREE.Color(0x111122),0.4);
+    scene.background=sky;scene.fog.color.copy(sky);
+    ambient.intensity=Math.max(0.08,ambient.intensity-0.3*dt);
+  }
 }
 
 // ── Dragon model builder ──────────────────────────────────────────────────────
@@ -1237,10 +1335,10 @@ function floatWorld(worldPos,text,col){
 // ── Game state ────────────────────────────────────────────────────────────────
 let gs='select',score=0,best=0,kills=0,frame=0;
 let dhp=0,dmaxHp=0,dfuel=0,dmaxFuel=0,dinvT=0,ddead=false,ddeathT=0;
-let dtype=DT[0],selectedType=0;
+let dtype=DT[1],selectedType=1; // 0=lightning (unlockable), start on fire
 let dragonMesh=null;
 let dYaw=0,dPitch=0,dRoll=0,dYawVel=0,dPitchVel=0;
-let isLanded=false,landedY=0,fireCooldown=0;
+let isLanded=false,landedY=0,fireCooldown=0,isSitting=false;
 const camPos=new THREE.Vector3(0,30,-20);
 const camTarget=new THREE.Vector3(0,20,10);
 
@@ -1249,7 +1347,8 @@ let isHuman=false;
 let humanMesh=null;
 let riderMesh=null;
 let humanYaw=0,humanPitch=0;
-let humanHP=100,humanVY=0; // vertical velocity for jump
+let humanHP=100,humanMaxHP=100,humanVY=0;
+let armorLevel=0; // 0=none 1=iron 2=steel 3=dragon scale
 let mouseDX=0,mouseDY=0;
 let pointerLocked=false;
 let nearNPC=null;
@@ -1326,13 +1425,14 @@ const mk={up:false,dn:false,lf:false,rt:false,fire:false};
 document.addEventListener('keydown',e=>{
   keys[e.code]=true;if(e.code==='Space')e.preventDefault();
   if(gs==='select'){
-    if(e.code==='ArrowLeft'||e.code==='KeyA'){selectedType=(selectedType-1+DT.length)%DT.length;buildSelectUI();}
-    if(e.code==='ArrowRight'||e.code==='KeyD'){selectedType=(selectedType+1)%DT.length;buildSelectUI();}
+    if(e.code==='ArrowLeft'||e.code==='KeyA'){selectedType=selectedType<=1?DT.length-1:selectedType-1;buildSelectUI();}
+    if(e.code==='ArrowRight'||e.code==='KeyD'){selectedType=selectedType>=DT.length-1?1:selectedType+1;buildSelectUI();}
     if(e.code==='Enter'||e.code==='Space')startGame();
   }
   if(gs==='dead'&&(e.code==='Enter'||e.code==='Space'))showSelect();
   if(gs==='playing'){
     if(e.code==='KeyM'){toggleWorldMap();return;}
+    if(e.code==='KeyC'&&!isHuman&&isLanded){isSitting=!isSitting;floatWorld(dragonMesh.position,isSitting?'🐉 SIT':'🐉 STAND','#88ff44');}
     if(e.code==='KeyT'&&!dialogOpen&&!mapOpen)toggleHumanMode();
     if(e.code==='KeyE'){if(dialogOpen)closeDialog();else if(nearNPC)openDialog(nearNPC);}
     if(e.code==='KeyJ'&&isHuman&&!dialogOpen){
@@ -1374,7 +1474,7 @@ function toggleHumanMode(){
     const gx=dragonMesh.position.x,gz=dragonMesh.position.z;
     const gy=groundY(gx,gz)+1.5;
     humanMesh.position.set(gx,gy,gz);
-    humanYaw=dYaw;humanPitch=0;humanVY=0;humanHP=Math.min(humanHP||100,100);
+    humanYaw=dYaw;humanPitch=0;humanVY=0;humanHP=Math.min(humanHP||humanMaxHP,humanMaxHP);
     humanMesh.visible=true;
     if(riderMesh)riderMesh.visible=false;
     // Dragon lands nearby
@@ -1399,19 +1499,48 @@ function toggleHumanMode(){
   }
 }
 
+const ARMOR_TIERS=[
+  {name:'Iron Armor',   cost:150, hpBonus:40,  orbs:0, desc:'Basic protection. Costs 150 score.'},
+  {name:'Steel Armor',  cost:400, hpBonus:70,  orbs:3, desc:'Strong plate. Costs 400 score + 3 orbs.'},
+  {name:'Dragon Scale', cost:900, hpBonus:120, orbs:6, desc:'Legendary armor. Costs 900 score + 6 orbs.'},
+];
 function openDialog(npc){
   dialogOpen=true;
+  const isSmith=npc.userData.npcName==='Blacksmith'&&armorLevel<3;
+  let txt=npc.userData.npcText;
+  if(isSmith){
+    const tier=ARMOR_TIERS[armorLevel];
+    txt+=`\n\n[ B ] BUY ${tier.name}: ${tier.desc}`;
+    if(armorLevel>0)txt+=`\nCurrent: ${ARMOR_TIERS[armorLevel-1].name} (+${ARMOR_TIERS.slice(0,armorLevel).reduce((s,t)=>s+t.hpBonus,0)} HP)`;
+  }
   document.getElementById('dialog-name').textContent=npc.userData.npcName;
-  document.getElementById('dialog-text').textContent=npc.userData.npcText;
+  document.getElementById('dialog-text').textContent=txt;
   document.getElementById('dialog').style.display='block';
   if(document.exitPointerLock)document.exitPointerLock();
+  // B key to buy armor while dialog open
+  const onKey=e=>{
+    if(e.code==='KeyB'&&dialogOpen&&isSmith&&armorLevel<3){
+      const tier=ARMOR_TIERS[armorLevel];
+      if(score>=tier.cost&&mageOrbs>=tier.orbs){
+        score-=tier.cost;mageOrbs-=tier.orbs;
+        humanMaxHP+=tier.hpBonus;humanHP=humanMaxHP;armorLevel++;
+        floatWorld(npc.position,'🛡 '+tier.name+'!','#88ff44');
+        // Update rider color to show armor (re-apply to humanMesh)
+        closeDialog();
+        document.removeEventListener('keydown',onKey);
+      } else {
+        floatWorld(npc.position,'❌ NOT ENOUGH','#ff4444');
+      }
+    }
+  };
+  document.addEventListener('keydown',onKey);
+  npc.userData._armorKey=onKey;
 }
 function closeDialog(){
   dialogOpen=false;
   document.getElementById('dialog').style.display='none';
   if(isHuman&&canvas.requestPointerLock)canvas.requestPointerLock();
 }
-
 function isMob(){return'ontouchstart'in window||navigator.maxTouchPoints>0;}
 let swipeX=null;
 canvas.addEventListener('touchstart',e=>{swipeX=e.touches[0].clientX;if(gs==='dead')showSelect();},{passive:true});
@@ -1436,6 +1565,7 @@ function buildSelectUI(){
   const container=document.getElementById('cards');
   container.innerHTML='';
   DT.forEach((dt,i)=>{
+    if(i===0)return; // lightning dragon is unlockable only, not selectable at start
     const card=document.createElement('div');
     card.className='card'+(i===selectedType?' sel':'');
     card.style.setProperty('--ec',dt.eyeC);
@@ -1466,7 +1596,7 @@ function startGame(){
   orbDrops.forEach(o=>scene.remove(o.mesh));orbDrops=[];
   mageOrbs=0;shadowDust=0;upgrades={dmg:0,hp:0,speed:0,fuel:0,attack:0};
   mapOpen=false;wmEl.classList.remove('show');
-  isHuman=false;humanHP=100;humanVY=0;mouseDX=0;mouseDY=0;nearNPC=null;dialogOpen=false;
+  isHuman=false;humanHP=100;humanMaxHP=100;humanVY=0;armorLevel=0;mouseDX=0;mouseDY=0;nearNPC=null;dialogOpen=false;
   if(humanMesh){scene.remove(humanMesh);humanMesh=null;}
   document.getElementById('human-badge').style.display='none';
   document.getElementById('dialog').style.display='none';
@@ -1475,7 +1605,8 @@ function startGame(){
   for(const[,objs] of zoneMap)objs.forEach(o=>scene.remove(o));
   zoneMap.clear();
   // Reset dragon position
-  dYaw=0;dPitch=0;dRoll=0;dYawVel=0;dPitchVel=0;isLanded=false;fireCooldown=0;
+  dYaw=0;dPitch=0;dRoll=0;dYawVel=0;dPitchVel=0;isLanded=false;fireCooldown=0;isSitting=false;
+  stormState='clear';stormT=60+Math.random()*60;rainPoints.visible=false;
   dhp=dtype.hp;dmaxHp=dtype.hp;dfuel=dtype.fuel;dmaxFuel=dtype.fuel;
   // Build new dragon mesh
   if(dragonMesh)scene.remove(dragonMesh);
@@ -1520,19 +1651,28 @@ function update(ts){
 
     // ── LANDED STATE ──
     if(isLanded){
-      // Can turn slowly on ground
-      if(lf)dYaw+=1.0*dt;if(rt)dYaw-=1.0*dt;
-      dragonMesh.position.y=landedY;
-      dragonMesh.rotation.set(0,dYaw,0,'YXZ');
-      dRoll=0;dPitchVel=0;dPitch=0;
-      // Slow ground walk
-      const gfwd=new THREE.Vector3(0,0,1).applyEuler(new THREE.Euler(0,dYaw,0));
-      dragonMesh.position.addScaledVector(gfwd,dtype.speed*0.3*dt);
-      // Wings fold
-      dragonMesh.userData.lwp.rotation.z= Math.PI*0.55;
-      dragonMesh.userData.rwp.rotation.z=-Math.PI*0.55;
-      // Press UP to take off
-      if(up){isLanded=false;dPitchVel=-0.5;}
+      if(isSitting){
+        // Sitting pose: lower, curled, no movement
+        dragonMesh.position.y=landedY-1.2;
+        dragonMesh.rotation.set(0.18,dYaw,0,'YXZ'); // nose dips
+        dragonMesh.userData.lwp.rotation.z= Math.PI*0.72;
+        dragonMesh.userData.rwp.rotation.z=-Math.PI*0.72;
+        dRoll=0;dPitchVel=0;dPitch=0;
+        if(up){isSitting=false;isLanded=false;dPitchVel=-0.5;} // UP cancels sit and takes off
+      } else {
+        // Can turn slowly on ground
+        if(lf)dYaw+=1.0*dt;if(rt)dYaw-=1.0*dt;
+        dragonMesh.position.y=landedY;
+        dragonMesh.rotation.set(0,dYaw,0,'YXZ');
+        dRoll=0;dPitchVel=0;dPitch=0;
+        // Slow ground walk
+        const gfwd=new THREE.Vector3(0,0,1).applyEuler(new THREE.Euler(0,dYaw,0));
+        dragonMesh.position.addScaledVector(gfwd,dtype.speed*0.3*dt);
+        // Wings fold
+        dragonMesh.userData.lwp.rotation.z= Math.PI*0.55;
+        dragonMesh.userData.rwp.rotation.z=-Math.PI*0.55;
+        if(up){isLanded=false;dPitchVel=-0.5;}
+      }
     } else {
       // ── FLYING STATE ──
       const turnSpd=1.6,pitchSpd=1.0,turnDrag=0.82,pitchDrag=0.78;
@@ -1766,6 +1906,7 @@ function update(ts){
 
     // ── DAY/NIGHT ────────────────────────────────────────────────────────────
     updateDayNight(dt);
+    updateStorm(dt,isHuman&&humanMesh?humanMesh.position:dragonMesh.position);
 
     updateZones();
     updateFireParticles(dt);
@@ -1791,7 +1932,7 @@ function updateHUD(){
   document.getElementById('type-badge').textContent=dtype.emoji+' '+(isHuman?'HUMAN':dtype.name);
   document.getElementById('type-badge').style.color=isHuman?'#88ff44':dtype.eyeC;
   if(isHuman){
-    document.getElementById('hp-fill').style.width=~~(100*Math.max(0,humanHP)/100)+'%';
+    document.getElementById('hp-fill').style.width=~~(100*Math.max(0,humanHP)/humanMaxHP)+'%';
     document.getElementById('fuel-fill').style.width='0%';
   } else {
     document.getElementById('hp-fill').style.width=~~(100*Math.max(0,dhp)/dmaxHp)+'%';

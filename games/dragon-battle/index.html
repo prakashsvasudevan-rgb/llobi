@@ -230,11 +230,19 @@ const DT=[
    body:0x556677,bodyL:0x8899aa,bodyD:0x334455,belly:0xaabbcc,
    wingD:0x223344,wingL:0x445566,horn:0xccddee,eye:0x44aaff,eyeC:'#44aaff',
    breath:[0xaabbcc,0x778899,0x445566],speed:15,hp:210,fuel:75,rfuel:1.0,dmg:7,pts:1},
+  {id:'glass', name:'GLASS',  emoji:'🔷',desc:'111 dmg shards',
+   body:0xaaddff,bodyL:0xeeffff,bodyD:0x6699bb,belly:0xffffff,
+   wingD:0x88bbdd,wingL:0xbbddff,horn:0xffffff,eye:0x00ffff,eyeC:'#00ffff',
+   breath:[0xeeffff,0xaaddff,0x6699cc],speed:21,hp:130,fuel:85,rfuel:1.5,dmg:111,pts:1},
+  {id:'thunder',name:'THUNDER',emoji:'🌩',desc:'Stuns & vanishes',
+   body:0x1a1a00,bodyL:0x888800,bodyD:0x0a0a00,belly:0xffff44,
+   wingD:0x0a0a00,wingL:0x555500,horn:0xffff00,eye:0xffee00,eyeC:'#ffee00',
+   breath:[0xffff88,0xffdd00,0xaa8800],speed:24,hp:145,fuel:90,rfuel:1.6,dmg:6,pts:1},
 ];
 // Player-selectable dragon ids (shown on select screen)
 const PLAYER_DT_IDS=['fire','ice','earth','air','nature','soul'];
 // Rider army dragon pool (broader selection)
-const RIDER_DT_IDS=['fire','soul','nature','air','lava','water','ice','smoke','bone','metal','earth'];
+const RIDER_DT_IDS=['fire','soul','nature','air','lava','water','ice','smoke','bone','metal','earth','glass','thunder'];
 
 // ── Three.js setup ────────────────────────────────────────────────────────────
 const canvas=document.getElementById('c3d');
@@ -1013,6 +1021,24 @@ function spawnFire(){
       if(isHoming&&homTarget)p.hom=homTarget;
       fireArr.push(p);
     }
+  } else if(id==='glass'){
+    // Glass shards — fast, narrow spread, high dmg flag
+    for(let k=0;k<3*fc;k++){
+      if(fireArr.length>=FIRE_MAX)break;
+      const fwd=getBreathFwd(isUltra?0.3:0.1);
+      const p={p:head.clone(),v:fwd.multiplyScalar(38+Math.random()*10),life:1,decay:.04+Math.random()*.02,isGlass:true};
+      if(isHoming&&homTarget)p.hom=homTarget;
+      fireArr.push(p);
+    }
+  } else if(id==='thunder'){
+    // Thunder bolt — wide crackle effect
+    for(let k=0;k<fc;k++){
+      if(fireArr.length>=FIRE_MAX)break;
+      const fwd=getBreathFwd(isUltra?0.6:0.3);
+      const p={p:head.clone(),v:fwd.multiplyScalar(30+Math.random()*14),life:1,decay:.025+Math.random()*.018,isThunder:true};
+      if(isHoming&&homTarget)p.hom=homTarget;
+      fireArr.push(p);
+    }
   } else {
     for(let k=0;k<fc;k++){
       const fwd=getBreathFwd(0.25);
@@ -1053,7 +1079,16 @@ function updateFireParticles(dt){
     const hitR=f.isBoulder?6:f.isPoison?5:f.isShard?3.5:4.5;
     for(const e of activeEnemies){
       if(!e.userData.alive)continue;
-      if(f.p.distanceTo(e.position)<hitR){hitEnemy(e,upgradedDmg());f.life=0;break;}
+      if(f.p.distanceTo(e.position)<hitR){
+        const dmg=f.isGlass?111:f.isThunder?upgradedDmg():upgradedDmg();
+        hitEnemy(e,dmg);
+        // Thunder: stun nearby enemies in 100u radius
+        if(f.isThunder){
+          for(const e2 of activeEnemies){if(!e2.userData.alive)continue;
+            if(f.p.distanceTo(e2.position)<100){e2.userData.si=(e2.userData.si||3)*4;e2.userData.stunT=(e2.userData.stunT||0)+3;}}
+        }
+        f.life=0;break;
+      }
     }
     // Wild dragon hit — weaken to tame
     for(const wd of wildDragons){
@@ -1088,8 +1123,8 @@ function updateFireParticles(dt){
     if(f.isBoulder)continue;
     fPos[pIdx*3]=f.p.x;fPos[pIdx*3+1]=f.p.y;fPos[pIdx*3+2]=f.p.z;
     const t=f.life,b=dtype.breath;
-    const c0=t>.6?b[0]:t>.3?b[1]:b[2];
-    const alpha=t*(f.isPoison?0.6:f.size>5?0.5:0.8);
+    const c0=f.isGlass?(t>.5?0xeeffff:0xaaddff):f.isThunder?(t>.5?0xffff88:0xffdd00):t>.6?b[0]:t>.3?b[1]:b[2];
+    const alpha=t*(f.isPoison?0.6:f.isGlass?0.95:f.isThunder?0.85:f.size>5?0.5:0.8);
     fCol[pIdx*3]=((c0>>16)&255)/255*alpha;
     fCol[pIdx*3+1]=((c0>>8)&255)/255*alpha;
     fCol[pIdx*3+2]=(c0&255)/255*alpha;
@@ -1426,7 +1461,7 @@ function makeEnemy3d(type){
 // ── Dragon Mountain (fixed at 0,1000) ─────────────────────────────────────────
 const DM_X=100,DM_Z=1000; // Dragon Mountain world position
 const VOL_X=3000,VOL_Z=3000; // Volcano world position
-const MTN_DRAGON_TYPES=['fire','ice','earth','air','nature','soul','lava','water','smoke','lightning'];
+const MTN_DRAGON_TYPES=['fire','ice','earth','air','nature','soul','lava','water','smoke','lightning','glass','thunder'];
 const RECRUIT_LINES=[
   ['Rider Kael','My storm-blue dragon and I are ready to fight for you! [R] RECRUIT'],
   ['Rider Yara','I ride the earth dragon — slow but unstoppable. [R] RECRUIT'],
@@ -1544,14 +1579,17 @@ function spawnDragonMountain(){
     [DM_X-18,DM_Z+15],[DM_X+18,DM_Z+15],[DM_X-8,DM_Z-20],[DM_X+8,DM_Z-20],[DM_X-15,DM_Z-5],[DM_X+15,DM_Z-5]];
   f1.forEach(([n,t],i)=>mkRecruit(n,t,f1Pos[i],groundY(f1Pos[i][0],f1Pos[i][1])+1.5));
 
-  // Floor 2 — 10 recruitable villagers inside the cave hall
+  // Floor 2 — 12 recruitable villagers inside the cave hall
   const f2=[['Voss','The cave is my home. I know its every stone.'],['Rhea','I train underground so my dragon breathes cold.'],
     ['Talor','Blane taught me everything about riding.'],['Cynn','I am fast and quiet — good for scouting.'],
     ['Aeva','My dragon can smell an enemy from miles away.'],['Dorn','Stone walls and iron will.'],
     ['Plia','I am a healer but I fight when I must.'],['Skye','I want to see the sky from dragon back.'],
-    ['Breck','Every scar on me is from a battle I won.'],['Nori','I joined the mountain people after the Emperor attacked my village.']];
+    ['Breck','Every scar on me is from a battle I won.'],['Nori','I joined the mountain people after the Emperor attacked my village.'],
+    ['Glas','My glass dragon cuts through armor like silk — one good hit and they fall.'],
+    ['Zolt','In a storm my thunder dragon becomes a ghost. The enemy never sees us coming.']];
   const f2Pos=[[DM_X-6,DM_Z+33],[DM_X+6,DM_Z+33],[DM_X-6,DM_Z+42],[DM_X+6,DM_Z+42],
-    [DM_X-6,DM_Z+54],[DM_X+6,DM_Z+54],[DM_X-6,DM_Z+62],[DM_X+6,DM_Z+62],[DM_X-6,DM_Z+71],[DM_X+6,DM_Z+71]];
+    [DM_X-6,DM_Z+54],[DM_X+6,DM_Z+54],[DM_X-6,DM_Z+62],[DM_X+6,DM_Z+62],[DM_X-6,DM_Z+71],[DM_X+6,DM_Z+71],
+    [DM_X-6,DM_Z+76],[DM_X+6,DM_Z+76]];
   f2.forEach(([n,t],i)=>mkRecruit(n,t,f2Pos[i],hallFloor));
 
   // Interior flavor NPCs (shops/lore) in the lower hall
@@ -2514,6 +2552,18 @@ function update(ts){
       if(!en.userData.alive){freezeMap.delete(en);continue;}
       freezeMap.set(en,t-dt);
       if(t-dt<=0){en.userData.si=Math.max(1,en.userData.si/1.6);freezeMap.delete(en);}
+    }
+    // Stun timer expiry (thunder dragon)
+    for(const e of activeEnemies){
+      if(!e.userData.alive)continue;
+      if(e.userData.stunT>0){e.userData.stunT-=dt;if(e.userData.stunT<=0){e.userData.si=Math.max(1,e.userData.si/4);e.userData.stunT=0;}}
+    }
+    // Thunder dragon: invisible during storms when holding fire (doFire)
+    if(dtype.id==='thunder'&&stormState==='storm'){
+      const alpha=doFire?0.08:1.0;
+      dragonMesh.traverse(c=>{if(c.isMesh&&c.material)c.material.opacity=alpha,c.material.transparent=alpha<1;});
+    } else if(dtype.id==='thunder'){
+      dragonMesh.traverse(c=>{if(c.isMesh&&c.material&&c.material.opacity<1)c.material.opacity=1,c.material.transparent=false;});
     }
 
     // Wing animation (only when flying)

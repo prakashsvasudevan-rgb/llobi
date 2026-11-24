@@ -427,7 +427,7 @@ function genLevel(n){
 let map=[],mapW=0,levelItems={};
 
 function inMap(x,y){return x>=0&&x<mapW&&y>=0&&y<H_TILES;}
-function tileAt(tx,ty){if(tx<0||ty<0||tx>=mapW||ty>=H_TILES)return ty>=H_TILES?T_DIRT:T_EMPTY;return map[ty][tx];}
+function tileAt(tx,ty){if(tx<0||ty<0||tx>=mapW||ty>=H_TILES)return T_EMPTY;return map[ty][tx];}
 function isSolid(t){return t===T_GRASS||t===T_DIRT||t===T_BRICK||t===T_QBLOCK||t===T_QUSED||t===T_SOLID||t===T_PIPE_T||t===T_PIPE_B||t===T_CANNON;}
 
 function buildMap(def){
@@ -616,7 +616,7 @@ function updatePlayer(){
   if(inMap(ptx,pty)&&map[pty][ptx]===T_GOAL&&!player.goalReached){player.goalReached=true;player.vx=0;player.vy=0;score+=1000;updateHUD();}
 
   // Fall off bottom
-  if(player.y>H_TILES*TILE+100)killPlayer();
+  if(player.y>12*TILE)killPlayer();
 
   // Camera
   const viewW=cW/scale;

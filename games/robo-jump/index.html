@@ -8,13 +8,13 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{background:#000;overflow:hidden;user-select:none;display:flex;flex-direction:column;align-items:center;height:100dvh;image-rendering:pixelated}
-.topbar{width:100%;max-width:520px;display:flex;align-items:center;justify-content:space-between;padding:4px 10px;background:#060f1e;border-bottom:3px solid #0d4b6b;flex-shrink:0}
+.topbar{width:100%;max-width:900px;display:flex;align-items:center;justify-content:space-between;padding:4px 10px;background:#060f1e;border-bottom:3px solid #0d4b6b;flex-shrink:0}
 .logo{font-family:'Press Start 2P',monospace;font-size:.55rem;color:#fff;text-decoration:none}
 .logo span{color:#00E5FF}
 .hud{display:flex;gap:8px;font-family:'Press Start 2P',monospace;font-size:.42rem;color:#fff;align-items:center}
 .hud-score{color:#00E5FF}
 .hud-coins{color:#FFD700}
-#wrap{position:relative;width:100%;max-width:520px;flex:1;overflow:hidden}
+#wrap{position:relative;width:100%;max-width:900px;flex:1;overflow:hidden}
 canvas{display:block;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges}
 #mctrl{position:absolute;bottom:0;left:0;right:0;display:none;padding:6px 10px;pointer-events:none}
 #mctrl.show{display:flex;justify-content:space-between;align-items:flex-end}
@@ -227,7 +227,7 @@ function addArcCoins(sx,gy,spread){
 function update(){
   if(gs!=='playing')return;
   frame++;
-  speed=Math.min(16,5+frame*0.0012);
+  speed=Math.min(8,2.5+frame*0.0006);
   worldX+=speed;
   score=Math.floor(worldX/10)+coins*10;
   updateHUD();
@@ -309,7 +309,7 @@ function update(){
         if(dist<120){c.x+=(robot.x+worldX-c.x)*.1;c.y+=(robot.y+robot.h/2-c.y)*.1;}
       }
     }
-    if(robot.boostTimer>0){robot.boostTimer--;speed=Math.min(22,speed*1.01);}
+    if(robot.boostTimer>0){robot.boostTimer--;speed=Math.min(11,speed*1.01);}
   } else {
     // Dead: fly up then fall
     robot.deathVy=Math.min(robot.deathVy+GRAV*0.5,10);

@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Tic Tac Toe | LLOBI</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:#0a0a1a;overflow:hidden;user-select:none;display:flex;flex-direction:column;align-items:center;height:100dvh;font-family:'Press Start 2P',monospace}
+.topbar{width:100%;max-width:520px;display:flex;align-items:center;justify-content:space-between;padding:4px 10px;background:#0d0d20;border-bottom:3px solid #3d1f6b;flex-shrink:0}
+.logo{font-family:'Press Start 2P',monospace;font-size:.55rem;color:#fff;text-decoration:none}
+.logo span{color:#a855f7}
+#wrap{width:100%;max-width:420px;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;padding:10px}
+
+/* Mode select */
+#mode-screen{display:flex;flex-direction:column;align-items:center;gap:14px;width:100%}
+.game-title{font-size:1.3rem;color:#a855f7;text-shadow:0 0 16px #a855f7,0 0 32px #7c3aed;margin-bottom:6px;letter-spacing:2px}
+.mode-btn{width:100%;max-width:280px;padding:14px 10px;background:#1a0a2e;border:3px solid #7c3aed;color:#a855f7;font-family:'Press Start 2P',monospace;font-size:.6rem;cursor:pointer;text-align:center;transition:background .15s}
+.mode-btn:hover,.mode-btn:active{background:#2d1060;border-color:#a855f7}
+
+/* Game screen */
+#game-screen{display:none;flex-direction:column;align-items:center;width:100%;gap:10px}
+
+/* Score bar */
+.scorebar{display:flex;justify-content:space-between;align-items:center;width:100%;max-width:360px;gap:4px}
+.score-box{flex:1;padding:8px 4px;background:#1a0a2e;border:2px solid #3d1f6b;text-align:center}
+.score-label{font-size:.35rem;color:#888;margin-bottom:4px}
+.score-val{font-size:.7rem}
+.score-x{color:#ef4444}
+.score-o{color:#3b82f6}
+.score-draw{color:#888;font-size:.55rem}
+
+/* Turn indicator */
+.turn-box{font-size:.45rem;color:#ccc;padding:6px 12px;border:2px solid #3d1f6b;background:#1a0a2e;min-width:200px;text-align:center}
+.turn-x{color:#ef4444}
+.turn-o{color:#3b82f6}
+
+/* Board */
+#board{display:grid;grid-template-columns:repeat(3,1fr);gap:0;width:min(calc(100vw - 20px),340px);aspect-ratio:1;position:relative;margin:4px 0}
+.cell{background:#0d0d20;border:3px solid #3d1f6b;cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative;transition:background .1s}
+.cell:hover:not(.taken){background:#1a0a2e}
+.cell.win-cell{background:#1a0a2e;border-color:#a855f7;animation:winPulse .5s ease infinite alternate}
+@keyframes winPulse{from{background:#1a0a2e}to{background:#2d1060}}
+
+canvas.cell-canvas{width:100%;height:100%;display:block}
+
+/* Result banner */
+#result{font-size:.7rem;color:#a855f7;text-align:center;min-height:1.4em;text-shadow:0 0 10px #a855f7}
+
+/* Buttons */
+.btn-row{display:flex;gap:10px}
+.btn{padding:9px 14px;background:#1a0a2e;border:2px solid #7c3aed;color:#a855f7;font-family:'Press Start 2P',monospace;font-size:.45rem;cursor:pointer}
+.btn:hover,.btn:active{background:#2d1060}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <a href="/" class="logo"><span>llobi</span>.com</a>
+  <span style="font-size:.42rem;color:#888">TIC TAC TOE</span>
+</div>
+<div id="wrap">
+
+  <!-- Mode select -->
+  <div id="mode-screen">
+    <div class="game-title">TIC TAC TOE</div>
+    <button class="mode-btn" id="btn-pvp">👥 2 PLAYERS</button>
+    <button class="mode-btn" id="btn-cpu-easy">🤖 VS CPU (EASY)</button>
+    <button class="mode-btn" id="btn-cpu-hard">🧠 VS CPU (HARD)</button>
+  </div>
+
+  <!-- Game -->
+  <div id="game-screen">
+    <div class="scorebar">
+      <div class="score-box">
+        <div class="score-label">X</div>
+        <div class="score-val score-x" id="score-x">0</div>
+      </div>
+      <div class="score-box">
+        <div class="score-label">DRAW</div>
+        <div class="score-draw" id="score-d">0</div>
+      </div>
+      <div class="score-box">
+        <div class="score-label">O</div>
+        <div class="score-val score-o" id="score-o">0</div>
+      </div>
+    </div>
+
+    <div class="turn-box" id="turn-box">X'S TURN</div>
+
+    <div id="board">
+      <div class="cell" data-i="0"><canvas class="cell-canvas" id="c0"></canvas></div>
+      <div class="cell" data-i="1"><canvas class="cell-canvas" id="c1"></canvas></div>
+      <div class="cell" data-i="2"><canvas class="cell-canvas" id="c2"></canvas></div>
+      <div class="cell" data-i="3"><canvas class="cell-canvas" id="c3"></canvas></div>
+      <div class="cell" data-i="4"><canvas class="cell-canvas" id="c4"></canvas></div>
+      <div class="cell" data-i="5"><canvas class="cell-canvas" id="c5"></canvas></div>
+      <div class="cell" data-i="6"><canvas class="cell-canvas" id="c6"></canvas></div>
+      <div class="cell" data-i="7"><canvas class="cell-canvas" id="c7"></canvas></div>
+      <div class="cell" data-i="8"><canvas class="cell-canvas" id="c8"></canvas></div>
+    </div>
+
+    <div id="result">&nbsp;</div>
+    <div class="btn-row">
+      <button class="btn" id="btn-replay">▶ PLAY AGAIN</button>
+      <button class="btn" id="btn-menu">⬅ MENU</button>
+    </div>
+  </div>
+
+</div>
+<script>
+'use strict';
+
+const WINS=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+let board,turn,gameOver,mode,scores={x:0,o:0,d:0};
+let animations=[];
+
+// ── Mode select ───────────────────────────────────────────────────────────────
+document.getElementById('btn-pvp').onclick=()=>startGame('pvp');
+document.getElementById('btn-cpu-easy').onclick=()=>startGame('easy');
+document.getElementById('btn-cpu-hard').onclick=()=>startGame('hard');
+document.getElementById('btn-replay').onclick=()=>startGame(mode);
+document.getElementById('btn-menu').onclick=()=>{
+  document.getElementById('mode-screen').style.display='flex';
+  document.getElementById('game-screen').style.display='none';
+  scores={x:0,o:0,d:0};
+};
+
+function startGame(m){
+  mode=m;
+  board=Array(9).fill(null);
+  turn='X';gameOver=false;animations=[];
+  document.getElementById('mode-screen').style.display='none';
+  document.getElementById('game-screen').style.display='flex';
+  document.getElementById('result').innerHTML='&nbsp;';
+  setTurn();
+  // Reset cells
+  document.querySelectorAll('.cell').forEach(c=>{c.classList.remove('taken','win-cell');});
+  // Clear canvases
+  for(let i=0;i<9;i++){
+    const cv=document.getElementById('c'+i);
+    const ctx=cv.getContext('2d');
+    ctx.clearRect(0,0,cv.width,cv.height);
+  }
+  updateScore();
+}
+
+// ── Cell clicks ───────────────────────────────────────────────────────────────
+document.getElementById('board').addEventListener('click',e=>{
+  const cell=e.target.closest('.cell');
+  if(!cell||gameOver)return;
+  const i=+cell.dataset.i;
+  if(board[i])return;
+  play(i);
+});
+
+function play(i){
+  if(board[i]||gameOver)return;
+  board[i]=turn;
+  document.querySelector(`.cell[data-i="${i}"]`).classList.add('taken');
+  animateMark(i,turn,()=>{
+    const result=checkWin();
+    if(result){endGame(result);return;}
+    turn=turn==='X'?'O':'X';
+    setTurn();
+    if(mode!=='pvp'&&turn==='O'&&!gameOver){
+      setTimeout(()=>cpuPlay(),300);
+    }
+  });
+}
+
+// ── Draw animations ───────────────────────────────────────────────────────────
+function animateMark(i,mark,done){
+  const cv=document.getElementById('c'+i);
+  const rect=cv.getBoundingClientRect();
+  cv.width=rect.width||80;cv.height=rect.height||80;
+  const ctx=cv.getContext('2d');
+  const cx=cv.width/2,cy=cv.height/2,r=Math.min(cx,cy)*.62;
+  const frames=18;let f=0;
+  function step(){
+    ctx.clearRect(0,0,cv.width,cv.height);
+    const t=f/frames;
+    if(mark==='X'){
+      ctx.strokeStyle='#ef4444';ctx.lineWidth=Math.max(4,cv.width*.07);ctx.lineCap='round';
+      // First stroke
+      const p1=Math.min(1,t*2);
+      ctx.beginPath();ctx.moveTo(cx-r,cy-r);ctx.lineTo(cx-r+(r*2)*p1,cy-r+(r*2)*p1);ctx.stroke();
+      // Second stroke
+      if(t>.5){const p2=(t-.5)*2;ctx.beginPath();ctx.moveTo(cx+r,cy-r);ctx.lineTo(cx+r-(r*2)*p2,cy-r+(r*2)*p2);ctx.stroke();}
+    } else {
+      ctx.strokeStyle='#3b82f6';ctx.lineWidth=Math.max(4,cv.width*.07);ctx.lineCap='round';
+      ctx.beginPath();ctx.arc(cx,cy,r,-.5*Math.PI,-.5*Math.PI+Math.PI*2*t);ctx.stroke();
+    }
+    f++;
+    if(f<=frames)requestAnimationFrame(step);
+    else done&&done();
+  }
+  step();
+}
+
+// ── Win check ─────────────────────────────────────────────────────────────────
+function checkWin(){
+  for(const [a,b,c] of WINS){
+    if(board[a]&&board[a]===board[b]&&board[a]===board[c])return{winner:board[a],line:[a,b,c]};
+  }
+  if(board.every(Boolean))return{winner:null};
+  return null;
+}
+
+function endGame(result){
+  gameOver=true;
+  const res=document.getElementById('result');
+  if(result.winner){
+    scores[result.winner==='X'?'x':'o']++;
+    updateScore();
+    result.line.forEach(i=>document.querySelector(`.cell[data-i="${i}"]`).classList.add('win-cell'));
+    res.textContent=result.winner+' WINS!';
+    res.style.color=result.winner==='X'?'#ef4444':'#3b82f6';
+    res.style.textShadow=`0 0 12px ${result.winner==='X'?'#ef4444':'#3b82f6'}`;
+  } else {
+    scores.d++;updateScore();
+    res.textContent='DRAW!';res.style.color='#aaa';res.style.textShadow='none';
+  }
+  document.getElementById('turn-box').textContent='';
+}
+
+function setTurn(){
+  const tb=document.getElementById('turn-box');
+  tb.textContent=turn+"'S TURN";
+  tb.className='turn-box '+(turn==='X'?'turn-x':'turn-o');
+}
+
+function updateScore(){
+  document.getElementById('score-x').textContent=scores.x;
+  document.getElementById('score-o').textContent=scores.o;
+  document.getElementById('score-d').textContent=scores.d;
+}
+
+// ── CPU AI ────────────────────────────────────────────────────────────────────
+function cpuPlay(){
+  if(gameOver)return;
+  let move;
+  if(mode==='hard'){move=bestMove();}
+  else {
+    // Easy: random with occasional block/win
+    const win=findWin('O');
+    const block=findWin('X');
+    if(win!=null)move=win;
+    else if(block!=null&&Math.random()>.3)move=block;
+    else{const empty=board.map((v,i)=>v?null:i).filter(v=>v!=null);move=empty[Math.floor(Math.random()*empty.length)];}
+  }
+  if(move!=null)play(move);
+}
+
+function findWin(mark){
+  for(const [a,b,c] of WINS){
+    const cells=[board[a],board[b],board[c]];
+    const idxs=[a,b,c];
+    if(cells.filter(v=>v===mark).length===2&&cells.includes(null))return idxs[cells.indexOf(null)];
+  }
+  return null;
+}
+
+function bestMove(){
+  let best=-Infinity,move=null;
+  for(let i=0;i<9;i++){
+    if(!board[i]){board[i]='O';const s=minimax(board,0,false);board[i]=null;if(s>best){best=s;move=i;}}
+  }
+  return move;
+}
+
+function minimax(b,depth,isMax){
+  for(const [a,bv,c] of WINS){if(b[a]&&b[a]===b[bv]&&b[a]===b[c])return b[a]==='O'?10-depth:depth-10;}
+  if(b.every(Boolean))return 0;
+  if(isMax){let best=-Infinity;for(let i=0;i<9;i++){if(!b[i]){b[i]='O';best=Math.max(best,minimax(b,depth+1,false));b[i]=null;}}return best;}
+  else{let best=Infinity;for(let i=0;i<9;i++){if(!b[i]){b[i]='X';best=Math.min(best,minimax(b,depth+1,true));b[i]=null;}}return best;}
+}
+
+// Size canvases on load
+function sizeCanvases(){
+  const cell=document.querySelector('.cell');
+  if(!cell)return;
+  const s=cell.getBoundingClientRect();
+  for(let i=0;i<9;i++){const cv=document.getElementById('c'+i);cv.width=~~s.width;cv.height=~~s.height;}
+}
+window.addEventListener('resize',sizeCanvases);
+setTimeout(sizeCanvases,100);
+</script>
+</body>
+</html>

@@ -69,15 +69,18 @@ const EMPTY=0,SAND=1,WATER=2,FIRE=3,STONE=4,WOOD=5,LAVA=6,ICE=7,SMOKE=8,PLANT=9,
 const ACID=13,GUNPOWDER=14,CLONER=15,VOID=16,WALL=17,RUIN=18,CONCRETE=19,TERRACOTTA=20;
 const GOLD=21,SILVER=22,MERCURY=23,IRON=24,STEEL=25;
 const SEED=26,CACTUS=27,PALM=28,CORN=29,APPLE_T=30,ORANGE_T=31,PAPAYA_T=32;
-const BOMB=33,FAN=34,HEATER=35,COOLER=36,BASALT=37,BLUE_FIRE=38;
+const BOMB=33,FAN=34,HEATER=35,COOLER=36,BASALT=37,BLUE_FIRE=38,LIGHT=39;
 const DRAGON=40,TIGER=41,SHEEP=42,HUMAN=43,FISH=44,RAT=45,FLEA=46,FIRE_DRAGON=48,EARTH_DRAGON=49;
-const ANIMAL_IDS=new Set([DRAGON,TIGER,SHEEP,HUMAN,FISH,RAT,FLEA,FIRE_DRAGON,EARTH_DRAGON]);
+const SOUL_DRAGON=50,SUN_DRAGON=51;
+const ANIMAL_IDS=new Set([DRAGON,TIGER,SHEEP,HUMAN,FISH,RAT,FLEA,FIRE_DRAGON,EARTH_DRAGON,SOUL_DRAGON,SUN_DRAGON]);
 
 // Animal sprite sizes in pixels
 const A_SIZE={
-  [DRAGON]:{w:20*CELL,h:16*CELL},  // wyvern — biggest
+  [DRAGON]:{w:20*CELL,h:16*CELL},
   [FIRE_DRAGON]:{w:28*CELL,h:18*CELL},
-  [EARTH_DRAGON]:{w:20*CELL,h:16*CELL}, // earth dragon — full size
+  [EARTH_DRAGON]:{w:20*CELL,h:16*CELL},
+  [SOUL_DRAGON]:{w:22*CELL,h:16*CELL},
+  [SUN_DRAGON]:{w:26*CELL,h:16*CELL},
   [TIGER]: {w:7*CELL,h:4*CELL},
   [SHEEP]: {w:5*CELL,h:4*CELL},
   [HUMAN]: {w:3*CELL,h:7*CELL},  // tall
@@ -125,9 +128,12 @@ const ELEM={
   [COOLER]:  {name:'Cooler',  color:'#80DEEA',colors:['#80DEEA','#4DD0E1','#B2EBF2'],fl:false},
   [BASALT]:   {name:'Basalt',  color:'#2D2D2D',colors:['#2D2D2D','#222','#383838'],fl:false},
   [BLUE_FIRE]:{name:'BluFire', color:'#00AAFF',colors:['#00AAFF','#0088EE','#44CCFF'],fl:false},
+  [LIGHT]:    {name:'Light',   color:'#FFEE55',colors:['#FFEE55','#FFD700','#FFFAAA'],fl:false},
   [DRAGON]:  {name:'Wyvern',  color:'#9B0057',colors:['#9B0057'],animal:true},
   [FIRE_DRAGON]:{name:'FireDrgn',color:'#FF1A00',colors:['#FF1A00'],animal:true},
   [EARTH_DRAGON]:{name:'EarthDrg',color:'#1B5E20',colors:['#1B5E20'],animal:true},
+  [SOUL_DRAGON]:{name:'SoulDrg', color:'#1A237E',colors:['#1A237E'],animal:true},
+  [SUN_DRAGON]: {name:'SunDrg',  color:'#E65100',colors:['#E65100'],animal:true},
   [TIGER]:   {name:'Tiger',   color:'#E65100',colors:['#E65100'],animal:true},
   [SHEEP]:   {name:'Sheep',   color:'#F5F5F5',colors:['#F5F5F5'],animal:true},
   [HUMAN]:   {name:'Human',   color:'#FFCCBC',colors:['#FFCCBC'],animal:true},
@@ -135,15 +141,15 @@ const ELEM={
   [RAT]:     {name:'Rat',     color:'#78909C',colors:['#78909C'],animal:true},
   [FLEA]:    {name:'Flea',    color:'#9C27B0',colors:['#9C27B0'],animal:true},
 };
-const A_EMOJI={[DRAGON]:'🐲',[TIGER]:'🐯',[SHEEP]:'🐑',[HUMAN]:'🧑',[FISH]:'🐟',[RAT]:'🐀',[FLEA]:'🦗',[FIRE_DRAGON]:'🐉',[EARTH_DRAGON]:'🦎'};
-const A_PRED={[SHEEP]:new Set([DRAGON,TIGER,FIRE_DRAGON]),[HUMAN]:new Set([DRAGON,TIGER,FIRE_DRAGON]),[RAT]:new Set([TIGER,HUMAN,FIRE_DRAGON]),[FISH]:new Set([TIGER]),[FLEA]:new Set([DRAGON,TIGER,FIRE_DRAGON])};
-const A_PREY={[DRAGON]:new Set([HUMAN,SHEEP,RAT]),[TIGER]:new Set([SHEEP,HUMAN,RAT,FISH]),[FIRE_DRAGON]:new Set([HUMAN,SHEEP,RAT,FLEA])};
+const A_EMOJI={[DRAGON]:'🐲',[TIGER]:'🐯',[SHEEP]:'🐑',[HUMAN]:'🧑',[FISH]:'🐟',[RAT]:'🐀',[FLEA]:'🦗',[FIRE_DRAGON]:'🐉',[EARTH_DRAGON]:'🦎',[SOUL_DRAGON]:'💙',[SUN_DRAGON]:'☀️'};
+const A_PRED={[SHEEP]:new Set([DRAGON,TIGER,FIRE_DRAGON,SOUL_DRAGON,SUN_DRAGON]),[HUMAN]:new Set([DRAGON,TIGER,FIRE_DRAGON,SOUL_DRAGON,SUN_DRAGON]),[RAT]:new Set([TIGER,HUMAN,FIRE_DRAGON,SOUL_DRAGON]),[FISH]:new Set([TIGER]),[FLEA]:new Set([DRAGON,TIGER,FIRE_DRAGON,SOUL_DRAGON])};
+const A_PREY={[DRAGON]:new Set([HUMAN,SHEEP,RAT]),[TIGER]:new Set([SHEEP,HUMAN,RAT,FISH]),[FIRE_DRAGON]:new Set([HUMAN,SHEEP,RAT,FLEA]),[SOUL_DRAGON]:new Set([HUMAN,SHEEP,RAT]),[SUN_DRAGON]:new Set([HUMAN,SHEEP,RAT,FLEA])};
 const CATS=[
   {name:'🌊 Basics',    ids:[SAND,WATER,OIL,SMOKE,STEAM]},
   {name:'🧱 Material',  ids:[STONE,WALL,WOOD,CONCRETE,TERRACOTTA,RUIN,ICE,ASH]},
   {name:'🔩 Metal',     ids:[GOLD,SILVER,MERCURY,IRON,STEEL]},
   {name:'🌿 Plants',    ids:[SEED,PLANT,CACTUS,PALM,CORN,APPLE_T,ORANGE_T,PAPAYA_T]},
-  {name:'🦁 Animals',   ids:[DRAGON,FIRE_DRAGON,EARTH_DRAGON,TIGER,SHEEP,HUMAN,FISH,RAT,FLEA]},
+  {name:'🦁 Animals',   ids:[DRAGON,FIRE_DRAGON,EARTH_DRAGON,SOUL_DRAGON,SUN_DRAGON,TIGER,SHEEP,HUMAN,FISH,RAT,FLEA]},
   {name:'💥 Disasters', ids:[FIRE,LAVA,ACID,GUNPOWDER,BOMB,VOID]},
   {name:'⚙️ Machines',  ids:[CLONER,FAN,HEATER,COOLER]},
 ];
@@ -178,10 +184,34 @@ function makeTransparent(img,threshold=230){
   ox.putImageData(d,0,0);
   return oc;
 }
+const soulDragonImg=new Image(); soulDragonImg.src='/games/sand-box/sprites/soul_dragon.webp';
+const sunDragonImg=new Image();  sunDragonImg.src='/games/sand-box/sprites/sun_dragon.webp';
+const fireBallImg=new Image();   fireBallImg.src='/games/sand-box/sprites/fire_ball.png';
+const blueBallImg=new Image();   blueBallImg.src='/games/sand-box/sprites/blue_fire_ball.png';
+const fireBreathImg=new Image(); fireBreathImg.src='/games/sand-box/sprites/fire_breath.png';
+
+// remove solid-color backgrounds (blue-grey for soul/sun dragon webp, white for others)
+function makeTransparentColor(img,r2,g2,b2,tol=40){
+  const oc=document.createElement('canvas');oc.width=img.naturalWidth;oc.height=img.naturalHeight;
+  const ox=oc.getContext('2d');ox.drawImage(img,0,0);
+  const d=ox.getImageData(0,0,oc.width,oc.height);
+  for(let i=0;i<d.data.length;i+=4){
+    if(Math.abs(d.data[i]-r2)<tol&&Math.abs(d.data[i+1]-g2)<tol&&Math.abs(d.data[i+2]-b2)<tol)d.data[i+3]=0;
+  }
+  ox.putImageData(d,0,0);return oc;
+}
 let earthDragonCanvas=null,fireDragonCanvas=null,wyvernCanvas=null;
+let soulDragonCanvas=null,sunDragonCanvas=null,fireBallCanvas=null,blueBallCanvas=null,fireBreathCanvas=null;
 earthDragonImg.onload=()=>{earthDragonCanvas=makeTransparent(earthDragonImg,210);};
 fireDragonImg.onload=()=>{fireDragonCanvas=makeTransparent(fireDragonImg,210);};
 wyvernImg.onload=()=>{wyvernCanvas=makeTransparent(wyvernImg,210);};
+// soul/sun dragon have blue-grey background (~76,99,114)
+soulDragonImg.onload=()=>{soulDragonCanvas=makeTransparentColor(soulDragonImg,76,99,114,30);};
+// sun dragon has blue-grey background (~113,145,162)
+sunDragonImg.onload=()=>{sunDragonCanvas=makeTransparentColor(sunDragonImg,113,145,162,35);};
+fireBallImg.onload=()=>{fireBallCanvas=makeTransparent(fireBallImg,230);};
+blueBallImg.onload=()=>{blueBallCanvas=makeTransparent(blueBallImg,230);};
+fireBreathImg.onload=()=>{fireBreathCanvas=makeTransparent(fireBreathImg,230);};
 
 function startGame(){document.getElementById('overlay').style.display='none';init();requestAnimationFrame(loop);}
 
@@ -264,7 +294,7 @@ function simulate(){
         case APPLE_T:uTree(x,y,'#C62828');break;case ORANGE_T:uTree(x,y,'#F4511E');break;case PAPAYA_T:uTree(x,y,'#FFA000');break;
         case ACID:uAcid(x,y);break;case GUNPOWDER:uGunpowder(x,y);break;case BOMB:uBomb(x,y);break;
         case CLONER:uCloner(x,y);break;case VOID:uVoid(x,y);break;
-        case FAN:uFan(x,y);break;case HEATER:uHeater(x,y);break;case COOLER:uCooler(x,y);break;case BASALT:break;case BLUE_FIRE:uBlueFire(x,y);break;
+        case FAN:uFan(x,y);break;case HEATER:uHeater(x,y);break;case COOLER:uCooler(x,y);break;case BASALT:break;case BLUE_FIRE:uBlueFire(x,y);break;case LIGHT:uLight(x,y);break;
       }
     }
   }
@@ -292,6 +322,15 @@ function uBlueFire(x,y){
     if(ANIMAL_IDS.has(nt)){const a=animals.find(a=>a.alive&&Math.round(a.x/CELL)===nx&&Math.round(a.y/CELL)===ny);if(a)a.hp-=0.2;}
   }
   if(life[i]>300+Math.random()*60)clr(x,y); // ~5 seconds
+}
+function uLight(x,y){
+  const i=idx(x,y);life[i]++;
+  // light ray moves fast horizontally, fades quickly
+  const dir=color[i*3]>128?1:-1; // stored direction in red channel
+  for(let s=1;s<=3;s++){const nx=x+dir*s;if(!inB(nx,y))break;const nt=get(nx,y);if(nt===EMPTY){set(nx,y,LIGHT);color[idx(nx,y)*3]=dir>0?200:50;simBuf[idx(nx,y)]=1;}else{if(ANIMAL_IDS.has(nt)){const a=animals.find(a=>a.alive&&Math.round(a.x/CELL)===nx&&Math.round(a.y/CELL)===y);if(a)a.hp-=0.4;}clr(x,y);return;}}
+  // slight vertical spread for ray look
+  if(Math.random()<.2){const sy=y+(Math.random()<.5?1:-1);if(inB(x,sy)&&get(x,sy)===EMPTY){set(x,sy,LIGHT);color[idx(x,sy)*3]=dir>0?200:50;simBuf[idx(x,sy)]=1;}}
+  if(life[i]>8+Math.random()*6)clr(x,y); // disappears fast
 }
 function uFire(x,y){
   const i=idx(x,y);life[i]++;
@@ -393,11 +432,33 @@ function uAnimals(){
           }
         } else{a.vx=a.dir*2;if(a.timer%90===0)a.dir=-a.dir;}
         break;
-      case EARTH_DRAGON: // peaceful grazer — only attacks when disturbed
+      case SOUL_DRAGON: // walks on ground, breathes blue fire when prey nearby
+        a.breathing=false;
+        if(nearPred&&npDist<120){a.vx=-(nearPred.x>a.x?1:-1)*2.5;if(onGround)a.vy=-4;}
+        else if(nearPrey&&nyDist<220){
+          a.vx=(nearPrey.x>a.x?1:-1)*2.8;
+          if(nyDist<80){a.breathing=true;if(Math.random()<.1){const fd=a.vx>0?1:-1;for(let fi=1;fi<=4;fi++){const fx=cx+fd*fi;if(inB(fx,cy))set(fx,cy,BLUE_FIRE);}}}
+        } else{a.vx=a.dir*1.5;if(a.timer%110===0)a.dir=-a.dir;}
+        if(onGround&&Math.random()<.005)a.vy=-4;break;
+      case SUN_DRAGON: // flies, shoots LIGHT rays when attacking
+        a.breathing=false;
+        a.vy+=-0.2;
+        if(a.y>rows*CELL*.82)a.vy-=0.6;
+        if(a.y<rows*CELL*.12)a.vy+=0.4;
+        a.vy=Math.max(-5,Math.min(5,a.vy));
+        if(nearPred&&npDist<110){a.vx=-(nearPred.x>a.x?1:-1)*3.5;a.vy=-3;}
+        else if(nearPrey&&nyDist<240){
+          a.vx=(nearPrey.x>a.x?1:-1)*3.8;
+          if(nyDist<90){a.breathing=true;if(Math.random()<.15){const fd=a.vx>0?1:-1;const lx=cx+fd*2;if(inB(lx,cy)){set(lx,cy,LIGHT);color[idx(lx,cy)*3]=fd>0?200:50;}}}
+        } else{a.vx=a.dir*2.5;if(a.timer%80===0)a.dir=-a.dir;}
+        break;
+      case EARTH_DRAGON: // peaceful — attacks when ANY animal comes within 80px
         if(!a.state)a.state='peace';
-        // detect threat: any animal within 80px angers it
-        if(npDist<80&&nearPred)a.state='angry';
-        else if(npDist>160)a.state='peace';
+        // detect ANY nearby animal (not just predators)
+        {let nearAny=null,naDist=9999;
+        for(const b of animals){if(!b.alive||b===a||b.type===EARTH_DRAGON)continue;const d=Math.hypot(b.x-a.x,b.y-a.y);if(d<naDist){naDist=d;nearAny=b;}}
+        if(naDist<80)a.state='angry';
+        else if(naDist>160)a.state='peace';}
         if(a.state==='angry'){
           // launch boulders arcing at distance 3-12 cells ahead
           if(Math.random()<.03&&nearPred){
@@ -475,7 +536,9 @@ function drawAnimal(a){
   switch(a.type){
     case DRAGON:      drawWyvern(W,H,f,a.breathing,resting); break;
     case FIRE_DRAGON: drawFireDragon(W,H,f,a.breathing,resting); break;
-    case EARTH_DRAGON:drawEarthDragon(W,H,f,a.state==='angry',resting); break;
+    case EARTH_DRAGON: drawEarthDragon(W,H,f,a.state==='angry',resting); break;
+    case SOUL_DRAGON:  drawSoulDragon(W,H,f,a.breathing,resting); break;
+    case SUN_DRAGON:   drawSunDragon(W,H,f,a.breathing,resting); break;
     case TIGER:  drawTiger(W,H,f,resting); break;
     case SHEEP:  drawSheep(W,H,f,resting); break;
     case HUMAN:  drawHuman(W,H,f,resting); break;
@@ -682,6 +745,113 @@ function drawEarthDragon(W,H,f,angry,resting){
     ctx.strokeStyle=`rgba(139,195,74,${0.35+Math.random()*.35})`;
     ctx.lineWidth=C*.7;
     ctx.beginPath();ctx.arc(W*.5,H*.5+bodyBob,W*.52,0,Math.PI*2);ctx.stroke();
+  }
+}
+
+function drawSoulDragon(W,H,f,breathing,resting){
+  const C=CELL;
+  const wa=wingAngle(f,resting);
+  const bodyBob=resting?Math.sin(f*Math.PI/2)*H*.012:[-H*.03,-H*.015,H*.015,0][f];
+
+  // ── Animated wings (deep blue) ──
+  ctx.fillStyle='#1A237E';
+  ctx.save();ctx.translate(W*.35,H*.38+bodyBob);ctx.rotate(wa*.9);
+  ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-W*.48,-H*.48);ctx.lineTo(-W*.30,-H*.42);ctx.lineTo(-W*.48,-H*.16);ctx.closePath();ctx.fill();
+  ctx.restore();
+  // second wing fold
+  ctx.fillStyle='#283593';
+  ctx.save();ctx.translate(W*.38,H*.42+bodyBob);ctx.rotate(wa*.5);
+  ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-W*.3,-H*.28);ctx.lineTo(-W*.18,-H*.24);ctx.lineTo(-W*.28,-H*.1);ctx.closePath();ctx.fill();
+  ctx.restore();
+
+  // ── Body from sprite ──
+  const src=soulDragonCanvas||soulDragonImg;
+  if(src&&(src.width||src.naturalWidth)>0){
+    const iw=src.width||src.naturalWidth,ih=src.height||src.naturalHeight;
+    const margin=Math.round(iw*0.06);
+    const cropW=iw-margin*2,cropH=ih-margin*2;
+    ctx.drawImage(src,margin,margin,cropW,cropH,0,bodyBob,W,H);
+  } else {ctx.fillStyle='#1565C0';ctx.fillRect(0,0,W,H);}
+
+  // ── Neck / head bob ──
+  const headTilt=resting?Math.sin(f*Math.PI/2)*.06:[-0.1,0.05,0.1,0][f];
+  ctx.save();ctx.translate(W*.82,H*.28+bodyBob);ctx.rotate(headTilt);
+  // eye glow always (soul dragon has glowing eyes)
+  ctx.fillStyle=`rgba(100,180,255,${0.5+Math.random()*.3})`;
+  ctx.beginPath();ctx.arc(C*.3,C*.3,C*.5,0,Math.PI*2);ctx.fill();
+  ctx.restore();
+
+  // ── Blue fire breath (only when attacking) ──
+  if(breathing){
+    const bsrc=blueBallCanvas||blueBallImg;
+    if(bsrc&&(bsrc.width||bsrc.naturalWidth)>0){
+      ctx.save();ctx.globalAlpha=0.85;
+      ctx.drawImage(bsrc,W*.85,H*.2+bodyBob,W*.7,H*.45);
+      ctx.restore();
+    } else {
+      ctx.fillStyle=`rgba(80,140,255,${0.7+Math.random()*.3})`;
+      ctx.beginPath();ctx.ellipse(W*.95,H*.3+bodyBob,W*.18,H*.12,0,0,Math.PI*2);ctx.fill();
+    }
+    // "BLUE FIRE!" label
+    ctx.save();ctx.font=`bold ${C*1.2}px sans-serif`;ctx.fillStyle='#64B5F6';
+    ctx.strokeStyle='#000';ctx.lineWidth=2;
+    ctx.strokeText('💙BLUE FIRE!',-W*.1,-C*1.5);ctx.fillText('💙BLUE FIRE!',-W*.1,-C*1.5);
+    ctx.restore();
+  }
+}
+
+function drawSunDragon(W,H,f,breathing,resting){
+  const C=CELL;
+  const wa=wingAngle(f,resting);
+  const bodyBob=resting?Math.sin(f*Math.PI/2)*H*.01:[-H*.04,-H*.02,H*.02,0][f];
+
+  // ── Large golden wings (flyer) ──
+  ctx.fillStyle='#E65100';
+  ctx.save();ctx.translate(W*.3,H*.35+bodyBob);ctx.rotate(wa*1.1);
+  ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-W*.62,-H*.6);ctx.lineTo(-W*.38,-H*.5);ctx.lineTo(-W*.58,-H*.2);ctx.closePath();ctx.fill();
+  ctx.restore();
+  ctx.fillStyle='#FF6D00';
+  ctx.save();ctx.translate(W*.35,H*.38+bodyBob);ctx.rotate(wa*.65);
+  ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-W*.4,-H*.35);ctx.lineTo(-W*.22,-H*.3);ctx.lineTo(-W*.35,-H*.12);ctx.closePath();ctx.fill();
+  ctx.restore();
+  // right wing (folded)
+  ctx.fillStyle='#BF360C';
+  ctx.save();ctx.translate(W*.65,H*.35+bodyBob);ctx.rotate(-wa*.5);
+  ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(W*.32,-H*.35);ctx.lineTo(W*.2,-H*.28);ctx.lineTo(W*.28,-H*.1);ctx.closePath();ctx.fill();
+  ctx.restore();
+
+  // ── Body from sprite ──
+  const src=sunDragonCanvas||sunDragonImg;
+  if(src&&(src.width||src.naturalWidth)>0){
+    const iw=src.width||src.naturalWidth,ih=src.height||src.naturalHeight;
+    const margin=Math.round(iw*0.06);
+    const cropW=iw-margin*2,cropH=ih-margin*2;
+    ctx.drawImage(src,margin,margin,cropW,cropH,0,bodyBob,W,H);
+  } else {ctx.fillStyle='#FF6D00';ctx.fillRect(0,0,W,H);}
+
+  // ── Head bob ──
+  const headTilt=resting?Math.sin(f*Math.PI/2)*.05:[-0.08,0.04,0.08,0][f];
+  ctx.save();ctx.translate(W*.82,H*.26+bodyBob);ctx.rotate(headTilt);
+  // sun dragon has bright golden eye glow
+  ctx.fillStyle=`rgba(255,235,59,${0.6+Math.random()*.3})`;
+  ctx.beginPath();ctx.arc(C*.3,C*.3,C*.6,0,Math.PI*2);ctx.fill();
+  ctx.restore();
+
+  // ── Light ray (only when attacking) ──
+  if(breathing){
+    // golden ray burst
+    const alpha=0.6+Math.random()*.35;
+    ctx.save();ctx.globalAlpha=alpha;
+    ctx.strokeStyle='#FFF176';ctx.lineWidth=C*1.4;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(W*.9,H*.28+bodyBob);ctx.lineTo(W*2.5,H*.28+bodyBob);ctx.stroke();
+    ctx.strokeStyle='rgba(255,255,255,.5)';ctx.lineWidth=C*.5;
+    ctx.beginPath();ctx.moveTo(W*.9,H*.28+bodyBob);ctx.lineTo(W*2.5,H*.28+bodyBob);ctx.stroke();
+    ctx.restore();
+    // "LIGHT!" label
+    ctx.save();ctx.font=`bold ${C*1.2}px sans-serif`;ctx.fillStyle='#FFD600';
+    ctx.strokeStyle='#000';ctx.lineWidth=2;
+    ctx.strokeText('☀️LIGHT!',-W*.05,-C*1.5);ctx.fillText('☀️LIGHT!',-W*.05,-C*1.5);
+    ctx.restore();
   }
 }
 
@@ -928,6 +1098,7 @@ function render(){
         const age=life[gi]/35;const hot=Math.max(0,1-age);
         r=Math.max(0,(Math.random()*30)|0);g=Math.min(255,120+hot*120+(Math.random()*40)|0);b=255;
       }
+      if(type===LIGHT){const p=Math.random()*40|0;r=255;g=Math.min(255,220+p);b=Math.min(255,80+p);a=Math.max(100,255-(life[gi]*20));}
       if(type===SMOKE||type===STEAM){const lf=life[gi]/160;a=Math.max(55,255-(lf*180|0));}
       if(type===ACID){g=Math.min(255,g+(Math.random()*30-10)|0);r=Math.max(0,r-10);}
       if(type===VOID){const p=Math.random()*30|0;r=20+p;g=0;b=20+p;}

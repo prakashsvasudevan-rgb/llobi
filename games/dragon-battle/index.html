@@ -1554,20 +1554,29 @@ function spawnDragonMountain(){
     scene.add(v);objects.push(v);friendlyNPCs.push(v);
   }
 
-  // Dragon Rider Blane — teaches team dragon selection
-  const blane=makeVillagerMesh();
-  blane.userData.npcName='Dragon Rider Blane';
-  blane.userData.npcText='Welcome! I train dragon riders. Once you have a team, press [B] to help them choose new dragons! [B] Accept my quest: defeat the Emperor at the Volcano.';
-  blane.userData.isBlane=true;
-  blane.userData.choices=[
-    {q:'How do I build my team?',       a:'Talk to the villagers on Floor 1 and Floor 2 of the mountain. Press [R] to recruit. They will wait outside until you fly out.'},
-    {q:'What is the first battle?',     a:'Fly north from here. You will find a castle held by the King Hunter. Defeat him to free the village. The freed folk will remember you!'},
-    {q:'How do I become Lightning?',    a:'Only a Fire dragon can absorb a lightning strike and transform. Fly into a storm on your fire dragon and hope lightning finds you!'},
-    {q:'How do I tame a wild dragon?',  a:'Attack a roaming wild dragon with your breath until it is defeated. It will land. Then press [F] to tame it — no rider needed!'},
+  // Dragon Rider Blane — rides his Lightning dragon Blast
+  const blaneGrp=new THREE.Group();
+  const blaneDragonDef=DT.find(d=>d.id==='lightning');
+  const blaneDragon=buildDragonMesh(blaneDragonDef);
+  blaneDragon.scale.set(0.7,0.7,0.7);
+  blaneGrp.add(blaneDragon);
+  const blaneRider=buildRiderOnDragon(blaneDragonDef);
+  blaneDragon.add(blaneRider);
+  blaneGrp.userData.npcName='Blane';
+  blaneGrp.userData.npcText='Welcome! I am Blane, and this is Blast — my Lightning dragon. I train riders here. Recruit your team and I will take each one to the Hatchery. When all bonds are made, follow me to battle!';
+  blaneGrp.userData.isBlane=true;
+  blaneGrp.userData.lwp=blaneDragon.userData.lwp;
+  blaneGrp.userData.rwp=blaneDragon.userData.rwp;
+  blaneGrp.userData.choices=[
+    {q:'How do I build my team?',       a:'Talk to the riders on Floor 1 and Floor 2. Press [R] to recruit. I will bring each one to the Hatchery to bond with their dragon.'},
+    {q:'What is the first battle?',     a:'Once every recruit is bonded I will lead you to the nearest castle. Stay with me in the Hatchery until then!'},
+    {q:'How do I become Lightning?',    a:'Only a Fire dragon can absorb a lightning strike and transform. Fly into a storm on your fire dragon and hope lightning finds you! That is how I found Blast.'},
+    {q:'How do I tame a wild dragon?',  a:'Attack a roaming wild dragon until it is defeated. It will land. Then press [F] to tame it — no rider needed!'},
   ];
-  blane.position.set(DM_X+5,groundY(DM_X+5,DM_Z+2)+1.5,DM_Z+2);
-  scene.add(blane);objects.push(blane);friendlyNPCs.push(blane);
-  blaneNPC=blane;
+  const blaneY=groundY(DM_X+5,DM_Z+2)+2;
+  blaneGrp.position.set(DM_X+5,blaneY,DM_Z+2);
+  scene.add(blaneGrp);objects.push(blaneGrp);friendlyNPCs.push(blaneGrp);
+  blaneNPC=blaneGrp;
 
   // Floor 1 — 10 recruitable villagers around the mountain base (outside)
   const f1=[['Tara','I will ride with you to the ends of the world.'],['Orin','My bones ache but my spirit is strong.'],
@@ -1936,6 +1945,8 @@ let blaneWanderT=0,blaneWanderTarget=null,blaneTalkT=0;
 // Hatchery tour sequence
 let hatcheryQueue=[]; // {recruit, phase:'fetch'|'lead'|'hatchery'|'done', t}
 const HATCH_X=DM_X, HATCH_Z=DM_Z+134; // hatchery room center
+let hatcheryDoneCount=0; // how many bonding sequences have completed
+let blaneLeadPhase='idle'; // 'idle'|'walking_to_player'|'leading_to_castle'
 let blaneQuest='inactive'; // 'inactive' | 'unlocked' | 'active' | 'complete'
 let shadowKills=0;
 let wildDragons=[]; // tameable wild dragons {mesh, hp, maxHp, tameable}
@@ -2400,7 +2411,7 @@ function startGame(){
   orbDrops.forEach(o=>scene.remove(o.mesh));orbDrops=[];
   mageOrbs=0;shadowDust=0;upgrades={dmg:0,hp:0,speed:0,fuel:0,attack:0};
   dragonArmy.forEach(a=>scene.remove(a.mesh));dragonArmy=[];
-  dragonMtnSpawned=false;volcanoSpawned=false;blaneNPC=null;blaneWanderT=0;blaneWanderTarget=null;blaneTalkT=0;hatcheryQueue=[];
+  dragonMtnSpawned=false;volcanoSpawned=false;blaneNPC=null;blaneWanderT=0;blaneWanderTarget=null;blaneTalkT=0;hatcheryQueue=[];hatcheryDoneCount=0;blaneLeadPhase='idle';
   blaneQuest='inactive';shadowKills=0;wildDragons=[];
   mapOpen=false;wmEl.classList.remove('show');
   // Spawn Dragon Mountain (always at world north, zone 0,5)
@@ -2861,16 +2872,55 @@ function update(ts){
           const sa=[DM_X-15+slot*8,DM_Z-25];
           dragonArmy.push({mesh:rec,slot,staging:true,stagingPos:sa});
           rec.userData.npcText='I am bonded! My dragon and I will meet you outside!';
-          // Blane leads recruit back out
+          hatcheryDoneCount++;
           hatcheryQueue.shift();
-          blaneWanderTarget=new THREE.Vector3(DM_X,0,DM_Z-10); // back toward exit
-          floatWorld(bPos,'Bond complete! Let us return.','#ffdd44');
+          // If more recruits pending, go fetch next; else start castle-lead phase
+          if(hatcheryQueue.length>0){
+            blaneWanderTarget=null; // let hatchery AI handle next
+          } else {
+            // All bondings done — Blane walks to player in hatchery then leads to castle
+            blaneLeadPhase='walking_to_player';
+            floatWorld(bPos,'Everyone is bonded! Follow me!','#ffdd44');
+          }
         }
       }
     }
 
+    // ── BLANE CASTLE-LEAD AI (after all bondings done) ───────────────────────
+    if(blaneNPC&&blaneLeadPhase!=='idle'&&hatcheryQueue.length===0){
+      const bPos=blaneNPC.position;
+      const playerPos=isHuman&&humanMesh?humanMesh.position:dragonMesh.position;
+      function blaneWalkTo(tx,tz,spd){
+        const toT=new THREE.Vector3(tx-bPos.x,0,tz-bPos.z);
+        const dist=toT.length();
+        if(dist>1.5){toT.normalize();bPos.addScaledVector(toT,spd*dt);
+          const flY=caveFloorY(bPos.x,bPos.z);
+          bPos.y=(flY!==null?flY:groundY(bPos.x,bPos.z))+2;
+          blaneNPC.rotation.y=Math.atan2(toT.x,toT.z);}
+        return dist<3;
+      }
+      if(blaneLeadPhase==='walking_to_player'){
+        // Walk to wherever the player is (hatchery or cave)
+        const done=blaneWalkTo(playerPos.x,playerPos.z,4);
+        if(done){
+          blaneLeadPhase='leading_to_castle';
+          floatWorld(bPos,'This way — to the castle!','#ffdd44');
+        }
+      } else if(blaneLeadPhase==='leading_to_castle'){
+        // Lead toward nearest enemy castle
+        const nearCastle=activeBuildings.find(b=>b.userData.type==='castle'&&!b.userData.safe);
+        if(nearCastle){
+          blaneWalkTo(nearCastle.position.x,nearCastle.position.z,5);
+          blaneTalkT-=dt;
+          if(blaneTalkT<=0){floatWorld(bPos,'Keep up! Castle ahead!','#ffdd44');blaneTalkT=6;}
+          // Once Blane reaches castle, hand off to normal wander
+          if(bPos.distanceTo(nearCastle.position)<20){blaneLeadPhase='idle';}
+        } else {blaneLeadPhase='idle';} // no castle found, done
+      }
+    }
+
     // ── BLANE WANDER AI ──────────────────────────────────────────────────────
-    if(blaneNPC&&!dialogOpen&&hatcheryQueue.length===0){
+    if(blaneNPC&&!dialogOpen&&hatcheryQueue.length===0&&blaneLeadPhase==='idle'){
       blaneWanderT-=dt;
       // Pick a new wander target every 4–8s
       if(blaneWanderT<=0){

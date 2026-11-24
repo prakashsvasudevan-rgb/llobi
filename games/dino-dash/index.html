@@ -241,11 +241,9 @@ function drawBg(){
   }
   ctx.globalAlpha=1;
   // Ground
-  dr(0,gy,cW,8,groundCol());
+  dr(0,gy,cW,4,nightPct>.5?'#4a6a4a':'#7ab040');
+  dr(0,gy+4,cW,4,groundCol());
   dr(0,gy+8,cW,cH-gy-8,dirtCol());
-  // Ground detail lines
-  ctx.fillStyle=nightPct>.5?'rgba(0,0,0,.3)':'rgba(0,0,0,.15)';
-  for(let x=(-(worldX*1))%60;x<cW;x+=60)ctx.fillRect(~~x,gy+2,30,2);
 }
 
 function drawDino(){

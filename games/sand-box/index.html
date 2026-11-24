@@ -185,7 +185,7 @@ function makeTransparent(img,threshold=230){
   return oc;
 }
 const soulDragonImg=new Image(); soulDragonImg.src='/games/sand-box/sprites/soul_dragon.webp';
-const sunDragonImg=new Image();  sunDragonImg.src='/games/sand-box/sprites/sun_dragon.webp';
+const sunDragonImg=new Image();  sunDragonImg.src='/games/sand-box/sprites/sun_dragon2.webp';
 const fireBallImg=new Image();   fireBallImg.src='/games/sand-box/sprites/fire_ball.png';
 const blueBallImg=new Image();   blueBallImg.src='/games/sand-box/sprites/blue_fire_ball.png';
 const fireBreathImg=new Image(); fireBreathImg.src='/games/sand-box/sprites/fire_breath.png';
@@ -208,7 +208,7 @@ wyvernImg.onload=()=>{wyvernCanvas=makeTransparent(wyvernImg,210);};
 // soul/sun dragon have blue-grey background (~76,99,114)
 soulDragonImg.onload=()=>{soulDragonCanvas=makeTransparentColor(soulDragonImg,76,99,114,30);};
 // sun dragon has blue-grey background (~113,145,162)
-sunDragonImg.onload=()=>{sunDragonCanvas=makeTransparentColor(sunDragonImg,113,145,162,35);};
+sunDragonImg.onload=()=>{sunDragonCanvas=makeTransparentColor(sunDragonImg,160,190,210,35);};
 fireBallImg.onload=()=>{fireBallCanvas=makeTransparent(fireBallImg,230);};
 blueBallImg.onload=()=>{blueBallCanvas=makeTransparent(blueBallImg,230);};
 fireBreathImg.onload=()=>{fireBreathCanvas=makeTransparent(fireBreathImg,230);};
@@ -802,39 +802,24 @@ function drawSoulDragon(W,H,f,breathing,resting){
 
 function drawSunDragon(W,H,f,breathing,resting){
   const C=CELL;
-  const wa=wingAngle(f,resting);
-  const bodyBob=resting?Math.sin(f*Math.PI/2)*H*.01:[-H*.04,-H*.02,H*.02,0][f];
+  // flying bob: smooth sine up/down to simulate wing flap
+  const flyBob=[-H*.05,-H*.02,H*.02,H*.04][f];
+  const bodyBob=resting?Math.sin(f*Math.PI/2)*H*.01:flyBob;
+  // slight vertical scale pulse (wings up = body rises slightly)
+  const scaleY=resting?1:[1.04,1.02,0.97,0.99][f];
 
-  // ── Large golden wings (flyer) ──
-  ctx.fillStyle='#E65100';
-  ctx.save();ctx.translate(W*.3,H*.35+bodyBob);ctx.rotate(wa*1.1);
-  ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-W*.62,-H*.6);ctx.lineTo(-W*.38,-H*.5);ctx.lineTo(-W*.58,-H*.2);ctx.closePath();ctx.fill();
-  ctx.restore();
-  ctx.fillStyle='#FF6D00';
-  ctx.save();ctx.translate(W*.35,H*.38+bodyBob);ctx.rotate(wa*.65);
-  ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-W*.4,-H*.35);ctx.lineTo(-W*.22,-H*.3);ctx.lineTo(-W*.35,-H*.12);ctx.closePath();ctx.fill();
-  ctx.restore();
-  // right wing (folded)
-  ctx.fillStyle='#BF360C';
-  ctx.save();ctx.translate(W*.65,H*.35+bodyBob);ctx.rotate(-wa*.5);
-  ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(W*.32,-H*.35);ctx.lineTo(W*.2,-H*.28);ctx.lineTo(W*.28,-H*.1);ctx.closePath();ctx.fill();
-  ctx.restore();
-
-  // ── Body from sprite ──
+  // ── Body from sprite (full sprite, background removed) ──
   const src=sunDragonCanvas||sunDragonImg;
+  ctx.save();
+  ctx.translate(W*.5,H*.5+bodyBob);
+  ctx.scale(1,scaleY);
+  ctx.translate(-W*.5,-H*.5);
   if(src&&(src.width||src.naturalWidth)>0){
     const iw=src.width||src.naturalWidth,ih=src.height||src.naturalHeight;
-    const margin=Math.round(iw*0.06);
+    const margin=Math.round(iw*0.04);
     const cropW=iw-margin*2,cropH=ih-margin*2;
-    ctx.drawImage(src,margin,margin,cropW,cropH,0,bodyBob,W,H);
+    ctx.drawImage(src,margin,margin,cropW,cropH,0,0,W,H);
   } else {ctx.fillStyle='#FF6D00';ctx.fillRect(0,0,W,H);}
-
-  // ── Head bob ──
-  const headTilt=resting?Math.sin(f*Math.PI/2)*.05:[-0.08,0.04,0.08,0][f];
-  ctx.save();ctx.translate(W*.82,H*.26+bodyBob);ctx.rotate(headTilt);
-  // sun dragon has bright golden eye glow
-  ctx.fillStyle=`rgba(255,235,59,${0.6+Math.random()*.3})`;
-  ctx.beginPath();ctx.arc(C*.3,C*.3,C*.6,0,Math.PI*2);ctx.fill();
   ctx.restore();
 
   // ── Light ray (only when attacking) ──

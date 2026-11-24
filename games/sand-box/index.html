@@ -801,17 +801,11 @@ function drawSoulDragon(W,H,f,breathing,resting,flying){
 
   // ── Blue fire breath (only when attacking) ──
   if(breathing){
-    for(let fi=0;fi<3;fi++){
-      const flicker=(Math.random()-.5)*C*.5;
-      ctx.fillStyle=`rgba(${fi*18},${130+fi*28},255,${.85-fi*.18})`;
-      ctx.beginPath();ctx.ellipse(W+fi*C*1.1+flicker,H*.45+flicker*.3,C*(.7-fi*.1),C*(.42-fi*.05),0,0,Math.PI*2);ctx.fill();
+    for(let fi=0;fi<2;fi++){
+      const flicker=(Math.random()-.5)*C*.2;
+      ctx.fillStyle=`rgba(${fi*18},${130+fi*28},255,${.75-fi*.2})`;
+      ctx.beginPath();ctx.ellipse(W+fi*C*.5+flicker,H*.45+flicker*.2,C*(.22-fi*.04),C*(.14-fi*.02),0,0,Math.PI*2);ctx.fill();
     }
-    ctx.fillStyle='rgba(210,245,255,.9)';
-    ctx.beginPath();ctx.ellipse(W+C*.5,H*.45,C*.35,C*.2,0,0,Math.PI*2);ctx.fill();
-    ctx.save();ctx.font=`bold ${C*1.1}px sans-serif`;ctx.fillStyle='#64B5F6';
-    ctx.strokeStyle='#000';ctx.lineWidth=2;
-    ctx.strokeText('💙BLUE FIRE!',-W*.1,-C*1.5);ctx.fillText('💙BLUE FIRE!',-W*.1,-C*1.5);
-    ctx.restore();
   }
 }
 
@@ -825,15 +819,10 @@ function drawSunDragon(W,H,f,breathing,resting,flying){
     // golden ray burst
     const alpha=0.6+Math.random()*.35;
     ctx.save();ctx.globalAlpha=alpha;
-    ctx.strokeStyle='#FFF176';ctx.lineWidth=C*1.4;ctx.lineCap='round';
-    ctx.beginPath();ctx.moveTo(W*.9,H*.28+bodyBob);ctx.lineTo(W*2.5,H*.28+bodyBob);ctx.stroke();
+    ctx.strokeStyle='#FFF176';ctx.lineWidth=C*.4;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(W*.9,H*.28+bob);ctx.lineTo(W*1.5,H*.28+bob);ctx.stroke();
     ctx.strokeStyle='rgba(255,255,255,.5)';ctx.lineWidth=C*.5;
-    ctx.beginPath();ctx.moveTo(W*.9,H*.28+bodyBob);ctx.lineTo(W*2.5,H*.28+bodyBob);ctx.stroke();
-    ctx.restore();
-    // "LIGHT!" label
-    ctx.save();ctx.font=`bold ${C*1.2}px sans-serif`;ctx.fillStyle='#FFD600';
-    ctx.strokeStyle='#000';ctx.lineWidth=2;
-    ctx.strokeText('☀️LIGHT!',-W*.05,-C*1.5);ctx.fillText('☀️LIGHT!',-W*.05,-C*1.5);
+    ctx.beginPath();ctx.moveTo(W*.9,H*.28+bob);ctx.lineTo(W*1.5,H*.28+bob);ctx.stroke();
     ctx.restore();
   }
 }

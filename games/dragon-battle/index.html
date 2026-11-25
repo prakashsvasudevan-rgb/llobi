@@ -118,7 +118,7 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
     <h1>DRAGON BATTLE</h1>
     <p class="sub">CHOOSE YOUR DRAGON</p>
     <div id="cards"></div>
-    <button id="sel-start" onclick="startGame()">▶ START</button>
+    <button id="sel-start" onclick="startGame()" ontouchstart="event.preventDefault();startGame()">▶ START GAME</button>
     <div id="device-pick" style="display:flex;gap:12px;margin:8px 0">
       <button class="d-btn" id="btn-pc" onclick="pickDevice('pc')">🖥 COMPUTER</button>
       <button class="d-btn" id="btn-ipad" onclick="pickDevice('ipad')">📱 iPAD / TOUCH</button>
@@ -3671,12 +3671,6 @@ function buildSelectUI(){
   });
   const sb=document.getElementById('sel-best');
   sb.textContent=best>0?'BEST: '+best:'';
-  const startBtn=document.getElementById('sel-start');
-  if(startBtn){
-    const selDt=DT[selectedType];
-    startBtn.textContent='▶ PLAY '+(selDt?selDt.name.toUpperCase():'');
-    startBtn.ontouchstart=e=>{e.preventDefault();startGame();};
-  }
 }
 
 function showSelect(){

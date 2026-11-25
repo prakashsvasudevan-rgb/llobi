@@ -595,19 +595,26 @@ function buildDragonMesh(dt){
   }
   addBox(g,0.3,0.3,0.65,mH, 0,-0.72,-11.6,0.5);
 
-  // ── LEGS & CLAWS ──
-  addBox(g,0.72,1.0,0.72,mD,-0.9,-0.9, 1.0);addBox(g,0.72,1.0,0.72,mD, 0.9,-0.9, 1.0);
-  addBox(g,0.88,1.1,0.88,mD,-0.9,-0.9,-0.9);addBox(g,0.88,1.1,0.88,mD, 0.9,-0.9,-0.9);
-  addBox(g,1.05,0.26,0.82,mD,-0.9,-1.5, 1.0);addBox(g,1.05,0.26,0.82,mD, 0.9,-1.5, 1.0);
-  addBox(g,1.1,0.26,0.9,mD,-0.9,-1.55,-0.9);addBox(g,1.1,0.26,0.9,mD, 0.9,-1.55,-0.9);
+  // ── LEGS & CLAWS (pivot groups for walk animation) ──
   const cm=mat(dt.horn,FS);
-  for(const[bx,bz] of [[-0.9,1.0],[0.9,1.0],[-0.9,-0.9],[0.9,-0.9]]){
-    addBox(g,0.2,0.2,0.52,cm,bx-0.3,-1.74,bz+0.4);
-    addBox(g,0.2,0.2,0.52,cm,bx,    -1.74,bz+0.46);
-    addBox(g,0.2,0.2,0.52,cm,bx+0.3,-1.74,bz+0.4);
+  function makeLeg(sx){
+    const lg=new THREE.Group();
+    lg.position.set(sx*0.9,0,0); // pivot at hip
+    addBox(lg,0.72,1.0,0.72,mD,0,-0.9,1.0);
+    addBox(lg,0.88,1.1,0.88,mD,0,-0.9,-0.9);
+    addBox(lg,1.05,0.26,0.82,mD,0,-1.5, 1.0);
+    addBox(lg,1.1,0.26,0.9,mD,0,-1.55,-0.9);
+    for(const bz of [1.0,-0.9]){
+      addBox(lg,0.2,0.2,0.52,cm,-0.3*sx,-1.74,bz+0.4);
+      addBox(lg,0.2,0.2,0.52,cm,0,      -1.74,bz+0.46);
+      addBox(lg,0.2,0.2,0.52,cm, 0.3*sx,-1.74,bz+0.4);
+    }
+    return lg;
   }
+  const llg=makeLeg(-1),rlg=makeLeg(1);
+  g.add(llg);g.add(rlg);
 
-  g.userData={lwp,rwp,wingAngle:0,tailF:0};
+  g.userData={lwp,rwp,llg,rlg,wingAngle:0,tailF:0,legCycle:0};
   return g;
 }
 
@@ -952,7 +959,7 @@ function getBreathHead(){
   head.add(dragonMesh.position);
   return head;
 }
-function getBreathFwd(spread=0.25){
+function getBreathFwd(spread=0.08){
   const fwd=new THREE.Vector3((Math.random()-.5)*spread,(Math.random()-.5)*spread*0.8,1);
   fwd.applyQuaternion(dragonMesh.quaternion).normalize();
   return fwd;
@@ -971,7 +978,7 @@ function spawnFire(){
   if(id==='fire'){
     for(let k=0;k<3*fc;k++){
       if(fireArr.length>=FIRE_MAX)break;
-      const spread=isUltra?0.7:0.4;
+      const spread=isUltra?0.35:0.12;
       const fwd=getBreathFwd(spread);
       const p={p:head.clone(),v:fwd.multiplyScalar(26+Math.random()*14),life:1,decay:.022+Math.random()*.015,size:(isUltra?7:4)+Math.random()*3};
       if(isHoming&&homTarget)p.hom=homTarget;
@@ -1473,7 +1480,7 @@ function spawnDragonMountain(){
   if(dragonMtnSpawned)return;
   dragonMtnSpawned=true;
   const objects=[];
-  const mh=280;
+  const mh=460;
   const mt=makeMountainMesh(mh);
   mt.position.set(DM_X,groundY(DM_X,DM_Z),DM_Z);
   scene.add(mt);objects.push(mt);
@@ -1543,6 +1550,25 @@ function spawnDragonMountain(){
       f2.position.set(DM_X+sx,hallY+4.5,tz);addObj(f2);
     }
   }
+  // ── CAVE STALLS (along hall walls) ───────────────────────────────────────────
+  const stallMat=mat(0x5a3a0a,{flatShading:true});
+  const stallPostMat=mat(0x3a2008,{flatShading:true});
+  for(let si=0;si<3;si++){
+    const sz=DM_Z+36+si*14;
+    const sy=hallY;
+    for(const sx of[-6.5,6.5]){
+      // Back wall of stall
+      const sb=new THREE.Mesh(new THREE.BoxGeometry(5.5,4,0.5),stallMat);sb.position.set(DM_X+sx,sy+2,sz-2.5);addObj(sb);
+      // Two side posts
+      const sp1=new THREE.Mesh(new THREE.BoxGeometry(0.4,4.5,5),stallPostMat);sp1.position.set(DM_X+sx-2.4,sy+2.2,sz);addObj(sp1);
+      const sp2=new THREE.Mesh(new THREE.BoxGeometry(0.4,4.5,5),stallPostMat);sp2.position.set(DM_X+sx+2.4,sy+2.2,sz);addObj(sp2);
+      // Top rail
+      const sr=new THREE.Mesh(new THREE.BoxGeometry(5.5,0.4,5),stallPostMat);sr.position.set(DM_X+sx,sy+4.4,sz);addObj(sr);
+      // Hay bale
+      const hay=new THREE.Mesh(new THREE.BoxGeometry(1.8,1.2,2.2),mat(0xddcc44,{flatShading:true}));hay.position.set(DM_X+sx,sy+0.6,sz);addObj(hay);
+    }
+  }
+
   // selectableDT used by all recruitable NPCs below
   const selectableDT=DT.filter(d=>RIDER_DT_IDS.includes(d.id));
   const hallFloor=hallY+1.5;
@@ -1626,6 +1652,36 @@ function spawnDragonMountain(){
     npc.position.set(cfg.ix,hallFloor,cfg.iz);
     scene.add(npc);objects.push(npc);friendlyNPCs.push(npc);
   });
+
+  // ── STABLES AT PEAK ──────────────────────────────────────────────────────────
+  const peakY=groundY(DM_X,DM_Z)+mh+2;
+  const stableMat=mat(0x5a3a0a,{flatShading:true});
+  const stableRoofMat=mat(0x3a1a00,{flatShading:true});
+  for(let si=0;si<3;si++){
+    const sx=DM_X-20+si*20;
+    // Stable building
+    const sBase=new THREE.Mesh(new THREE.BoxGeometry(12,5,8),stableMat);sBase.position.set(sx,peakY+2.5,DM_Z-10);addObj(sBase);
+    const sRoof=new THREE.Mesh(new THREE.ConeGeometry(9,3,4),stableRoofMat);sRoof.position.set(sx,peakY+6.5,DM_Z-10);addObj(sRoof);
+    // Door opening (dark box)
+    const sDoor=new THREE.Mesh(new THREE.BoxGeometry(3,3.5,0.6),mat(0x111108,{flatShading:true}));sDoor.position.set(sx,peakY+1.75,DM_Z-6.2);addObj(sDoor);
+    // Fence rails in front
+    for(const fx of[-4,4]){
+      const fp=new THREE.Mesh(new THREE.BoxGeometry(0.4,2,0.4),stallPostMat);fp.position.set(sx+fx,peakY+1,DM_Z-4);addObj(fp);
+    }
+    const fr=new THREE.Mesh(new THREE.BoxGeometry(10,0.3,0.3),stallPostMat);fr.position.set(sx,peakY+1.6,DM_Z-4);addObj(fr);
+    // Hay bale inside each
+    const hay2=new THREE.Mesh(new THREE.BoxGeometry(2,1.4,2.5),mat(0xddcc44,{flatShading:true}));hay2.position.set(sx-3,peakY+0.7,DM_Z-12);addObj(hay2);
+  }
+  // Stable Keeper NPC at peak
+  const stableKeeper=makeVillagerMesh();
+  stableKeeper.userData.npcName='Stable Keeper';
+  stableKeeper.userData.npcText='Welcome to the Peak Stables! Leave your dragon here and it will be safe while you explore inside. Best view on the mountain too!';
+  stableKeeper.userData.choices=[
+    {q:'Can I stable my dragon here?',a:'Of course! Just land beside the stables. Your dragon will rest and recover HP while you are away.'},
+    {q:'Are these dragons for rent?',a:'Not exactly — these are the dragons of riders who are inside training. But sometimes a rider will let you ride if you have proven yourself.'},
+  ];
+  stableKeeper.position.set(DM_X,peakY+1.5,DM_Z-5);
+  scene.add(stableKeeper);objects.push(stableKeeper);friendlyNPCs.push(stableKeeper);
 
   // 5 recruitable dragon riders on the peak (with visible mounts)
   for(let i=0;i<5;i++){
@@ -2188,8 +2244,7 @@ document.addEventListener('keydown',e=>{
     if(e.code==='KeyE'){if(dialogOpen)closeDialog();else if(nearNPC)openDialog(nearNPC);
       else if(!isHuman){/* sky dialog — nearNPC set in sky dialog block above */}}
     if(e.code==='KeyJ'&&isHuman&&!dialogOpen){
-      // Jump
-      if(humanVY===0)humanVY=12;
+      if(humanVY<=1)humanVY=18; // easier jump: higher, tolerant of slight VY
     }
     if(e.code==='KeyD'&&isHuman&&!dialogOpen){
       // Call dragon to player
@@ -2508,10 +2563,21 @@ function update(ts){
         dragonMesh.position.y=landedY;
         dragonMesh.rotation.set(0,dYaw,0,'YXZ');
         dRoll=0;dPitchVel=0;dPitch=0;
-        // Walk animation — bob wings gently while moving
-        const wFold=Math.PI*0.55+(fw||bk?Math.sin(frame*0.18)*0.12:0);
+        // Walk animation — wings folded high, feet step, body bobs
+        const moving=fw||bk;
+        const wFold=Math.PI*0.68+(moving?Math.sin(frame*0.22)*0.06:0);
         dragonMesh.userData.lwp.rotation.z= wFold;
         dragonMesh.userData.rwp.rotation.z=-wFold;
+        if(moving){
+          dragonMesh.userData.legCycle=(dragonMesh.userData.legCycle||0)+dt*4.5;
+          const lc=dragonMesh.userData.legCycle;
+          if(dragonMesh.userData.llg)dragonMesh.userData.llg.rotation.x= Math.sin(lc)*0.32;
+          if(dragonMesh.userData.rlg)dragonMesh.userData.rlg.rotation.x=-Math.sin(lc)*0.32;
+          dragonMesh.position.y=landedY+Math.abs(Math.sin(lc*2))*0.18; // gentle body bob
+        } else {
+          if(dragonMesh.userData.llg)dragonMesh.userData.llg.rotation.x=0;
+          if(dragonMesh.userData.rlg)dragonMesh.userData.rlg.rotation.x=0;
+        }
         if(up){isLanded=false;dPitchVel=-0.5;} // take off
       }
     } else {
@@ -2721,7 +2787,7 @@ function update(ts){
         hint.style.display='none';
       }
       // Jump (J key / movementY handled above, VY applied to position)
-      humanVY-=28*dt; // gravity
+      humanVY-=18*dt; // gravity (floatier)
       humanMesh.position.y+=humanVY*dt;
       {const _cf2=caveFloorY(humanMesh.position.x,humanMesh.position.z);
       const groundH=(_cf2!==null?_cf2:groundY(humanMesh.position.x,humanMesh.position.z))+1.5;

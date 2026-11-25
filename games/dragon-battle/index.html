@@ -1562,7 +1562,7 @@ function makeKingDeathDragonMesh(){
   const el=new THREE.Mesh(eG,new THREE.MeshBasicMaterial({color:0xff0000}));el.position.set(-0.72,1.0,7.6);g.add(el);
   const er=new THREE.Mesh(eG,new THREE.MeshBasicMaterial({color:0xff0000}));er.position.set( 0.72,1.0,7.6);g.add(er);
   g.userData={lwp:lw,rwp:rw,wingAngle:0,type:'kingDeathDragon',alive:true,isKingDeath:true,
-    hp:1600,maxHp:1600,si:1.0,spd:14,dmg:40,pts:5000,
+    hp:7995,maxHp:7995,si:1.0,spd:14,dmg:195,pts:5000,
     shootT:1.5,flyOrbit:0,animT:0};
   return g;
 }
@@ -1579,7 +1579,7 @@ function makeEnemy3d(type){
               hunter:          {hp:35, maxHp:35, si:2+Math.random()*1.5,spd:20,dmg:18, pts:80},
               shadowDragon:    {hp:120,maxHp:120,si:2+Math.random()*1.5,spd:14,dmg:35, pts:400},
               kingHunter:      {hp:200,maxHp:200,si:1.5,              spd:16,dmg:30, pts:1000},
-              kingDeathDragon: {hp:1600,maxHp:1600,si:1.0,             spd:14,dmg:40, pts:5000}};
+              kingDeathDragon: {hp:7995,maxHp:7995,si:1.0,             spd:14,dmg:195,pts:5000}};
   Object.assign(m.userData,cfg[type]||{});
   if(!m.userData.shootT)m.userData.shootT=Math.random()*(m.userData.si||2);
   return m;
@@ -2262,35 +2262,56 @@ function spawnKingRuin(cfg){
   altMesh.position.set(x,plateauY+1.5,z);scene.add(altMesh);
   const runeGlow=new THREE.Mesh(new THREE.BoxGeometry(14,0.1,14),new THREE.MeshBasicMaterial({color:cfg.weaponColor,transparent:true,opacity:0.5,blending:THREE.AdditiveBlending}));
   runeGlow.position.set(x,plateauY+3.1,z);scene.add(runeGlow);
-  // King Dragon boss — bone white skeleton with element-colored glow between bones
+  // King Dragon boss — special imposing model: bone-white dragon + crown + armor + runes
   const dtDef1=DT.find(d=>d.id===cfg.elem1)||DT[0];
   const bossMesh=buildDragonMesh(dtDef1);
   bossMesh.scale.set(4,4,4);
   // Bone white body
   bossMesh.traverse(c=>{
     if(c.isMesh&&c.material){
-      c.material=new THREE.MeshBasicMaterial({color:0xddeedd}); // bone white
+      c.material=new THREE.MeshBasicMaterial({color:0xddeedd});
     }
   });
-  // Element-colored glow fills the gaps between bones (additive overlay — slightly smaller)
+  // Element-colored glow (inner smaller mesh)
   const glowMesh=buildDragonMesh(dtDef1);
   glowMesh.traverse(c=>{
     if(c.isMesh&&c.material){
       c.material=new THREE.MeshBasicMaterial({color:cfg.weaponColor,transparent:true,opacity:0.55,blending:THREE.AdditiveBlending});
     }
   });
-  glowMesh.scale.set(0.88,0.88,0.88); // slightly inside the bone mesh so it glows through gaps
+  glowMesh.scale.set(0.88,0.88,0.88);
   bossMesh.add(glowMesh);
-  // Pulsing halo rings at element color
+  // Crown of 7 spikes (in world-space group added after scaling)
+  const crownG=new THREE.Group();
+  for(let si2=0;si2<7;si2++){
+    const a=si2/7*Math.PI*2;
+    const spike=new THREE.Mesh(new THREE.ConeGeometry(1.2,9,5),new THREE.MeshBasicMaterial({color:cfg.weaponColor,transparent:true,opacity:0.9,blending:THREE.AdditiveBlending}));
+    spike.position.set(Math.cos(a)*7,38+Math.abs(Math.sin(si2))*3,Math.sin(a)*7+8);
+    crownG.add(spike);
+  }
+  // Shoulder armor plates (two big flat diamonds)
+  const plateMat=new THREE.MeshBasicMaterial({color:0x888899,transparent:true,opacity:0.85});
+  const lPlate=new THREE.Mesh(new THREE.BoxGeometry(6,2,8),plateMat);lPlate.position.set(-18,22,8);crownG.add(lPlate);
+  const rPlate=new THREE.Mesh(new THREE.BoxGeometry(6,2,8),plateMat);rPlate.position.set(18,22,8);crownG.add(rPlate);
+  // Glowing rune disk under body
+  const runeDisk=new THREE.Mesh(new THREE.CylinderGeometry(14,14,0.5,12),new THREE.MeshBasicMaterial({color:cfg.weaponColor,transparent:true,opacity:0.4,blending:THREE.AdditiveBlending}));
+  runeDisk.position.set(0,-4,8);crownG.add(runeDisk);
+  // Giant eye glow spheres
+  const eyeGeo=new THREE.SphereGeometry(2.5,8,6);
+  const eyeMat=new THREE.MeshBasicMaterial({color:cfg.weaponColor,transparent:true,opacity:1.0,blending:THREE.AdditiveBlending});
+  const le=new THREE.Mesh(eyeGeo,eyeMat);le.position.set(-4.5,28,20);crownG.add(le);
+  const re=new THREE.Mesh(eyeGeo,eyeMat);re.position.set(4.5,28,20);crownG.add(re);
+  bossMesh.add(crownG);
+  // Orbiting halo rings
   for(let ri=0;ri<3;ri++){
-    const rg=new THREE.Mesh(new THREE.TorusGeometry(6+ri*3,0.5,6,16),new THREE.MeshBasicMaterial({color:cfg.weaponColor,transparent:true,opacity:0.6,blending:THREE.AdditiveBlending}));
+    const rg=new THREE.Mesh(new THREE.TorusGeometry(8+ri*4,0.7,6,16),new THREE.MeshBasicMaterial({color:cfg.weaponColor,transparent:true,opacity:0.5,blending:THREE.AdditiveBlending}));
     rg.rotation.x=ri*Math.PI/3;bossMesh.add(rg);
   }
   // Spawn boss 400-440u away from island center, airborne
   const bossSpawnAng=Math.random()*Math.PI*2;
   const bossSpawnR=400+Math.random()*40;
   bossMesh.position.set(x+Math.cos(bossSpawnAng)*bossSpawnR, plateauY+40, z+Math.sin(bossSpawnAng)*bossSpawnR);
-  bossMesh.userData={hp:24000,maxHp:24000,dmg:27,pts:5000,alive:true,type:'dragon',
+  bossMesh.userData={hp:120000,maxHp:120000,dmg:135,pts:5000,alive:true,type:'dragon',
     isKingDragon:true,ruinCfg:cfg,islandX:x,islandZ:z,islandR:95,shootT:3,si:1,animT:0,stunT:0};
   scene.add(bossMesh);activeEnemies.push(bossMesh);
   // Tall glowing pillar beacon visible from far away
@@ -2807,7 +2828,7 @@ function collectOrb(o){
 const SWORD_TYPES={fire:'FLAME',nature:'LIFE',soul:'SPIRIT',ice:'FROST',earth:'STONE'};
 let legendSwordMesh=null,legendSwordTaken=false,legendSwordSpinT=0;
 function upgradedDmg(){
-  const base=dtype.dmg*(1+upgrades.dmg*0.4)*21;
+  const base=dtype.dmg*(1+upgrades.dmg*0.4)*8;
   return legendSwordTaken&&SWORD_TYPES[dtype.id]?base*200:base;
 }
 // How many particles to spawn per fire call (attack upgrade)
@@ -5273,6 +5294,14 @@ function drawMinimap(){
   // Fixed landmarks
   dot(DM_X,DM_Z,'#aaffcc',6,'🏔');
   if(typeof VOL_X!=='undefined')dot(VOL_X,VOL_Z,'#ff4400',5,'🌋');
+  // King Ruin landmarks (always shown even before spawned)
+  const KING_COL={fire_water:'#ff4400',earth_nature:'#4a8a2a',air_smoke:'#aaccff',lava_ice:'#88ffff',thunder_lightning:'#ffff00',sun_soul:'#ffffff',bone_acid:'#44ff44',metal_glass:'#ddeeff'};
+  for(const cfg of KING_RUINS_CFG){
+    const alive=activeEnemies.find(e=>e.userData.isKingDragon&&e.userData.ruinCfg===cfg&&e.userData.alive);
+    const col=KING_COL[cfg.id]||'#ff00ff';
+    // Skull if king alive there, crown if defeated
+    dot(cfg.pos.x,cfg.pos.z,col,kingRuinsSpawned.has(cfg.id)?(alive?5:3):3,kingRuinsSpawned.has(cfg.id)?(alive?'💀':'✓'):'👑');
+  }
   // Army members (blue dots)
   for(const a of dragonArmy){if(a.mesh&&a.mesh.userData.alive)dot(a.mesh.position.x,a.mesh.position.z,'#4488ff',3);}
   // Enemies

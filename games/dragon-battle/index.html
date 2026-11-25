@@ -3598,9 +3598,22 @@ function closeDialog(){
   if(isHuman&&canvas.requestPointerLock)canvas.requestPointerLock();
 }
 function isMob(){return'ontouchstart'in window||navigator.maxTouchPoints>0;}
-let swipeX=null;
-canvas.addEventListener('touchstart',e=>{swipeX=e.touches[0].clientX;if(gs==='dead')showSelect();},{passive:true});
+let swipeX=null,selLongPressTimer=null;
+canvas.addEventListener('touchstart',e=>{
+  swipeX=e.touches[0].clientX;
+  if(gs==='dead')showSelect();
+  if(gs==='select'){
+    // Long press (500ms) cycles to next dragon
+    selLongPressTimer=setTimeout(()=>{
+      selLongPressTimer=null;
+      let ni=(selectedType+1+DT.length)%DT.length;
+      while(!PLAYER_DT_IDS.includes(DT[ni].id))ni=(ni+1+DT.length)%DT.length;
+      selectedType=ni;buildSelectUI();
+    },500);
+  }
+},{passive:true});
 canvas.addEventListener('touchend',e=>{
+  if(selLongPressTimer){clearTimeout(selLongPressTimer);selLongPressTimer=null;}
   if(gs!=='select')return;
   const dx=e.changedTouches[0].clientX-swipeX;
   if(Math.abs(dx)>30){

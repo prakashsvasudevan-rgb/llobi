@@ -1250,7 +1250,7 @@ let projectiles=[];
 const projGeo=new THREE.SphereGeometry(0.3,4,4);
 const arrowGeo=new THREE.CylinderGeometry(0.1,0.1,1.4,4);
 
-function spawnProjectile(type,pos,target){
+function spawnProjectile(type,pos,target,friendly=false){
   const col=type==='magic'?0xff44ff:type==='rock'?0x886644:type==='bolt'?0xFFD700:type==='acid'?0x44ff44:0x8b5a1a;
   const geo=(type==='arrow'||type==='bolt')?arrowGeo:projGeo;
   const mesh=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:col}));
@@ -1261,7 +1261,7 @@ function spawnProjectile(type,pos,target){
     // Rotate cylinder to point along travel direction
     mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir);
   }
-  mesh.userData={vel:dir.multiplyScalar(spd),dmg:type==='rock'?20:type==='magic'?15:type==='bolt'?28:14,life:3.5,projType:type};
+  mesh.userData={vel:dir.multiplyScalar(spd),dmg:type==='rock'?20:type==='magic'?15:type==='bolt'?28:14,life:3.5,projType:type,friendly};
   scene.add(mesh);projectiles.push(mesh);
 }
 
@@ -1272,8 +1272,8 @@ function updateProjectiles(dt){
     p.userData.vel.y-=5*dt; // gravity
     p.userData.life-=dt;
     if(p.userData.life<=0){scene.remove(p);projectiles.splice(i,1);continue;}
-    // Hit dragon or human
-    if(!ddead&&dinvT<=0){
+    // Hit dragon or human (only enemy projectiles)
+    if(!ddead&&dinvT<=0&&!p.userData.friendly){
       const target=isHuman&&humanMesh?humanMesh:dragonMesh;
       if(p.position.distanceTo(target.position)<(isHuman?2.5:4)){
         if(isHuman){humanHP-=p.userData.dmg;if(humanHP<=0&&!ddead){ddead=true;humanHP=0;endGame();}}
@@ -3200,7 +3200,7 @@ function update(ts){
           rd.userData.shootT=3+Math.random()*2;
           let be=null,bd=150;
           for(const e of activeEnemies){if(!e.userData.alive)continue;const d=rd.position.distanceTo(e.position);if(d<bd){bd=d;be=e;}}
-          if(be)spawnProjectile('magic',rd.position.clone(),be.position.clone());
+          if(be)spawnProjectile('magic',rd.position.clone(),be.position.clone(),true);
         }
         rd.userData.wingAngle+=dt*4;
         const wa2=Math.sin(rd.userData.wingAngle)*.5;
@@ -3225,6 +3225,8 @@ function update(ts){
     const playerDistFromDM=dragonMesh.position.distanceTo(new THREE.Vector3(DM_X,dragonMesh.position.y,DM_Z));
     for(const a of dragonArmy){
       if(!a.mesh)continue;
+      // Stay at hatchery bench until Blane leads to castle
+      if(a.mesh.userData.hatchBenchPos)continue;
       // Switch from staging to formation when player leaves Dragon Mountain area
       if(a.staging&&playerDistFromDM>200)a.staging=false;
       const ref=isHuman&&humanMesh?humanMesh.position:dragonMesh.position;
@@ -3248,7 +3250,7 @@ function update(ts){
         a.mesh.userData.atkT=2+Math.random()*2;
         let be=null,bd=600;
         for(const e of activeEnemies){if(!e.userData.alive)continue;const d=a.mesh.position.distanceTo(e.position);if(d<bd){bd=d;be=e;}}
-        if(be)spawnProjectile('magic',a.mesh.position.clone(),be.position.clone());
+        if(be)spawnProjectile('magic',a.mesh.position.clone(),be.position.clone(),true);
       }
     }
 
@@ -3299,6 +3301,17 @@ function update(ts){
           const bsY=caveFloorY(bs[0],bs[1])||groundY(bs[0],bs[1]);
           rec.position.set(bs[0],bsY+1.5,bs[1]);
           rec.userData.hatchBenchPos=new THREE.Vector3(bs[0],bsY+1.5,bs[1]);
+          // Build and attach dragon if none yet
+          if(!rec.userData.npcDragon){
+            const dtDef=rec.userData.dtDef||selectableDT[0];
+            const bondDragon=buildDragonMesh(dtDef);
+            bondDragon.scale.set(0.65,0.65,0.65);
+            bondDragon.position.set(0,-0.5,2.5);
+            rec.add(bondDragon);
+            const bondRider=buildRiderOnDragon(dtDef);
+            bondDragon.add(bondRider);
+            rec.userData.npcDragon=bondDragon;
+          }
           rec.userData.npcText='Bonded! My dragon and I are ready. Waiting here with the others for Blane\'s signal!';
           dragonArmy.push({mesh:rec,slot,staging:false,stagingPos:bs});
           hatcheryDoneCount++;
@@ -3532,7 +3545,7 @@ function update(ts){
           npc.userData.npcAtkT=2+Math.random()*2;
           let be=null,bd=200;
           for(const e of activeEnemies){if(!e.userData.alive)continue;const d=npc.position.distanceTo(e.position);if(d<bd){bd=d;be=e;}}
-          if(be){spawnProjectile('magic',npc.position.clone().add(new THREE.Vector3(0,2,0)),be.position.clone());npc.lookAt(be.position.x,npc.position.y,be.position.z);}
+          if(be){spawnProjectile('magic',npc.position.clone().add(new THREE.Vector3(0,2,0)),be.position.clone(),true);npc.lookAt(be.position.x,npc.position.y,be.position.z);}
         }
       }
     }
@@ -3551,7 +3564,7 @@ function update(ts){
         let be=null,bd=120;
         for(const e of activeEnemies){if(!e.userData.alive)continue;const d=npc.position.distanceTo(e.position);if(d<bd){bd=d;be=e;}}
         if(be){
-          spawnProjectile('magic',npc.position.clone().add(new THREE.Vector3(0,2,0)),be.position.clone());
+          spawnProjectile('magic',npc.position.clone().add(new THREE.Vector3(0,2,0)),be.position.clone(),true);
           npc.lookAt(be.position.x,npc.position.y,be.position.z);
         }
       }

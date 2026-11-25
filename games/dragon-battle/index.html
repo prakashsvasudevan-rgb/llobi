@@ -1655,6 +1655,7 @@ function spawnDragonMountain(){
 
   // ── STABLES AT PEAK ──────────────────────────────────────────────────────────
   const peakY=groundY(DM_X,DM_Z)+mh+2;
+  dmPeakY=peakY; // expose globally for teleport
   const stableMat=mat(0x5a3a0a,{flatShading:true});
   const stableRoofMat=mat(0x3a1a00,{flatShading:true});
   for(let si=0;si<3;si++){
@@ -2022,7 +2023,8 @@ let blaneWanderT=0,blaneWanderTarget=null,blaneTalkT=0;
 let hatcheryQueue=[]; // {recruit, phase:'fetch'|'lead'|'hatchery'|'done', t}
 const HATCH_X=DM_X, HATCH_Z=DM_Z+134; // hatchery room center
 let hatcheryDoneCount=0; // how many bonding sequences have completed
-let blaneLeadPhase='idle'; // 'idle'|'walking_to_player'|'leading_to_castle'
+let blaneLeadPhase='idle'; // 'idle'|'walking_to_player'|'leading_to_castle'|'flying_to_peak'
+let dmPeakY=0; // set when Dragon Mountain spawns
 let blaneQuest='inactive'; // 'inactive' | 'unlocked' | 'active' | 'complete'
 let shadowKills=0;
 let wildDragons=[]; // tameable wild dragons {mesh, hp, maxHp, tameable}
@@ -2498,7 +2500,7 @@ function startGame(){
   orbDrops.forEach(o=>scene.remove(o.mesh));orbDrops=[];
   mageOrbs=0;shadowDust=0;upgrades={dmg:0,hp:0,speed:0,fuel:0,attack:0};
   dragonArmy.forEach(a=>scene.remove(a.mesh));dragonArmy=[];
-  dragonMtnSpawned=false;volcanoSpawned=false;blaneNPC=null;blaneWanderT=0;blaneWanderTarget=null;blaneTalkT=0;hatcheryQueue=[];hatcheryDoneCount=0;blaneLeadPhase='idle';
+  dragonMtnSpawned=false;volcanoSpawned=false;blaneNPC=null;blaneWanderT=0;blaneWanderTarget=null;blaneTalkT=0;hatcheryQueue=[];hatcheryDoneCount=0;blaneLeadPhase='idle';dmPeakY=0;
   blaneQuest='inactive';shadowKills=0;wildDragons=[];
   mapOpen=false;wmEl.classList.remove('show');
   // Spawn Dragon Mountain (always at world north, zone 0,5)
@@ -2964,21 +2966,25 @@ function update(ts){
         // Blane watches from center
         walkTo(blaneNPC,HATCH_X,0,HATCH_Z-10,1.0);
         if(tour.t>6){
-          // Bond complete — assign dragon, add to army
+          // Bond complete — teleport recruit up to next free stable slot on peak
           tour.phase='done';
           const slot=dragonArmy.length;
-          const sa=[DM_X-15+slot*8,DM_Z-25];
-          dragonArmy.push({mesh:rec,slot,staging:true,stagingPos:sa});
-          rec.userData.npcText='I am bonded! My dragon and I will meet you outside!';
+          // Pick a stable slot above the ones already used
+          const stableSlots=[[DM_X-20,DM_Z-12],[DM_X-20,DM_Z-6],[DM_X,DM_Z-12],[DM_X,DM_Z-6],[DM_X+20,DM_Z-12]];
+          const sp=stableSlots[slot%stableSlots.length];
+          const spY=(dmPeakY||groundY(DM_X,DM_Z)+462)+1.5;
+          rec.position.set(sp[0],spY,sp[1]);
+          rec.userData.stablePos=new THREE.Vector3(sp[0],spY,sp[1]);
+          rec.userData.npcText='Bonded! My dragon and I are ready. Waiting at the peak stables for you!';
+          dragonArmy.push({mesh:rec,slot,staging:false,stagingPos:sp});
           hatcheryDoneCount++;
           hatcheryQueue.shift();
-          // If more recruits pending, go fetch next; else start castle-lead phase
           if(hatcheryQueue.length>0){
-            blaneWanderTarget=null; // let hatchery AI handle next
+            blaneWanderTarget=null;
           } else {
-            // All bondings done — Blane walks to player in hatchery then leads to castle
-            blaneLeadPhase='walking_to_player';
-            floatWorld(bPos,'Everyone is bonded! Follow me!','#ffdd44');
+            // All bonded — Blane flies up to peak and calls the player
+            blaneLeadPhase='flying_to_peak';
+            floatWorld(bPos,'Everyone is bonded! Meet me at the peak!','#ffdd44');
           }
         }
       }
@@ -2997,8 +3003,41 @@ function update(ts){
           blaneNPC.rotation.y=Math.atan2(toT.x,toT.z);}
         return dist<3;
       }
-      if(blaneLeadPhase==='walking_to_player'){
-        // Walk to wherever the player is (hatchery or cave)
+      if(blaneLeadPhase==='flying_to_peak'){
+        // Blane flies upward to the mountain peak
+        const peakTx=DM_X+5,peakTz=DM_Z-8,peakTy=(dmPeakY||groundY(DM_X,DM_Z)+462)+3;
+        const toP=new THREE.Vector3(peakTx-bPos.x,peakTy-bPos.y,peakTz-bPos.z);
+        const distP=toP.length();
+        if(distP>4){
+          toP.normalize();bPos.addScaledVector(toP,12*dt);
+          blaneNPC.rotation.y=Math.atan2(toP.x,toP.z);
+        } else {
+          bPos.set(peakTx,peakTy,peakTz);
+          blaneLeadPhase='calling_player';
+          blaneTalkT=0;
+        }
+        // Flap wings during flight
+        const bd2=blaneNPC.children[0];
+        if(bd2&&bd2.userData.lwp){
+          const wa=Math.sin(frame*0.18)*0.5;
+          bd2.userData.lwp.rotation.z=wa;bd2.userData.rwp.rotation.z=-wa;
+        }
+      } else if(blaneLeadPhase==='calling_player'){
+        // Blane waits at peak calling the player
+        blaneTalkT-=dt;
+        if(blaneTalkT<=0){
+          floatWorld(bPos,'Come to the peak! Your team awaits!','#ffdd44');
+          blaneTalkT=5;
+        }
+        // Once player reaches peak, switch to leading to castle
+        const distToPlayer=bPos.distanceTo(playerPos);
+        if(distToPlayer<30){
+          blaneLeadPhase='leading_to_castle';
+          floatWorld(bPos,'Everyone ready — follow me to battle!','#ffdd44');
+          blaneTalkT=0;
+        }
+      } else if(blaneLeadPhase==='walking_to_player'){
+        // Legacy path: walk to player first (kept for safety)
         const done=blaneWalkTo(playerPos.x,playerPos.z,4);
         if(done){
           blaneLeadPhase='leading_to_castle';

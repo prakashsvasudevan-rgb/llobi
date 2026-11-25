@@ -3533,7 +3533,7 @@ function update(ts){
     for(const a of dragonArmy){
       const npc=a.mesh;
       const bp=npc.userData.hatchBenchPos;
-      if(!bp||npc.userData.recruited)continue;
+      if(!bp)continue;
       // Sit on bench — stay close to bench position
       const nPos=npc.position;
       const distToBench=nPos.distanceTo(bp);

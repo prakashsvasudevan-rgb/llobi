@@ -1290,6 +1290,19 @@ function spawnProjectile(type,pos,target,friendly=false){
   scene.add(mesh);projectiles.push(mesh);
 }
 
+// Friendly NPC dragon breath shot — colored + sized by dragon type
+function spawnDragonShot(dtDef,pos,target){
+  if(!dtDef)return spawnProjectile('magic',pos,target,true);
+  const col=dtDef.breath?dtDef.breath[0]:0xff4400;
+  const sz=0.55;
+  const geo=new THREE.SphereGeometry(sz,5,4);
+  const mesh=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.9,blending:THREE.AdditiveBlending}));
+  mesh.position.copy(pos);
+  const dir=new THREE.Vector3().subVectors(target,pos).normalize();
+  mesh.userData={vel:dir.multiplyScalar(28),dmg:dtDef.dmg*1.2,life:3,projType:'dragon',friendly:true,dtCol:col};
+  scene.add(mesh);projectiles.push(mesh);
+}
+
 function updateProjectiles(dt){
   for(let i=projectiles.length-1;i>=0;i--){
     const p=projectiles[i];
@@ -1818,6 +1831,7 @@ function spawnDragonMountain(){
   lumenGrp.userData.patrolAngle=0;
   lumenGrp.userData.patrolR=35;
   lumenGrp.userData.npcAtkT=2;
+  lumenGrp.userData.dtDef=lumenDtDef;
   scene.add(lumenGrp);objects.push(lumenGrp);friendlyNPCs.push(lumenGrp);
 
   // Lumen's team — 3 riders on various dragons, also patrol and fight
@@ -1829,7 +1843,7 @@ function spawnDragonMountain(){
     ltGrp.add(ltd);
     const ltr=buildRiderOnDragon(ltDef);ltd.add(ltr);
     ltGrp.userData.lwp=ltd.userData.lwp;ltGrp.userData.rwp=ltd.userData.rwp;
-    ltGrp.userData.npcDragon=ltd;
+    ltGrp.userData.npcDragon=ltd;ltGrp.userData.dtDef=ltDef;
     ltGrp.userData.npcName='Rider '+['Vex','Kira','Ash'][li];
     ltGrp.userData.npcText='I ride with Lumen. We keep the hunters away from Dragon Mountain!';
     ltGrp.userData.choices=[
@@ -1853,7 +1867,7 @@ function spawnDragonMountain(){
     scGrp.add(scd);
     const scr=buildRiderOnDragon(scDtDef);scd.add(scr);
     scGrp.userData.lwp=scd.userData.lwp;scGrp.userData.rwp=scd.userData.rwp;
-    scGrp.userData.npcDragon=scd;
+    scGrp.userData.npcDragon=scd;scGrp.userData.dtDef=scDtDef;
     scGrp.userData.npcName='Soulcat';
     scGrp.userData.npcText='I am Soulcat, Soul Rider. My dragon and I sense the emotions of every creature on this mountain. The hunters feel dread before they even see us.';
     scGrp.userData.choices=[
@@ -1879,7 +1893,7 @@ function spawnDragonMountain(){
     rd.position.set(rx,groundY(rx,rz)+50+i*8,rz);
     rd.userData.baseX=rx;rd.userData.baseZ=rz;rd.userData.baseY=rd.position.y;
     rd.userData.hp=80;rd.userData.maxHp=80;rd.userData.tameable=false;rd.userData.isWild=true;
-    rd.userData.guardDM=true; // patrols Dragon Mountain, attacks enemies nearby
+    rd.userData.guardDM=true;rd.userData.dtDef=dtDef;
     scene.add(rd);objects.push(rd);roamDragons.push(rd);wildDragons.push(rd);
   });
 
@@ -3310,7 +3324,7 @@ function update(ts){
           rd.userData.shootT=3+Math.random()*2;
           let be=null,bd=150;
           for(const e of activeEnemies){if(!e.userData.alive)continue;const d=rd.position.distanceTo(e.position);if(d<bd){bd=d;be=e;}}
-          if(be)spawnProjectile('magic',rd.position.clone(),be.position.clone(),true);
+          if(be)spawnDragonShot(rd.userData.dtDef,rd.position.clone(),be.position.clone());
         }
         rd.userData.wingAngle+=dt*4;
         const wa2=Math.sin(rd.userData.wingAngle)*.5;
@@ -3360,7 +3374,7 @@ function update(ts){
         a.mesh.userData.atkT=2+Math.random()*2;
         let be=null,bd=600;
         for(const e of activeEnemies){if(!e.userData.alive)continue;const d=a.mesh.position.distanceTo(e.position);if(d<bd){bd=d;be=e;}}
-        if(be)spawnProjectile('magic',a.mesh.position.clone(),be.position.clone(),true);
+        if(be)spawnDragonShot(a.mesh.userData.dtDef,a.mesh.position.clone(),be.position.clone());
       }
     }
 
@@ -3678,7 +3692,7 @@ function update(ts){
           npc.userData.npcAtkT=2+Math.random()*2;
           let be=null,bd=200;
           for(const e of activeEnemies){if(!e.userData.alive)continue;const d=npc.position.distanceTo(e.position);if(d<bd){bd=d;be=e;}}
-          if(be){spawnProjectile('magic',npc.position.clone().add(new THREE.Vector3(0,2,0)),be.position.clone(),true);npc.lookAt(be.position.x,npc.position.y,be.position.z);}
+          if(be){spawnDragonShot(npc.userData.dtDef,npc.position.clone().add(new THREE.Vector3(0,2,0)),be.position.clone());npc.lookAt(be.position.x,npc.position.y,be.position.z);}
         }
       }
     }
@@ -3697,7 +3711,7 @@ function update(ts){
         let be=null,bd=120;
         for(const e of activeEnemies){if(!e.userData.alive)continue;const d=npc.position.distanceTo(e.position);if(d<bd){bd=d;be=e;}}
         if(be){
-          spawnProjectile('magic',npc.position.clone().add(new THREE.Vector3(0,2,0)),be.position.clone(),true);
+          spawnDragonShot(npc.userData.dtDef,npc.position.clone().add(new THREE.Vector3(0,2,0)),be.position.clone());
           npc.lookAt(be.position.x,npc.position.y,be.position.z);
         }
       }

@@ -1358,6 +1358,8 @@ function updateProjectiles(dt){
           if(soulShieldHP>0){const absorbed=Math.min(soulShieldHP,dmgLeft);soulShieldHP-=absorbed;dmgLeft-=absorbed;if(soulShieldHP<=0)floatWorld(dragonMesh.position,'🔮 SHIELD BROKEN!','#ff88ff');}
           if(dmgLeft>0){dhp-=dmgLeft;if(dhp<=0&&!ddead){ddead=true;dhp=0;}}
         }
+        // Blood dragon projectile — apply slow
+        if(p.userData.isBloodProj){playerSlowT=Math.max(playerSlowT,4);spawnAbilityCloud(target.position.clone(),0x00ccaa,20,0.6);floatWorld(target.position,'🧊 SLOWED!','#00ffcc');}
         dinvT=1.5;
         scene.remove(p);projectiles.splice(i,1);continue;
       }
@@ -1375,6 +1377,7 @@ function zoneKey(cx,cz){return`${cx},${cz}`;}
 function spawnZone(cx,cz){
   const key=zoneKey(cx,cz);
   if(zoneMap.has(key))return;
+  if(gameAtPeace){zoneMap.set(key,[]);return;}
   const objects=[];
   const wx0=cx*ZONE,wz0=cz*ZONE;
   const dist2=cx*cx+cz*cz;
@@ -1542,28 +1545,103 @@ function caveFloorY(x,z){
 function makeKingDeathDragonMesh(){
   const g=new THREE.Group();
   const FS={flatShading:true};
-  const mB=mat(0x0a0000,FS),mR=mat(0x880000,FS),mGold=mat(0xcc4400,FS);
-  const mW=mat(0x1a0000,{side:THREE.DoubleSide,flatShading:true,transparent:true,opacity:.9});
-  addBox(g,3.0,1.4,6.0,mB);    // massive body
-  addBox(g,1.1,1.1,2.4,mB,0,0.4,4.2,-0.4);  // neck
-  addBox(g,1.6,1.4,2.4,mR,0,0.9,6.0);       // head
-  addBox(g,1.4,0.6,0.1,mGold,0,1.6,7.0);    // crown visor
-  // Crown spikes
-  for(let i=0;i<5;i++) addBox(g,0.2,0.7,0.2,mat(0xdd2200,FS),(i-2)*0.35,2.1+Math.abs(i-2)*0.1,6.5);
-  // Lava glow on belly
-  addBox(g,2.0,0.3,5.0,mat(0xff4400,{flatShading:true,transparent:true,opacity:0.7}),0,-0.6,0);
-  const lw=new THREE.Group();lw.position.set(-1.5,0.2,1.0);
-  const rw=new THREE.Group();rw.position.set( 1.5,0.2,1.0);
-  lw.add(new THREE.Mesh(makeWingGeo(false,'nature'),mW.clone()));
-  rw.add(new THREE.Mesh(makeWingGeo(true,'nature'),mW.clone()));
+  // Obsidian black body — titanic
+  const mObs=mat(0x050508,FS);
+  const mBlood=mat(0x990000,FS);
+  const mBone=mat(0xccbbaa,FS);
+  const mDeath=new THREE.MeshBasicMaterial({color:0x6600cc,transparent:true,opacity:0.85,blending:THREE.AdditiveBlending});
+  const mGlow=new THREE.MeshBasicMaterial({color:0xaa00ff,transparent:true,opacity:0.6,blending:THREE.AdditiveBlending});
+  // Giant body
+  addBox(g,4.5,2.2,9.0,mObs);
+  addBox(g,1.6,1.8,3.5,mObs,0,0.6,6.5,-0.5);  // neck
+  // Skull head
+  addBox(g,2.8,2.4,3.6,mat(0x0a0005,FS),0,1.3,9.5);
+  // Jaw (lower)
+  addBox(g,2.4,0.7,2.2,mat(0x150010,FS),0,0.1,10.0);
+  // Bone teeth top
+  for(let i=0;i<6;i++) addBox(g,0.22,0.6,0.22,mBone,(i-2.5)*0.42,2.4,10.9+Math.abs(i-2.5)*0.05);
+  // Bone teeth bottom
+  for(let i=0;i<5;i++) addBox(g,0.2,0.5,0.2,mBone,(i-2)*0.44,0.0,10.9);
+  // Death-crown: 9 massive bone spikes on skull top
+  for(let i=0;i<9;i++){
+    const a=i/9*Math.PI*1.3-Math.PI*0.15;
+    const spike=new THREE.Mesh(new THREE.ConeGeometry(0.28,2.4+Math.abs(i-4)*0.3,4),mBone.clone());
+    spike.position.set(Math.cos(a)*1.1,3.8+Math.abs(i-4)*0.2,9.2+Math.sin(a)*0.4);
+    spike.rotation.x=-0.3;
+    g.add(spike);
+  }
+  // Death rune disk halo behind head
+  const rDisk=new THREE.Mesh(new THREE.CylinderGeometry(3.8,3.8,0.3,16),mGlow.clone());
+  rDisk.position.set(0,2.5,8.0);rDisk.rotation.x=Math.PI/2;g.add(rDisk);
+  // Inner rune ring
+  const rRing=new THREE.Mesh(new THREE.TorusGeometry(2.2,0.18,6,16),mDeath.clone());
+  rRing.position.set(0,2.5,7.8);rRing.rotation.x=Math.PI/2;g.add(rRing);
+  // Glowing purple eyes
+  const eG=new THREE.SphereGeometry(0.42,8,6);
+  const eMat=new THREE.MeshBasicMaterial({color:0xdd00ff,transparent:true,opacity:1.0,blending:THREE.AdditiveBlending});
+  const el=new THREE.Mesh(eG,eMat);el.position.set(-0.9,1.9,11.1);g.add(el);
+  const er=new THREE.Mesh(eG,eMat.clone());er.position.set(0.9,1.9,11.1);g.add(er);
+  // Eye glow aura
+  [[-0.9,11.1],[0.9,11.1]].forEach(([ex,ez])=>{
+    const ea=new THREE.Mesh(new THREE.SphereGeometry(0.8,6,5),new THREE.MeshBasicMaterial({color:0xaa00cc,transparent:true,opacity:0.35,blending:THREE.AdditiveBlending}));
+    ea.position.set(ex,1.9,ez);g.add(ea);
+  });
+  // Bone shoulder spikes
+  addBox(g,0.4,2.2,0.4,mBone,-5.0,2.0,2.5,-0.4);
+  addBox(g,0.4,2.2,0.4,mBone, 5.0,2.0,2.5,-0.4);
+  addBox(g,0.3,1.6,0.3,mBone,-4.3,2.6,4.0);
+  addBox(g,0.3,1.6,0.3,mBone, 4.3,2.6,4.0);
+  // Back spine ridge
+  for(let i=0;i<7;i++) addBox(g,0.3,0.8+i*0.1,0.3,mBone,0,1.5+i*0.1,-3.5+i*1.0,0);
+  // Blood-red belly runes
+  addBox(g,3.5,0.4,7.5,new THREE.MeshBasicMaterial({color:0xff0000,transparent:true,opacity:0.5,blending:THREE.AdditiveBlending}),0,-1.0,0);
+  // Wings — massive dark membrane
+  const mW=mat(0x0d0005,{side:THREE.DoubleSide,flatShading:true,transparent:true,opacity:.88});
+  const lw=new THREE.Group();lw.position.set(-2.3,0.4,2.0);
+  const rw=new THREE.Group();rw.position.set( 2.3,0.4,2.0);
+  lw.add(new THREE.Mesh(makeWingGeo(false,'smoke'),mW.clone()));
+  rw.add(new THREE.Mesh(makeWingGeo(true,'smoke'),mW.clone()));
   g.add(lw);g.add(rw);
-  for(let i=0;i<8;i++){const s=1.2-i*0.1;addBox(g,s,s,1.0,mB,0,-i*0.05,-4.0-i*1.1,i*0.06);}
-  const eG=new THREE.SphereGeometry(0.22,6,6);
-  const el=new THREE.Mesh(eG,new THREE.MeshBasicMaterial({color:0xff0000}));el.position.set(-0.72,1.0,7.6);g.add(el);
-  const er=new THREE.Mesh(eG,new THREE.MeshBasicMaterial({color:0xff0000}));er.position.set( 0.72,1.0,7.6);g.add(er);
+  // Wing bone accent
+  const wBone=new THREE.MeshBasicMaterial({color:0x998877,transparent:true,opacity:0.8});
+  const lwb=new THREE.Mesh(new THREE.BoxGeometry(0.25,0.25,7.5),wBone);lwb.position.set(-5.5,0.3,0);lwb.rotation.z=-0.35;g.add(lwb);
+  const rwb=new THREE.Mesh(new THREE.BoxGeometry(0.25,0.25,7.5),wBone.clone());rwb.position.set(5.5,0.3,0);rwb.rotation.z=0.35;g.add(rwb);
+  // Tail — thick segmented
+  for(let i=0;i<10;i++){const s=1.5-i*0.12;addBox(g,s,s,1.4,mObs,0,-i*0.08,-5.5-i*1.5,i*0.08);}
+  // Death chains (3 orbit rings)
+  for(let ri=0;ri<3;ri++){
+    const ch=new THREE.Mesh(new THREE.TorusGeometry(5+ri*2,0.2,5,14),new THREE.MeshBasicMaterial({color:0x442244,transparent:true,opacity:0.55}));
+    ch.rotation.x=ri*Math.PI/4;ch.rotation.z=ri*Math.PI/5;
+    g.add(ch);
+  }
   g.userData={lwp:lw,rwp:rw,wingAngle:0,type:'kingDeathDragon',alive:true,isKingDeath:true,
-    hp:7995,maxHp:7995,si:1.0,spd:14,dmg:195,pts:5000,
-    shootT:1.5,flyOrbit:0,animT:0};
+    hp:546767,maxHp:546767,si:1.0,spd:14,dmg:195,pts:50000,
+    shootT:1.5,flyOrbit:0,animT:0,kdSummonT:12};
+  return g;
+}
+function makeBloodDragonMesh(){
+  const g=new THREE.Group();
+  const FS={flatShading:true};
+  const mT=mat(0x004455,FS);
+  const mTC=mat(0x007788,FS);
+  addBox(g,1.8,0.9,3.5,mT);
+  addBox(g,0.7,0.7,1.5,mT,0,0.2,2.6);
+  addBox(g,1.0,0.9,1.5,mTC,0,0.4,3.8);
+  for(let i=0;i<4;i++) addBox(g,0.14,0.45,0.14,mTC,(i-1.5)*0.28,1.1,4.4);
+  const mW=mat(0x003344,{side:THREE.DoubleSide,flatShading:true,transparent:true,opacity:0.8});
+  const lw=new THREE.Group();lw.position.set(-0.9,0.1,0.8);
+  const rw=new THREE.Group();rw.position.set(0.9,0.1,0.8);
+  lw.add(new THREE.Mesh(makeWingGeo(false,'water'),mW.clone()));
+  rw.add(new THREE.Mesh(makeWingGeo(true,'water'),mW.clone()));
+  g.add(lw);g.add(rw);
+  for(let i=0;i<6;i++){const s=0.65-i*0.07;addBox(g,s,s,0.8,mT,0,-i*0.03,-2.0-i*0.9,i*0.05);}
+  const eG=new THREE.SphereGeometry(0.16,6,5);
+  const eM=new THREE.MeshBasicMaterial({color:0x00ffee,blending:THREE.AdditiveBlending,transparent:true,opacity:1});
+  const el=new THREE.Mesh(eG,eM);el.position.set(-0.38,0.65,4.8);g.add(el);
+  const er=new THREE.Mesh(eG,eM.clone());er.position.set(0.38,0.65,4.8);g.add(er);
+  g.add(lw);g.add(rw);
+  g.userData={lwp:lw,rwp:rw,wingAngle:0,type:'bloodDragon',alive:true,isBloodDragon:true,
+    hp:0,maxHp:0,si:1.0,spd:16,dmg:30,pts:300,shootT:2,animT:0};
   return g;
 }
 
@@ -1571,7 +1649,7 @@ function makeEnemy3d(type){
   const m=type==='ogre'?makeOgreMesh():type==='mage'?makeMageMesh():
            type==='dragon'?makeEnemyDragonMesh():type==='hunter'?makeDragonHunterMesh():
            type==='shadowDragon'?makeShadowDragonMesh():type==='kingHunter'?makeKingHunterMesh():
-           type==='kingDeathDragon'?makeKingDeathDragonMesh():makeArcherMesh();
+           type==='kingDeathDragon'?makeKingDeathDragonMesh():type==='bloodDragon'?makeBloodDragonMesh():makeArcherMesh();
   const cfg={archer:          {hp:20, maxHp:20, si:3+Math.random()*2,  spd:18,dmg:12, pts:60},
               ogre:            {hp:60, maxHp:60, si:5+Math.random()*2,  spd:14,dmg:20, pts:120},
               mage:            {hp:30, maxHp:30, si:2+Math.random()*2,  spd:22,dmg:15, pts:100},
@@ -1579,7 +1657,8 @@ function makeEnemy3d(type){
               hunter:          {hp:35, maxHp:35, si:2+Math.random()*1.5,spd:20,dmg:18, pts:80},
               shadowDragon:    {hp:120,maxHp:120,si:2+Math.random()*1.5,spd:14,dmg:35, pts:400},
               kingHunter:      {hp:200,maxHp:200,si:1.5,              spd:16,dmg:30, pts:1000},
-              kingDeathDragon: {hp:7995,maxHp:7995,si:1.0,             spd:14,dmg:195,pts:5000}};
+              kingDeathDragon: {hp:546767,maxHp:546767,si:1.0,         spd:14,dmg:195,pts:50000},
+              bloodDragon:     {hp:260,maxHp:260,si:1.5,              spd:16,dmg:30, pts:300}};
   Object.assign(m.userData,cfg[type]||{});
   if(!m.userData.shootT)m.userData.shootT=Math.random()*(m.userData.si||2);
   return m;
@@ -2311,7 +2390,7 @@ function spawnKingRuin(cfg){
   const bossSpawnAng=Math.random()*Math.PI*2;
   const bossSpawnR=400+Math.random()*40;
   bossMesh.position.set(x+Math.cos(bossSpawnAng)*bossSpawnR, plateauY+40, z+Math.sin(bossSpawnAng)*bossSpawnR);
-  bossMesh.userData={hp:120000,maxHp:120000,dmg:135,pts:5000,alive:true,type:'dragon',
+  bossMesh.userData={hp:34567,maxHp:34567,dmg:135,pts:5000,alive:true,type:'dragon',
     isKingDragon:true,ruinCfg:cfg,islandX:x,islandZ:z,islandR:95,shootT:3,si:1,animT:0,stunT:0};
   scene.add(bossMesh);activeEnemies.push(bossMesh);
   // Tall glowing pillar beacon visible from far away
@@ -2676,10 +2755,35 @@ function hitEnemy(e,dmgAmt){
     }
     if(e.userData.isKingDeath){
       blaneQuest='complete';
+      gameAtPeace=true;
       const bonus=2000+liberatedVillages*500;
       score+=bonus;
-      floatWorld(e.position,'👑 EMPEROR DEFEATED! +'+bonus,'#ffdd44');
-      if(liberatedVillages>0)floatWorld(e.position,'🏘 '+liberatedVillages+' VILLAGES ANSWERED THE CALL!','#44ffcc');
+      floatWorld(e.position,'👑 KING OF DEATH FALLS! PEACE REIGNS! +'+bonus,'#ffdd44');
+      if(liberatedVillages>0)floatWorld(e.position,'🏘 ALL '+liberatedVillages+' VILLAGES ARE FREE!','#44ffcc');
+      // Clear all hostile enemies
+      setTimeout(()=>{
+        for(let i=activeEnemies.length-1;i>=0;i--){
+          const ae=activeEnemies[i];
+          if(!ae.userData.alive)continue;
+          spawnAbilityCloud(ae.position.clone(),0xffdd44,30,1.0);
+          ae.userData.alive=false;ae.userData.hp=0;
+          scene.remove(ae);
+          activeEnemies.splice(i,1);
+        }
+        // Free all buildings
+        scene.children.forEach(obj=>{
+          if(obj.userData&&obj.userData.isBuilding){obj.userData.safe=true;}
+          if(obj.userData&&obj.userData.guardBuilding){obj.userData.guardBuilding.userData.safe=true;}
+          // Turn wild dragons gold
+          if(obj.userData&&(obj.userData.type==='dragon'||obj.userData.type==='shadowDragon')){
+            obj.traverse(ch=>{if(ch.material)ch.material.color&&ch.material.color.set(0xffcc00);});
+          }
+        });
+        floatWorld(dragonMesh.position.clone().add(new THREE.Vector3(0,30,0)),'🌟 ALL DRAGONS ARE FREE! 🌟','#ffffaa');
+        floatWorld(dragonMesh.position.clone().add(new THREE.Vector3(0,50,0)),'☮ THE WORLD IS AT PEACE ☮','#44ffaa');
+        spawnAbilityCloud(e.position.clone(),0xffdd00,300,5.0);
+        spawnAbilityCloud(e.position.clone(),0xffffff,200,4.0);
+      },800);
     }
     if(e.userData.isKingDragon&&e.userData.ruinCfg){
       dropKingWeapon(e.userData.ruinCfg,e.position.clone());
@@ -2790,6 +2894,8 @@ let blaneQuest='inactive'; // 'inactive' | 'unlocked' | 'active' | 'complete'
 let shadowKills=0;
 let wildDragons=[]; // tameable wild dragons {mesh, hp, maxHp, tameable}
 let liberatedVillages=0; // freed villages contribute to final battle
+let gameAtPeace=false;
+let playerSlowT=0; // seconds of remaining speed slow
 let dragonMtnSpawned=false;
 let volcanoSpawned=false;
 
@@ -3276,7 +3382,11 @@ function initMobile(){
     el.addEventListener('touchstart',e=>{e.preventDefault();mk[flag]=true;},{passive:false});
     el.addEventListener('touchend',e=>{e.preventDefault();mk[flag]=false;},{passive:false});
   }
-  wire('mc-up','up');wire('mc-down','dn');wire('mc-left','lf');wire('mc-right','rt');wire('mc-fire','fire');
+  wire('mc-up','up');wire('mc-down','dn');wire('mc-left','lf');wire('mc-right','rt');
+  const fireBtnEl=document.getElementById('mc-fire');if(fireBtnEl){
+    fireBtnEl.addEventListener('touchstart',e=>{e.preventDefault();mk.fire=true;if(gs==='select')startGame();},{passive:false});
+    fireBtnEl.addEventListener('touchend',e=>{e.preventDefault();mk.fire=false;},{passive:false});
+  }
   // One-shot action buttons
   ['bite','tail','roar','power','kw','tab','sit','human'].forEach(f=>{
     const el=document.getElementById('mc-'+f);if(!el)return;
@@ -3299,7 +3409,22 @@ function initMobile(){
       touchX=t.clientX;touchY=t.clientY;
     }
   },{passive:false});
-  canvas.addEventListener('touchend',e=>{e.preventDefault();touchId=null;},{passive:false});
+  let lastTapT=0;
+  canvas.addEventListener('touchend',e=>{
+    e.preventDefault();touchId=null;
+    // Double-tap to recruit / interact
+    const now=performance.now();
+    if(now-lastTapT<320){
+      // Double-tap: recruit nearby NPC or open dialog
+      if(nearNPC&&nearNPC.userData.isRecruitable&&!nearNPC.userData.recruited&&dragonArmy.length<MAX_ARMY){
+        nearNPC.userData.recruited=true;
+        nearNPC.userData.npcText='Blane is coming to take me to the Hatchery. I will meet you there!';
+        hatcheryQueue.push({recruit:nearNPC,phase:'fetch',t:0});
+        floatWorld(nearNPC.position,'🐉 RECRUITED!','#44ffcc');
+      } else if(nearNPC&&gs==='playing'){openDialog(nearNPC);}
+    }
+    lastTapT=now;
+  },{passive:false});
 }
 
 function pickDevice(type){
@@ -3484,15 +3609,6 @@ canvas.addEventListener('touchend',e=>{
     selectedType=ni;buildSelectUI();}
   else startGame();
 },{passive:true});
-
-function initMobile(){
-  document.getElementById('mctrl').classList.add('show');
-  const btn=(id,k)=>{const el=document.getElementById(id);el.addEventListener('touchstart',e=>{e.preventDefault();mk[k]=true;},{passive:false});el.addEventListener('touchend',e=>{e.preventDefault();mk[k]=false;},{passive:false});};
-  btn('mc-up','up');btn('mc-down','dn');btn('mc-left','lf');btn('mc-right','rt');
-  const f=document.getElementById('mc-fire');
-  f.addEventListener('touchstart',e=>{e.preventDefault();mk.fire=true;if(gs==='select')startGame();},{passive:false});
-  f.addEventListener('touchend',e=>{e.preventDefault();mk.fire=false;},{passive:false});
-}
 
 // ── CUTSCENE ──────────────────────────────────────────────────────────────────
 const CS_SLIDES=[
@@ -3688,7 +3804,9 @@ function update(ts){
       dragonMesh.rotation.set(dPitch,dYaw,dRoll,'YXZ');
       const fwd=new THREE.Vector3(0,0,1);
       fwd.applyEuler(dragonMesh.rotation);
-      dragonMesh.position.addScaledVector(fwd,dtype.speed*2.2*dt);
+      if(playerSlowT>0){playerSlowT-=dt;if(Math.random()<0.15)spawnAbilityCloud(dragonMesh.position.clone(),0x00ccaa,12,0.3);}
+      const speedMult=playerSlowT>0?0.4:1.0;
+      dragonMesh.position.addScaledVector(fwd,dtype.speed*2.2*dt*speedMult);
       // Land if descend to ground
       if(dragonMesh.position.y<=landThreshold&&dPitch>=0.1){
         isLanded=true;landedY=landThreshold;
@@ -4259,6 +4377,28 @@ function update(ts){
             },100);
           }
         }
+        // ── Summon minions ──
+        if(gameAtPeace)return;
+        e.userData.kdSummonT-=dt;
+        if(e.userData.kdSummonT<=0){
+          e.userData.kdSummonT=18+Math.random()*8;
+          const summonTypes=['bloodDragon','shadowDragon','bloodDragon','bloodDragon'];
+          const st=summonTypes[Math.floor(Math.random()*summonTypes.length)];
+          floatWorld(e.position.clone().add(new THREE.Vector3(0,20,0)),'💀 SUMMONS '+st.toUpperCase().replace('DRAGON',' DRAGON')+'!','#cc00ff');
+          for(let si=0;si<2+(e.userData.hp<e.userData.maxHp*0.5?2:0);si++){
+            const ang=Math.random()*Math.PI*2;
+            const minion=makeEnemy3d(st);
+            minion.position.set(e.position.x+Math.cos(ang)*40,e.position.y+8+Math.random()*20,e.position.z+Math.sin(ang)*40);
+            minion.scale.setScalar(minion.userData.si||1.0);
+            scene.add(minion);activeEnemies.push(minion);
+            spawnAbilityCloud(minion.position.clone(),0xaa00ff,25,0.8);
+          }
+        }
+      }
+      // Blood dragon — slows player on hit
+      if(e.userData.isBloodDragon&&e.userData.alive){
+        // Teal particle trail
+        if(Math.random()<0.3) spawnAbilityCloud(e.position.clone().add(new THREE.Vector3((Math.random()-.5)*4,0,(Math.random()-.5)*4)),0x00ccaa,8,0.3);
       }
       // King Hunter: charges player on ground, big swings
       if(e.userData.type==='kingHunter'){
@@ -4277,12 +4417,23 @@ function update(ts){
       const distToDragon=e.position.distanceTo(dragonMesh.position);
       if(e.userData.shootT<=0&&distToDragon<400){
         e.userData.shootT=e.userData.si;
-        const pType=e.userData.type==='mage'?'magic':e.userData.type==='ogre'?'rock':
-        e.userData.type==='dragon'||e.userData.type==='shadowDragon'?'magic':
-        e.userData.type==='kingHunter'?'bolt':e.userData.type==='ballista'?'bolt':
-        e.userData.type==='golem'?'rock':
-        e.userData.type==='kingDeathDragon'?(Math.random()<0.5?'magic':'bolt'):'arrow';
-        spawnProjectile(pType,e.position.clone(),dragonMesh.position.clone());
+        if(e.userData.isBloodDragon){
+          // Teal slowing projectile
+          const bp=new THREE.Mesh(new THREE.SphereGeometry(1.2,6,5),new THREE.MeshBasicMaterial({color:0x00ffcc,transparent:true,opacity:0.9,blending:THREE.AdditiveBlending}));
+          const ref2=isHuman&&humanMesh?humanMesh:dragonMesh;
+          bp.position.copy(e.position).add(new THREE.Vector3(0,4,0));
+          const bdir=new THREE.Vector3().subVectors(ref2.position,bp.position).normalize();
+          bp.userData={vel:bdir.multiplyScalar(32),dmg:e.userData.dmg,life:4,projType:'fire',friendly:false,isBloodProj:true};
+          scene.add(bp);projectiles.push(bp);
+          spawnAbilityCloud(e.position.clone(),0x00ccaa,15,0.4);
+        } else {
+          const pType=e.userData.type==='mage'?'magic':e.userData.type==='ogre'?'rock':
+          e.userData.type==='dragon'||e.userData.type==='shadowDragon'?'magic':
+          e.userData.type==='kingHunter'?'bolt':e.userData.type==='ballista'?'bolt':
+          e.userData.type==='golem'?'rock':
+          e.userData.type==='kingDeathDragon'?(Math.random()<0.5?'magic':'bolt'):'arrow';
+          spawnProjectile(pType,e.position.clone(),dragonMesh.position.clone());
+        }
       }
     }
 

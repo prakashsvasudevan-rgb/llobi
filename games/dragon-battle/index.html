@@ -2143,21 +2143,21 @@ function spawnLegendCastle(){
 // ── KING RUINS — 8 islands, each with a King Dragon skeleton boss ─────────────
 const KING_RUINS_CFG=[
   {id:'fire_water',  elem1:'fire',  elem2:'water',   name:'INFERNO TIDE',
-   pos:{x:DM_X+800,z:DM_Z+600},   bossColor:0x551100, weaponName:'METEOR STRIKE',  weaponColor:0xff4400,weaponEmoji:'☄'},
+   pos:{x:DM_X+800,z:DM_Z+600},   bossColor:0xff6633, weaponName:'METEOR STRIKE',  weaponColor:0xff4400,weaponEmoji:'☄'},
   {id:'earth_nature',elem1:'earth', elem2:'nature',  name:'ANCIENT GROVE',
-   pos:{x:DM_X-900,z:DM_Z+700},   bossColor:0x112200, weaponName:'GOLEM SUMMON',   weaponColor:0x44ff44,weaponEmoji:'🗿'},
+   pos:{x:DM_X-900,z:DM_Z+700},   bossColor:0x44ff66, weaponName:'GOLEM SUMMON',   weaponColor:0x44ff44,weaponEmoji:'🗿'},
   {id:'air_smoke',   elem1:'air',   elem2:'smoke',   name:'ASHEN SKY',
-   pos:{x:DM_X+1300,z:DM_Z+100},  bossColor:0x334455, weaponName:'TORNADO',        weaponColor:0xaaccff,weaponEmoji:'🌪'},
+   pos:{x:DM_X+1300,z:DM_Z+100},  bossColor:0xaaccff, weaponName:'TORNADO',        weaponColor:0xaaccff,weaponEmoji:'🌪'},
   {id:'lava_ice',    elem1:'lava',  elem2:'ice',     name:'GLACIAL CALDERA',
-   pos:{x:DM_X-1200,z:DM_Z+100},  bossColor:0x224466, weaponName:'FROZEN VOLCANO', weaponColor:0x88ffff,weaponEmoji:'❄'},
+   pos:{x:DM_X-1200,z:DM_Z+100},  bossColor:0x44ddff, weaponName:'FROZEN VOLCANO', weaponColor:0x88ffff,weaponEmoji:'❄'},
   {id:'thunder_lightning',elem1:'thunder',elem2:'lightning',name:'STORM THRONE',
-   pos:{x:DM_X+600,z:DM_Z-500},   bossColor:0x222200, weaponName:'MEGASTORM',      weaponColor:0xffff44,weaponEmoji:'⛈'},
+   pos:{x:DM_X+600,z:DM_Z-500},   bossColor:0xffff44, weaponName:'MEGASTORM',      weaponColor:0xffff44,weaponEmoji:'⛈'},
   {id:'sun_soul',    elem1:'sun',   elem2:'soul',    name:'CELESTIAL ALTAR',
-   pos:{x:DM_X-500,z:DM_Z-600},   bossColor:0x442200, weaponName:'SOUL BEAM',      weaponColor:0xffffff,weaponEmoji:'✨'},
+   pos:{x:DM_X-500,z:DM_Z-600},   bossColor:0xffffff, weaponName:'SOUL BEAM',      weaponColor:0xffffff,weaponEmoji:'✨'},
   {id:'bone_acid',   elem1:'bone',  elem2:'acid',    name:'DEATH MARSHES',
-   pos:{x:DM_X+200,z:DM_Z+2200},  bossColor:0x334422, weaponName:'PLAGUE CLOUD',   weaponColor:0x88ff44,weaponEmoji:'☠'},
+   pos:{x:DM_X+200,z:DM_Z+2200},  bossColor:0xccffaa, weaponName:'PLAGUE CLOUD',   weaponColor:0x88ff44,weaponEmoji:'☠'},
   {id:'metal_glass', elem1:'metal', elem2:'glass',   name:'SHATTERED FORGE',
-   pos:{x:DM_X-800,z:DM_Z-700},   bossColor:0x445566, weaponName:'SHURIKEN STORM', weaponColor:0xddeeff,weaponEmoji:'⭐'},
+   pos:{x:DM_X-800,z:DM_Z-700},   bossColor:0xddeeff, weaponName:'SHURIKEN STORM', weaponColor:0xddeeff,weaponEmoji:'⭐'},
 ];
 const kingRuinsSpawned=new Set();
 const kingWeaponOrbs=[];
@@ -2202,17 +2202,26 @@ function spawnKingRuin(cfg){
   const dtDef1=DT.find(d=>d.id===cfg.elem1)||DT[0];
   const bossMesh=buildDragonMesh(dtDef1);
   bossMesh.scale.set(5,5,5);
-  bossMesh.traverse(c=>{if(c.isMesh&&c.material)c.material=new THREE.MeshBasicMaterial({color:cfg.bossColor,transparent:true,opacity:0.9});});
-  // Add glow aura rings
+  bossMesh.traverse(c=>{if(c.isMesh&&c.material)c.material=new THREE.MeshBasicMaterial({color:cfg.bossColor});});
+  // Large visible beacon — a big glowing orb so the boss is never invisible
+  const beaconGeo=new THREE.SphereGeometry(12,8,6);
+  const beaconMat=new THREE.MeshBasicMaterial({color:cfg.weaponColor,transparent:true,opacity:0.35,blending:THREE.AdditiveBlending});
+  const beacon=new THREE.Mesh(beaconGeo,beaconMat);bossMesh.add(beacon);
+  // Glow aura rings
   for(let ri=0;ri<3;ri++){
-    const rg=new THREE.Mesh(new THREE.TorusGeometry(6+ri*3,0.4,6,16),new THREE.MeshBasicMaterial({color:cfg.weaponColor,transparent:true,opacity:0.6,blending:THREE.AdditiveBlending}));
+    const rg=new THREE.Mesh(new THREE.TorusGeometry(8+ri*4,0.6,6,16),new THREE.MeshBasicMaterial({color:cfg.weaponColor,transparent:true,opacity:0.7,blending:THREE.AdditiveBlending}));
     rg.rotation.x=ri*Math.PI/3;bossMesh.add(rg);
   }
-  bossMesh.position.set(x,plateauY+28,z);
+  // Sit the boss on the plateau (scale 5 → dragon body center ~5 units up)
+  bossMesh.position.set(x,plateauY+8,z);
   bossMesh.userData={hp:12000,maxHp:12000,dmg:80,pts:5000,alive:true,type:'dragon',
     isKingDragon:true,ruinCfg:cfg,shootT:3,si:1,animT:0,stunT:0};
   scene.add(bossMesh);activeEnemies.push(bossMesh);
-  floatWorld(new THREE.Vector3(x,plateauY+50,z),'💀 KING DRAGON: '+cfg.name,'#ff4444');
+  // Tall glowing pillar beacon visible from far away
+  const pillarMat=new THREE.MeshBasicMaterial({color:cfg.weaponColor,transparent:true,opacity:0.5,blending:THREE.AdditiveBlending});
+  const pillar=new THREE.Mesh(new THREE.CylinderGeometry(2,2,200,6),pillarMat);
+  pillar.position.set(x,plateauY+100,z);scene.add(pillar);
+  floatWorld(new THREE.Vector3(x,plateauY+60,z),'💀 KING DRAGON: '+cfg.name,'#ff4444');
 }
 
 function dropKingWeapon(cfg,pos){

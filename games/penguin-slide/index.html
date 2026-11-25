@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Penguin Slide | LLOBI</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:#001830;overflow:hidden;user-select:none;display:flex;flex-direction:column;align-items:center;height:100dvh;font-family:'Press Start 2P',monospace}
+.topbar{width:100%;max-width:520px;display:flex;align-items:center;justify-content:space-between;padding:4px 10px;background:#001020;border-bottom:3px solid #0a3a6a;flex-shrink:0}
+.logo{font-family:'Press Start 2P',monospace;font-size:.55rem;color:#fff;text-decoration:none}
+.logo span{color:#7dd3fc}
+#wrap{width:100%;max-width:420px;flex:1;display:flex;flex-direction:column;align-items:center;position:relative;overflow:hidden}
+canvas{display:block;width:100%;height:100%}
+#overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:rgba(0,16,40,.88);z-index:10}
+#overlay.hide{display:none}
+.ov-icon{font-size:4rem;animation:bob .9s ease-in-out infinite alternate}
+@keyframes bob{from{transform:translateY(0)}to{transform:translateY(-14px)}}
+.ov-title{font-size:1rem;color:#7dd3fc;text-shadow:0 0 16px #38bdf8}
+.ov-sub{font-size:.35rem;color:#aaa;text-align:center;line-height:2.4;max-width:260px}
+.ov-btn{padding:13px 22px;background:#0c2a4a;border:3px solid #0ea5e9;color:#7dd3fc;font-family:'Press Start 2P',monospace;font-size:.55rem;cursor:pointer;margin:3px}
+.ov-btn:hover,.ov-btn:active{background:#0e3a60;border-color:#7dd3fc}
+.ov-score{font-size:.7rem;color:#facc15}
+.ov-best{font-size:.38rem;color:#7dd3fc}
+.ov-stats{font-size:.33rem;color:#888;text-align:center;line-height:2.6}
+#hud{position:absolute;top:6px;left:0;right:0;display:flex;justify-content:space-between;padding:0 10px;pointer-events:none;z-index:5}
+.hud-l{font-size:.42rem;color:#facc15;text-shadow:0 0 8px #ca8a04}
+.hud-r{font-size:.38rem;color:#7dd3fc;letter-spacing:2px}
+#combo-flash{position:absolute;top:38px;left:50%;transform:translateX(-50%);font-size:.5rem;color:#facc15;pointer-events:none;z-index:5;opacity:0;transition:opacity .2s}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <a href="/" class="logo"><span>llobi</span>.com</a>
+  <span style="font-size:.42rem;color:#555">PENGUIN SLIDE</span>
+</div>
+<div id="wrap">
+  <canvas id="c"></canvas>
+  <div id="hud">
+    <div class="hud-l" id="hud-score">0</div>
+    <div class="hud-r" id="hud-lives">🐧🐧🐧</div>
+  </div>
+  <div id="combo-flash"></div>
+  <!-- Overlay -->
+  <div id="overlay">
+    <div class="ov-icon">🐧</div>
+    <div class="ov-title" id="ov-title">PENGUIN SLIDE</div>
+    <div class="ov-sub" id="ov-sub">Slide down the ice!<br>◀ ▶ ARROWS · A D · TAP<br>Collect fish · Dodge obstacles</div>
+    <div class="ov-score" id="ov-score" style="display:none"></div>
+    <div class="ov-best" id="ov-best" style="display:none"></div>
+    <div class="ov-stats" id="ov-stats" style="display:none"></div>
+    <button class="ov-btn" id="btn-play">▶ SLIDE!</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d');
+const wrap=document.getElementById('wrap');
+
+// ── Sizing ────────────────────────────────────────────────────────────────────
+let W,H,LANE_W,LANES=3;
+function resize(){
+  const r=wrap.getBoundingClientRect();
+  W=canvas.width=r.width;H=canvas.height=r.height;
+  LANE_W=W/LANES;
+}
+window.addEventListener('resize',()=>{resize();});
+resize();
+
+// ── Game state ────────────────────────────────────────────────────────────────
+let gs='menu'; // menu | playing | dead | over
+let score,distance,lives,combo,comboTimer;
+let speed,elapsed;
+let lane,targetLane,pengX,pengXAnim; // pengXAnim 0→1 for smooth slide
+let spawnTimer,spawnInterval;
+let obstacles=[],collectibles=[],snowParticles=[],sparkles=[];
+let bgOffset=0;
+let frame=0;
+let killed=0,fishEaten=0;
+
+// Obstacle & collectible configs
+const OBS=[
+  {type:'snowball', emoji:'🌨', w:52, h:52, dmg:1, pts:0,  prob:40, color:'#cce8ff'},
+  {type:'rock',     emoji:'🪨', w:58, h:46, dmg:1, pts:0,  prob:25, color:'#7a6a5a'},
+  {type:'bear',     emoji:'🐻‍❄️',w:66, h:66, dmg:1, pts:0,  prob:20, color:'#eef5ff'},
+  {type:'crack',    emoji:'',   w:LANE_W,h:20,dmg:1,pts:0, prob:15, color:'#88aadd'},
+];
+const FISH=[
+  {type:'fish',   emoji:'🐟', pts:10, prob:55, color:'#60a5fa'},
+  {type:'sardine',emoji:'🐠', pts:25, prob:30, color:'#f97316'},
+  {type:'gold',   emoji:'⭐', pts:60, prob:15, color:'#facc15'},
+];
+
+// ── Input ─────────────────────────────────────────────────────────────────────
+const keys={};
+document.addEventListener('keydown',e=>{
+  keys[e.code]=true;
+  if(gs==='playing'){
+    if(e.code==='ArrowLeft'||e.code==='KeyA')moveLane(-1);
+    if(e.code==='ArrowRight'||e.code==='KeyD')moveLane(1);
+  }
+});
+document.addEventListener('keyup',e=>keys[e.code]=false);
+
+// Touch controls
+let touchStartX=null;
+wrap.addEventListener('touchstart',e=>{touchStartX=e.touches[0].clientX;},{passive:true});
+wrap.addEventListener('touchend',e=>{
+  if(gs==='playing'&&touchStartX!==null){
+    const dx=e.changedTouches[0].clientX-touchStartX;
+    if(Math.abs(dx)>18)moveLane(dx>0?1:-1);
+    else moveLane(e.changedTouches[0].clientX<W/2?-1:1); // tap left/right
+  }
+  touchStartX=null;
+},{passive:true});
+
+document.getElementById('btn-play').onclick=startGame;
+
+function moveLane(dir){
+  const nl=Math.max(0,Math.min(LANES-1,targetLane+dir));
+  if(nl===targetLane)return;
+  targetLane=nl;
+  pengXAnim=0;
+}
+
+// ── Game lifecycle ────────────────────────────────────────────────────────────
+function startGame(){
+  gs='playing';score=0;distance=0;lives=3;combo=0;comboTimer=0;
+  speed=240;elapsed=0;spawnTimer=0;spawnInterval=1.1;
+  lane=1;targetLane=1;pengX=LANE_W*1.5;pengXAnim=1;
+  obstacles=[];collectibles=[];sparkles=[];frame=0;killed=0;fishEaten=0;
+  bgOffset=0;
+  spawnSnow();
+  document.getElementById('overlay').classList.add('hide');
+  updateHUD();
+  loop(performance.now());
+}
+
+function endGame(){
+  gs='over';
+  const key='ps_best';
+  let best=0;try{best=parseInt(localStorage.getItem(key)||'0');}catch(e){}
+  const isNew=score>best;
+  if(isNew)try{localStorage.setItem(key,score);}catch(e){}
+  document.getElementById('ov-title').textContent='WIPED OUT!';
+  document.getElementById('ov-sub').style.display='none';
+  document.getElementById('ov-score').style.display='block';
+  document.getElementById('ov-score').textContent='SCORE: '+score;
+  document.getElementById('ov-best').style.display='block';
+  document.getElementById('ov-best').textContent=isNew?'🏆 NEW BEST: '+score:'BEST: '+best;
+  document.getElementById('ov-stats').style.display='block';
+  document.getElementById('ov-stats').innerHTML=`DISTANCE: ${~~distance}m &nbsp; FISH: ${fishEaten}`;
+  document.getElementById('btn-play').textContent='▶ AGAIN';
+  document.getElementById('overlay').classList.remove('hide');
+}
+
+// ── Snow particles ─────────────────────────────────────────────────────────────
+function spawnSnow(){
+  snowParticles=[];
+  for(let i=0;i<60;i++){
+    snowParticles.push({x:Math.random()*W,y:Math.random()*H,r:1+Math.random()*2.5,vy:30+Math.random()*80,vx:(Math.random()-.5)*20,alpha:0.4+Math.random()*0.5});
+  }
+}
+
+// ── Spawn ─────────────────────────────────────────────────────────────────────
+function spawnObs(){
+  // Pick lane(s) — sometimes 2 lanes blocked (but always 1 safe)
+  const usedLanes=new Set();
+  const count=Math.random()<(elapsed>20?0.4:0.2)?2:1;
+  for(let i=0;i<count;i++){
+    let l;do{l=~~(Math.random()*LANES);}while(usedLanes.has(l));
+    usedLanes.add(l);
+    const cfg=pickWeighted(OBS);
+    obstacles.push({lane:l,y:-70,type:cfg.type,emoji:cfg.emoji,w:Math.min(cfg.w,LANE_W-8),h:cfg.h,color:cfg.color,animT:0});
+  }
+}
+
+function spawnFish(){
+  const l=~~(Math.random()*LANES);
+  const cfg=pickWeighted(FISH);
+  collectibles.push({lane:l,y:-50,type:cfg.type,emoji:cfg.emoji,pts:cfg.pts,color:cfg.color,animT:0,taken:false});
+}
+
+function pickWeighted(arr){
+  let r=Math.random()*arr.reduce((a,b)=>a+b.prob,0),acc=0;
+  for(const a of arr){acc+=a.prob;if(r<acc)return a;}
+  return arr[0];
+}
+
+// ── HUD ───────────────────────────────────────────────────────────────────────
+function updateHUD(){
+  document.getElementById('hud-score').textContent=score;
+  const liveIcons=['','🐧','🐧🐧','🐧🐧🐧'];
+  document.getElementById('hud-lives').textContent=liveIcons[Math.max(0,lives)]||'💀';
+}
+
+function showCombo(text,color='#facc15'){
+  const el=document.getElementById('combo-flash');
+  el.textContent=text;el.style.color=color;el.style.opacity='1';
+  clearTimeout(el._t);el._t=setTimeout(()=>el.style.opacity='0',600);
+}
+
+// ── Main loop ─────────────────────────────────────────────────────────────────
+let lastT=0;
+function loop(t){
+  if(gs!=='playing')return;
+  const dt=Math.min((t-lastT)/1000,.05);lastT=t;
+  frame++;elapsed+=dt;
+
+  // Speed ramp
+  speed=Math.min(700,240+elapsed*22);
+  distance+=speed*dt*0.05;
+  score=~~(distance*0.8)+Math.max(0,score-~~(distance*0.8)); // base from distance
+
+  // Penguin lane slide animation
+  const targX=LANE_W*(targetLane+0.5);
+  const slidespd=8;
+  pengX+=(targX-pengX)*Math.min(1,slidespd*dt);
+  if(Math.abs(pengX-targX)<1){pengX=targX;lane=targetLane;}
+
+  // Spawn
+  spawnTimer-=dt;
+  if(spawnTimer<=0){
+    spawnInterval=Math.max(0.45,1.1-elapsed*0.018);
+    spawnTimer=spawnInterval*(0.8+Math.random()*0.4);
+    spawnObs();
+    if(Math.random()<0.65)spawnFish();
+  }
+
+  // Combo timer
+  if(comboTimer>0)comboTimer-=dt;else combo=0;
+
+  // Update background scroll
+  bgOffset=(bgOffset+speed*dt*0.4)%120;
+
+  // Update snow
+  for(const s of snowParticles){
+    s.x+=s.vx*dt;s.y+=s.vy*dt+(speed*0.3*dt);
+    if(s.y>H+10){s.y=-10;s.x=Math.random()*W;}
+    if(s.x<0)s.x=W;if(s.x>W)s.x=0;
+  }
+
+  // Update obstacles
+  const pengY=H*0.72;
+  const hitR=22;
+  for(let i=obstacles.length-1;i>=0;i--){
+    const o=obstacles[i];
+    o.y+=speed*dt;o.animT+=dt;
+    // Collision
+    if(o.y>pengY-o.h/2&&o.y<pengY+o.h/2+10){
+      const oX=LANE_W*(o.lane+0.5);
+      if(Math.abs(pengX-oX)<hitR+o.w*0.4){
+        lives--;updateHUD();
+        spawnHitSparks(pengX,pengY);
+        combo=0;
+        obstacles.splice(i,1);
+        if(lives<=0){gs='dead';setTimeout(endGame,600);}
+        continue;
+      }
+    }
+    if(o.y>H+80)obstacles.splice(i,1);
+  }
+
+  // Update collectibles
+  for(let i=collectibles.length-1;i>=0;i--){
+    const c=collectibles[i];
+    c.y+=speed*dt;c.animT+=dt;
+    if(!c.taken){
+      if(c.y>pengY-30&&c.y<pengY+30){
+        const cX=LANE_W*(c.lane+0.5);
+        if(Math.abs(pengX-cX)<hitR+18){
+          c.taken=true;
+          combo++;comboTimer=2;
+          const pts=c.pts*(combo>=3?2:1);
+          score+=pts;fishEaten++;
+          spawnCollectSparks(cX,c.y,c.color);
+          if(combo>=3)showCombo('x'+combo+' COMBO! +'+pts,c.color);
+          else showCombo('+'+pts,c.color);
+          updateHUD();
+        }
+      }
+    }
+    if(c.y>H+60)collectibles.splice(i,1);
+  }
+
+  // Update sparkles
+  for(let i=sparkles.length-1;i>=0;i--){
+    const s=sparkles[i];
+    s.x+=s.vx*dt;s.y+=s.vy*dt;s.life-=dt;s.alpha=s.life/s.maxLife;
+    if(s.life<=0)sparkles.splice(i,1);
+  }
+
+  draw();
+  requestAnimationFrame(loop);
+}
+
+function spawnHitSparks(x,y){
+  for(let i=0;i<20;i++){
+    const a=Math.random()*Math.PI*2,v=60+Math.random()*140;
+    sparkles.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:0.6,maxLife:0.6,alpha:1,color:'#ff4444',r:3+Math.random()*3});
+  }
+}
+function spawnCollectSparks(x,y,color){
+  for(let i=0;i<12;i++){
+    const a=Math.random()*Math.PI*2,v=40+Math.random()*100;
+    sparkles.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:0.5,maxLife:0.5,alpha:1,color,r:2+Math.random()*3});
+  }
+}
+
+// ── Drawing ───────────────────────────────────────────────────────────────────
+function draw(){
+  // Background — icy slope gradient
+  const bg=ctx.createLinearGradient(0,0,0,H);
+  bg.addColorStop(0,'#001a3a');bg.addColorStop(0.4,'#002a5a');bg.addColorStop(1,'#003870');
+  ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+
+  // Scrolling ice lane stripes
+  for(let l=0;l<LANES;l++){
+    const lx=l*LANE_W;
+    const lc=l%2===0?'rgba(100,180,255,0.07)':'rgba(60,140,220,0.05)';
+    ctx.fillStyle=lc;ctx.fillRect(lx,0,LANE_W,H);
+    // Lane dividers
+    if(l>0){
+      ctx.strokeStyle='rgba(120,200,255,0.3)';ctx.lineWidth=2;ctx.setLineDash([18,22]);ctx.lineDashOffset=-bgOffset;
+      ctx.beginPath();ctx.moveTo(lx,0);ctx.lineTo(lx,H);ctx.stroke();ctx.setLineDash([]);
+    }
+  }
+
+  // Speed lines (perspective)
+  ctx.save();
+  const speedAlpha=Math.min(0.18,(speed-240)/2000);
+  if(speedAlpha>0){
+    ctx.strokeStyle=`rgba(180,230,255,${speedAlpha})`;ctx.lineWidth=1;
+    for(let i=0;i<12;i++){
+      const sx=Math.random()*W;
+      ctx.beginPath();ctx.moveTo(sx,0);ctx.lineTo(sx+(sx-W/2)*0.1,H);ctx.stroke();
+    }
+  }
+  ctx.restore();
+
+  // Scrolling ice texture lines
+  ctx.strokeStyle='rgba(160,210,255,0.1)';ctx.lineWidth=1;ctx.setLineDash([]);
+  for(let y=(bgOffset%120)-120;y<H+120;y+=60){
+    ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y+10);ctx.stroke();
+  }
+
+  // Snow particles
+  ctx.fillStyle='rgba(220,240,255,0.7)';
+  for(const s of snowParticles){
+    ctx.globalAlpha=s.alpha;ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill();
+  }
+  ctx.globalAlpha=1;
+
+  // Collectibles
+  for(const c of collectibles){
+    if(c.taken)continue;
+    const cx=LANE_W*(c.lane+0.5);
+    const bob=Math.sin(c.animT*4)*5;
+    // Glow
+    const grd=ctx.createRadialGradient(cx,c.y+bob,0,cx,c.y+bob,28);
+    grd.addColorStop(0,c.color+'66');grd.addColorStop(1,'transparent');
+    ctx.fillStyle=grd;ctx.beginPath();ctx.arc(cx,c.y+bob,28,0,Math.PI*2);ctx.fill();
+    // Emoji
+    ctx.font='22px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(c.emoji,cx,c.y+bob);
+  }
+
+  // Obstacles
+  for(const o of obstacles){
+    const ox=LANE_W*(o.lane+0.5);
+    const shake=o.animT<0.1?Math.sin(o.animT*80)*3:0;
+    if(o.type==='crack'){
+      // Ice crack spans the lane
+      ctx.strokeStyle='rgba(100,160,220,0.9)';ctx.lineWidth=3;
+      ctx.beginPath();
+      const lx=LANE_W*o.lane+4,rx=LANE_W*(o.lane+1)-4;
+      ctx.moveTo(lx,o.y);
+      for(let xi=lx;xi<rx;xi+=12){ctx.lineTo(xi+6+(Math.random()-.5)*8,o.y+(Math.random()-.5)*10);}
+      ctx.lineTo(rx,o.y);ctx.stroke();
+      ctx.strokeStyle='rgba(180,220,255,0.5)';ctx.lineWidth=1;ctx.stroke();
+    } else {
+      // Shadow
+      ctx.fillStyle='rgba(0,0,0,0.25)';
+      ctx.beginPath();ctx.ellipse(ox+3,o.y+o.h/2+6,o.w/2+2,10,0,0,Math.PI*2);ctx.fill();
+      // Obstacle emoji
+      ctx.font=(o.type==='bear'?'44px':'36px')+' serif';
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(o.emoji,ox+shake,o.y+shake);
+    }
+  }
+
+  // Sparkles
+  for(const s of sparkles){
+    ctx.globalAlpha=s.alpha;
+    ctx.fillStyle=s.color;
+    ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill();
+  }
+  ctx.globalAlpha=1;
+
+  // Penguin
+  const pengY=H*0.72;
+  drawPenguin(pengX,pengY,lane!==targetLane);
+
+  // Horizon glow
+  const hgrd=ctx.createLinearGradient(0,0,0,H*0.3);
+  hgrd.addColorStop(0,'rgba(100,200,255,0.12)');hgrd.addColorStop(1,'transparent');
+  ctx.fillStyle=hgrd;ctx.fillRect(0,0,W,H*0.3);
+
+  // Score popups (handled by DOM)
+}
+
+function drawPenguin(x,y,sliding){
+  ctx.save();
+  ctx.translate(x,y);
+  if(sliding)ctx.rotate(targetLane<lane?-0.25:0.25);
+  // Shadow
+  ctx.fillStyle='rgba(0,0,0,0.3)';ctx.beginPath();ctx.ellipse(0,22,20,8,0,0,Math.PI*2);ctx.fill();
+  // Body
+  ctx.fillStyle='#111';ctx.beginPath();ctx.ellipse(0,0,16,22,0,0,Math.PI*2);ctx.fill();
+  // Belly
+  ctx.fillStyle='#eee';ctx.beginPath();ctx.ellipse(0,4,9,15,0,0,Math.PI*2);ctx.fill();
+  // Head
+  ctx.fillStyle='#111';ctx.beginPath();ctx.arc(0,-19,12,0,Math.PI*2);ctx.fill();
+  // Eye
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(4,-21,4,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#111';ctx.beginPath();ctx.arc(5,-21,2,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(6,-22,0.8,0,Math.PI*2);ctx.fill();
+  // Beak
+  ctx.fillStyle='#f97316';ctx.beginPath();ctx.moveTo(8,-19);ctx.lineTo(14,-21);ctx.lineTo(8,-17);ctx.closePath();ctx.fill();
+  // Flippers
+  const flap=Math.sin(frame*0.18)*0.3;
+  ctx.fillStyle='#111';
+  ctx.save();ctx.translate(-16,0);ctx.rotate(-0.4+flap);ctx.beginPath();ctx.ellipse(0,0,6,14,0,0,Math.PI*2);ctx.fill();ctx.restore();
+  ctx.save();ctx.translate(16,0);ctx.rotate(0.4-flap);ctx.beginPath();ctx.ellipse(0,0,6,14,0,0,Math.PI*2);ctx.fill();ctx.restore();
+  // Feet / ice skates
+  ctx.fillStyle='#7dd3fc';
+  ctx.beginPath();ctx.ellipse(-6,22,5,3,-.3,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(6,22,5,3,.3,0,Math.PI*2);ctx.fill();
+  // Ice trail
+  ctx.strokeStyle='rgba(180,230,255,0.4)';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(-10,24);ctx.lineTo(-30,24+(Math.random()-.5)*4);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(10,24);ctx.lineTo(30,24+(Math.random()-.5)*4);ctx.stroke();
+  ctx.restore();
+}
+
+// ── Menu loop ─────────────────────────────────────────────────────────────────
+function menuLoop(t){
+  if(gs!=='menu'&&gs!=='over')return;
+  lastT=t;
+  bgOffset=(bgOffset+1)%120;
+  // Draw idle background
+  const bg=ctx.createLinearGradient(0,0,0,H);
+  bg.addColorStop(0,'#001a3a');bg.addColorStop(1,'#003870');
+  ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+  // Lanes
+  for(let l=0;l<LANES;l++){
+    if(l>0){ctx.strokeStyle='rgba(120,200,255,0.2)';ctx.lineWidth=2;ctx.setLineDash([18,22]);ctx.lineDashOffset=-bgOffset;ctx.beginPath();ctx.moveTo(l*LANE_W,0);ctx.lineTo(l*LANE_W,H);ctx.stroke();ctx.setLineDash([]);}
+  }
+  for(let y=(bgOffset%120)-120;y<H+120;y+=60){
+    ctx.strokeStyle='rgba(160,210,255,0.08)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y+10);ctx.stroke();
+  }
+  if(gs==='menu'){
+    // Idle snow
+    if(!snowParticles.length)spawnSnow();
+    for(const s of snowParticles){s.y+=s.vy*0.016;if(s.y>H)s.y=-10;}
+    ctx.fillStyle='rgba(220,240,255,0.5)';
+    for(const s of snowParticles){ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill();}
+  }
+  requestAnimationFrame(menuLoop);
+}
+requestAnimationFrame(menuLoop);
+</script>
+</body>
+</html>

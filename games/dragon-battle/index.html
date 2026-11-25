@@ -154,7 +154,7 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
   </div>
 
   <!-- Human badge -->
-  <div id="human-badge">🧍 HUMAN · T=RIDE · WASD=WALK · SHIFT=SWORD · J=JUMP · D=CALL · E=TALK/MOUNT · B=BUY ARMOR</div>
+  <div id="human-badge">🧍 HUMAN · T=RIDE · WASD=WALK · SHIFT=SWORD SWING · B=FIREBALL(sword)/SHIELD · J=JUMP · E=TALK/MOUNT</div>
 
   <!-- Interact hint -->
   <div id="interact-hint"></div>
@@ -2048,8 +2048,18 @@ function spawnLegendCastle(){
   // Gate
   addLC(g,14,22,2,mat(0x000000),0,-4,32);
   addLC(g,14,10,2,mat(0x440022),0,18,32);
-  // 5 blood-red flags
-  for(const fx of [-12,-6,0,6,12]){addLC(g,0.8,30,0.8,mat(0x330011),fx,62,0);addLC(g,8,6,0.3,mat(0xcc0022),fx+4,91,0);}
+  // 5 decorative swords on the battlements (instead of flags)
+  for(const fx of [-12,-6,0,6,12]){
+    const sg=new THREE.Group();
+    const bm2=new THREE.MeshBasicMaterial({color:0xeeeeff});
+    const gm2=new THREE.MeshBasicMaterial({color:0xffee44,transparent:true,opacity:0.8,blending:THREE.AdditiveBlending});
+    sg.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.4,4,0.18),bm2),{position:{y:2}}));
+    sg.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.7,4.4,0.4),gm2),{position:{y:2}}));
+    sg.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(2,0.35,0.35),new THREE.MeshBasicMaterial({color:0xddaa33})),{position:{y:0.2}}));
+    sg.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.25,1.2,0.25),new THREE.MeshBasicMaterial({color:0x885522})),{position:{y:-0.7}}));
+    sg.position.set(LC_X+fx,lcY+92,LC_Z);
+    scene.add(sg);
+  }
   // Dark glow beam above altar
   const darkGlowMat=new THREE.MeshBasicMaterial({color:0xaa00ff,transparent:true,opacity:0.25,blending:THREE.AdditiveBlending});
   const pillarGlow=new THREE.Mesh(new THREE.CylinderGeometry(5,5,120,12),darkGlowMat);
@@ -2333,7 +2343,7 @@ let isHuman=false;
 let humanMesh=null;
 let riderMesh=null;
 let humanYaw=0,humanPitch=0;
-let humanHP=100,humanMaxHP=100,humanVY=0;
+let humanHP=100,humanMaxHP=100,humanVY=0,humanFireCooldown=0,humanShielding=false;
 let armorLevel=0; // 0=none 1=iron 2=steel 3=dragon scale
 let mouseDX=0,mouseDY=0;
 let pointerLocked=false;
@@ -2978,7 +2988,7 @@ function startGame(){
   orbDrops.forEach(o=>scene.remove(o.mesh));orbDrops=[];
   mageOrbs=0;shadowDust=0;upgrades={dmg:0,hp:0,speed:0,fuel:0,attack:0};
   dragonArmy.forEach(a=>scene.remove(a.mesh));dragonArmy=[];
-  dragonMtnSpawned=false;volcanoSpawned=false;legendCastleSpawned=false;blaneNPC=null;blaneWanderT=0;blaneWanderTarget=null;blaneTalkT=0;hatcheryQueue=[];hatcheryDoneCount=0;blaneLeadPhase='idle';dmPeakY=0;legendSwordTaken=false;legendSwordMesh=null;
+  dragonMtnSpawned=false;volcanoSpawned=false;legendCastleSpawned=false;blaneNPC=null;blaneWanderT=0;blaneWanderTarget=null;blaneTalkT=0;hatcheryQueue=[];hatcheryDoneCount=0;blaneLeadPhase='idle';dmPeakY=0;legendSwordTaken=false;legendSwordMesh=null;humanFireCooldown=0;humanShielding=false;
   if(dmShieldMesh)scene.remove(dmShieldMesh);if(dmShieldRing)scene.remove(dmShieldRing);
   dmShieldMesh=null;dmShieldRing=null;dmShieldFlashT=0;
   blaneQuest='inactive';shadowKills=0;wildDragons=[];
@@ -3317,6 +3327,32 @@ function update(ts){
           }
         }
       }
+      // Human B = fireball (needs Legend Sword) / hold B = shield
+      if(keys['KeyB']&&legendSwordTaken&&!dialogOpen){
+        if(!humanFireCooldown||humanFireCooldown<=0){
+          humanFireCooldown=0.55;
+          const fwdH=new THREE.Vector3(-Math.sin(humanMesh.rotation.y),0.1,Math.cos(humanMesh.rotation.y)).normalize();
+          const fireFrom=humanMesh.position.clone().add(new THREE.Vector3(0,2,0));
+          const fireTo=fireFrom.clone().addScaledVector(fwdH,80);
+          spawnProjectile('fire',fireFrom,fireTo,false);
+          // also fire two spread shots if dragon type matches
+          if(SWORD_TYPES[dtype.id]){
+            const perp=new THREE.Vector3(-fwdH.z,0,fwdH.x).multiplyScalar(2.5);
+            spawnProjectile('fire',fireFrom.clone().add(perp),fireTo.clone().add(perp.clone().multiplyScalar(5)),false);
+            spawnProjectile('fire',fireFrom.clone().sub(perp),fireTo.clone().add(perp.clone().multiplyScalar(-5)),false);
+          }
+          floatWorld(humanMesh.position.clone().add(new THREE.Vector3(0,3,0)),'🔥','#ff6600');
+        }
+        humanShielding=false;
+      } else if(keys['KeyB']&&!legendSwordTaken&&!dialogOpen){
+        humanShielding=true;
+      } else {
+        humanShielding=false;
+      }
+      // Shield: reduce incoming damage
+      if(humanShielding){
+        floatWorld(humanMesh.position.clone().add(new THREE.Vector3(0,4,0)),'🛡','#88aaff');
+      }
 
       // Collect orb drops
       for(let i=orbDrops.length-1;i>=0;i--){
@@ -3331,12 +3367,15 @@ function update(ts){
           toggleHumanMode(); // remount
         }
       }
-      // Enemy attack on human
+      // Tick fire cooldown
+      if(humanFireCooldown>0)humanFireCooldown-=dt;
+      // Enemy attack on human (shield halves damage)
       if(dinvT<=0){
         for(const e of activeEnemies){
           if(!e.userData.alive)continue;
           if(humanMesh.position.distanceTo(e.position)<4){
-            humanHP-=e.userData.dmg*dt*2;dinvT=1.0;
+            const dmgMult=humanShielding?0.15:1;
+            humanHP-=e.userData.dmg*dt*2*dmgMult;dinvT=1.0;
             if(humanHP<=0&&!ddead){ddead=true;humanHP=0;endGame();}
           }
         }

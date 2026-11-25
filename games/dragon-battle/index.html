@@ -3337,7 +3337,16 @@ function update(ts){
             bondDragon.add(bondRider);
             rec.userData.npcDragon=bondDragon;
           }
-          rec.userData.npcText='Bonded! My dragon and I are ready. Waiting here with the others for Blane\'s signal!';
+          const dtDef2=rec.userData.dtDef||selectableDT[0];
+          rec.userData.npcText='Bonded! My '+dtDef2.name+' dragon and I are ready. Waiting for Blane\'s signal!';
+          if(!rec.userData.choices||rec.userData.choices.length===0){
+            rec.userData.choices=[
+              {q:'How does it feel to bond?',a:'Like the dragon is part of me now. I can feel its heartbeat. We breathe together. Nothing could break this bond.'},
+              {q:'Are you ready to fight?',a:'More than ready. My '+dtDef2.name+' dragon has been waiting for this. We will fight until the Emperor falls.'},
+              {q:'What is your dragon like?',a:'Fierce and loyal. A '+dtDef2.name+' dragon — '+dtDef2.desc+'. I could not have asked for a better partner.'},
+              {q:'Are you afraid?',a:'A little. But Blane says fear is just courage that has not found its wings yet. When the horn sounds, I will be ready.'},
+            ];
+          }
           dragonArmy.push({mesh:rec,slot,staging:false,stagingPos:bs});
           hatcheryDoneCount++;
           hatcheryQueue.shift();

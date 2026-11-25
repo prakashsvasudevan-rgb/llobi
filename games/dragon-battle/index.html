@@ -238,11 +238,15 @@ const DT=[
    body:0x1a1a00,bodyL:0x888800,bodyD:0x0a0a00,belly:0xffff44,
    wingD:0x0a0a00,wingL:0x555500,horn:0xffff00,eye:0xffee00,eyeC:'#ffee00',
    breath:[0xffff88,0xffdd00,0xaa8800],speed:24,hp:145,fuel:90,rfuel:1.6,dmg:6,pts:1},
+  {id:'sun',name:'SUN',emoji:'☀️',desc:'Solar flare blinds & burns',
+   body:0xffaa00,bodyL:0xffdd44,bodyD:0xdd7700,belly:0xffffcc,
+   wingD:0xdd8800,wingL:0xffcc44,horn:0xffffff,eye:0xffee00,eyeC:'#ffee00',
+   breath:[0xffff88,0xffdd00,0xff8800],speed:26,hp:155,fuel:100,rfuel:1.8,dmg:9,pts:1},
 ];
 // Player-selectable dragon ids (shown on select screen)
 const PLAYER_DT_IDS=['fire','ice','earth','air','nature','soul'];
 // Rider army dragon pool (broader selection)
-const RIDER_DT_IDS=['fire','soul','nature','air','lava','water','ice','smoke','bone','metal','earth','glass','thunder'];
+const RIDER_DT_IDS=['fire','soul','nature','air','lava','water','ice','smoke','bone','metal','earth','glass','thunder','sun'];
 
 // ── Three.js setup ────────────────────────────────────────────────────────────
 const canvas=document.getElementById('c3d');
@@ -959,7 +963,7 @@ function getBreathHead(){
   head.add(dragonMesh.position);
   return head;
 }
-function getBreathFwd(spread=0.08){
+function getBreathFwd(spread=0.04){
   const fwd=new THREE.Vector3((Math.random()-.5)*spread,(Math.random()-.5)*spread*0.8,1);
   fwd.applyQuaternion(dragonMesh.quaternion).normalize();
   return fwd;
@@ -978,7 +982,7 @@ function spawnFire(){
   if(id==='fire'){
     for(let k=0;k<3*fc;k++){
       if(fireArr.length>=FIRE_MAX)break;
-      const spread=isUltra?0.35:0.12;
+      const spread=isUltra?0.35:0.06;
       const fwd=getBreathFwd(spread);
       const p={p:head.clone(),v:fwd.multiplyScalar(26+Math.random()*14),life:1,decay:.022+Math.random()*.015,size:(isUltra?7:4)+Math.random()*3};
       if(isHoming&&homTarget)p.hom=homTarget;
@@ -1046,6 +1050,15 @@ function spawnFire(){
       if(isHoming&&homTarget)p.hom=homTarget;
       fireArr.push(p);
     }
+  } else if(id==='sun'){
+    // Solar beam — fast golden ray + burn
+    for(let k=0;k<fc;k++){
+      if(fireArr.length>=FIRE_MAX)break;
+      const fwd=getBreathFwd(isUltra?0.25:0.06);
+      const p={p:head.clone(),v:fwd.multiplyScalar(42+Math.random()*12),life:1,decay:.03+Math.random()*.015,isSun:true};
+      if(isHoming&&homTarget)p.hom=homTarget;
+      fireArr.push(p);
+    }
   } else {
     for(let k=0;k<fc;k++){
       const fwd=getBreathFwd(0.25);
@@ -1087,8 +1100,10 @@ function updateFireParticles(dt){
     for(const e of activeEnemies){
       if(!e.userData.alive)continue;
       if(f.p.distanceTo(e.position)<hitR){
-        const dmg=f.isGlass?111:f.isThunder?upgradedDmg():upgradedDmg();
+        const dmg=f.isGlass?111:f.isSun?upgradedDmg()*1.4:f.isThunder?upgradedDmg():upgradedDmg();
         hitEnemy(e,dmg);
+        // Sun: burn DoT
+        if(f.isSun){burnMap.set(e,(burnMap.get(e)||0)+3);}
         // Thunder: stun nearby enemies in 100u radius
         if(f.isThunder){
           for(const e2 of activeEnemies){if(!e2.userData.alive)continue;
@@ -1130,8 +1145,8 @@ function updateFireParticles(dt){
     if(f.isBoulder)continue;
     fPos[pIdx*3]=f.p.x;fPos[pIdx*3+1]=f.p.y;fPos[pIdx*3+2]=f.p.z;
     const t=f.life,b=dtype.breath;
-    const c0=f.isGlass?(t>.5?0xeeffff:0xaaddff):f.isThunder?(t>.5?0xffff88:0xffdd00):t>.6?b[0]:t>.3?b[1]:b[2];
-    const alpha=t*(f.isPoison?0.6:f.isGlass?0.95:f.isThunder?0.85:f.size>5?0.5:0.8);
+    const c0=f.isGlass?(t>.5?0xeeffff:0xaaddff):f.isThunder?(t>.5?0xffff88:0xffdd00):f.isSun?(t>.5?0xffffff:0xffdd44):t>.6?b[0]:t>.3?b[1]:b[2];
+    const alpha=t*(f.isPoison?0.6:f.isGlass?0.95:f.isThunder?0.85:f.isSun?0.9:f.size>5?0.5:0.8);
     fCol[pIdx*3]=((c0>>16)&255)/255*alpha;
     fCol[pIdx*3+1]=((c0>>8)&255)/255*alpha;
     fCol[pIdx*3+2]=(c0&255)/255*alpha;
@@ -1472,7 +1487,7 @@ function makeEnemy3d(type){
 // ── Dragon Mountain (fixed at 0,1000) ─────────────────────────────────────────
 const DM_X=100,DM_Z=1000; // Dragon Mountain world position
 const VOL_X=3000,VOL_Z=3000; // Volcano world position
-const MTN_DRAGON_TYPES=['fire','ice','earth','air','nature','soul','lava','water','smoke','lightning','glass','thunder'];
+const MTN_DRAGON_TYPES=['fire','ice','earth','air','nature','soul','lava','water','smoke','lightning','glass','thunder','sun'];
 const RECRUIT_LINES=[
   ['Rider Kael','My storm-blue dragon and I are ready to fight for you! [R] RECRUIT'],
   ['Rider Yara','I ride the earth dragon — slow but unstoppable. [R] RECRUIT'],
@@ -1727,8 +1742,8 @@ function spawnDragonMountain(){
     scene.add(dr);objects.push(dr);friendlyNPCs.push(dr);
   }
 
-  // ── LUMEN — Soul dragon rider, patrols base and fights hunters ───────────────
-  const lumenDtDef=DT.find(d=>d.id==='soul');
+  // ── LUMEN — Sun dragon rider, patrols base and fights hunters ────────────────
+  const lumenDtDef=DT.find(d=>d.id==='sun');
   function makeLumenRider(){
     const grp=new THREE.Group();
     const ld=buildDragonMesh(lumenDtDef);ld.scale.set(0.85,0.85,0.85);
@@ -1741,10 +1756,10 @@ function spawnDragonMountain(){
   }
   const lumenGrp=makeLumenRider();
   lumenGrp.userData.npcName='Lumen';
-  lumenGrp.userData.npcText='I am Lumen, Soul Rider. My team and I defend Dragon Mountain from every hunter that dares approach. Stand with us!';
+  lumenGrp.userData.npcText='I am Lumen, Sun Rider. My Sun dragon Corona and I lead the defense of Dragon Mountain. The hunters fear our solar flame!';
   lumenGrp.userData.isLumen=true;
   lumenGrp.userData.choices=[
-    {q:'How do you fight the hunters?',a:'Soul dragons fire beams that pierce armour. We circle the base at all times. No hunter has ever reached the cave entrance on my watch.'},
+    {q:'How do you fight the hunters?',a:'Sun dragons fire solar beams that blind and burn. We circle the base at all times. No hunter has ever reached the cave entrance on my watch.'},
     {q:'Can I join your patrol?',a:'You already belong here, rider. When you are ready, ride alongside us. The more dragons in the air, the safer the mountain.'},
     {q:'Who is the leader of the hunters?',a:'The Emperor commands them all from the Volcano. The hunters are his eyes on the ground. Defeat him and they scatter.'},
   ];
@@ -1777,6 +1792,29 @@ function spawnDragonMountain(){
       groundY(DM_X,DM_Z)+3,
       DM_Z+Math.sin(ltGrp.userData.patrolAngle)*ltGrp.userData.patrolR);
     scene.add(ltGrp);objects.push(ltGrp);friendlyNPCs.push(ltGrp);
+  }
+
+  // ── SOULCAT — Soul dragon rider NPC at Dragon Mountain ───────────────────────
+  {
+    const scDtDef=DT.find(d=>d.id==='soul');
+    const scGrp=new THREE.Group();
+    const scd=buildDragonMesh(scDtDef);scd.scale.set(0.8,0.8,0.8);
+    scGrp.add(scd);
+    const scr=buildRiderOnDragon(scDtDef);scd.add(scr);
+    scGrp.userData.lwp=scd.userData.lwp;scGrp.userData.rwp=scd.userData.rwp;
+    scGrp.userData.npcDragon=scd;
+    scGrp.userData.npcName='Soulcat';
+    scGrp.userData.npcText='I am Soulcat, Soul Rider. My dragon and I sense the emotions of every creature on this mountain. The hunters feel dread before they even see us.';
+    scGrp.userData.choices=[
+      {q:'What is a Soul dragon?',a:'Soul dragons tap into living energy. We can drain the will from enemies and give strength to allies. Few can withstand our gaze.'},
+      {q:'Can you help me fight?',a:'I already walk the dream paths around the mountain. When hunters come, I move to intercept. You will see me when you need me most.'},
+      {q:'What do you know about the Emperor?',a:'The Emperor fears soul power above all else. His hunters carry talismans against it. Shatter those talismans and his grip weakens.'},
+    ];
+    scGrp.userData.patrolAngle=Math.PI*0.75;
+    scGrp.userData.patrolR=42;
+    scGrp.userData.npcAtkT=3;
+    scGrp.position.set(DM_X+Math.cos(Math.PI*0.75)*42,groundY(DM_X,DM_Z)+3,DM_Z+Math.sin(Math.PI*0.75)*42);
+    scene.add(scGrp);objects.push(scGrp);friendlyNPCs.push(scGrp);
   }
 
   // Variety of dragon types roaming around the peak
@@ -2045,7 +2083,7 @@ function floatWorld(worldPos,text,col){
 let gs='select',score=0,best=0,kills=0,frame=0;
 let dhp=0,dmaxHp=0,dfuel=0,dmaxFuel=0,dinvT=0,ddead=false,ddeathT=0;
 // Dragon abilities
-let abilityCooldown={attack:0,heal:0,ice:0,fire:0,soul:0,earth:0};
+let abilityCooldown={attack:0,heal:0,ice:0,fire:0,soul:0,earth:0,bite:0};
 let soulShieldHP=0; // bonus shield HP
 let earthInvT=0;    // invincibility timer
 let burnMap=new Map();  // enemy→burnT
@@ -2312,6 +2350,104 @@ document.addEventListener('keydown',e=>{
         }
       }
     }
+      // X = Dragon Bite / Type-specific melee/special
+      if(e.code==='KeyX'&&!isLanded&&!isHuman){
+        if(abilityCooldown.bite<=0){
+          abilityCooldown.bite=6;
+          const ref3=dragonMesh.position.clone();
+          const biteR=20; // melee range
+          let hit=0;
+          // Find enemies in bite range
+          const closeEnemies=activeEnemies.filter(en=>en.userData.alive&&dragonMesh.position.distanceTo(en.position)<biteR);
+          if(dtype.id==='lightning'){
+            // Chain lightning — hits up to 5 enemies, jumps between them
+            abilityCooldown.bite=8;
+            let chain=closeEnemies.slice(0,5);
+            if(chain.length===0){for(const en of activeEnemies){if(!en.userData.alive)continue;if(dragonMesh.position.distanceTo(en.position)<60){chain.push(en);if(chain.length>=3)break;}}}
+            for(const en of chain){spawnBeamFX(ref3,en.position.clone(),0xeeeeff);hitEnemy(en,dtype.dmg*2);}
+            spawnAbilityCloud(ref3,0xddaaff,20,0.8);
+          } else if(dtype.id==='fire'){
+            // Fire bite — burns target
+            for(const en of closeEnemies){hitEnemy(en,dtype.dmg*2.5);burnMap.set(en,(burnMap.get(en)||0)+5);if(++hit>=2)break;}
+            spawnAbilityCloud(ref3,0xff5500,18,0.7);
+          } else if(dtype.id==='ice'){
+            // Frost bite — freezes target
+            for(const en of closeEnemies){hitEnemy(en,dtype.dmg*1.8);freezeMap.set(en,(freezeMap.get(en)||0)+6);if(++hit>=2)break;}
+            spawnAbilityCloud(ref3,0x88ddff,18,0.7);
+          } else if(dtype.id==='earth'){
+            // Earth slam — shockwave hits all nearby
+            abilityCooldown.bite=10;
+            for(const en of activeEnemies){if(!en.userData.alive)continue;const d=dragonMesh.position.distanceTo(en.position);if(d<50){hitEnemy(en,dtype.dmg*(1-d/60)*3);}}
+            spawnAbilityCloud(ref3,0x88cc44,36,1.4);
+          } else if(dtype.id==='air'){
+            // Tornado spin — flings nearby enemies
+            for(const en of activeEnemies){if(!en.userData.alive)continue;const d=dragonMesh.position.distanceTo(en.position);if(d<40){hitEnemy(en,dtype.dmg*2);en.userData.si=(en.userData.si||3)*2;}}
+            spawnAbilityCloud(ref3,0xaaffee,28,1.0);
+          } else if(dtype.id==='nature'){
+            // Vine grab — slows all nearby
+            for(const en of activeEnemies){if(!en.userData.alive)continue;const d=dragonMesh.position.distanceTo(en.position);if(d<45){hitEnemy(en,dtype.dmg*1.5);en.userData.si=(en.userData.si||3)*3;if(++hit>=4)break;}}
+            spawnAbilityCloud(ref3,0x44ff44,24,0.9);
+          } else if(dtype.id==='soul'){
+            // Soul drain — steal HP from nearest enemy
+            abilityCooldown.bite=10;
+            let nearest=null,nd=200;
+            for(const en of activeEnemies){if(!en.userData.alive)continue;const d=dragonMesh.position.distanceTo(en.position);if(d<nd){nd=d;nearest=en;}}
+            if(nearest){const steal=dtype.dmg*4;hitEnemy(nearest,steal);dhp=Math.min(dmaxHp,dhp+steal*0.5);spawnBeamFX(nearest.position.clone(),ref3,0x8888ff);}
+            spawnAbilityCloud(ref3,0x8888ff,20,0.8);
+          } else if(dtype.id==='lava'){
+            // Lava spit — AoE burn splash
+            for(const en of activeEnemies){if(!en.userData.alive)continue;const d=dragonMesh.position.distanceTo(en.position);if(d<55){hitEnemy(en,dtype.dmg*2);burnMap.set(en,(burnMap.get(en)||0)+6);if(++hit>=4)break;}}
+            spawnAbilityCloud(ref3,0xff4400,30,1.1);
+          } else if(dtype.id==='water'){
+            // Water whip — hits all in a line
+            const fwd3=new THREE.Vector3(0,0,1).applyEuler(dragonMesh.rotation);
+            for(const en of activeEnemies){if(!en.userData.alive)continue;const d=dragonMesh.position.distanceTo(en.position);if(d<70){const dot=fwd3.dot(en.position.clone().sub(dragonMesh.position).normalize());if(dot>0.5){hitEnemy(en,dtype.dmg*2.5);if(++hit>=4)break;}}}
+            spawnAbilityCloud(ref3,0x4499ff,22,0.9);
+          } else if(dtype.id==='smoke'){
+            // Smoke cloud — blinds/slows all nearby
+            for(const en of activeEnemies){if(!en.userData.alive)continue;const d=dragonMesh.position.distanceTo(en.position);if(d<60){en.userData.si=(en.userData.si||3)*2.5;if(++hit>=6)break;}}
+            spawnAbilityCloud(ref3,0x888888,40,1.5);
+          } else if(dtype.id==='acid'){
+            // Acid spit — melts armor (heavy DoT)
+            for(const en of closeEnemies){hitEnemy(en,dtype.dmg*2);burnMap.set(en,(burnMap.get(en)||0)+8);if(++hit>=2)break;}
+            spawnAbilityCloud(ref3,0xaaff44,20,0.7);
+          } else if(dtype.id==='bone'){
+            // Bone crush — massive single-target damage
+            abilityCooldown.bite=10;
+            const target=closeEnemies[0]||(activeEnemies.find(en=>en.userData.alive&&dragonMesh.position.distanceTo(en.position)<60));
+            if(target){hitEnemy(target,dtype.dmg*8);spawnBeamFX(ref3,target.position.clone(),0xddddcc);}
+            spawnAbilityCloud(ref3,0xddddcc,16,0.6);
+          } else if(dtype.id==='metal'){
+            // Metal shred — hits all nearby, heavy armor damage
+            abilityCooldown.bite=10;
+            for(const en of activeEnemies){if(!en.userData.alive)continue;const d=dragonMesh.position.distanceTo(en.position);if(d<45){hitEnemy(en,dtype.dmg*3);if(++hit>=5)break;}}
+            spawnAbilityCloud(ref3,0xaabbcc,26,1.0);
+          } else if(dtype.id==='glass'){
+            // Glass shatter — 111 dmg to nearest, shards to others
+            abilityCooldown.bite=10;
+            const target=closeEnemies[0];
+            if(target){hitEnemy(target,111);}
+            for(const en of activeEnemies){if(!en.userData.alive||en===target)continue;if(dragonMesh.position.distanceTo(en.position)<50){hitEnemy(en,30);if(++hit>=4)break;}}
+            spawnAbilityCloud(ref3,0xeeffff,22,0.8);
+          } else if(dtype.id==='thunder'){
+            // Thunder stomp — stuns all nearby
+            abilityCooldown.bite=12;
+            for(const en of activeEnemies){if(!en.userData.alive)continue;const d=dragonMesh.position.distanceTo(en.position);if(d<70){hitEnemy(en,dtype.dmg*2);en.userData.stunT=(en.userData.stunT||0)+3;}}
+            spawnAbilityCloud(ref3,0xffff88,34,1.3);
+          } else if(dtype.id==='sun'){
+            // Solar flare — blinds and burns all in wide cone
+            abilityCooldown.bite=12;
+            const fwd3=new THREE.Vector3(0,0,1).applyEuler(dragonMesh.rotation);
+            for(const en of activeEnemies){if(!en.userData.alive)continue;const d=dragonMesh.position.distanceTo(en.position);if(d<90){const dot=fwd3.dot(en.position.clone().sub(dragonMesh.position).normalize());if(dot>0.3){hitEnemy(en,dtype.dmg*2);burnMap.set(en,(burnMap.get(en)||0)+5);en.userData.si=(en.userData.si||3)*1.8;if(++hit>=6)break;}}}
+            spawnAbilityCloud(ref3,0xffffff,44,1.6);spawnAbilityCloud(ref3,0xffdd44,28,1.0);
+          } else {
+            // Generic bite
+            for(const en of closeEnemies){hitEnemy(en,dtype.dmg*2);if(++hit>=2)break;}
+            spawnAbilityCloud(ref3,0xffffff,16,0.6);
+          }
+        }
+      }
+    }
     if(e.code==='KeyR'&&nearNPC&&nearNPC.userData.isRecruitable&&!nearNPC.userData.recruited&&dragonArmy.length<MAX_ARMY){
       nearNPC.userData.recruited=true;
       nearNPC.userData.npcText='Blane is coming to take me to the Hatchery. I will meet you there!';
@@ -2550,7 +2686,7 @@ function startGame(){
   dtype=DT[selectedType];
   gs='playing';score=0;kills=0;frame=0;
   ddead=false;ddeathT=0;dinvT=0;fireArr=[];projectiles.forEach(p=>scene.remove(p));projectiles=[];
-  abilityCooldown={attack:0,heal:0,ice:0,fire:0,soul:0,earth:0};soulShieldHP=0;earthInvT=0;burnMap=new Map();freezeMap=new Map();
+  abilityCooldown={attack:0,heal:0,ice:0,fire:0,soul:0,earth:0,bite:0};soulShieldHP=0;earthInvT=0;burnMap=new Map();freezeMap=new Map();
   abilityFX.forEach(fx=>scene.remove(fx.group));abilityFX=[];
   activeEnemies=[];activeBuildings=[];friendlyNPCs=[];roamDragons=[];
   orbDrops.forEach(o=>scene.remove(o.mesh));orbDrops=[];
@@ -2670,7 +2806,7 @@ function update(ts){
       dragonMesh.rotation.set(dPitch,dYaw,dRoll,'YXZ');
       const fwd=new THREE.Vector3(0,0,1);
       fwd.applyEuler(dragonMesh.rotation);
-      dragonMesh.position.addScaledVector(fwd,dtype.speed*1.6*dt);
+      dragonMesh.position.addScaledVector(fwd,dtype.speed*2.2*dt);
       // Land if descend to ground
       if(dragonMesh.position.y<=landThreshold&&dPitch>=0.1){
         isLanded=true;landedY=landThreshold;
@@ -3366,8 +3502,10 @@ function updateHUD(){
   if(!isHuman&&gs==='playing'){
     const id=dtype.id;
     let hints=[];
-    const fName={fire:'Fire Cloud',nature:'Poison Cloud',ice:'Ice Shards',soul:'Soul Beam',earth:'Boulder',air:'Gust Burst',lightning:'Storm Cloud'}[id]||'Special';
+    const fName={fire:'Fire Cloud',nature:'Poison Cloud',ice:'Ice Shards',soul:'Soul Beam',earth:'Boulder',air:'Gust Burst',lightning:'Storm Cloud',sun:'Solar Flare'}[id]||'Special';
     hints.push('[F] '+fName+(abilityCooldown.attack>0?' '+~~abilityCooldown.attack+'s':'✓'));
+    const xName={lightning:'Chain Bite',fire:'Fire Bite',ice:'Frost Bite',earth:'Slam',air:'Tornado',nature:'Vine Grab',soul:'Soul Drain',lava:'Lava Spit',water:'Water Whip',smoke:'Smoke Cloud',acid:'Acid Spit',bone:'Bone Crush',metal:'Metal Shred',glass:'Glass Shatter',thunder:'Thunder Stomp',sun:'Solar Flare'}[id]||'Bite';
+    hints.push('[X] '+xName+(abilityCooldown.bite>0?' '+~~abilityCooldown.bite+'s':'✓'));
     if(id==='lightning')hints.push('[G] Bolt-kill'+(abilityCooldown.soul>0?' '+~~abilityCooldown.soul+'s':'✓'));
     if(id==='nature')hints.push('[H] Heal'+(abilityCooldown.heal>0?' '+~~abilityCooldown.heal+'s':'✓'));
     if(id==='ice')hints.push('[V] Freeze'+(abilityCooldown.ice>0?' '+~~abilityCooldown.ice+'s':'✓'));

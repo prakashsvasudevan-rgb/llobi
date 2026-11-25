@@ -63,11 +63,11 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
 #minimap canvas{width:100%;height:100%;display:block}
 
 /* Dialog */
-#dialog{position:absolute;bottom:60px;left:50%;transform:translateX(-50%) translateZ(0);width:92%;max-width:460px;background:rgba(0,0,0,.88);border:2px solid #FFD700;padding:12px 14px;display:none;z-index:7;pointer-events:all}
+#dialog{position:absolute;bottom:60px;left:50%;transform:translateX(-50%) translateZ(0);width:92%;max-width:460px;max-height:65vh;overflow-y:auto;background:rgba(0,0,0,.92);border:2px solid #FFD700;padding:12px 14px;display:none;z-index:7;pointer-events:all}
 #dialog-name{font-size:.45rem;color:#FFD700;margin-bottom:6px}
-#dialog-text{font-size:.38rem;color:#eee;line-height:1.9;margin-bottom:8px}
+#dialog-text{font-size:.38rem;color:#eee;line-height:1.9;margin-bottom:10px;white-space:pre-wrap}
 #dialog-close{font-size:.35rem;color:#888;text-align:right}
-.d-choice{font-size:.35rem;color:#88ddff;background:rgba(0,80,120,.35);border:1px solid #446688;padding:5px 10px;cursor:pointer;text-align:left}
+.d-choice{display:block;width:100%;font-size:.35rem;color:#88ddff;background:rgba(0,80,120,.35);border:1px solid #446688;padding:6px 10px;cursor:pointer;text-align:left;margin-bottom:3px}
 .d-choice:hover{background:rgba(0,120,180,.5);color:#fff}
 
 /* Human mode badge */
@@ -2608,7 +2608,9 @@ function openDialog(npc){
       const btn=document.createElement('button');btn.className='d-choice';
       btn.textContent='▶ '+c.q;
       btn.onclick=()=>{
-        document.getElementById('dialog-text').textContent=c.a;
+        const dtEl=document.getElementById('dialog-text');
+        dtEl.innerHTML='<span style="color:#ffdd88;font-size:.32rem">▶ '+c.q+'</span><br><br>'+c.a;
+        dtEl.scrollIntoView({behavior:'smooth',block:'nearest'});
         // Show "back" button to return to questions
         choicesEl.innerHTML='';
         const back=document.createElement('button');back.className='d-choice';

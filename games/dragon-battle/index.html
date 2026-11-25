@@ -1318,6 +1318,7 @@ function updateProjectiles(dt){
         else if(earthInvT>0){/* earth invincibility */}
         else{
           let dmgLeft=p.userData.dmg;
+          if(humanShielding)dmgLeft*=0.15;
           if(soulShieldHP>0){const absorbed=Math.min(soulShieldHP,dmgLeft);soulShieldHP-=absorbed;dmgLeft-=absorbed;if(soulShieldHP<=0)floatWorld(dragonMesh.position,'🔮 SHIELD BROKEN!','#ff88ff');}
           if(dmgLeft>0){dhp-=dmgLeft;if(dhp<=0&&!ddead){ddead=true;dhp=0;}}
         }
@@ -3126,6 +3127,12 @@ function update(ts){
       }
     }
 
+    // ── SHIELD (hold B while riding) ──
+    if(!isHuman){
+      humanShielding=keys['KeyB']&&!dialogOpen;
+      if(humanShielding)floatWorld(dragonMesh.position.clone().add(new THREE.Vector3(0,6,0)),'🛡','#88aaff');
+    }
+
     // ── FIRE (hold Space = continuous) ──
     if(fireCooldown>0)fireCooldown-=dt;
     if(doFire&&dfuel>0&&!isLanded){
@@ -3349,7 +3356,7 @@ function update(ts){
       } else {
         humanShielding=false;
       }
-      // Shield: reduce incoming damage
+      // Shield visual
       if(humanShielding){
         floatWorld(humanMesh.position.clone().add(new THREE.Vector3(0,4,0)),'🛡','#88aaff');
       }

@@ -84,6 +84,20 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
 #worldmap-hint{font-size:.32rem;color:#888;margin-top:8px}
 #worldmap-legend{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:6px;font-size:.3rem;color:#aaa}
 #worldmap-legend span{display:flex;align-items:center;gap:4px}
+
+/* Cutscene */
+#cutscene{position:fixed;inset:0;background:#000;z-index:30;display:none;flex-direction:column;align-items:center;justify-content:flex-end;overflow:hidden}
+#cutscene.show{display:flex}
+#cs-bg{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 60%,#1a0a00 0%,#000 70%);pointer-events:none}
+#cs-panel{position:relative;width:100%;max-width:680px;padding:18px 22px 24px;background:rgba(0,0,0,.82);border-top:2px solid #8B6914;z-index:2;min-height:160px}
+#cs-speaker{font-size:.5rem;color:#FFD700;letter-spacing:2px;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+#cs-speaker-icon{font-size:1.2rem}
+#cs-text{font-size:.42rem;color:#e8dcc8;line-height:2.0;min-height:60px}
+#cs-progress{font-size:.3rem;color:#555;text-align:right;margin-top:10px}
+#cs-hint{font-size:.32rem;color:#666;text-align:center;margin-top:6px;animation:csBlink 1.4s ease infinite}
+@keyframes csBlink{0%,100%{opacity:.4}50%{opacity:1}}
+#cs-art{position:absolute;top:0;left:50%;transform:translateX(-50%);width:100%;max-width:680px;height:calc(100% - 160px);display:flex;align-items:center;justify-content:center;pointer-events:none}
+#cs-art-text{font-size:4rem;opacity:.18;user-select:none;text-align:center;line-height:1.3}
 </style>
 </head>
 <body>
@@ -170,6 +184,18 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
       <div class="mc-btn" id="mc-right">▶</div>
     </div>
     <div class="mc-fire" id="mc-fire">🔥</div>
+  </div>
+</div>
+
+<!-- Cutscene overlay -->
+<div id="cutscene">
+  <div id="cs-bg"></div>
+  <div id="cs-art"><div id="cs-art-text"></div></div>
+  <div id="cs-panel">
+    <div id="cs-speaker"><span id="cs-speaker-icon">📖</span><span id="cs-speaker-name">ELDER RUNA</span></div>
+    <div id="cs-text"></div>
+    <div id="cs-progress"></div>
+    <div id="cs-hint">[ SPACE / CLICK to continue ]</div>
   </div>
 </div>
 
@@ -2607,10 +2633,12 @@ function openDialog(npc){
       if(blaneQuest==='inactive'){
         floatWorld(npc.position,'SLAY 3 SHADOW DRAGONS FIRST!','#ff8844');
       } else if(blaneQuest==='unlocked'){
-        // Accept the quest
-        blaneQuest='active';
-        floatWorld(npc.position,'⚔ QUEST: DEFEAT THE EMPEROR!','#ffdd44');
+        // Accept the quest — show cutscene first, then set active
         closeDialog();document.removeEventListener('keydown',onKey);
+        startCutscene(()=>{
+          blaneQuest='active';
+          floatWorld(npc.position,'⚔ QUEST: DEFEAT THE EMPEROR!','#ffdd44');
+        });
       } else if(blaneQuest==='active'&&dragonArmy.length>0){
         // Reassign team dragons
         const rDT=DT.filter(d=>RIDER_DT_IDS.includes(d.id));
@@ -2681,6 +2709,44 @@ function initMobile(){
   const f=document.getElementById('mc-fire');
   f.addEventListener('touchstart',e=>{e.preventDefault();mk.fire=true;if(gs==='select')startGame();},{passive:false});
   f.addEventListener('touchend',e=>{e.preventDefault();mk.fire=false;},{passive:false});
+}
+
+// ── CUTSCENE ──────────────────────────────────────────────────────────────────
+const CS_SLIDES=[
+  {art:'👑',text:'Once upon a time there was a king. He lived far to the north and was one of the richest kings in the world.'},
+  {art:'🐉',text:'But there was one thing he could never have — a dragon. Back then, dragons were bonded only by the true of heart. No amount of gold could buy that bond.'},
+  {art:'💀',text:'Long before people learned to tame dragons, he hunted them for power. He killed the King of Bone and Gas — the second-last of his kind.'},
+  {art:'✨',text:'Kings once slaughtered these ancient dragons for their scales, which held deep magical power. But their kind dwindled, and so did the magic he craved.'},
+  {art:'🦴',text:'The Bone dragons survived — they were already gone from his reach. So he turned his hunger elsewhere.'},
+  {art:'🌑',text:'He killed the King of Acid and Shadow, then used that king\'s own daughter to seize control of the shadow and acid dragons. Village by village, he took over the land.'},
+  {art:'⚔️',text:'He employed hunters across every road and hired mages for a darker purpose — to forge golems of stone and steel that would never question his rule.'},
+  {art:'💀👑',text:'Then he found the brother of the King Dragon of Death. He struck him down, took an Ultra Orb from the volcano\'s core, and fused with it. He became immortal. He is the Emperor now. And he will not stop.'},
+];
+let csSlide=0,csActive=false,csOnDone=null;
+function startCutscene(onDone){
+  csSlide=0;csActive=true;csOnDone=onDone||null;
+  const el=document.getElementById('cutscene');
+  el.classList.add('show');
+  showCsSlide();
+  const advance=()=>{if(!csActive)return;csSlide++;if(csSlide>=CS_SLIDES.length){endCutscene();}else{showCsSlide();}};
+  el._csAdvance=advance;
+  el.onclick=advance;
+  el._csKeyFn=e=>{if(e.code==='Space'||e.code==='Enter'){e.preventDefault();advance();}};
+  document.addEventListener('keydown',el._csKeyFn);
+}
+function showCsSlide(){
+  const s=CS_SLIDES[csSlide];
+  document.getElementById('cs-art-text').textContent=s.art;
+  document.getElementById('cs-text').textContent=s.text;
+  document.getElementById('cs-progress').textContent=(csSlide+1)+' / '+CS_SLIDES.length;
+}
+function endCutscene(){
+  csActive=false;
+  const el=document.getElementById('cutscene');
+  el.classList.remove('show');
+  el.onclick=null;
+  if(el._csKeyFn)document.removeEventListener('keydown',el._csKeyFn);
+  if(csOnDone)csOnDone();
 }
 
 // ── UI helpers ─────────────────────────────────────────────────────────────────

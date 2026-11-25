@@ -1991,6 +1991,85 @@ function spawnDragonMountain(){
   else zoneMap.get(key).push(...objects);
 }
 
+// ── Legend Castle — south stronghold holding the Legend Sword ────────────────
+let legendCastleSpawned=false;
+const LC_X=DM_X+80, LC_Z=DM_Z-900; // deep south
+function spawnLegendCastle(){
+  if(legendCastleSpawned)return;
+  legendCastleSpawned=true;
+  const lcY=groundY(LC_X,LC_Z);
+  function addLC(g,w,h,d,m,ox=0,oy=0,oz=0){
+    const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);
+    mesh.position.set(ox,oy+h/2,oz);g.add(mesh);
+  }
+  // Main keep — 2x bigger and darker
+  const g=new THREE.Group();
+  const wallMat=mat(0x1a0a0a,{flatShading:true});
+  const towerMat=mat(0x2a0505,{flatShading:true});
+  const battleMat=mat(0x110000,{flatShading:true});
+  addLC(g,24,18,20,wallMat);
+  addLC(g,16,16,16,mat(0x2a0a0a,{flatShading:true}),0,1,0);
+  // 4 large towers
+  for(const[tx,tz] of [[-14,-11],[14,-11],[-14,11],[14,11]]){
+    addLC(g,6,26,6,towerMat,tx,2,tz);
+    addLC(g,7,2,7,battleMat,tx,27,tz);
+  }
+  // Extra corner spires
+  for(const[tx,tz] of [[-20,-17],[20,-17],[-20,17],[20,17]]){
+    addLC(g,4,20,4,towerMat,tx,0,tz);
+    const spire=new THREE.Mesh(new THREE.ConeGeometry(3.5,6,4),mat(0x440000,{flatShading:true}));
+    spire.position.set(tx,22,tz);spire.rotation.y=Math.PI/4;g.add(spire);
+  }
+  // Gate
+  addLC(g,5,8,1,mat(0x000000),0,-1,10.6);
+  addLC(g,5,4,1,mat(0x660000),0,7,10.6);
+  // Blood-red flag
+  addLC(g,0.4,16,0.4,mat(0x442222),0,26,0);
+  addLC(g,4,3,0.2,mat(0xaa0000),2.2,41,0);
+  // Dark glow pillar around the sword altar
+  const darkGlowMat=new THREE.MeshBasicMaterial({color:0xff2200,transparent:true,opacity:0.18,blending:THREE.AdditiveBlending});
+  const pillarGlow=new THREE.Mesh(new THREE.CylinderGeometry(2,2,30,12),darkGlowMat);
+  pillarGlow.position.set(0,22,0);g.add(pillarGlow);
+
+  g.position.set(LC_X,lcY,LC_Z);
+  g.userData={type:'castle',alive:true,hp:800,maxHp:800,radius:28,isLegend:true};
+  scene.add(g);activeBuildings.push(g);
+
+  // Altar inside the keep (on top)
+  const altarY=lcY+18;
+  const altarMat=mat(0x332222,{flatShading:true});
+  const altarBase=new THREE.Mesh(new THREE.BoxGeometry(4,1.5,4),altarMat);
+  altarBase.position.set(LC_X,altarY+0.75,LC_Z);scene.add(altarBase);
+  const altarTop=new THREE.Mesh(new THREE.BoxGeometry(3.2,0.5,3.2),mat(0x554433,{flatShading:true}));
+  altarTop.position.set(LC_X,altarY+1.75,LC_Z);scene.add(altarTop);
+
+  // Sword mesh
+  const swordGrp=new THREE.Group();
+  const bladeMat2=new THREE.MeshBasicMaterial({color:0xffffff});
+  const glowMat2=new THREE.MeshBasicMaterial({color:0xffee44,transparent:true,opacity:0.75,blending:THREE.AdditiveBlending});
+  const blade2=new THREE.Mesh(new THREE.BoxGeometry(0.3,3.4,0.15),bladeMat2);blade2.position.y=1.8;swordGrp.add(blade2);
+  const bladeGlow2=new THREE.Mesh(new THREE.BoxGeometry(0.55,3.8,0.35),glowMat2);bladeGlow2.position.y=1.8;swordGrp.add(bladeGlow2);
+  const guard2=new THREE.Mesh(new THREE.BoxGeometry(1.6,0.3,0.3),mat(0xddaa33,{flatShading:true}));guard2.position.y=0.15;swordGrp.add(guard2);
+  const hilt2=new THREE.Mesh(new THREE.BoxGeometry(0.24,1.2,0.24),mat(0x885522,{flatShading:true}));hilt2.position.y=-0.65;swordGrp.add(hilt2);
+  const pommel2=new THREE.Mesh(new THREE.SphereGeometry(0.3,6,6),mat(0xddaa33,{flatShading:true}));pommel2.position.y=-1.4;swordGrp.add(pommel2);
+  swordGrp.position.set(LC_X,altarY+2.2,LC_Z);
+  scene.add(swordGrp);
+  legendSwordMesh=swordGrp;
+  legendSwordTaken=false;
+
+  // Guard dragons around the legend castle — 6 elite hunters
+  for(let i=0;i<6;i++){
+    const ang=i/6*Math.PI*2;
+    const gx=LC_X+Math.cos(ang)*35, gz=LC_Z+Math.sin(ang)*35;
+    const hunter=new THREE.Group();
+    hunter.position.set(gx,lcY+8,gz);
+    const bodyMat=mat(0x440000,{flatShading:true});
+    const hBody=new THREE.Mesh(new THREE.BoxGeometry(3,2,5),bodyMat);hBody.position.y=1;hunter.add(hBody);
+    hunter.userData={alive:true,hp:400,maxHp:400,type:'dragon',si:1,atk:0,shootT:3,pts:300,dmg:35};
+    scene.add(hunter);activeEnemies.push(hunter);
+  }
+}
+
 // ── Volcano + King of Death Dragon (fixed at far edge) ───────────────────────
 function spawnVolcano(){
   if(volcanoSpawned)return;
@@ -2262,7 +2341,12 @@ function collectOrb(o){
     floatWorld(o.pos,'🐉 ULTRA ORB! '+atNames[upgrades.attack-1],'#ffdd00');
   }
 }
-function upgradedDmg(){return dtype.dmg*(1+upgrades.dmg*0.4);}
+const SWORD_TYPES={fire:'FLAME',nature:'LIFE',soul:'SPIRIT',ice:'FROST',earth:'STONE'};
+let legendSwordMesh=null,legendSwordTaken=false,legendSwordSpinT=0;
+function upgradedDmg(){
+  const base=dtype.dmg*(1+upgrades.dmg*0.4);
+  return legendSwordTaken&&SWORD_TYPES[dtype.id]?base*200:base;
+}
 // How many particles to spawn per fire call (attack upgrade)
 function fireCount(){return upgrades.attack>=3?6:upgrades.attack>=1?2:1;}
 // Nearest enemy for homing
@@ -2837,7 +2921,7 @@ function startGame(){
   orbDrops.forEach(o=>scene.remove(o.mesh));orbDrops=[];
   mageOrbs=0;shadowDust=0;upgrades={dmg:0,hp:0,speed:0,fuel:0,attack:0};
   dragonArmy.forEach(a=>scene.remove(a.mesh));dragonArmy=[];
-  dragonMtnSpawned=false;volcanoSpawned=false;blaneNPC=null;blaneWanderT=0;blaneWanderTarget=null;blaneTalkT=0;hatcheryQueue=[];hatcheryDoneCount=0;blaneLeadPhase='idle';dmPeakY=0;
+  dragonMtnSpawned=false;volcanoSpawned=false;legendCastleSpawned=false;blaneNPC=null;blaneWanderT=0;blaneWanderTarget=null;blaneTalkT=0;hatcheryQueue=[];hatcheryDoneCount=0;blaneLeadPhase='idle';dmPeakY=0;legendSwordTaken=false;legendSwordMesh=null;
   if(dmShieldMesh)scene.remove(dmShieldMesh);if(dmShieldRing)scene.remove(dmShieldRing);
   dmShieldMesh=null;dmShieldRing=null;dmShieldFlashT=0;
   blaneQuest='inactive';shadowKills=0;wildDragons=[];
@@ -2846,6 +2930,7 @@ function startGame(){
   setTimeout(()=>{if(gs==='playing')spawnDragonMountain();},100);
   // Spawn Volcano at edge (zone 15,15)
   setTimeout(()=>{if(gs==='playing')spawnVolcano();},200);
+  setTimeout(()=>{if(gs==='playing')spawnLegendCastle();},300);
   isHuman=false;humanHP=100;humanMaxHP=100;humanVY=0;armorLevel=0;mouseDX=0;mouseDY=0;nearNPC=null;dialogOpen=false;
   if(humanMesh){scene.remove(humanMesh);humanMesh=null;}
   document.getElementById('human-badge').style.display='none';
@@ -3669,6 +3754,27 @@ function update(ts){
       }
     }
 
+    // ── LEGEND SWORD PICKUP + SPIN ──────────────────────────────────────────
+    if(legendSwordMesh&&!legendSwordTaken){
+      legendSwordSpinT+=dt;
+      legendSwordMesh.rotation.y=legendSwordSpinT*1.4;
+      legendSwordMesh.position.y=(dmPeakY+6+1.4)+Math.sin(legendSwordSpinT*2)*0.3;
+      const sPos=isHuman&&humanMesh?humanMesh.position:dragonMesh.position;
+      const sDist=sPos.distanceTo(legendSwordMesh.position);
+      const hint=document.getElementById('interact-hint');
+      if(sDist<10&&SWORD_TYPES[dtype.id]){
+        hint.textContent='[ E ] Take the Legend Sword ('+SWORD_TYPES[dtype.id]+' POWER)';
+        hint.style.display='block';
+        if(keys['KeyE']&&!dialogOpen){
+          legendSwordTaken=true;
+          scene.remove(legendSwordMesh);
+          legendSwordMesh=null;
+          playHorn();
+          floatWorld(sPos,'⚔ LEGEND SWORD! '+dtype.name.toUpperCase()+' → '+SWORD_TYPES[dtype.id]+'  200x POWER!','#ffee00');
+        }
+      }
+    }
+
     updateHUD();
 
     if(dhp<=0&&!ddead){endGame();}
@@ -3687,7 +3793,8 @@ function update(ts){
 
 // ── HUD ───────────────────────────────────────────────────────────────────────
 function updateHUD(){
-  document.getElementById('type-badge').textContent=dtype.emoji+' '+(isHuman?'HUMAN':dtype.name);
+  const upgName=legendSwordTaken&&SWORD_TYPES[dtype.id]?'⚔'+SWORD_TYPES[dtype.id]:dtype.name;
+  document.getElementById('type-badge').textContent=dtype.emoji+' '+(isHuman?'HUMAN':upgName);
   document.getElementById('type-badge').style.color=isHuman?'#88ff44':dtype.eyeC;
   if(isHuman){
     document.getElementById('hp-fill').style.width=~~(100*Math.max(0,humanHP)/humanMaxHP)+'%';
@@ -3826,8 +3933,8 @@ function drawWorldMap(){
 
   // Buildings
   for(const b of activeBuildings){
-    const col=b.userData.safe?'#44ff44':b.userData.type==='castle'?'#ffdd00':'#ff8800';
-    const lbl=b.userData.type==='castle'?'STRONGHOLD':b.userData.safe?'SAFE':'VILLAGE';
+    const col=b.userData.safe?'#44ff44':b.userData.isLegend?'#ffffff':b.userData.type==='castle'?'#ffdd00':'#ff8800';
+    const lbl=b.userData.isLegend?'⚔LEGEND':b.userData.type==='castle'?'STRONGHOLD':b.userData.safe?'SAFE':'VILLAGE';
     dot(b.position.x,b.position.z,col,5,lbl);
   }
 

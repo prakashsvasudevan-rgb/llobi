@@ -1683,22 +1683,42 @@ function spawnDragonMountain(){
   stableKeeper.position.set(DM_X,peakY+1.5,DM_Z-5);
   scene.add(stableKeeper);objects.push(stableKeeper);friendlyNPCs.push(stableKeeper);
 
-  // 5 recruitable dragon riders on the peak (with visible mounts)
+  // 5 recruitable dragon riders waiting at the peak stables
+  const stableSlots=[
+    [DM_X-20,DM_Z-12],[DM_X-20,DM_Z-6],
+    [DM_X,   DM_Z-12],[DM_X,   DM_Z-6],
+    [DM_X+20,DM_Z-12],
+  ];
+  const riderChoices=[
+    [{q:'What is it like riding a dragon?',a:'There is nothing like it. The wind, the speed, the bond. You will feel it when you bond with yours.'},
+     {q:'How did you train your dragon?',a:'Patience and trust. A dragon senses fear. Stay calm and they will follow you anywhere.'}],
+    [{q:'Is Dragon Mountain safe?',a:'Safe as long as the Emperor stays at the Volcano. We patrol the skies every night to be sure.'},
+     {q:'What do you do at the stables?',a:'Care for our dragons. Brush scales, check wings, feed them. A healthy dragon is a fast dragon.'}],
+    [{q:'How long have you been a rider?',a:'Since I was twelve. Found a hatchling alone on the mountain. We grew up together.'},
+     {q:'What is the strongest dragon?',a:'Depends what you need. Earth for defence, Lightning for speed, Soul for magic. Mine is perfect for me.'}],
+    [{q:'Will you ride into battle with me?',a:'Recruit me and yes! I have been waiting for a leader worth following.'},
+     {q:'What do riders do between battles?',a:'Train, rest, care for our dragons. And a lot of waiting up here with a good view.'}],
+    [{q:'How do I get a stronger dragon?',a:'Tame a wild one on the mountain or earn a bond in the Hatchery. The stronger the bond, the more powerful you both become.'},
+     {q:'What is the Hatchery like?',a:'Ancient and warm. The eggs glow with the kind of magic you can feel in your chest. Unforgettable.'}],
+  ];
   for(let i=0;i<5;i++){
-    const angle=i/5*Math.PI*2;
     const dr=new THREE.Group();
-    // Random dragon type per rider (re-randomized each game)
     const dtDef=selectableDT[~~(Math.random()*selectableDT.length)];
     const riderDragon=buildDragonMesh(dtDef);
-    // Add a rider figure on its back
     const rFig=buildRiderOnDragon(dtDef);riderDragon.add(rFig);
     dr.add(riderDragon);
     const r=RECRUIT_LINES[i];
     const dragonName=dtDef.name+' dragon';
-    dr.userData={npcName:r[0],npcText:r[1]+' I ride a '+dragonName+'.',isRecruitable:true,recruited:false,dtDef};
-    const px=DM_X+Math.cos(angle)*18,pz=DM_Z+Math.sin(angle)*18;
-    dr.position.set(px,groundY(DM_X,DM_Z)+mh+3,pz);
-    dr.rotation.y=angle+Math.PI;
+    const sp=stableSlots[i];
+    dr.userData={npcName:r[0],npcText:r[1]+' I ride a '+dragonName+'. [R] RECRUIT',
+      isRecruitable:true,recruited:false,dtDef,
+      choices:riderChoices[i],
+      stablePos:new THREE.Vector3(sp[0],peakY+1.5,sp[1]),
+      npcDragon:riderDragon, // ref to inner dragon for sit anim
+      npcSitT:3+Math.random()*8, // countdown to sit
+      npcSitting:false};
+    dr.position.set(sp[0],peakY+1.5,sp[1]);
+    dr.rotation.y=Math.PI; // face inward
     scene.add(dr);objects.push(dr);friendlyNPCs.push(dr);
   }
 
@@ -2999,6 +3019,23 @@ function update(ts){
 
     // ── BLANE WANDER AI ──────────────────────────────────────────────────────
     if(blaneNPC&&!dialogOpen&&hatcheryQueue.length===0&&blaneLeadPhase==='idle'){
+      // Blane's dragon (Blast) can sit when idle
+      const bd=blaneNPC.children[0]; // first child = dragon mesh
+      if(bd&&bd.userData.lwp){
+        if(!blaneNPC.userData.blaneSitT)blaneNPC.userData.blaneSitT=6+Math.random()*8;
+        blaneNPC.userData.blaneSitT-=dt;
+        if(blaneNPC.userData.blaneSitT<=0){
+          blaneNPC.userData.blaneSitting=!blaneNPC.userData.blaneSitting;
+          blaneNPC.userData.blaneSitT=blaneNPC.userData.blaneSitting?(4+Math.random()*6):(6+Math.random()*10);
+        }
+        if(blaneNPC.userData.blaneSitting){
+          bd.rotation.x=0.18;
+          bd.userData.lwp.rotation.z= Math.PI*0.72;bd.userData.rwp.rotation.z=-Math.PI*0.72;
+        } else {
+          bd.rotation.x=0;
+          bd.userData.lwp.rotation.z= Math.PI*0.65;bd.userData.rwp.rotation.z=-Math.PI*0.65;
+        }
+      }
       blaneWanderT-=dt;
       // Pick a new wander target every 4–8s
       if(blaneWanderT<=0){
@@ -3043,6 +3080,56 @@ function update(ts){
             }
           }
           if(blaneTalkT<=0)blaneTalkT=3;
+        }
+      }
+    }
+
+    // ── PEAK RIDER STABLE AI + NPC DRAGON SIT ────────────────────────────────
+    for(const npc of friendlyNPCs){
+      if(!npc.userData.stablePos||npc.userData.recruited)continue;
+      const sp=npc.userData.stablePos;
+      const nPos=npc.position;
+      // Sit / stand cycle
+      npc.userData.npcSitT-=dt;
+      if(npc.userData.npcSitT<=0){
+        npc.userData.npcSitting=!npc.userData.npcSitting;
+        npc.userData.npcSitT=npc.userData.npcSitting?(4+Math.random()*6):(5+Math.random()*10);
+      }
+      const nd=npc.userData.npcDragon;
+      if(nd){
+        if(npc.userData.npcSitting){
+          // Sit pose: wings folded tight, nose dip
+          nd.rotation.x=0.18;
+          if(nd.userData.lwp)nd.userData.lwp.rotation.z= Math.PI*0.72;
+          if(nd.userData.rwp)nd.userData.rwp.rotation.z=-Math.PI*0.72;
+          if(nd.userData.llg)nd.userData.llg.rotation.x=0;
+          if(nd.userData.rlg)nd.userData.rlg.rotation.x=0;
+        } else {
+          nd.rotation.x=0;
+          // Wings gently folded at rest
+          if(nd.userData.lwp)nd.userData.lwp.rotation.z= Math.PI*0.65;
+          if(nd.userData.rwp)nd.userData.rwp.rotation.z=-Math.PI*0.65;
+        }
+      }
+      // Drift slightly near stable, return if too far
+      const distToStable=nPos.distanceTo(sp);
+      if(!npc.userData.npcSitting){
+        if(distToStable>8){
+          // Walk back to stable
+          const toS=sp.clone().sub(nPos);toS.y=0;toS.normalize();
+          nPos.addScaledVector(toS,3*dt);
+          nPos.y=groundY(nPos.x,nPos.z)+1.5;
+          npc.rotation.y=Math.atan2(toS.x,toS.z);
+        } else if(distToStable>1){
+          // Wander slowly around stable
+          if(!npc.userData.npcWanderT||npc.userData.npcWanderT<=0){
+            npc.userData.npcWanderT=2+Math.random()*3;
+            npc.userData.npcWanderDir=new THREE.Vector3((Math.random()-.5),(0),(Math.random()-.5)).normalize();
+          }
+          npc.userData.npcWanderT-=dt;
+          nPos.addScaledVector(npc.userData.npcWanderDir,1.5*dt);
+          nPos.y=groundY(nPos.x,nPos.z)+1.5;
+          npc.rotation.y=Math.atan2(npc.userData.npcWanderDir.x,npc.userData.npcWanderDir.z);
         }
       }
     }

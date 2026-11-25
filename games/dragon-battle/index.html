@@ -3470,6 +3470,58 @@ function update(ts){
         e.userData.orb.rotation.y+=dt*3;
         e.position.y+=Math.sin(e.userData.animT*2)*.02;
       }
+      // King Dragon: aggressive — flies, chases, pursues fleeing player
+      if(e.userData.isKingDragon){
+        const ref=isHuman&&humanMesh?humanMesh.position:dragonMesh.position;
+        const toP=new THREE.Vector3().subVectors(ref,e.position);
+        const dist=toP.length();
+        // Chase mode: always fly toward player, overtake if fleeing
+        const chaseSpd=24;
+        const targetY=ref.y+20+Math.sin(e.userData.animT*0.5)*12;
+        const tx=ref.x+Math.cos(e.userData.flyOrbit||0)*35;
+        const tz=ref.z+Math.sin(e.userData.flyOrbit||0)*35;
+        e.userData.flyOrbit=(e.userData.flyOrbit||0)+dt*0.9;
+        const toOrbit=new THREE.Vector3(tx-e.position.x,targetY-e.position.y,tz-e.position.z);
+        // If far away, charge directly; if close, orbit menacingly
+        const moveDir=dist>80?toP.clone().normalize():toOrbit.normalize();
+        e.position.addScaledVector(moveDir,chaseSpd*dt);
+        e.lookAt(ref);
+        // Wing flap
+        e.userData.wingAngle=(e.userData.wingAngle||0)+dt*5;
+        const wa=Math.sin(e.userData.wingAngle)*0.7;
+        if(e.userData.lwp){e.userData.lwp.rotation.z=wa;e.userData.rwp.rotation.z=-wa;}
+        // Shoot colored breath at player every 1.5s
+        e.userData.shootT-=dt;
+        if(e.userData.shootT<=0&&dist<500){
+          e.userData.shootT=1.5+Math.random();
+          const cfg=e.userData.ruinCfg;
+          const col=cfg?cfg.weaponColor:0xff4400;
+          const shotGeo=new THREE.SphereGeometry(1.2,5,4);
+          const shotMat=new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.9,blending:THREE.AdditiveBlending});
+          // 3-shot spread toward player
+          const fwd=new THREE.Vector3().subVectors(ref,e.position).normalize();
+          const perp=new THREE.Vector3(-fwd.z,0,fwd.x).multiplyScalar(5);
+          for(let si=0;si<3;si++){
+            const offset=si===0?new THREE.Vector3():si===1?perp:perp.clone().negate();
+            const shot=new THREE.Mesh(shotGeo,shotMat);
+            shot.position.copy(e.position).add(new THREE.Vector3(0,2,0));
+            const tgt=ref.clone().add(offset);
+            const vel=new THREE.Vector3().subVectors(tgt,shot.position).normalize().multiplyScalar(32);
+            shot.userData={vel,dmg:e.userData.dmg,life:4,projType:'dragon',friendly:false};
+            scene.add(shot);projectiles.push(shot);
+          }
+          // Visual + roar float
+          if(frame%60===0)floatWorld(e.position.clone().add(new THREE.Vector3(0,8,0)),'👑','#ff4444');
+        }
+        // Melee stomp if very close
+        if(dist<18&&dinvT<=0){
+          const target=isHuman&&humanMesh?humanMesh:dragonMesh;
+          if(isHuman){humanHP-=e.userData.dmg*dt*3;if(humanHP<=0&&!ddead){ddead=true;humanHP=0;endGame();}}
+          else{const dmg=humanShielding?e.userData.dmg*0.15*dt*3:e.userData.dmg*dt*3;dhp-=dmg;if(dhp<=0&&!ddead){ddead=true;dhp=0;}}
+          dinvT=0.5;
+        }
+        continue; // skip generic enemy AI below
+      }
       // Enemy dragon: circle player at altitude, swoop to attack
       if(e.userData.type==='dragon'||e.userData.type==='shadowDragon'){
         e.userData.flyOrbit=(e.userData.flyOrbit||0)+dt*(e.userData.type==='shadowDragon'?0.6:0.4);

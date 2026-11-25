@@ -29,6 +29,8 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
 .bar-fill{height:3px;background:var(--ec);border-radius:1px}
 #sel-hint{font-size:.38rem;color:#FFD700}
 #sel-best{font-size:.35rem;color:#ff8888}
+.d-btn{padding:10px 18px;background:#1a0010;border:2px solid #661111;color:#ff8888;font-family:'Press Start 2P',monospace;font-size:.4rem;cursor:pointer;border-radius:6px;transition:.1s}
+.d-btn:hover,.d-btn:active,.d-btn.active{background:#440020;border-color:#ff4444;color:#fff}
 
 /* HUD */
 #hud{position:absolute;inset:0;pointer-events:none;display:none;z-index:4;transform:translateZ(0)}
@@ -59,7 +61,7 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
 .mc-fire:active{background:rgba(255,160,0,.5)}
 
 /* Minimap */
-#minimap{position:absolute;bottom:10px;right:10px;width:110px;height:110px;border:2px solid rgba(255,255,255,.25);border-radius:4px;overflow:hidden;display:none;z-index:4;transform:translateZ(0);background:rgba(0,0,0,.55)}
+#minimap{position:absolute;bottom:10px;right:10px;width:150px;height:150px;border:2px solid rgba(255,255,255,.25);border-radius:4px;overflow:hidden;display:none;z-index:4;transform:translateZ(0);background:rgba(0,0,0,.55)}
 #minimap canvas{width:100%;height:100%;display:block}
 
 /* Dialog */
@@ -113,6 +115,10 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
     <h1>DRAGON BATTLE</h1>
     <p class="sub">CHOOSE YOUR DRAGON</p>
     <div id="cards"></div>
+    <div id="device-pick" style="display:flex;gap:12px;margin:8px 0">
+      <button class="d-btn" id="btn-pc" onclick="pickDevice('pc')">🖥 COMPUTER</button>
+      <button class="d-btn" id="btn-ipad" onclick="pickDevice('ipad')">📱 iPAD / TOUCH</button>
+    </div>
     <p id="sel-hint">◀ ▶ · SPACE=FIRE · T=HUMAN · C=SIT · M=MAP · SHIFT=SWORD · J=JUMP · D=CALL · E=TALK · B=ARMOR</p>
     <p id="sel-best"></p>
   </div>
@@ -143,7 +149,7 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
   </div>
 
   <!-- Minimap -->
-  <div id="minimap"><canvas id="mm-canvas" width="110" height="110"></canvas></div>
+  <div id="minimap"><canvas id="mm-canvas" width="150" height="150"></canvas></div>
 
   <!-- Dialog -->
   <div id="dialog">
@@ -182,16 +188,18 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
   <!-- Mobile -->
   <div id="mctrl">
     <div style="display:flex;flex-direction:column;gap:4px;align-items:center">
-      <div style="display:flex;gap:4px">
-        <div class="mc-btn" id="mc-bite" style="font-size:.45rem;width:48px;height:48px">🦷<br><span style="font-size:.22rem">BITE</span></div>
-        <div class="mc-btn" id="mc-tail" style="font-size:.45rem;width:48px;height:48px">💥<br><span style="font-size:.22rem">TAIL</span></div>
-        <div class="mc-btn" id="mc-roar" style="font-size:.45rem;width:48px;height:48px">🔊<br><span style="font-size:.22rem">ROAR</span></div>
-        <div class="mc-btn" id="mc-power" style="font-size:.45rem;width:48px;height:48px">⚡<br><span style="font-size:.22rem">PWR</span></div>
-        <div class="mc-btn" id="mc-kw" style="font-size:.45rem;width:48px;height:48px">👑<br><span style="font-size:.22rem">WPN</span></div>
-        <div class="mc-btn" id="mc-tab" style="font-size:.45rem;width:48px;height:48px">🔄<br><span style="font-size:.22rem">SWAP</span></div>
+      <div style="display:flex;gap:3px;flex-wrap:wrap;justify-content:center">
+        <div class="mc-btn" id="mc-bite" style="font-size:.45rem;width:46px;height:46px">🦷<br><span style="font-size:.2rem">BITE</span></div>
+        <div class="mc-btn" id="mc-tail" style="font-size:.45rem;width:46px;height:46px">💥<br><span style="font-size:.2rem">TAIL</span></div>
+        <div class="mc-btn" id="mc-roar" style="font-size:.45rem;width:46px;height:46px">🔊<br><span style="font-size:.2rem">ROAR</span></div>
+        <div class="mc-btn" id="mc-power" style="font-size:.45rem;width:46px;height:46px">⚡<br><span style="font-size:.2rem">PWR</span></div>
+        <div class="mc-btn" id="mc-kw" style="font-size:.45rem;width:46px;height:46px">👑<br><span style="font-size:.2rem">WPN</span></div>
+        <div class="mc-btn" id="mc-tab" style="font-size:.45rem;width:46px;height:46px">🔄<br><span style="font-size:.2rem">SWAP</span></div>
+        <div class="mc-btn" id="mc-sit" style="font-size:.45rem;width:46px;height:46px">🐉<br><span style="font-size:.2rem">SIT</span></div>
+        <div class="mc-btn" id="mc-human" style="font-size:.45rem;width:46px;height:46px">🧍<br><span style="font-size:.2rem">WALK</span></div>
       </div>
       <div class="mc-pad">
-        <div></div><div class="mc-btn" id="mc-up">▲</div><div></div>
+        <div></div><div class="mc-btn" id="mc-up">▲ FLY</div><div></div>
         <div class="mc-btn" id="mc-left">◀</div>
         <div class="mc-btn" id="mc-down">▼</div>
         <div class="mc-btn" id="mc-right">▶</div>
@@ -2833,7 +2841,8 @@ function enemyBudget(){return Math.max(1,~~(score/400));}
 
 // ── Input ─────────────────────────────────────────────────────────────────────
 const keys={};
-const mk={up:false,dn:false,lf:false,rt:false,fire:false,bite:false,tail:false,roar:false,power:false,kw:false,tab:false};
+const mk={up:false,dn:false,lf:false,rt:false,fire:false,bite:false,tail:false,roar:false,power:false,kw:false,tab:false,sit:false,human:false};
+let useMobile=false;
 document.addEventListener('keydown',e=>{
   keys[e.code]=true;if(e.code==='Space')e.preventDefault();
   if(gs==='select'){
@@ -3236,42 +3245,51 @@ document.addEventListener('keyup',e=>{delete keys[e.code];});
 
 // ── Mobile controls ────────────────────────────────────────────────────────────
 function isMob(){return 'ontouchstart'in window||navigator.maxTouchPoints>0;}
+let mobileInited=false;
 function initMobile(){
-  if(!isMob())return;
-  const mctrl=document.getElementById('mctrl');
-  mctrl.classList.add('show');
+  if(mobileInited)return;mobileInited=true;
+  useMobile=true;
+  document.getElementById('mctrl').classList.add('show');
   function wire(id,flag){
     const el=document.getElementById(id);if(!el)return;
     el.addEventListener('touchstart',e=>{e.preventDefault();mk[flag]=true;},{passive:false});
     el.addEventListener('touchend',e=>{e.preventDefault();mk[flag]=false;},{passive:false});
   }
   wire('mc-up','up');wire('mc-down','dn');wire('mc-left','lf');wire('mc-right','rt');wire('mc-fire','fire');
-  // Action buttons — set flag for one frame, game loop handles and resets
-  ['bite','tail','roar','power','kw','tab'].forEach(f=>{
+  // One-shot action buttons
+  ['bite','tail','roar','power','kw','tab','sit','human'].forEach(f=>{
     const el=document.getElementById('mc-'+f);if(!el)return;
     el.addEventListener('touchstart',e=>{e.preventDefault();mk[f]=true;},{passive:false});
     el.addEventListener('touchend',e=>{e.preventDefault();},{passive:false});
   });
-  // Swipe to look (joystick-style drag on canvas)
-  let touchId=null,touchX=0;
-  document.getElementById('c3d').addEventListener('touchstart',e=>{
+  // Canvas drag to turn (right-side only so it doesn't conflict with d-pad)
+  let touchId=null,touchX=0,touchY=0;
+  canvas.addEventListener('touchstart',e=>{
     e.preventDefault();
-    for(const t of e.changedTouches){touchId=t.identifier;touchX=t.clientX;}
+    for(const t of e.changedTouches){if(t.clientX>canvas.clientWidth*0.35){touchId=t.identifier;touchX=t.clientX;touchY=t.clientY;break;}}
   },{passive:false});
-  document.getElementById('c3d').addEventListener('touchmove',e=>{
+  canvas.addEventListener('touchmove',e=>{
     e.preventDefault();
     for(const t of e.changedTouches){
       if(t.identifier!==touchId)continue;
-      const dx=t.clientX-touchX;
-      dYawVel-=dx*0.0014;
-      touchX=t.clientX;
+      const dx=t.clientX-touchX,dy=t.clientY-touchY;
+      if(!isHuman)dYawVel-=dx*0.0014;
+      else{mouseDX+=dx*0.004;mouseDY+=dy*0.003;}
+      touchX=t.clientX;touchY=t.clientY;
     }
   },{passive:false});
-  document.getElementById('c3d').addEventListener('touchend',e=>{
-    e.preventDefault();touchId=null;
-  },{passive:false});
+  canvas.addEventListener('touchend',e=>{e.preventDefault();touchId=null;},{passive:false});
 }
-if(isMob())initMobile();
+
+function pickDevice(type){
+  document.getElementById('btn-pc').classList.toggle('active',type==='pc');
+  document.getElementById('btn-ipad').classList.toggle('active',type==='ipad');
+  document.getElementById('sel-hint').style.display=type==='ipad'?'none':'';
+  if(type==='ipad')initMobile();
+  else{useMobile=false;document.getElementById('mctrl').classList.remove('show');}
+}
+// Auto-pick based on device
+if(isMob())pickDevice('ipad'); else pickDevice('pc');
 
 // Pointer lock on click when in human mode
 canvas.addEventListener('click',()=>{
@@ -3739,6 +3757,8 @@ function update(ts){
     }
     if(mk.kw){mk.kw=false;useKingWeapon();}
     if(mk.tab){mk.tab=false;if(playerKingWeapons.length>0){activeKingWeaponIdx=(activeKingWeaponIdx+1)%playerKingWeapons.length;updateKingWeaponHUD();}}
+    if(mk.sit){mk.sit=false;if(!isHuman&&isLanded){isSitting=!isSitting;floatWorld(dragonMesh.position,isSitting?'🐉 SIT':'🐉 STAND','#88ff44');}}
+    if(mk.human){mk.human=false;if(!dialogOpen&&!mapOpen)toggleHumanMode();}
 
     // Dragon melee ram — damages any enemy within 7u while flying
     if(!isLanded&&!isHuman){
@@ -5129,7 +5149,7 @@ function drawOverlay(){
 // ── Minimap ───────────────────────────────────────────────────────────────────
 const mmCanvas=document.getElementById('mm-canvas');
 const mmCtx=mmCanvas.getContext('2d');
-const MM_SIZE=110,MM_SCALE=1/8; // 1 pixel = 8 world units
+const MM_SIZE=150,MM_SCALE=1/5; // 1 pixel = 5 world units (more precise zoom)
 
 // ── Full-screen world map ──────────────────────────────────────────────────────
 const wmEl=document.getElementById('worldmap');
@@ -5231,62 +5251,73 @@ function drawMinimap(){
   if(gs!=='playing')return;
   const W=MM_SIZE,H=MM_SIZE;
   mmCtx.clearRect(0,0,W,H);
-  // Background
-  mmCtx.fillStyle='rgba(0,0,0,0.6)';mmCtx.fillRect(0,0,W,H);
+  mmCtx.fillStyle='rgba(0,0,0,0.65)';mmCtx.fillRect(0,0,W,H);
   const ref=isHuman&&humanMesh?humanMesh.position:dragonMesh.position;
   const cx=ref.x,cz=ref.z;
-  // Draw zone dots for enemies (red), friendly NPCs (green), roam dragons (cyan)
-  const dot=(wx,wz,col,r)=>{
-    const mx=W/2+(wx-cx)*MM_SCALE;
-    const mz=H/2+(wz-cz)*MM_SCALE;
-    if(mx<0||mx>W||mz<0||mz>H)return;
-    mmCtx.fillStyle=col;mmCtx.beginPath();
-    mmCtx.arc(mx,mz,r,0,Math.PI*2);mmCtx.fill();
+  const toMx=wx=>W/2+(wx-cx)*MM_SCALE;
+  const toMz=wz=>H/2+(wz-cz)*MM_SCALE;
+  const dot=(wx,wz,col,r,label)=>{
+    const mx=toMx(wx),mz=toMz(wz);
+    if(mx<-r||mx>W+r||mz<-r||mz>H+r)return;
+    mmCtx.fillStyle=col;mmCtx.beginPath();mmCtx.arc(mx,mz,r,0,Math.PI*2);mmCtx.fill();
+    if(label){mmCtx.font='bold 6px sans-serif';mmCtx.fillStyle='rgba(255,255,255,0.8)';mmCtx.textAlign='center';mmCtx.textBaseline='bottom';mmCtx.fillText(label,mx,mz-r-1);}
   };
-  // Draw ground grid hint
-  mmCtx.strokeStyle='rgba(255,255,255,0.08)';mmCtx.lineWidth=0.5;
-  for(let g2=-3;g2<=3;g2++){
+  // Grid
+  mmCtx.strokeStyle='rgba(255,255,255,0.07)';mmCtx.lineWidth=0.5;
+  for(let g2=-5;g2<=5;g2++){
     const gx=W/2+(g2*ZONE-((cx%ZONE+ZONE)%ZONE))*MM_SCALE;
     const gz=H/2+(g2*ZONE-((cz%ZONE+ZONE)%ZONE))*MM_SCALE;
     mmCtx.beginPath();mmCtx.moveTo(gx,0);mmCtx.lineTo(gx,H);mmCtx.stroke();
     mmCtx.beginPath();mmCtx.moveTo(0,gz);mmCtx.lineTo(W,gz);mmCtx.stroke();
   }
+  // Fixed landmarks
+  dot(DM_X,DM_Z,'#aaffcc',6,'🏔');
+  if(typeof VOL_X!=='undefined')dot(VOL_X,VOL_Z,'#ff4400',5,'🌋');
+  // Army members (blue dots)
+  for(const a of dragonArmy){if(a.mesh&&a.mesh.userData.alive)dot(a.mesh.position.x,a.mesh.position.z,'#4488ff',3);}
+  // Enemies
+  const KING_COLORS={fire_water:'#ff4400',earth_nature:'#4a8a2a',air_smoke:'#aaccff',lava_ice:'#88ffff',thunder_lightning:'#ffff00',sun_soul:'#ffffff',bone_acid:'#44ff44',metal_glass:'#ddeeff'};
   for(const e of activeEnemies){
     if(!e.userData.alive)continue;
-    let dc,dr=2;
-    if(e.userData.isKingDragon){
-      dr=5;
-      const eid=e.userData.ruinCfg?e.userData.ruinCfg.id:'';
-      const KING_COLORS={fire_water:'#ff4400',earth_nature:'#4a8a2a',air_smoke:'#aaccff',lava_ice:'#88ffff',thunder_lightning:'#ffff00',sun_soul:'#ffffff',bone_acid:'#44ff44',metal_glass:'#ddeeff'};
-      dc=KING_COLORS[eid]||'#ff00ff';
-    } else if(e.userData.type==='snake'){dc='#00ff88';}
+    let dc,dr=2.5;
+    if(e.userData.isKingDragon||e.userData.isKingDeath){
+      dr=6;const eid=e.userData.ruinCfg?e.userData.ruinCfg.id:'death';
+      dc=e.userData.isKingDeath?'#cc00ff':KING_COLORS[eid]||'#ff00ff';
+      dot(e.position.x,e.position.z,dc,dr,'👑');
+      continue;
+    } else if(e.userData.type==='shadowDragon'){dc='#8844ff';dr=3;}
+    else if(e.userData.type==='snake'){dc='#00ff88';}
     else if(e.userData.type==='dragon'){dc='#ff4400';}
     else{dc='#ff2222';}
     dot(e.position.x,e.position.z,dc,dr);
   }
-  for(const n of friendlyNPCs){dot(n.position.x,n.position.z,'#44ff44',2.5);}
-  for(const r of roamDragons){dot(r.position.x,r.position.z,'#44ffff',2);}
+  for(const n of friendlyNPCs){dot(n.position.x,n.position.z,'#44ff44',2);}
+  for(const r of roamDragons){dot(r.position.x,r.position.z,'#44ffff',2.5);}
   for(const wd of wildDragons){if(wd.userData.isWild)dot(wd.position.x,wd.position.z,wd.userData.tameable?'#dd88ff':'#aa44ff',wd.userData.tameable?3.5:2.5);}
   for(const b of activeBuildings){
     const col=b.userData.safe?'#44ff44':b.userData.type==='castle'?'#ffaa00':'#ff8800';
     dot(b.position.x,b.position.z,col,3.5);
   }
-  // Player dot
-  const br=getDayBrightness(dayTime);
-  mmCtx.fillStyle='#ffffff';mmCtx.beginPath();
-  mmCtx.arc(W/2,H/2,3.5,0,Math.PI*2);mmCtx.fill();
-  // Player direction arrow
+  // King weapon orbs
+  for(const o of kingWeaponOrbs){dot(o.mesh.position.x,o.mesh.position.z,'#ffdd00',4,'★');}
+  // Player dot + direction
+  mmCtx.fillStyle='#ffffff';mmCtx.beginPath();mmCtx.arc(W/2,H/2,4,0,Math.PI*2);mmCtx.fill();
   const pYaw=isHuman?humanYaw:dYaw;
-  mmCtx.strokeStyle='#ffffff';mmCtx.lineWidth=1.5;
+  mmCtx.strokeStyle='#ffffff';mmCtx.lineWidth=2;
   mmCtx.beginPath();mmCtx.moveTo(W/2,H/2);
-  mmCtx.lineTo(W/2+Math.sin(pYaw)*10,H/2+Math.cos(pYaw)*10);mmCtx.stroke();
+  mmCtx.lineTo(W/2+Math.sin(pYaw)*12,H/2+Math.cos(pYaw)*12);mmCtx.stroke();
   // Day/night tint
-  mmCtx.fillStyle=`rgba(0,0,20,${0.6-br*0.5})`;
-  mmCtx.fillRect(0,0,W,H);
-  // Compass
-  mmCtx.font='7px sans-serif';mmCtx.fillStyle='rgba(255,255,255,0.5)';
-  mmCtx.textAlign='center';mmCtx.textBaseline='top';
-  mmCtx.fillText('N',W/2,2);
+  const br=getDayBrightness(dayTime);
+  mmCtx.fillStyle=`rgba(0,0,20,${0.5-br*0.4})`;mmCtx.fillRect(0,0,W,H);
+  // Compass N
+  mmCtx.font='bold 7px sans-serif';mmCtx.fillStyle='rgba(255,255,255,0.6)';
+  mmCtx.textAlign='center';mmCtx.textBaseline='top';mmCtx.fillText('N',W/2,2);
+  // Scale bar: 100 world units
+  const sbLen=100*MM_SCALE;
+  mmCtx.strokeStyle='rgba(255,255,255,0.4)';mmCtx.lineWidth=1.5;
+  mmCtx.beginPath();mmCtx.moveTo(6,H-6);mmCtx.lineTo(6+sbLen,H-6);mmCtx.stroke();
+  mmCtx.font='5px sans-serif';mmCtx.fillStyle='rgba(255,255,255,0.4)';
+  mmCtx.textAlign='left';mmCtx.textBaseline='bottom';mmCtx.fillText('100u',6,H-7);
 }
 
 // ── Main loop ─────────────────────────────────────────────────────────────────

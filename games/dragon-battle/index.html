@@ -3598,22 +3598,15 @@ function closeDialog(){
   if(isHuman&&canvas.requestPointerLock)canvas.requestPointerLock();
 }
 function isMob(){return'ontouchstart'in window||navigator.maxTouchPoints>0;}
-let swipeX=null,selLastTap=0;
+let swipeX=null;
 canvas.addEventListener('touchstart',e=>{swipeX=e.touches[0].clientX;if(gs==='dead')showSelect();},{passive:true});
 canvas.addEventListener('touchend',e=>{
   if(gs!=='select')return;
   const dx=e.changedTouches[0].clientX-swipeX;
   if(Math.abs(dx)>30){
-    // Swipe left/right also cycles
     const dir=dx<0?1:-1;let ni=(selectedType+dir+DT.length)%DT.length;
     while(!PLAYER_DT_IDS.includes(DT[ni].id))ni=(ni+dir+DT.length)%DT.length;
     selectedType=ni;buildSelectUI();
-  } else {
-    // Single tap = cycle to next dragon; double-tap = start game
-    const now=performance.now();
-    if(now-selLastTap<350){startGame();}
-    else{let ni=(selectedType+1+DT.length)%DT.length;while(!PLAYER_DT_IDS.includes(DT[ni].id))ni=(ni+1+DT.length)%DT.length;selectedType=ni;buildSelectUI();}
-    selLastTap=now;
   }
 },{passive:true});
 
@@ -3668,7 +3661,7 @@ function buildSelectUI(){
     const spdPct=~~(dt.speed/30*100),hpPct=~~(dt.hp/220*100);
     card.innerHTML=`<div class="card-emoji">${dt.emoji}</div><div class="card-name">${dt.name}</div><div class="card-desc">${dt.desc}</div>`+
       (i===selectedType?`<div class="bars"><div class="bar-row" style="--ec:${dt.eyeC}">SPD<div class="bar-fill" style="width:${spdPct}%"></div></div><div class="bar-row" style="--ec:#ff4444">HP<div class="bar-fill" style="background:#ff4444;width:${hpPct}%"></div></div></div>`:'');
-    card.onclick=()=>{selectedType=i;buildSelectUI();};
+    card.onclick=()=>{if(selectedType===i){startGame();}else{selectedType=i;buildSelectUI();}};
     container.appendChild(card);
   });
   const sb=document.getElementById('sel-best');

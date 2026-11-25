@@ -1878,6 +1878,31 @@ function spawnDragonMountain(){
       flame2.position.set(bx2,hatchY+4,bz2);addObj(flame2);
     }
   }
+  // ── WOODEN SITTING AREA (front of hatchery, DM_Z+101 → DM_Z+122) ───────────
+  const woodMat=mat(0x7a4a1a,{flatShading:true});
+  const woodDarkMat=mat(0x5c3410,{flatShading:true});
+  // Plank floor (3 rows of planks)
+  for(let pi=0;pi<6;pi++){
+    const plank=new THREE.Mesh(new THREE.BoxGeometry(30,0.4,3),pi%2===0?woodMat:woodDarkMat);
+    plank.position.set(DM_X,hatchY+0.3,DM_Z+103+pi*3);addObj(plank);
+  }
+  // Benches along the sides of the sitting area
+  const benchPositions=[
+    {x:DM_X-11,z:DM_Z+107},{x:DM_X-11,z:DM_Z+113},
+    {x:DM_X+11,z:DM_Z+107},{x:DM_X+11,z:DM_Z+113},
+    {x:DM_X-5, z:DM_Z+120},{x:DM_X+5, z:DM_Z+120},
+  ];
+  for(const bp of benchPositions){
+    const seat=new THREE.Mesh(new THREE.BoxGeometry(5,0.5,1.4),woodMat);
+    seat.position.set(bp.x,hatchY+1.6,bp.z);addObj(seat);
+    const legL=new THREE.Mesh(new THREE.BoxGeometry(0.4,1.4,1.2),woodDarkMat);
+    legL.position.set(bp.x-1.8,hatchY+0.9,bp.z);addObj(legL);
+    const legR=new THREE.Mesh(new THREE.BoxGeometry(0.4,1.4,1.2),woodDarkMat);
+    legR.position.set(bp.x+1.8,hatchY+0.9,bp.z);addObj(legR);
+    const back=new THREE.Mesh(new THREE.BoxGeometry(5,1.2,0.3),woodMat);
+    back.position.set(bp.x,hatchY+2.5,bp.z-0.85);addObj(back);
+  }
+
   // Hatchery NPCs: Elder Runa + Caretaker (Maran)
   const hElderY=hatchY+1.5;
   const hElder=makeVillagerMesh();
@@ -2116,8 +2141,13 @@ let blaneWanderT=0,blaneWanderTarget=null,blaneTalkT=0;
 // Hatchery tour sequence
 let hatcheryQueue=[]; // {recruit, phase:'fetch'|'lead'|'hatchery'|'done', t}
 const HATCH_X=DM_X, HATCH_Z=DM_Z+134; // hatchery room center
+const HATCH_BENCH_SLOTS=[ // where bonded riders sit and wait
+  [DM_X-11,DM_Z+107],[DM_X+11,DM_Z+107],
+  [DM_X-11,DM_Z+113],[DM_X+11,DM_Z+113],
+  [DM_X-5, DM_Z+120],[DM_X+5, DM_Z+120],
+];
 let hatcheryDoneCount=0; // how many bonding sequences have completed
-let blaneLeadPhase='idle'; // 'idle'|'walking_to_player'|'leading_to_castle'|'flying_to_peak'
+let blaneLeadPhase='idle'; // 'idle'|'calling_at_hatchery'|'leading_to_castle'
 let dmPeakY=0; // set when Dragon Mountain spawns
 let blaneQuest='inactive'; // 'inactive' | 'unlocked' | 'active' | 'complete'
 let shadowKills=0;
@@ -3169,25 +3199,24 @@ function update(ts){
         // Blane watches from center
         walkTo(blaneNPC,HATCH_X,0,HATCH_Z-10,1.0);
         if(tour.t>6){
-          // Bond complete — teleport recruit up to next free stable slot on peak
+          // Bond complete — seat recruit at a bench in the hatchery waiting area
           tour.phase='done';
           const slot=dragonArmy.length;
-          // Pick a stable slot above the ones already used
-          const stableSlots=[[DM_X-20,DM_Z-12],[DM_X-20,DM_Z-6],[DM_X,DM_Z-12],[DM_X,DM_Z-6],[DM_X+20,DM_Z-12]];
-          const sp=stableSlots[slot%stableSlots.length];
-          const spY=(dmPeakY||groundY(DM_X,DM_Z)+462)+1.5;
-          rec.position.set(sp[0],spY,sp[1]);
-          rec.userData.stablePos=new THREE.Vector3(sp[0],spY,sp[1]);
-          rec.userData.npcText='Bonded! My dragon and I are ready. Waiting at the peak stables for you!';
-          dragonArmy.push({mesh:rec,slot,staging:false,stagingPos:sp});
+          const bs=HATCH_BENCH_SLOTS[slot%HATCH_BENCH_SLOTS.length];
+          const bsY=caveFloorY(bs[0],bs[1])||groundY(bs[0],bs[1]);
+          rec.position.set(bs[0],bsY+1.5,bs[1]);
+          rec.userData.hatchBenchPos=new THREE.Vector3(bs[0],bsY+1.5,bs[1]);
+          rec.userData.npcText='Bonded! My dragon and I are ready. Waiting here with the others for Blane\'s signal!';
+          dragonArmy.push({mesh:rec,slot,staging:false,stagingPos:bs});
           hatcheryDoneCount++;
           hatcheryQueue.shift();
           if(hatcheryQueue.length>0){
             blaneWanderTarget=null;
           } else {
-            // All bonded — Blane flies up to peak and calls the player
-            blaneLeadPhase='flying_to_peak';
-            floatWorld(bPos,'Everyone is bonded! Meet me at the peak!','#ffdd44');
+            // All bonded — Blane walks into hatchery and calls everyone
+            blaneLeadPhase='calling_at_hatchery';
+            blaneTalkT=0;
+            floatWorld(bPos,'Everyone bonded! Gather at the hatchery!','#ffdd44');
           }
         }
       }
@@ -3206,45 +3235,24 @@ function update(ts){
           blaneNPC.rotation.y=Math.atan2(toT.x,toT.z);}
         return dist<3;
       }
-      if(blaneLeadPhase==='flying_to_peak'){
-        // Blane flies upward to the mountain peak
-        const peakTx=DM_X+5,peakTz=DM_Z-8,peakTy=(dmPeakY||groundY(DM_X,DM_Z)+462)+3;
-        const toP=new THREE.Vector3(peakTx-bPos.x,peakTy-bPos.y,peakTz-bPos.z);
-        const distP=toP.length();
-        if(distP>4){
-          toP.normalize();bPos.addScaledVector(toP,12*dt);
-          blaneNPC.rotation.y=Math.atan2(toP.x,toP.z);
-        } else {
-          bPos.set(peakTx,peakTy,peakTz);
-          blaneLeadPhase='calling_player';
-          blaneTalkT=0;
-        }
-        // Flap wings during flight
-        const bd2=blaneNPC.children[0];
-        if(bd2&&bd2.userData.lwp){
-          const wa=Math.sin(frame*0.18)*0.5;
-          bd2.userData.lwp.rotation.z=wa;bd2.userData.rwp.rotation.z=-wa;
-        }
-      } else if(blaneLeadPhase==='calling_player'){
-        // Blane waits at peak calling the player
+      if(blaneLeadPhase==='calling_at_hatchery'){
+        // Blane walks into the hatchery sitting area to call the player
+        const hCallX=HATCH_X,hCallZ=HATCH_Z-30;
+        const arrivedH=blaneWalkTo(hCallX,hCallZ,5);
         blaneTalkT-=dt;
         if(blaneTalkT<=0){
-          floatWorld(bPos,'Come to the peak! Your team awaits!','#ffdd44');
-          blaneTalkT=5;
+          floatWorld(bPos,'Everyone to the hatchery! Time to ride!','#ffdd44');
+          blaneTalkT=4;
         }
-        // Once player reaches peak, switch to leading to castle
+        // Fold wings while walking in cave
+        const bd2=blaneNPC.children[0];
+        if(bd2&&bd2.userData.lwp){bd2.userData.lwp.rotation.z=Math.PI*0.68;bd2.userData.rwp.rotation.z=-Math.PI*0.68;}
+        // Once player arrives in hatchery, start moving to castle
         const distToPlayer=bPos.distanceTo(playerPos);
-        if(distToPlayer<30){
+        if(arrivedH&&distToPlayer<40){
           blaneLeadPhase='leading_to_castle';
-          floatWorld(bPos,'Everyone ready — follow me to battle!','#ffdd44');
+          floatWorld(bPos,'Follow me — to the castle! Riders, mount up!','#ffdd44');
           blaneTalkT=0;
-        }
-      } else if(blaneLeadPhase==='walking_to_player'){
-        // Legacy path: walk to player first (kept for safety)
-        const done=blaneWalkTo(playerPos.x,playerPos.z,4);
-        if(done){
-          blaneLeadPhase='leading_to_castle';
-          floatWorld(bPos,'This way — to the castle!','#ffdd44');
         }
       } else if(blaneLeadPhase==='leading_to_castle'){
         // Lead toward nearest enemy castle
@@ -3373,6 +3381,35 @@ function update(ts){
           nPos.y=groundY(nPos.x,nPos.z)+1.5;
           npc.rotation.y=Math.atan2(npc.userData.npcWanderDir.x,npc.userData.npcWanderDir.z);
         }
+      }
+    }
+
+    // ── HATCHERY BENCH-WAIT AI (bonded riders sitting at hatchery) ───────────
+    for(const a of dragonArmy){
+      const npc=a.mesh;
+      const bp=npc.userData.hatchBenchPos;
+      if(!bp||npc.userData.recruited)continue;
+      // Sit on bench — stay close to bench position
+      const nPos=npc.position;
+      const distToBench=nPos.distanceTo(bp);
+      if(distToBench>3){
+        const toB=bp.clone().sub(nPos);toB.y=0;toB.normalize();
+        nPos.addScaledVector(toB,2.5*dt);
+        const flY=caveFloorY(nPos.x,nPos.z);
+        nPos.y=(flY!==null?flY:groundY(nPos.x,nPos.z))+1.5;
+        npc.rotation.y=Math.atan2(toB.x,toB.z);
+      }
+      // Dragon sitting animation
+      const nd=npc.userData.npcDragon||npc.children[0];
+      if(nd&&nd.userData.lwp){
+        nd.rotation.x=0.14;
+        nd.userData.lwp.rotation.z= Math.PI*0.72;
+        nd.userData.rwp.rotation.z=-Math.PI*0.72;
+      }
+      // When Blane leads to castle, recruit joins the army (remove benchPos)
+      if(blaneLeadPhase==='leading_to_castle'){
+        npc.userData.hatchBenchPos=null;
+        npc.userData.recruited=true;
       }
     }
 

@@ -1245,6 +1245,31 @@ function updateAbilityFX(dt){
   }
 }
 
+// ── Horn sound ────────────────────────────────────────────────────────────────
+let _audioCtx=null;
+function playHorn(){
+  try{
+    if(!_audioCtx)_audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+    const ctx=_audioCtx;
+    // Three-note fanfare: G4 → C5 → E5
+    const notes=[392,523,659];
+    const times=[0,0.22,0.44];
+    const durations=[0.32,0.32,0.55];
+    notes.forEach((freq,i)=>{
+      const osc=ctx.createOscillator();
+      const gain=ctx.createGain();
+      osc.connect(gain);gain.connect(ctx.destination);
+      osc.type='sawtooth';osc.frequency.value=freq;
+      const t0=ctx.currentTime+times[i];
+      gain.gain.setValueAtTime(0,t0);
+      gain.gain.linearRampToValueAtTime(0.18,t0+0.04);
+      gain.gain.linearRampToValueAtTime(0.14,t0+durations[i]-0.08);
+      gain.gain.linearRampToValueAtTime(0,t0+durations[i]);
+      osc.start(t0);osc.stop(t0+durations[i]);
+    });
+  }catch(e){}
+}
+
 // ── Projectile system ─────────────────────────────────────────────────────────
 let projectiles=[];
 const projGeo=new THREE.SphereGeometry(0.3,4,4);
@@ -3357,19 +3382,33 @@ function update(ts){
         const distToPlayer=bPos.distanceTo(playerPos);
         if(arrivedH&&distToPlayer<40){
           blaneLeadPhase='leading_to_castle';
-          floatWorld(bPos,'Follow me — to the castle! Riders, mount up!','#ffdd44');
-          blaneTalkT=0;
+          playHorn();
+          floatWorld(bPos,'🎺 TO THE CASTLE! RIDERS — FLY!','#ffdd44');
+          blaneTalkT=5;
         }
       } else if(blaneLeadPhase==='leading_to_castle'){
-        // Lead toward nearest enemy castle
+        // Lead toward nearest enemy castle — Blane flies (moves in 3D)
         const nearCastle=activeBuildings.find(b=>b.userData.type==='castle'&&!b.userData.safe);
         if(nearCastle){
-          blaneWalkTo(nearCastle.position.x,nearCastle.position.z,5);
+          const flyY=groundY(nearCastle.position.x,nearCastle.position.z)+30;
+          const toC=new THREE.Vector3(nearCastle.position.x-bPos.x,flyY-bPos.y,nearCastle.position.z-bPos.z);
+          const distC=toC.length();
+          if(distC>5){
+            toC.normalize();
+            bPos.addScaledVector(toC,18*dt);
+            blaneNPC.rotation.y=Math.atan2(toC.x,toC.z);
+            // Wing flap while flying
+            const bd2=blaneNPC.children[0];
+            if(bd2&&bd2.userData.lwp){
+              const wa=Math.sin(frame*0.12)*0.6;
+              bd2.userData.lwp.rotation.z=wa;bd2.userData.rwp.rotation.z=-wa;
+              bd2.rotation.x=-0.15;
+            }
+          }
           blaneTalkT-=dt;
-          if(blaneTalkT<=0){floatWorld(bPos,'Keep up! Castle ahead!','#ffdd44');blaneTalkT=6;}
-          // Once Blane reaches castle, hand off to normal wander
-          if(bPos.distanceTo(nearCastle.position)<20){blaneLeadPhase='idle';}
-        } else {blaneLeadPhase='idle';} // no castle found, done
+          if(blaneTalkT<=0){playHorn();floatWorld(bPos,'🎺 Keep up! Castle ahead!','#ffdd44');blaneTalkT=8;}
+          if(distC<20){blaneLeadPhase='idle';}
+        } else {blaneLeadPhase='idle';}
       }
     }
 

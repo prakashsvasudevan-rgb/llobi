@@ -50,12 +50,12 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
 #dead .hint{font-size:.38rem;color:#ff8888;margin-top:4px}
 
 /* Mobile controls */
-#mctrl{position:absolute;bottom:0;left:0;right:0;display:none;padding:6px 10px;pointer-events:none;z-index:4}
-#mctrl.show{display:flex;justify-content:space-between;align-items:flex-end}
+#mctrl{position:absolute;bottom:0;left:0;right:0;display:none;padding:6px 10px 10px;pointer-events:none;z-index:4;background:rgba(0,0,0,.35)}
+#mctrl.show{display:flex;justify-content:space-between;align-items:flex-end;gap:6px}
 .mc-pad{display:grid;grid-template-columns:repeat(3,52px);grid-template-rows:repeat(2,52px);gap:4px}
-.mc-btn{width:52px;height:52px;background:rgba(255,50,50,.18);border:2px solid rgba(255,80,80,.35);color:#ff8888;font-size:.8rem;display:grid;place-items:center;cursor:pointer;pointer-events:all;border-radius:6px}
+.mc-btn{width:52px;height:52px;background:rgba(255,50,50,.18);border:2px solid rgba(255,80,80,.35);color:#ff8888;font-size:.8rem;display:grid;place-items:center;cursor:pointer;pointer-events:all;border-radius:6px;text-align:center;line-height:1.1;-webkit-tap-highlight-color:transparent;user-select:none}
 .mc-btn:active{background:rgba(255,80,80,.4)}
-.mc-fire{width:76px;height:76px;background:rgba(255,100,0,.22);border:3px solid rgba(255,140,0,.5);border-radius:50%;color:#ffaa00;font-size:1.6rem;display:grid;place-items:center;cursor:pointer;pointer-events:all}
+.mc-fire{width:80px;height:80px;background:rgba(255,100,0,.22);border:3px solid rgba(255,140,0,.5);border-radius:50%;color:#ffaa00;font-size:1.6rem;display:grid;place-items:center;cursor:pointer;pointer-events:all;flex-shrink:0;-webkit-tap-highlight-color:transparent;user-select:none}
 .mc-fire:active{background:rgba(255,160,0,.5)}
 
 /* Minimap */
@@ -181,11 +181,21 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
 
   <!-- Mobile -->
   <div id="mctrl">
-    <div class="mc-pad">
-      <div></div><div class="mc-btn" id="mc-up">▲</div><div></div>
-      <div class="mc-btn" id="mc-left">◀</div>
-      <div class="mc-btn" id="mc-down">▼</div>
-      <div class="mc-btn" id="mc-right">▶</div>
+    <div style="display:flex;flex-direction:column;gap:4px;align-items:center">
+      <div style="display:flex;gap:4px">
+        <div class="mc-btn" id="mc-bite" style="font-size:.45rem;width:48px;height:48px">🦷<br><span style="font-size:.22rem">BITE</span></div>
+        <div class="mc-btn" id="mc-tail" style="font-size:.45rem;width:48px;height:48px">💥<br><span style="font-size:.22rem">TAIL</span></div>
+        <div class="mc-btn" id="mc-roar" style="font-size:.45rem;width:48px;height:48px">🔊<br><span style="font-size:.22rem">ROAR</span></div>
+        <div class="mc-btn" id="mc-power" style="font-size:.45rem;width:48px;height:48px">⚡<br><span style="font-size:.22rem">PWR</span></div>
+        <div class="mc-btn" id="mc-kw" style="font-size:.45rem;width:48px;height:48px">👑<br><span style="font-size:.22rem">WPN</span></div>
+        <div class="mc-btn" id="mc-tab" style="font-size:.45rem;width:48px;height:48px">🔄<br><span style="font-size:.22rem">SWAP</span></div>
+      </div>
+      <div class="mc-pad">
+        <div></div><div class="mc-btn" id="mc-up">▲</div><div></div>
+        <div class="mc-btn" id="mc-left">◀</div>
+        <div class="mc-btn" id="mc-down">▼</div>
+        <div class="mc-btn" id="mc-right">▶</div>
+      </div>
     </div>
     <div class="mc-fire" id="mc-fire">🔥</div>
   </div>
@@ -1544,7 +1554,7 @@ function makeKingDeathDragonMesh(){
   const el=new THREE.Mesh(eG,new THREE.MeshBasicMaterial({color:0xff0000}));el.position.set(-0.72,1.0,7.6);g.add(el);
   const er=new THREE.Mesh(eG,new THREE.MeshBasicMaterial({color:0xff0000}));er.position.set( 0.72,1.0,7.6);g.add(er);
   g.userData={lwp:lw,rwp:rw,wingAngle:0,type:'kingDeathDragon',alive:true,isKingDeath:true,
-    hp:4800,maxHp:4800,si:1.0,spd:14,dmg:120,pts:5000,
+    hp:1600,maxHp:1600,si:1.0,spd:14,dmg:40,pts:5000,
     shootT:1.5,flyOrbit:0,animT:0};
   return g;
 }
@@ -1561,7 +1571,7 @@ function makeEnemy3d(type){
               hunter:          {hp:35, maxHp:35, si:2+Math.random()*1.5,spd:20,dmg:18, pts:80},
               shadowDragon:    {hp:120,maxHp:120,si:2+Math.random()*1.5,spd:14,dmg:35, pts:400},
               kingHunter:      {hp:200,maxHp:200,si:1.5,              spd:16,dmg:30, pts:1000},
-              kingDeathDragon: {hp:4800,maxHp:4800,si:1.0,             spd:14,dmg:120,pts:5000}};
+              kingDeathDragon: {hp:1600,maxHp:1600,si:1.0,             spd:14,dmg:40, pts:5000}};
   Object.assign(m.userData,cfg[type]||{});
   if(!m.userData.shootT)m.userData.shootT=Math.random()*(m.userData.si||2);
   return m;
@@ -2272,7 +2282,7 @@ function spawnKingRuin(cfg){
   const bossSpawnAng=Math.random()*Math.PI*2;
   const bossSpawnR=400+Math.random()*40;
   bossMesh.position.set(x+Math.cos(bossSpawnAng)*bossSpawnR, plateauY+40, z+Math.sin(bossSpawnAng)*bossSpawnR);
-  bossMesh.userData={hp:8000,maxHp:8000,dmg:9,pts:5000,alive:true,type:'dragon',
+  bossMesh.userData={hp:24000,maxHp:24000,dmg:27,pts:5000,alive:true,type:'dragon',
     isKingDragon:true,ruinCfg:cfg,islandX:x,islandZ:z,islandR:95,shootT:3,si:1,animT:0,stunT:0};
   scene.add(bossMesh);activeEnemies.push(bossMesh);
   // Tall glowing pillar beacon visible from far away
@@ -2789,7 +2799,7 @@ function collectOrb(o){
 const SWORD_TYPES={fire:'FLAME',nature:'LIFE',soul:'SPIRIT',ice:'FROST',earth:'STONE'};
 let legendSwordMesh=null,legendSwordTaken=false,legendSwordSpinT=0;
 function upgradedDmg(){
-  const base=dtype.dmg*(1+upgrades.dmg*0.4)*7;
+  const base=dtype.dmg*(1+upgrades.dmg*0.4)*21;
   return legendSwordTaken&&SWORD_TYPES[dtype.id]?base*200:base;
 }
 // How many particles to spawn per fire call (attack upgrade)
@@ -2823,7 +2833,7 @@ function enemyBudget(){return Math.max(1,~~(score/400));}
 
 // ── Input ─────────────────────────────────────────────────────────────────────
 const keys={};
-const mk={up:false,dn:false,lf:false,rt:false,fire:false};
+const mk={up:false,dn:false,lf:false,rt:false,fire:false,bite:false,tail:false,roar:false,power:false,kw:false,tab:false};
 document.addEventListener('keydown',e=>{
   keys[e.code]=true;if(e.code==='Space')e.preventDefault();
   if(gs==='select'){
@@ -3223,6 +3233,45 @@ document.addEventListener('keydown',e=>{
   if(gs==='dead'&&(e.code==='Enter'||e.code==='Space'))showSelect();
 });
 document.addEventListener('keyup',e=>{delete keys[e.code];});
+
+// ── Mobile controls ────────────────────────────────────────────────────────────
+function isMob(){return 'ontouchstart'in window||navigator.maxTouchPoints>0;}
+function initMobile(){
+  if(!isMob())return;
+  const mctrl=document.getElementById('mctrl');
+  mctrl.classList.add('show');
+  function wire(id,flag){
+    const el=document.getElementById(id);if(!el)return;
+    el.addEventListener('touchstart',e=>{e.preventDefault();mk[flag]=true;},{passive:false});
+    el.addEventListener('touchend',e=>{e.preventDefault();mk[flag]=false;},{passive:false});
+  }
+  wire('mc-up','up');wire('mc-down','dn');wire('mc-left','lf');wire('mc-right','rt');wire('mc-fire','fire');
+  // Action buttons — set flag for one frame, game loop handles and resets
+  ['bite','tail','roar','power','kw','tab'].forEach(f=>{
+    const el=document.getElementById('mc-'+f);if(!el)return;
+    el.addEventListener('touchstart',e=>{e.preventDefault();mk[f]=true;},{passive:false});
+    el.addEventListener('touchend',e=>{e.preventDefault();},{passive:false});
+  });
+  // Swipe to look (joystick-style drag on canvas)
+  let touchId=null,touchX=0;
+  document.getElementById('c3d').addEventListener('touchstart',e=>{
+    e.preventDefault();
+    for(const t of e.changedTouches){touchId=t.identifier;touchX=t.clientX;}
+  },{passive:false});
+  document.getElementById('c3d').addEventListener('touchmove',e=>{
+    e.preventDefault();
+    for(const t of e.changedTouches){
+      if(t.identifier!==touchId)continue;
+      const dx=t.clientX-touchX;
+      dYawVel-=dx*0.0014;
+      touchX=t.clientX;
+    }
+  },{passive:false});
+  document.getElementById('c3d').addEventListener('touchend',e=>{
+    e.preventDefault();touchId=null;
+  },{passive:false});
+}
+if(isMob())initMobile();
 
 // Pointer lock on click when in human mode
 canvas.addEventListener('click',()=>{
@@ -3651,6 +3700,45 @@ function update(ts){
       dfuel=Math.max(0,dfuel-70*dt);
       if(frame%2===0)spawnFire();
     } else dfuel=Math.min(dmaxFuel,dfuel+dtype.rfuel*60*dt);
+
+    // ── MOBILE ONE-SHOT ACTIONS ──
+    if(mk.bite){mk.bite=false;
+      if(!abilityCooldown.pBite||abilityCooldown.pBite<=0){abilityCooldown.pBite=2;
+        const ref=dragonMesh.position;let be=null,bd=60;for(const ae of activeEnemies){if(!ae.userData.alive)continue;const d=ref.distanceTo(ae.position);if(d<bd){bd=d;be=ae;}}
+        if(be){spawnBeamFX(ref.clone().add(new THREE.Vector3(0,2,0)),be.position.clone(),0xff2200);hitEnemy(be,upgradedDmg()*5);spawnAbilityCloud(be.position.clone(),0xff2200,22,0.5);floatWorld(ref.clone().add(new THREE.Vector3(0,8,0)),'🦷 BITE!','#ff4400');}
+      }
+    }
+    if(mk.tail){mk.tail=false;
+      if(!abilityCooldown.pTail||abilityCooldown.pTail<=0){abilityCooldown.pTail=3;
+        const ref=dragonMesh.position;
+        spawnAbilityCloud(ref.clone(),0xff8800,70,1.5);
+        for(const ae of activeEnemies){if(!ae.userData.alive)continue;if(ref.distanceTo(ae.position)<60){hitEnemy(ae,upgradedDmg()*4);}}
+        floatWorld(ref.clone().add(new THREE.Vector3(0,8,0)),'💥 TAIL SWEEP!','#ff8800');
+      }
+    }
+    if(mk.roar){mk.roar=false;
+      if(!abilityCooldown.pRoar||abilityCooldown.pRoar<=0){abilityCooldown.pRoar=5;
+        const ref=dragonMesh.position;
+        spawnAbilityCloud(ref.clone(),0xff4400,100,2.0);spawnAbilityCloud(ref.clone(),0xffffff,60,1.2);
+        for(const ae of activeEnemies){if(!ae.userData.alive)continue;const d=ref.distanceTo(ae.position);if(d<120){hitEnemy(ae,upgradedDmg()*2);ae.position.addScaledVector(new THREE.Vector3().subVectors(ae.position,ref).normalize(),30);}}
+        floatWorld(ref.clone().add(new THREE.Vector3(0,10,0)),'🔊 ROAR!','#ffee44');
+      }
+    }
+    if(mk.power){mk.power=false;
+      // Trigger slash/power action — same as Slash key
+      const pRef=dragonMesh.position;
+      if((!abilityCooldown.power||abilityCooldown.power<=0)&&!isHuman){
+        const id=dtype.id;const refP=pRef.clone().add(new THREE.Vector3(0,6,0));
+        if(id==='fire'){abilityCooldown.power=5;floatWorld(refP,'🔥 MEGA FIREBALL!','#ff4400');const fGeo=new THREE.SphereGeometry(5,8,6);const fMesh=new THREE.Mesh(fGeo,new THREE.MeshBasicMaterial({color:0xff4400,transparent:true,opacity:0.95,blending:THREE.AdditiveBlending}));fMesh.position.copy(pRef).add(new THREE.Vector3(0,4,0));let ftgt=null,fd=800;for(const ae of activeEnemies){if(!ae.userData.alive)continue;const d=pRef.distanceTo(ae.position);if(d<fd){fd=d;ftgt=ae;}}const fDir=ftgt?new THREE.Vector3().subVectors(ftgt.position,fMesh.position).normalize():new THREE.Vector3(-Math.sin(dragonMesh.rotation.y),0,Math.cos(dragonMesh.rotation.y));fMesh.userData={vel:fDir.multiplyScalar(50),dmg:upgradedDmg()*20,life:4,projType:'fire',friendly:true,spin:false};scene.add(fMesh);projectiles.push(fMesh);spawnAbilityCloud(refP,0xff4400,40,0.8);}
+        else if(id==='ice'){abilityCooldown.power=3;floatWorld(refP,'❄ ICE BEAM!','#88ffff');const fwd2=new THREE.Vector3(-Math.sin(dragonMesh.rotation.y),0,Math.cos(dragonMesh.rotation.y));for(const ae of activeEnemies){if(!ae.userData.alive)continue;const toE=new THREE.Vector3().subVectors(ae.position,pRef).normalize();if(fwd2.dot(toE)>0.5&&pRef.distanceTo(ae.position)<300){hitEnemy(ae,upgradedDmg()*5);freezeMap.set(ae,(freezeMap.get(ae)||0)+6);spawnBeamFX(refP.clone(),ae.position.clone(),0x88ffff);spawnAbilityCloud(ae.position.clone(),0x88ffff,22,0.6);}}spawnAbilityCloud(refP,0x88ffff,55,1.0);}
+        else if(id==='soul'){abilityCooldown.power=8;floatWorld(refP,'👻 GHOST DRAGONS!','#ffffff');for(let gi=0;gi<3;gi++){const ghostMesh=buildDragonMesh(dtype);ghostMesh.scale.set(2,2,2);ghostMesh.traverse(c=>{if(c.isMesh&&c.material)c.material=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.5,blending:THREE.AdditiveBlending});});const ang=gi/3*Math.PI*2;ghostMesh.position.copy(pRef).add(new THREE.Vector3(Math.cos(ang)*20,8,Math.sin(ang)*20));ghostMesh.userData={hp:9999,maxHp:9999,dmg:upgradedDmg()*8,alive:true,attackT:0.5,pts:0,stunT:0,shootT:1,si:1,type:'golem',isGhost:true,ghostLife:10};scene.add(ghostMesh);dragonArmy.push({mesh:ghostMesh,dtDef:dtype,isGolem:false,isGhost:true});spawnAbilityCloud(ghostMesh.position.clone(),0xffffff,25,0.8);}}
+        else if(id==='nature'){abilityCooldown.power=5;floatWorld(refP,'🌿 LIFE BEAM!','#44ff44');dhp=Math.min(dmaxHp,dhp+400);spawnAbilityCloud(refP,0x44ff44,55,1.2);const fwd2=new THREE.Vector3(-Math.sin(dragonMesh.rotation.y),0,Math.cos(dragonMesh.rotation.y));for(const ae of activeEnemies){if(!ae.userData.alive)continue;const toE=new THREE.Vector3().subVectors(ae.position,pRef).normalize();if(fwd2.dot(toE)>0.4&&pRef.distanceTo(ae.position)<250){hitEnemy(ae,400);spawnBeamFX(refP.clone(),ae.position.clone(),0x44ff44);spawnAbilityCloud(ae.position.clone(),0x44ff44,20,0.5);}}}
+        else if(id==='earth'){abilityCooldown.power=7;floatWorld(refP,'🌍 GROUND SMASH!','#aa8844');spawnAbilityCloud(pRef.clone(),0xaa8844,100,2.5);spawnAbilityCloud(pRef.clone(),0x886622,70,1.8);for(let ei=0;ei<32;ei++){const ea=ei/32*Math.PI*2;const ep=pRef.clone().add(new THREE.Vector3(Math.cos(ea)*180,0,Math.sin(ea)*180));spawnAbilityCloud(ep,0xaa8844,22,0.8);}for(const ae of activeEnemies){if(!ae.userData.alive)continue;if(pRef.distanceTo(ae.position)<200){hitEnemy(ae,upgradedDmg()*10);}}}
+        else{abilityCooldown.power=5;spawnAbilityCloud(refP,0xffffff,60,1.5);for(const ae of activeEnemies){if(!ae.userData.alive)continue;if(pRef.distanceTo(ae.position)<150)hitEnemy(ae,upgradedDmg()*8);}}
+      }
+    }
+    if(mk.kw){mk.kw=false;useKingWeapon();}
+    if(mk.tab){mk.tab=false;if(playerKingWeapons.length>0){activeKingWeaponIdx=(activeKingWeaponIdx+1)%playerKingWeapons.length;updateKingWeaponHUD();}}
 
     // Dragon melee ram — damages any enemy within 7u while flying
     if(!isLanded&&!isHuman){
@@ -4341,6 +4429,8 @@ function update(ts){
       }
       const offset=new THREE.Vector3(Math.sin(a.slot*1.2)*25,8+a.slot*3,Math.cos(a.slot*1.2)*25);
       target=ref.clone().add(offset);
+      // Teleport if too far from player
+      if(a.mesh.position.distanceTo(ref)>200)a.mesh.position.copy(target);
       // Move toward formation at fixed speed, not lerp fraction
       const toTarget=new THREE.Vector3().subVectors(target,a.mesh.position);
       const dist=toTarget.length();

@@ -2086,9 +2086,10 @@ function spawnLegendCastle(){
   const hilt2=new THREE.Mesh(new THREE.BoxGeometry(0.3,1.6,0.3),mat(0x885522,{flatShading:true}));hilt2.position.y=-0.9;swordGrp.add(hilt2);
   const pommel2=new THREE.Mesh(new THREE.SphereGeometry(0.5,6,6),mat(0xddaa33,{flatShading:true}));pommel2.position.y=-1.9;swordGrp.add(pommel2);
   const pommelGlow=new THREE.Mesh(new THREE.SphereGeometry(0.8,6,6),glowMat2);pommelGlow.position.y=-1.9;swordGrp.add(pommelGlow);
-  swordGrp.position.set(LC_X,altarY+3.5,LC_Z);
+  swordGrp.scale.set(3,3,3);
+  swordGrp.position.set(LC_X,altarY+10.5,LC_Z);
   scene.add(swordGrp);
-  legendSwordMesh=swordGrp;legendSwordTaken=false;
+  legendSwordMesh=swordGrp;legendSwordMesh.userData.baseY=altarY+10.5;legendSwordTaken=false;
 
   // ── GUARDS: shadow dragons, acid dragons, ogres, golems, mages ───────────
   function spawnLC(type,x,z,hpMult,dmgMult,scale=1){
@@ -3841,7 +3842,7 @@ function update(ts){
     if(legendSwordMesh&&!legendSwordTaken){
       legendSwordSpinT+=dt;
       legendSwordMesh.rotation.y=legendSwordSpinT*1.4;
-      legendSwordMesh.position.y=(dmPeakY+6+1.4)+Math.sin(legendSwordSpinT*2)*0.3;
+      legendSwordMesh.position.y=legendSwordMesh.userData.baseY+Math.sin(legendSwordSpinT*2)*1.2;
       const sPos=isHuman&&humanMesh?humanMesh.position:dragonMesh.position;
       const sDist=sPos.distanceTo(legendSwordMesh.position);
       const hint=document.getElementById('interact-hint');
@@ -3854,6 +3855,29 @@ function update(ts){
           legendSwordMesh=null;
           playHorn();
           floatWorld(sPos,'⚔ LEGEND SWORD! '+dtype.name.toUpperCase()+' → '+SWORD_TYPES[dtype.id]+'  200x POWER!','#ffee00');
+          // Dragon power-up burst: 40 gold particles
+          for(let _i=0;_i<40;_i++){
+            const pg=new THREE.Mesh(new THREE.SphereGeometry(0.5,4,3),new THREE.MeshBasicMaterial({color:0xffee00,transparent:true,opacity:1,blending:THREE.AdditiveBlending}));
+            pg.position.copy(dragonMesh.position);
+            const pv=new THREE.Vector3((Math.random()-0.5)*40,(Math.random()*20+5),(Math.random()-0.5)*40);
+            pg.userData={vel:pv,life:1.4};
+            scene.add(pg);
+            setTimeout(()=>scene.remove(pg),1400);
+            (function animPG(elapsed){
+              requestAnimationFrame(()=>{
+                const t=elapsed+0.016;
+                if(!pg.parent)return;
+                pg.position.addScaledVector(pv,0.016);
+                pv.y-=20*0.016;
+                pg.material.opacity=Math.max(0,1-t/1.4);
+                if(t<1.4)animPG(t);
+              });
+            })(0);
+          }
+          // Brief scale pulse on the dragon
+          const origScale=dragonMesh.scale.x;
+          dragonMesh.scale.set(origScale*2,origScale*2,origScale*2);
+          setTimeout(()=>dragonMesh.scale.set(origScale,origScale,origScale),600);
         }
       }
     }

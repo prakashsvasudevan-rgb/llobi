@@ -2016,72 +2016,114 @@ function spawnLegendCastle(){
     const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);
     mesh.position.set(ox,oy+h/2,oz);g.add(mesh);
   }
-  // Main keep — 2x bigger and darker
+  // ── 3x Main Keep ──────────────────────────────────────────────────────────
   const g=new THREE.Group();
-  const wallMat=mat(0x1a0a0a,{flatShading:true});
-  const towerMat=mat(0x2a0505,{flatShading:true});
-  const battleMat=mat(0x110000,{flatShading:true});
-  addLC(g,24,18,20,wallMat);
-  addLC(g,16,16,16,mat(0x2a0a0a,{flatShading:true}),0,1,0);
-  // 4 large towers
-  for(const[tx,tz] of [[-14,-11],[14,-11],[-14,11],[14,11]]){
-    addLC(g,6,26,6,towerMat,tx,2,tz);
-    addLC(g,7,2,7,battleMat,tx,27,tz);
+  const wallMat=mat(0x0d0005,{flatShading:true});
+  const towerMat=mat(0x1a0010,{flatShading:true});
+  const battleMat=mat(0x080003,{flatShading:true});
+  const accentMat=mat(0x2a0030,{flatShading:true});
+  addLC(g,70,55,60,wallMat);
+  addLC(g,48,50,48,mat(0x150008,{flatShading:true}),0,1,0);
+  // 4 massive towers
+  for(const[tx,tz] of [[-42,-33],[42,-33],[-42,33],[42,33]]){
+    addLC(g,16,80,16,towerMat,tx,2,tz);
+    addLC(g,18,4,18,battleMat,tx,80,tz);
+    const spire=new THREE.Mesh(new THREE.ConeGeometry(10,22,4),mat(0x330022,{flatShading:true}));
+    spire.position.set(tx,88,tz);spire.rotation.y=Math.PI/4;g.add(spire);
   }
-  // Extra corner spires
-  for(const[tx,tz] of [[-20,-17],[20,-17],[-20,17],[20,17]]){
-    addLC(g,4,20,4,towerMat,tx,0,tz);
-    const spire=new THREE.Mesh(new THREE.ConeGeometry(3.5,6,4),mat(0x440000,{flatShading:true}));
-    spire.position.set(tx,22,tz);spire.rotation.y=Math.PI/4;g.add(spire);
+  // 8 outer wall bastions
+  for(let bi=0;bi<8;bi++){
+    const ba=bi/8*Math.PI*2;
+    const br=60,bx=Math.cos(ba)*br,bz=Math.sin(ba)*br;
+    addLC(g,10,36,10,accentMat,bx,0,bz);
+    addLC(g,12,4,12,battleMat,bx,36,bz);
+  }
+  // Outer wall ring
+  for(let wi=0;wi<8;wi++){
+    const wa=wi/8*Math.PI*2,wan=(wi+1)/8*Math.PI*2;
+    const wr=60;
+    const mx=Math.cos((wa+wan)/2)*wr,mz=Math.sin((wa+wan)/2)*wr;
+    addLC(g,26,28,5,wallMat,mx,0,mz);
   }
   // Gate
-  addLC(g,5,8,1,mat(0x000000),0,-1,10.6);
-  addLC(g,5,4,1,mat(0x660000),0,7,10.6);
-  // Blood-red flag
-  addLC(g,0.4,16,0.4,mat(0x442222),0,26,0);
-  addLC(g,4,3,0.2,mat(0xaa0000),2.2,41,0);
-  // Dark glow pillar around the sword altar
-  const darkGlowMat=new THREE.MeshBasicMaterial({color:0xff2200,transparent:true,opacity:0.18,blending:THREE.AdditiveBlending});
-  const pillarGlow=new THREE.Mesh(new THREE.CylinderGeometry(2,2,30,12),darkGlowMat);
-  pillarGlow.position.set(0,22,0);g.add(pillarGlow);
+  addLC(g,14,22,2,mat(0x000000),0,-4,32);
+  addLC(g,14,10,2,mat(0x440022),0,18,32);
+  // 5 blood-red flags
+  for(const fx of [-12,-6,0,6,12]){addLC(g,0.8,30,0.8,mat(0x330011),fx,62,0);addLC(g,8,6,0.3,mat(0xcc0022),fx+4,91,0);}
+  // Dark glow beam above altar
+  const darkGlowMat=new THREE.MeshBasicMaterial({color:0xaa00ff,transparent:true,opacity:0.25,blending:THREE.AdditiveBlending});
+  const pillarGlow=new THREE.Mesh(new THREE.CylinderGeometry(5,5,120,12),darkGlowMat);
+  pillarGlow.position.set(0,60,0);g.add(pillarGlow);
+  // Purple outer glow halo
+  const haloMat=new THREE.MeshBasicMaterial({color:0x6600aa,transparent:true,opacity:0.09,blending:THREE.AdditiveBlending,side:THREE.DoubleSide});
+  const halo=new THREE.Mesh(new THREE.SphereGeometry(110,16,10),haloMat);halo.position.set(0,40,0);g.add(halo);
 
   g.position.set(LC_X,lcY,LC_Z);
-  g.userData={type:'castle',alive:true,hp:800,maxHp:800,radius:28,isLegend:true};
+  g.userData={type:'castle',alive:true,hp:2000,maxHp:2000,radius:90,isLegend:true};
   scene.add(g);activeBuildings.push(g);
 
-  // Altar inside the keep (on top)
-  const altarY=lcY+18;
-  const altarMat=mat(0x332222,{flatShading:true});
-  const altarBase=new THREE.Mesh(new THREE.BoxGeometry(4,1.5,4),altarMat);
-  altarBase.position.set(LC_X,altarY+0.75,LC_Z);scene.add(altarBase);
-  const altarTop=new THREE.Mesh(new THREE.BoxGeometry(3.2,0.5,3.2),mat(0x554433,{flatShading:true}));
-  altarTop.position.set(LC_X,altarY+1.75,LC_Z);scene.add(altarTop);
+  // ── Altar on top of keep ──────────────────────────────────────────────────
+  const altarY=lcY+56;
+  const altarMat=mat(0x220011,{flatShading:true});
+  const altarBase=new THREE.Mesh(new THREE.BoxGeometry(6,2,6),altarMat);
+  altarBase.position.set(LC_X,altarY+1,LC_Z);scene.add(altarBase);
+  const altarTop=new THREE.Mesh(new THREE.BoxGeometry(5,0.6,5),mat(0x442233,{flatShading:true}));
+  altarTop.position.set(LC_X,altarY+2.3,LC_Z);scene.add(altarTop);
+  // Altar rune glow
+  const runeGlow=new THREE.Mesh(new THREE.BoxGeometry(5,0.1,5),new THREE.MeshBasicMaterial({color:0xff44ff,transparent:true,opacity:0.6,blending:THREE.AdditiveBlending}));
+  runeGlow.position.set(LC_X,altarY+2.65,LC_Z);scene.add(runeGlow);
 
-  // Sword mesh
+  // ── Sword (bigger, more impressive) ──────────────────────────────────────
   const swordGrp=new THREE.Group();
-  const bladeMat2=new THREE.MeshBasicMaterial({color:0xffffff});
-  const glowMat2=new THREE.MeshBasicMaterial({color:0xffee44,transparent:true,opacity:0.75,blending:THREE.AdditiveBlending});
-  const blade2=new THREE.Mesh(new THREE.BoxGeometry(0.3,3.4,0.15),bladeMat2);blade2.position.y=1.8;swordGrp.add(blade2);
-  const bladeGlow2=new THREE.Mesh(new THREE.BoxGeometry(0.55,3.8,0.35),glowMat2);bladeGlow2.position.y=1.8;swordGrp.add(bladeGlow2);
-  const guard2=new THREE.Mesh(new THREE.BoxGeometry(1.6,0.3,0.3),mat(0xddaa33,{flatShading:true}));guard2.position.y=0.15;swordGrp.add(guard2);
-  const hilt2=new THREE.Mesh(new THREE.BoxGeometry(0.24,1.2,0.24),mat(0x885522,{flatShading:true}));hilt2.position.y=-0.65;swordGrp.add(hilt2);
-  const pommel2=new THREE.Mesh(new THREE.SphereGeometry(0.3,6,6),mat(0xddaa33,{flatShading:true}));pommel2.position.y=-1.4;swordGrp.add(pommel2);
-  swordGrp.position.set(LC_X,altarY+2.2,LC_Z);
+  const bladeMat2=new THREE.MeshBasicMaterial({color:0xeeeeff});
+  const glowMat2=new THREE.MeshBasicMaterial({color:0xffee44,transparent:true,opacity:0.8,blending:THREE.AdditiveBlending});
+  const glowMat3=new THREE.MeshBasicMaterial({color:0xff88ff,transparent:true,opacity:0.45,blending:THREE.AdditiveBlending});
+  const blade2=new THREE.Mesh(new THREE.BoxGeometry(0.5,5.5,0.22),bladeMat2);blade2.position.y=3;swordGrp.add(blade2);
+  const bladeGlow2=new THREE.Mesh(new THREE.BoxGeometry(0.9,6,0.5),glowMat2);bladeGlow2.position.y=3;swordGrp.add(bladeGlow2);
+  const bladeAura=new THREE.Mesh(new THREE.BoxGeometry(1.6,6.8,1.0),glowMat3);bladeAura.position.y=3;swordGrp.add(bladeAura);
+  const guard2=new THREE.Mesh(new THREE.BoxGeometry(2.6,0.4,0.4),mat(0xddaa33,{flatShading:true}));guard2.position.y=0.2;swordGrp.add(guard2);
+  const guardGem=new THREE.Mesh(new THREE.SphereGeometry(0.35,6,6),new THREE.MeshBasicMaterial({color:0xff44ff,blending:THREE.AdditiveBlending}));guardGem.position.set(0,0.3,0);swordGrp.add(guardGem);
+  const hilt2=new THREE.Mesh(new THREE.BoxGeometry(0.3,1.6,0.3),mat(0x885522,{flatShading:true}));hilt2.position.y=-0.9;swordGrp.add(hilt2);
+  const pommel2=new THREE.Mesh(new THREE.SphereGeometry(0.5,6,6),mat(0xddaa33,{flatShading:true}));pommel2.position.y=-1.9;swordGrp.add(pommel2);
+  const pommelGlow=new THREE.Mesh(new THREE.SphereGeometry(0.8,6,6),glowMat2);pommelGlow.position.y=-1.9;swordGrp.add(pommelGlow);
+  swordGrp.position.set(LC_X,altarY+3.5,LC_Z);
   scene.add(swordGrp);
-  legendSwordMesh=swordGrp;
-  legendSwordTaken=false;
+  legendSwordMesh=swordGrp;legendSwordTaken=false;
 
-  // Guard dragons around the legend castle — 6 elite hunters
-  for(let i=0;i<6;i++){
-    const ang=i/6*Math.PI*2;
-    const gx=LC_X+Math.cos(ang)*35, gz=LC_Z+Math.sin(ang)*35;
-    const hunter=new THREE.Group();
-    hunter.position.set(gx,lcY+8,gz);
-    const bodyMat=mat(0x440000,{flatShading:true});
-    const hBody=new THREE.Mesh(new THREE.BoxGeometry(3,2,5),bodyMat);hBody.position.y=1;hunter.add(hBody);
-    hunter.userData={alive:true,hp:400,maxHp:400,type:'dragon',si:1,atk:0,shootT:3,pts:300,dmg:35};
-    scene.add(hunter);activeEnemies.push(hunter);
+  // ── GUARDS: shadow dragons, acid dragons, ogres, golems, mages ───────────
+  function spawnLC(type,x,z,hpMult,dmgMult,scale=1){
+    const e=makeEnemy3d(type);
+    const gy=groundY(x,z);
+    e.position.set(x,gy+(type==='shadowDragon'||type==='dragon'?20:2),z);
+    e.userData.hp*=hpMult;e.userData.maxHp=e.userData.hp;
+    e.userData.dmg*=dmgMult;e.userData.pts*=3;
+    if(scale!==1)e.scale.set(scale,scale,scale);
+    scene.add(e);activeEnemies.push(e);
   }
+  // 10 shadow dragons circling high
+  for(let i=0;i<10;i++){const a=i/10*Math.PI*2;spawnLC('shadowDragon',LC_X+Math.cos(a)*130,LC_Z+Math.sin(a)*130,4,2.5);}
+  // 8 acid dragons (tinted acid-green)
+  for(let i=0;i<8;i++){
+    const a=i/8*Math.PI*2+0.4;
+    const e=makeEnemy3d('dragon');
+    e.traverse(c=>{if(c.isMesh&&c.material)c.material=new THREE.MeshBasicMaterial({color:0x33ff44});});
+    e.position.set(LC_X+Math.cos(a)*100,groundY(LC_X+Math.cos(a)*100,LC_Z+Math.sin(a)*100)+25,LC_Z+Math.sin(a)*100);
+    e.userData.hp=450;e.userData.maxHp=450;e.userData.dmg=32;e.userData.pts=700;e.userData.type='dragon';
+    scene.add(e);activeEnemies.push(e);
+  }
+  // 12 ogres around the walls
+  for(let i=0;i<12;i++){const a=i/12*Math.PI*2;spawnLC('ogre',LC_X+Math.cos(a)*80,LC_Z+Math.sin(a)*80,5,3,2.5);}
+  // 8 giant golems at gates (huge grey stone)
+  for(const[gx,gz] of [[0,90],[0,-90],[90,0],[-90,0],[65,65],[-65,65],[65,-65],[-65,-65]]){
+    const e=makeEnemy3d('ogre');
+    e.scale.set(4,4,4);
+    e.position.set(LC_X+gx,groundY(LC_X+gx,LC_Z+gz)+4,LC_Z+gz);
+    e.userData.hp=900;e.userData.maxHp=900;e.userData.dmg=60;e.userData.pts=1000;e.userData.spd=3;e.userData.type='golem';
+    e.traverse(c=>{if(c.isMesh&&c.material)c.material=new THREE.MeshBasicMaterial({color:0x445566});});
+    scene.add(e);activeEnemies.push(e);
+  }
+  // 16 mages on the battlements
+  for(let i=0;i<16;i++){const a=i/16*Math.PI*2;spawnLC('mage',LC_X+Math.cos(a)*68,LC_Z+Math.sin(a)*68,6,4);}
 }
 
 // ── Volcano + King of Death Dragon (fixed at far edge) ───────────────────────

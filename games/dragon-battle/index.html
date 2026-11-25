@@ -1273,8 +1273,12 @@ function spawnZone(cx,cz){
       scene.add(t);objects.push(t);
     }
 
+    // Dragon Mountain safe zone — no hostile buildings or roaming enemies
+    const dmCx=~~(DM_X/ZONE),dmCz=~~(DM_Z/ZONE);
+    const nearDM=Math.abs(cx-dmCx)<=1&&Math.abs(cz-dmCz)<=1;
+
     // Building — villages are HOSTILE (dragon hunters live here)
-    if(Math.random()<0.07){
+    if(!nearDM&&Math.random()<0.07){
       const isC=Math.random()<.3;
       const b=isC?makeCastleMesh():makeVillageMesh();
       const bx=wx0+ZONE/2+(Math.random()-.5)*80;
@@ -1322,7 +1326,7 @@ function spawnZone(cx,cz){
 
     // Ground roaming enemy (very sparse)
     const ec=0.004*enemyBudget();
-    if(Math.random()<ec){
+    if(!nearDM&&Math.random()<ec){
       const eType=Math.random()<.5?'ogre':'archer';
       const e=makeEnemy3d(eType);
       const ex=wx0+Math.random()*ZONE,ez=wz0+Math.random()*ZONE;
@@ -1331,7 +1335,7 @@ function spawnZone(cx,cz){
     }
 
     // Shadow Dragon mage-rider teams — only appear once player has a dragon army
-    if(dragonArmy.length>=1&&dist2>9&&Math.random()<0.014*Math.max(0.3,enemyBudget()*0.3)){
+    if(!nearDM&&dragonArmy.length>=1&&dist2>9&&Math.random()<0.014*Math.max(0.3,enemyBudget()*0.3)){
       const sd=makeEnemy3d('shadowDragon');
       const sdx=wx0+Math.random()*ZONE,sdz=wz0+Math.random()*ZONE;
       sd.position.set(sdx,groundY(sdx,sdz)+45+Math.random()*25,sdz);
@@ -1342,7 +1346,7 @@ function spawnZone(cx,cz){
     }
 
     // Flying enemy dragon (rare, appears with score)
-    if(Math.random()<0.03*Math.max(0.3,enemyBudget()*0.4)){
+    if(!nearDM&&Math.random()<0.03*Math.max(0.3,enemyBudget()*0.4)){
       const ed=makeEnemy3d('dragon');
       const edx=wx0+Math.random()*ZONE,edz=wz0+Math.random()*ZONE;
       ed.position.set(edx,groundY(edx,edz)+35+Math.random()*30,edz);
@@ -1721,6 +1725,58 @@ function spawnDragonMountain(){
     dr.position.set(sp[0],peakY+1.5,sp[1]);
     dr.rotation.y=Math.PI; // face inward
     scene.add(dr);objects.push(dr);friendlyNPCs.push(dr);
+  }
+
+  // ── LUMEN — Soul dragon rider, patrols base and fights hunters ───────────────
+  const lumenDtDef=DT.find(d=>d.id==='soul');
+  function makeLumenRider(){
+    const grp=new THREE.Group();
+    const ld=buildDragonMesh(lumenDtDef);ld.scale.set(0.85,0.85,0.85);
+    grp.add(ld);
+    const lr=buildRiderOnDragon(lumenDtDef);ld.add(lr);
+    grp.userData.lwp=ld.userData.lwp;grp.userData.rwp=ld.userData.rwp;
+    grp.userData.llg=ld.userData.llg;grp.userData.rlg=ld.userData.rlg;
+    grp.userData.npcDragon=ld;
+    return grp;
+  }
+  const lumenGrp=makeLumenRider();
+  lumenGrp.userData.npcName='Lumen';
+  lumenGrp.userData.npcText='I am Lumen, Soul Rider. My team and I defend Dragon Mountain from every hunter that dares approach. Stand with us!';
+  lumenGrp.userData.isLumen=true;
+  lumenGrp.userData.choices=[
+    {q:'How do you fight the hunters?',a:'Soul dragons fire beams that pierce armour. We circle the base at all times. No hunter has ever reached the cave entrance on my watch.'},
+    {q:'Can I join your patrol?',a:'You already belong here, rider. When you are ready, ride alongside us. The more dragons in the air, the safer the mountain.'},
+    {q:'Who is the leader of the hunters?',a:'The Emperor commands them all from the Volcano. The hunters are his eyes on the ground. Defeat him and they scatter.'},
+  ];
+  lumenGrp.position.set(DM_X-18,groundY(DM_X-18,DM_Z-20)+2,DM_Z-20);
+  lumenGrp.userData.patrolAngle=0;
+  lumenGrp.userData.patrolR=35;
+  lumenGrp.userData.npcAtkT=2;
+  scene.add(lumenGrp);objects.push(lumenGrp);friendlyNPCs.push(lumenGrp);
+
+  // Lumen's team — 3 riders on various dragons, also patrol and fight
+  const lumenTeamTypes=['fire','air','nature'];
+  for(let li=0;li<3;li++){
+    const ltDef=DT.find(d=>d.id===lumenTeamTypes[li]);
+    const ltGrp=new THREE.Group();
+    const ltd=buildDragonMesh(ltDef);ltd.scale.set(0.75,0.75,0.75);
+    ltGrp.add(ltd);
+    const ltr=buildRiderOnDragon(ltDef);ltd.add(ltr);
+    ltGrp.userData.lwp=ltd.userData.lwp;ltGrp.userData.rwp=ltd.userData.rwp;
+    ltGrp.userData.npcDragon=ltd;
+    ltGrp.userData.npcName='Rider '+['Vex','Kira','Ash'][li];
+    ltGrp.userData.npcText='I ride with Lumen. We keep the hunters away from Dragon Mountain!';
+    ltGrp.userData.choices=[
+      {q:'What do you do here?',a:'Patrol, train, protect. When hunters approach the mountain we intercept them before they reach the gates.'},
+      {q:'Can I recruit you?',a:'I already serve Lumen. But if Blane clears the path, we will all ride to the final battle together!'},
+    ];
+    ltGrp.userData.patrolAngle=(li+1)/4*Math.PI*2;
+    ltGrp.userData.patrolR=28+li*8;
+    ltGrp.userData.npcAtkT=2+li;
+    ltGrp.position.set(DM_X+Math.cos(ltGrp.userData.patrolAngle)*ltGrp.userData.patrolR,
+      groundY(DM_X,DM_Z)+3,
+      DM_Z+Math.sin(ltGrp.userData.patrolAngle)*ltGrp.userData.patrolR);
+    scene.add(ltGrp);objects.push(ltGrp);friendlyNPCs.push(ltGrp);
   }
 
   // Variety of dragon types roaming around the peak
@@ -2614,7 +2670,7 @@ function update(ts){
       dragonMesh.rotation.set(dPitch,dYaw,dRoll,'YXZ');
       const fwd=new THREE.Vector3(0,0,1);
       fwd.applyEuler(dragonMesh.rotation);
-      dragonMesh.position.addScaledVector(fwd,dtype.speed*dt);
+      dragonMesh.position.addScaledVector(fwd,dtype.speed*1.6*dt);
       // Land if descend to ground
       if(dragonMesh.position.y<=landThreshold&&dPitch>=0.1){
         isLanded=true;landedY=landThreshold;
@@ -2641,6 +2697,18 @@ function update(ts){
       dfuel=Math.max(0,dfuel-70*dt);
       if(frame%2===0)spawnFire();
     } else dfuel=Math.min(dmaxFuel,dfuel+dtype.rfuel*60*dt);
+
+    // Dragon melee ram — damages any enemy within 7u while flying
+    if(!isLanded&&!isHuman){
+      for(const e of activeEnemies){
+        if(!e.userData.alive)continue;
+        if(dragonMesh.position.distanceTo(e.position)<7){
+          hitEnemy(e,dtype.dmg*0.6);
+          if(!e.userData.ramT||e.userData.ramT<=0)e.userData.ramT=1.2;
+        }
+        if(e.userData.ramT>0)e.userData.ramT-=dt;
+      }
+    }
 
     // fwd needed below (define if landed)
     const fwd=new THREE.Vector3(0,0,1);fwd.applyEuler(dragonMesh.rotation);
@@ -3169,6 +3237,37 @@ function update(ts){
           nPos.addScaledVector(npc.userData.npcWanderDir,1.5*dt);
           nPos.y=groundY(nPos.x,nPos.z)+1.5;
           npc.rotation.y=Math.atan2(npc.userData.npcWanderDir.x,npc.userData.npcWanderDir.z);
+        }
+      }
+    }
+
+    // ── LUMEN PATROL + COMBAT ─────────────────────────────────────────────────
+    for(const npc of friendlyNPCs){
+      if(!npc.userData.patrolAngle===undefined)continue;
+      if(npc.userData.patrolR===undefined)continue;
+      // Patrol circle around DM base
+      npc.userData.patrolAngle+=dt*0.4;
+      const pr=npc.userData.patrolR;
+      const baseGY=groundY(DM_X,DM_Z)+6;
+      const ptx=DM_X+Math.cos(npc.userData.patrolAngle)*pr;
+      const ptz=DM_Z+Math.sin(npc.userData.patrolAngle)*pr;
+      const toP=new THREE.Vector3(ptx-npc.position.x,baseGY-npc.position.y,ptz-npc.position.z);
+      npc.position.addScaledVector(toP.normalize(),8*dt);
+      npc.lookAt(ptx,npc.position.y,ptz);
+      // Wing flap
+      const nd3=npc.userData.npcDragon;
+      if(nd3&&nd3.userData.lwp){
+        const wa=Math.sin(npc.userData.patrolAngle*4)*0.5;
+        nd3.userData.lwp.rotation.z=wa;nd3.userData.rwp.rotation.z=-wa;
+      }
+      // Attack nearest active enemy within 200 units
+      if(npc.userData.npcAtkT!==undefined){
+        npc.userData.npcAtkT-=dt;
+        if(npc.userData.npcAtkT<=0){
+          npc.userData.npcAtkT=2+Math.random()*2;
+          let be=null,bd=200;
+          for(const e of activeEnemies){if(!e.userData.alive)continue;const d=npc.position.distanceTo(e.position);if(d<bd){bd=d;be=e;}}
+          if(be){spawnProjectile('magic',npc.position.clone().add(new THREE.Vector3(0,2,0)),be.position.clone());npc.lookAt(be.position.x,npc.position.y,be.position.z);}
         }
       }
     }

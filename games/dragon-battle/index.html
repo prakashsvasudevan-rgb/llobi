@@ -2278,15 +2278,27 @@ function openDialog(npc){
   const choicesEl=document.getElementById('dialog-choices');
   choicesEl.innerHTML='';
   const choices=npc.userData.choices||[];
-  choices.forEach(c=>{
-    const btn=document.createElement('button');btn.className='d-choice';
-    btn.textContent='▶ '+c.q;
-    btn.onclick=()=>{
-      document.getElementById('dialog-text').textContent=c.a;
-      choicesEl.innerHTML=''; // hide choices after selection
-    };
-    choicesEl.appendChild(btn);
-  });
+  function showChoices(){
+    choicesEl.innerHTML='';
+    choices.forEach(c=>{
+      const btn=document.createElement('button');btn.className='d-choice';
+      btn.textContent='▶ '+c.q;
+      btn.onclick=()=>{
+        document.getElementById('dialog-text').textContent=c.a;
+        // Show "back" button to return to questions
+        choicesEl.innerHTML='';
+        const back=document.createElement('button');back.className='d-choice';
+        back.textContent='◀ Ask another question';
+        back.onclick=()=>{
+          document.getElementById('dialog-text').textContent=txt;
+          showChoices();
+        };
+        choicesEl.appendChild(back);
+      };
+      choicesEl.appendChild(btn);
+    });
+  }
+  if(choices.length>0)showChoices();
   document.getElementById('dialog').style.display='block';
   if(document.exitPointerLock)document.exitPointerLock();
   // B key to buy food / armor / Blane dragon reassign while dialog open

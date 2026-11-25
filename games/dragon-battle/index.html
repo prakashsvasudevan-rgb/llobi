@@ -3363,18 +3363,37 @@ function update(ts){
         a.mesh.rotation.y=Math.atan2(DM_X-a.stagingPos[0],DM_Z-a.stagingPos[1]);
         continue;
       }
-      const offset=new THREE.Vector3(Math.sin(a.slot*1.2)*25,10+a.slot*4,Math.cos(a.slot*1.2)*25);
+      const offset=new THREE.Vector3(Math.sin(a.slot*1.2)*25,8+a.slot*3,Math.cos(a.slot*1.2)*25);
       target=ref.clone().add(offset);
-      a.mesh.position.lerp(target,dt*1.5);
-      a.mesh.lookAt(ref);
-      // Attack nearest enemy
-      if(a.mesh.userData.atkT===undefined)a.mesh.userData.atkT=2;
+      // Move toward formation at fixed speed, not lerp fraction
+      const toTarget=new THREE.Vector3().subVectors(target,a.mesh.position);
+      const dist=toTarget.length();
+      if(dist>2)a.mesh.position.addScaledVector(toTarget.normalize(),Math.min(dist,22)*dt);
+      a.mesh.lookAt(target.x,a.mesh.position.y,target.z);
+      // Wing flap while flying
+      const adn=a.mesh.userData.npcDragon||a.mesh.children[0];
+      if(adn&&adn.userData&&adn.userData.lwp){
+        const wf=Math.sin(frame*0.14+a.slot)*0.55;
+        adn.userData.lwp.rotation.z=wf;adn.userData.rwp.rotation.z=-wf;
+      }
+      // Attack nearest enemy — 3 breath shots in spread
+      if(a.mesh.userData.atkT===undefined)a.mesh.userData.atkT=2+Math.random();
       a.mesh.userData.atkT-=dt;
       if(a.mesh.userData.atkT<=0){
-        a.mesh.userData.atkT=2+Math.random()*2;
-        let be=null,bd=600;
+        a.mesh.userData.atkT=2.5+Math.random()*1.5;
+        let be=null,bd=400;
         for(const e of activeEnemies){if(!e.userData.alive)continue;const d=a.mesh.position.distanceTo(e.position);if(d<bd){bd=d;be=e;}}
-        if(be)spawnDragonShot(a.mesh.userData.dtDef,a.mesh.position.clone(),be.position.clone());
+        if(be){
+          const dtd=a.mesh.userData.dtDef;
+          const firePos=a.mesh.position.clone().add(new THREE.Vector3(0,2,0));
+          spawnDragonShot(dtd,firePos,be.position.clone());
+          // Two side shots with slight spread
+          const side=new THREE.Vector3().subVectors(be.position,firePos).normalize();
+          const perp=new THREE.Vector3(-side.z,0,side.x).multiplyScalar(3);
+          spawnDragonShot(dtd,firePos.clone().add(perp),be.position.clone().add(perp.clone().multiplyScalar(4)));
+          spawnDragonShot(dtd,firePos.clone().sub(perp),be.position.clone().add(perp.clone().multiplyScalar(-4)));
+          a.mesh.lookAt(be.position.x,a.mesh.position.y,be.position.z);
+        }
       }
     }
 
@@ -3692,7 +3711,15 @@ function update(ts){
           npc.userData.npcAtkT=2+Math.random()*2;
           let be=null,bd=200;
           for(const e of activeEnemies){if(!e.userData.alive)continue;const d=npc.position.distanceTo(e.position);if(d<bd){bd=d;be=e;}}
-          if(be){spawnDragonShot(npc.userData.dtDef,npc.position.clone().add(new THREE.Vector3(0,2,0)),be.position.clone());npc.lookAt(be.position.x,npc.position.y,be.position.z);}
+          if(be){
+            const fp2=npc.position.clone().add(new THREE.Vector3(0,2,0));
+            spawnDragonShot(npc.userData.dtDef,fp2,be.position.clone());
+            const sd2=new THREE.Vector3().subVectors(be.position,fp2).normalize();
+            const pp2=new THREE.Vector3(-sd2.z,0,sd2.x).multiplyScalar(2.5);
+            spawnDragonShot(npc.userData.dtDef,fp2.clone().add(pp2),be.position.clone());
+            spawnDragonShot(npc.userData.dtDef,fp2.clone().sub(pp2),be.position.clone());
+            npc.lookAt(be.position.x,npc.position.y,be.position.z);
+          }
         }
       }
     }

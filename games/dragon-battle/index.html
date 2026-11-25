@@ -1947,6 +1947,20 @@ function spawnDragonMountain(){
     ]};
   hCaretaker.position.set(DM_X+6,hElderY,DM_Z+158);addObj(hCaretaker);friendlyNPCs.push(hCaretaker);
 
+  // ── SHIELD DOME ──────────────────────────────────────────────────────────────
+  const shieldGeo=new THREE.SphereGeometry(320,32,20);
+  const shieldMat=new THREE.MeshBasicMaterial({color:0x44aaff,transparent:true,opacity:0.07,side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending});
+  dmShieldMesh=new THREE.Mesh(shieldGeo,shieldMat);
+  dmShieldMesh.position.set(DM_X,groundY(DM_X,DM_Z)+120,DM_Z);
+  scene.add(dmShieldMesh);
+  // Inner ring glow
+  const ringGeo=new THREE.TorusGeometry(320,4,8,64);
+  const ringMat=new THREE.MeshBasicMaterial({color:0x88ddff,transparent:true,opacity:0.25,blending:THREE.AdditiveBlending});
+  dmShieldRing=new THREE.Mesh(ringGeo,ringMat);
+  dmShieldRing.rotation.x=Math.PI/2;
+  dmShieldRing.position.set(DM_X,groundY(DM_X,DM_Z)+2,DM_Z);
+  scene.add(dmShieldRing);
+
   const key=zoneKey(~~(DM_X/ZONE),~~(DM_Z/ZONE));
   if(!zoneMap.has(key))zoneMap.set(key,objects);
   else zoneMap.get(key).push(...objects);
@@ -2113,6 +2127,13 @@ function hitEnemy(e,dmgAmt){
 }
 function hitBuilding(b){
   if(!b.userData.alive)return;
+  // Dragon Mountain structures are protected by the shield — indestructible
+  const distToDM=new THREE.Vector2(b.position.x-DM_X,b.position.z-DM_Z).length();
+  if(distToDM<DM_SHIELD_R){
+    // Flash shield on hit
+    dmShieldFlashT=0.5;
+    return;
+  }
   b.userData.hp-=dtype.dmg*.5;
   if(b.userData.hp<=0){
     b.userData.alive=false;const pts=b.userData.type==='castle'?500:150;score+=pts;kills++;
@@ -2175,6 +2196,8 @@ const HATCH_BENCH_SLOTS=[ // where bonded riders sit and wait
 let hatcheryDoneCount=0; // how many bonding sequences have completed
 let blaneLeadPhase='idle'; // 'idle'|'calling_at_hatchery'|'leading_to_castle'
 let dmPeakY=0; // set when Dragon Mountain spawns
+let dmShieldMesh=null,dmShieldRing=null,dmShieldFlashT=0;
+const DM_SHIELD_R=320; // shield dome radius
 let blaneQuest='inactive'; // 'inactive' | 'unlocked' | 'active' | 'complete'
 let shadowKills=0;
 let wildDragons=[]; // tameable wild dragons {mesh, hp, maxHp, tameable}
@@ -2790,6 +2813,8 @@ function startGame(){
   mageOrbs=0;shadowDust=0;upgrades={dmg:0,hp:0,speed:0,fuel:0,attack:0};
   dragonArmy.forEach(a=>scene.remove(a.mesh));dragonArmy=[];
   dragonMtnSpawned=false;volcanoSpawned=false;blaneNPC=null;blaneWanderT=0;blaneWanderTarget=null;blaneTalkT=0;hatcheryQueue=[];hatcheryDoneCount=0;blaneLeadPhase='idle';dmPeakY=0;
+  if(dmShieldMesh)scene.remove(dmShieldMesh);if(dmShieldRing)scene.remove(dmShieldRing);
+  dmShieldMesh=null;dmShieldRing=null;dmShieldFlashT=0;
   blaneQuest='inactive';shadowKills=0;wildDragons=[];
   mapOpen=false;wmEl.classList.remove('show');
   // Spawn Dragon Mountain (always at world north, zone 0,5)
@@ -3558,6 +3583,31 @@ function update(ts){
     updateFireParticles(dt);
     updateProjectiles(dt);
     updateAbilityFX(dt);
+
+    // ── DM SHIELD ───────────────────────────────────────────────────────────
+    if(dmShieldMesh){
+      // Pulse opacity
+      dmShieldFlashT=Math.max(0,dmShieldFlashT-dt);
+      const flash=dmShieldFlashT>0?0.35:0;
+      dmShieldMesh.material.opacity=0.07+Math.sin(frame*0.04)*0.025+flash;
+      dmShieldRing.material.opacity=0.25+Math.sin(frame*0.06)*0.08+flash*0.5;
+      dmShieldMesh.rotation.y+=dt*0.04; // slow spin
+      // Repel enemies that cross into the shield
+      for(const e of activeEnemies){
+        if(!e.userData.alive)continue;
+        const ex=e.position.x-DM_X,ez=e.position.z-DM_Z;
+        const dist=Math.sqrt(ex*ex+ez*ez);
+        if(dist<DM_SHIELD_R){
+          // Push out radially
+          const nx=ex/dist,nz=ez/dist;
+          e.position.x=DM_X+nx*DM_SHIELD_R;
+          e.position.z=DM_Z+nz*DM_SHIELD_R;
+          e.userData.si=(e.userData.si||3)*1.5; // slow them
+          dmShieldFlashT=Math.max(dmShieldFlashT,0.3);
+        }
+      }
+    }
+
     updateHUD();
 
     if(dhp<=0&&!ddead){endGame();}

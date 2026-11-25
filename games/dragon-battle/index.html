@@ -3661,9 +3661,8 @@ function buildSelectUI(){
     const spdPct=~~(dt.speed/30*100),hpPct=~~(dt.hp/220*100);
     card.innerHTML=`<div class="card-emoji">${dt.emoji}</div><div class="card-name">${dt.name}</div><div class="card-desc">${dt.desc}</div>`+
       (i===selectedType?`<div class="bars"><div class="bar-row" style="--ec:${dt.eyeC}">SPD<div class="bar-fill" style="width:${spdPct}%"></div></div><div class="bar-row" style="--ec:#ff4444">HP<div class="bar-fill" style="background:#ff4444;width:${hpPct}%"></div></div></div>`:'');
-    const selectOrStart=(e)=>{if(e)e.preventDefault();if(selectedType===i){startGame();}else{selectedType=i;buildSelectUI();}};
-    card.onclick=selectOrStart;
-    card.addEventListener('touchstart',e=>{e.preventDefault();selectOrStart(e);},{passive:false});
+    card.onclick=()=>{selectedType=i;startGame();};
+    card.addEventListener('touchstart',e=>{e.preventDefault();selectedType=i;startGame();},{passive:false});
     container.appendChild(card);
   });
   const sb=document.getElementById('sel-best');

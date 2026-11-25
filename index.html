@@ -161,30 +161,30 @@
   <main class="main">
 
     <!-- FEATURE BANNER -->
-    <section class="feature">
-      <div class="stage stage-art">
-        <div class="stage-clouds"></div>
-        <div class="stage-scene">🦊</div>
-        <button class="big-play" title="Play">▶</button>
+    <section class="feature" onclick="location.href='/games/dragon-battle/'" style="cursor:pointer">
+      <div class="stage" style="background:linear-gradient(160deg,#0a0020,#1a0040,#330066);position:relative;overflow:hidden">
+        <div style="position:absolute;inset:0;background:radial-gradient(circle at 30% 60%,#ff440044 0,transparent 55%),radial-gradient(circle at 75% 35%,#4444ff44 0,transparent 50%)"></div>
+        <div class="stage-scene" style="font-size:5rem;z-index:2;position:relative">🐉</div>
+        <button class="big-play" title="Play Dragon Battle" onclick="event.stopPropagation();location.href='/games/dragon-battle/'" style="background:var(--berry)">▶</button>
         <div class="stage-foot">
           <div class="left">
-            <div class="gicon">🦊</div>
+            <div class="gicon" style="background:#6600aa">🐉</div>
             <div>
-              <h3>Llobi Run</h3>
-              <div class="by">by Llobi Studio</div>
+              <h3>Dragon Battle</h3>
+              <div class="by">by Llobi Studio · 3D open world</div>
             </div>
           </div>
           <div class="stats">
-            <span>👍 12.4k</span>
-            <span>▶ 88k plays</span>
+            <span>🔥 King Ruins</span>
+            <span>⚔ Legend Sword</span>
           </div>
         </div>
       </div>
-      <div class="promo">
-        <span class="badge">100% FREE</span>
-        <h3>No sign-up. No cost. Just play!</h3>
-        <p>Hundreds of safe, kid-friendly games. Pick one and go.</p>
-        <button class="btn-pill">Browse all games</button>
+      <div class="promo" style="background:linear-gradient(160deg,#330066,#6600cc)">
+        <span class="badge">NEW</span>
+        <h3>Fly. Fight. Conquer.</h3>
+        <p>Bond with dragons, recruit riders, storm the Legend Castle and slay 8 King Dragons for ultimate weapons.</p>
+        <button class="btn-pill" onclick="event.stopPropagation();location.href='/games/dragon-battle/'">Play Now →</button>
       </div>
     </section>
 
@@ -259,6 +259,7 @@
   ];
 
   const popular=[
+    {n:"Dragon Battle",e:"🐉",hot:"LIVE",url:"/games/dragon-battle/",id:"dragon-battle"},
     {n:"Snake Classic",e:"🐍",hot:"HOT",url:"/games/snake/",id:"snake"},{n:"Bubble Pop",e:"🫧",url:"/games/bubble-pop/",id:"bubble-pop"},
     {n:"Speedy Karts",e:"🏎️",hot:"HOT",url:"/games/speedy-karts/",id:"speedy-karts"},{n:"Memory Match",e:"🧠"},
     {n:"Star Hopper",e:"⭐",url:"/games/star-hopper/",id:"star-hopper"},{n:"Block Stack",e:"🧱",url:"/games/block-stack/",id:"block-stack"},
@@ -270,8 +271,9 @@
     {n:"Gobble",e:"😋",hot:"LIVE",url:"/games/gobble-game/",id:"gobble"}
   ];
   const fresh=[
-    {n:"Penguin Slide",e:"🐧",hot:"NEW"},{n:"Magic Match",e:"🔮"},
-    {n:"Dino Dash",e:"🦖",hot:"NEW",url:"/games/dino-dash/",id:"dino-dash"},{n:"Dragon Battle",e:"🐉",hot:"NEW",url:"/games/dragon-battle/",id:"dragon-battle"},{n:"Pizza Stack",e:"🍕"},
+    {n:"Dragon Battle",e:"🐉",hot:"LIVE",url:"/games/dragon-battle/",id:"dragon-battle"},
+    {n:"Dino Dash",e:"🦖",hot:"NEW",url:"/games/dino-dash/",id:"dino-dash"},
+    {n:"Penguin Slide",e:"🐧",hot:"NEW"},{n:"Magic Match",e:"🔮"},{n:"Pizza Stack",e:"🍕"},
     {n:"Ghost Hunt",e:"👻"},{n:"Rocket Race",e:"🚀"},
     {n:"Cookie Crush",e:"🍪",hot:"NEW"},{n:"Frog Leap",e:"🐸"},
     {n:"Drum Beat",e:"🥁"},{n:"Castle Climb",e:"🏯"},

@@ -61,7 +61,7 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
 .mc-pad{display:grid;grid-template-columns:repeat(3,52px);grid-template-rows:repeat(2,52px);gap:4px}
 .mc-btn{width:52px;height:52px;background:rgba(255,50,50,.18);border:2px solid rgba(255,80,80,.35);color:#ff8888;font-size:.8rem;display:grid;place-items:center;cursor:pointer;pointer-events:all;border-radius:6px;text-align:center;line-height:1.1;-webkit-tap-highlight-color:transparent;user-select:none}
 .mc-btn:active{background:rgba(255,80,80,.4)}
-#joy-left{pointer-events:all;touch-action:none;border-radius:50%;background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.18);flex-shrink:0}
+#joy-left,#joy-right{pointer-events:all;touch-action:none;border-radius:50%;background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.18);flex-shrink:0}
 .mc-fire{width:80px;height:80px;background:rgba(255,100,0,.22);border:3px solid rgba(255,140,0,.5);border-radius:50%;color:#ffaa00;font-size:1.6rem;display:grid;place-items:center;cursor:pointer;pointer-events:all;flex-shrink:0;-webkit-tap-highlight-color:transparent;user-select:none}
 .mc-fire:active{background:rgba(255,160,0,.5)}
 
@@ -193,23 +193,32 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
 
   <!-- Mobile -->
   <div id="mctrl">
-    <!-- Left joystick: steer dragon (yaw + pitch/altitude) -->
-    <canvas id="joy-left" width="110" height="110"></canvas>
+    <!-- Left joystick: walk/turn -->
+    <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+      <canvas id="joy-left" width="80" height="80"></canvas>
+      <span style="font-size:.22rem;color:rgba(255,255,255,.4);pointer-events:none">WALK/TURN</span>
+    </div>
     <!-- Center action buttons -->
     <div style="display:flex;flex-direction:column;gap:3px;align-items:center;flex:1">
       <div style="display:flex;gap:3px;flex-wrap:wrap;justify-content:center">
-        <div class="mc-btn" id="mc-bite" style="font-size:.45rem;width:44px;height:44px">🦷<br><span style="font-size:.2rem">BITE</span></div>
-        <div class="mc-btn" id="mc-tail" style="font-size:.45rem;width:44px;height:44px">💥<br><span style="font-size:.2rem">TAIL</span></div>
-        <div class="mc-btn" id="mc-roar" style="font-size:.45rem;width:44px;height:44px">🔊<br><span style="font-size:.2rem">ROAR</span></div>
-        <div class="mc-btn" id="mc-power" style="font-size:.45rem;width:44px;height:44px">⚡<br><span style="font-size:.2rem">PWR</span></div>
-        <div class="mc-btn" id="mc-kw" style="font-size:.45rem;width:44px;height:44px">👑<br><span style="font-size:.2rem">WPN</span></div>
-        <div class="mc-btn" id="mc-tab" style="font-size:.45rem;width:44px;height:44px">🔄<br><span style="font-size:.2rem">SWAP</span></div>
-        <div class="mc-btn" id="mc-sit" style="font-size:.45rem;width:44px;height:44px">🐉<br><span style="font-size:.2rem">SIT</span></div>
-        <div class="mc-btn" id="mc-human" style="font-size:.45rem;width:44px;height:44px">🧍<br><span style="font-size:.2rem">WALK</span></div>
+        <div class="mc-btn" id="mc-bite" style="font-size:.45rem;width:40px;height:40px">🦷<br><span style="font-size:.2rem">BITE</span></div>
+        <div class="mc-btn" id="mc-tail" style="font-size:.45rem;width:40px;height:40px">💥<br><span style="font-size:.2rem">TAIL</span></div>
+        <div class="mc-btn" id="mc-roar" style="font-size:.45rem;width:40px;height:40px">🔊<br><span style="font-size:.2rem">ROAR</span></div>
+        <div class="mc-btn" id="mc-power" style="font-size:.45rem;width:40px;height:40px">⚡<br><span style="font-size:.2rem">PWR</span></div>
+        <div class="mc-btn" id="mc-kw" style="font-size:.45rem;width:40px;height:40px">👑<br><span style="font-size:.2rem">WPN</span></div>
+        <div class="mc-btn" id="mc-tab" style="font-size:.45rem;width:40px;height:40px">🔄<br><span style="font-size:.2rem">SWAP</span></div>
+        <div class="mc-btn" id="mc-sit" style="font-size:.45rem;width:40px;height:40px">🐉<br><span style="font-size:.2rem">SIT</span></div>
+        <div class="mc-btn" id="mc-human" style="font-size:.45rem;width:40px;height:40px">🧍<br><span style="font-size:.2rem">WALK</span></div>
+        <div class="mc-btn" id="mc-recruit" style="font-size:.45rem;width:40px;height:40px">🤝<br><span style="font-size:.2rem">R</span></div>
+        <div class="mc-btn" id="mc-talk" style="font-size:.45rem;width:40px;height:40px">💬<br><span style="font-size:.2rem">E</span></div>
       </div>
+      <div class="mc-fire" id="mc-fire">🔥</div>
     </div>
-    <!-- Right: fire button -->
-    <div class="mc-fire" id="mc-fire">🔥</div>
+    <!-- Right joystick: fly up/down -->
+    <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+      <canvas id="joy-right" width="80" height="80"></canvas>
+      <span style="font-size:.22rem;color:rgba(255,255,255,.4);pointer-events:none">FLY</span>
+    </div>
   </div>
 </div>
 
@@ -2861,6 +2870,17 @@ function hitEnemy(e,dmgAmt){
     if(e.userData.isKingDragon&&e.userData.ruinCfg){
       dropKingWeapon(e.userData.ruinCfg,e.position.clone());
       floatWorld(e.position,'👑 KING DRAGON SLAIN! Collect the weapon!','#ffee44');
+      // Player victory dialogue after King Dragon fight
+      const cfg=e.userData.ruinCfg;
+      const kd_lines=[
+        `The ${cfg.name} guardian has fallen. Its power is mine now.`,
+        `I can feel the ${cfg.elem1} and ${cfg.elem2} energy flowing through me!`,
+        `One more King Dragon defeated. The world grows safer.`,
+      ];
+      setTimeout(()=>{
+        const fakeNPC={userData:{npcName:'You',npcText:kd_lines.join('\n\n')}};
+        openDialog(fakeNPC);
+      },1200);
     }
     if(e.userData.type==='shadowDragon'){
       shadowKills++;
@@ -3516,14 +3536,35 @@ function initMobile(){
     C.addEventListener('touchcancel',end,{passive:false});
   }
 
-  // Left stick: X=yaw, Y=pitch/altitude
+  // Left stick: walk/turn (yaw left/right, forward/back)
   const joyL=document.getElementById('joy-left');
   if(joyL)makeJoystick(joyL,(ax,ay)=>{
     mk.lf=ax<-0.25;mk.rt=ax>0.25;
-    mk.up=ay<-0.25;mk.dn=ay>0.25;
-    // Smooth yaw/pitch via velocity for fluid feel
-    if(!isHuman){dYawVel-=ax*0.028;dPitchVel+=ay*0.022;}
+    mk.fwd=ay<-0.25;mk.bk=ay>0.25;
+    if(!isHuman)dYawVel-=ax*0.028;
   },null,null);
+
+  // Right stick: fly up/down + pitch
+  const joyR=document.getElementById('joy-right');
+  if(joyR)makeJoystick(joyR,(ax,ay)=>{
+    mk.up=ay<-0.25;mk.dn=ay>0.25;
+    if(!isHuman){dPitchVel+=ay*0.022;dYawVel-=ax*0.014;}
+  },null,null);
+
+  // R button = recruit, E button = talk
+  const rBtn=document.getElementById('mc-recruit');
+  if(rBtn){rBtn.addEventListener('touchstart',e=>{e.preventDefault();
+    if(nearNPC&&nearNPC.userData.isRecruitable&&!nearNPC.userData.recruited&&dragonArmy.length<MAX_ARMY){
+      nearNPC.userData.recruited=true;
+      nearNPC.userData.npcText='Blane is coming to take me to the Hatchery...';
+      hatcheryQueue.push({recruit:nearNPC,phase:'fetch',t:0});
+      floatWorld(nearNPC.position,'🐉 RECRUITED!','#44ffcc');
+    }
+  },{passive:false});}
+  const eBtn=document.getElementById('mc-talk');
+  if(eBtn){eBtn.addEventListener('touchstart',e=>{e.preventDefault();
+    if(nearNPC&&gs==='playing')openDialog(nearNPC);
+  },{passive:false});}
 
   // Keep old button wires for backward compat (mc-up etc no longer in DOM but safe)
   wire('mc-up','up');wire('mc-down','dn');wire('mc-left','lf');wire('mc-right','rt');
@@ -5592,53 +5633,52 @@ function drawIslandOnMap(ctx,W,H,toMx,toMz){
   ctx.beginPath();ctx.ellipse(imx,imz,Math.abs(toMx(ISLAND_CX+ISLAND_R)-imx),Math.abs(toMz(ISLAND_CZ+ISLAND_R)-imz),0,0,Math.PI*2);ctx.stroke();
 }
 
+// Offscreen canvas for 3D minimap flat pass
+const mmOff=document.createElement('canvas');mmOff.width=MM_SIZE;mmOff.height=MM_SIZE;
+const mmOCtx=mmOff.getContext('2d');
+
 function drawMinimap(){
   if(gs!=='playing')return;
   const W=MM_SIZE,H=MM_SIZE;
-  mmCtx.clearRect(0,0,W,H);
   const ref=isHuman&&humanMesh?humanMesh.position:dragonMesh.position;
   const cx=ref.x,cz=ref.z;
   const toMx=wx=>W/2+(wx-cx)*MM_SCALE;
   const toMz=wz=>H/2+(wz-cz)*MM_SCALE;
-  // Island + ocean background
-  drawIslandOnMap(mmCtx,W,H,toMx,toMz);
+
+  // ── Draw flat map into offscreen canvas ──────────────────────────────────
+  const c=mmOCtx;
+  c.clearRect(0,0,W,H);
+  drawIslandOnMap(c,W,H,toMx,toMz);
   const dot=(wx,wz,col,r,label)=>{
     const mx=toMx(wx),mz=toMz(wz);
     if(mx<-r||mx>W+r||mz<-r||mz>H+r)return;
-    mmCtx.fillStyle=col;mmCtx.beginPath();mmCtx.arc(mx,mz,r,0,Math.PI*2);mmCtx.fill();
-    if(label){mmCtx.font='bold 6px sans-serif';mmCtx.fillStyle='rgba(255,255,255,0.8)';mmCtx.textAlign='center';mmCtx.textBaseline='bottom';mmCtx.fillText(label,mx,mz-r-1);}
+    c.fillStyle=col;c.beginPath();c.arc(mx,mz,r,0,Math.PI*2);c.fill();
+    if(label){c.font='bold 6px sans-serif';c.fillStyle='rgba(255,255,255,0.85)';c.textAlign='center';c.textBaseline='bottom';c.fillText(label,mx,mz-r-1);}
   };
   // Grid
-  mmCtx.strokeStyle='rgba(255,255,255,0.07)';mmCtx.lineWidth=0.5;
+  c.strokeStyle='rgba(255,255,255,0.07)';c.lineWidth=0.5;
   for(let g2=-5;g2<=5;g2++){
     const gx=W/2+(g2*ZONE-((cx%ZONE+ZONE)%ZONE))*MM_SCALE;
     const gz=H/2+(g2*ZONE-((cz%ZONE+ZONE)%ZONE))*MM_SCALE;
-    mmCtx.beginPath();mmCtx.moveTo(gx,0);mmCtx.lineTo(gx,H);mmCtx.stroke();
-    mmCtx.beginPath();mmCtx.moveTo(0,gz);mmCtx.lineTo(W,gz);mmCtx.stroke();
+    c.beginPath();c.moveTo(gx,0);c.lineTo(gx,H);c.stroke();
+    c.beginPath();c.moveTo(0,gz);c.lineTo(W,gz);c.stroke();
   }
-  // Fixed landmarks
+  // Landmarks
   dot(DM_X,DM_Z,'#aaffcc',6,'🏔');
   if(typeof VOL_X!=='undefined')dot(VOL_X,VOL_Z,'#ff4400',5,'🌋');
-  // King Ruin landmarks (always shown even before spawned)
   const KING_COL={fire_water:'#ff4400',earth_nature:'#4a8a2a',air_smoke:'#aaccff',lava_ice:'#88ffff',thunder_lightning:'#ffff00',sun_soul:'#ffffff',bone_acid:'#44ff44',metal_glass:'#ddeeff'};
   for(const cfg of KING_RUINS_CFG){
     const alive=activeEnemies.find(e=>e.userData.isKingDragon&&e.userData.ruinCfg===cfg&&e.userData.alive);
     const col=KING_COL[cfg.id]||'#ff00ff';
-    // Skull if king alive there, crown if defeated
     dot(cfg.pos.x,cfg.pos.z,col,kingRuinsSpawned.has(cfg.id)?(alive?5:3):3,kingRuinsSpawned.has(cfg.id)?(alive?'💀':'✓'):'👑');
   }
-  // Army members (blue dots)
   for(const a of dragonArmy){if(a.mesh&&a.mesh.userData.alive)dot(a.mesh.position.x,a.mesh.position.z,'#4488ff',3);}
-  // Enemies
-  const KING_COLORS={fire_water:'#ff4400',earth_nature:'#4a8a2a',air_smoke:'#aaccff',lava_ice:'#88ffff',thunder_lightning:'#ffff00',sun_soul:'#ffffff',bone_acid:'#44ff44',metal_glass:'#ddeeff'};
   for(const e of activeEnemies){
     if(!e.userData.alive)continue;
     let dc,dr=2.5;
     if(e.userData.isKingDragon||e.userData.isKingDeath){
-      dr=6;const eid=e.userData.ruinCfg?e.userData.ruinCfg.id:'death';
-      dc=e.userData.isKingDeath?'#cc00ff':KING_COLORS[eid]||'#ff00ff';
-      dot(e.position.x,e.position.z,dc,dr,'👑');
-      continue;
+      dr=6;dc=e.userData.isKingDeath?'#cc00ff':KING_COL[e.userData.ruinCfg?.id]||'#ff00ff';
+      dot(e.position.x,e.position.z,dc,dr,'👑');continue;
     } else if(e.userData.type==='shadowDragon'){dc='#8844ff';dr=3;}
     else if(e.userData.type==='snake'){dc='#00ff88';}
     else if(e.userData.type==='dragon'){dc='#ff4400';}
@@ -5648,30 +5688,53 @@ function drawMinimap(){
   for(const n of friendlyNPCs){dot(n.position.x,n.position.z,'#44ff44',2);}
   for(const r of roamDragons){dot(r.position.x,r.position.z,'#44ffff',2.5);}
   for(const wd of wildDragons){if(wd.userData.isWild)dot(wd.position.x,wd.position.z,wd.userData.tameable?'#dd88ff':'#aa44ff',wd.userData.tameable?3.5:2.5);}
-  for(const b of activeBuildings){
-    const col=b.userData.safe?'#44ff44':b.userData.type==='castle'?'#ffaa00':'#ff8800';
-    dot(b.position.x,b.position.z,col,3.5);
-  }
-  // King weapon orbs
+  for(const b of activeBuildings){dot(b.position.x,b.position.z,b.userData.safe?'#44ff44':b.userData.type==='castle'?'#ffaa00':'#ff8800',3.5);}
   for(const o of kingWeaponOrbs){dot(o.mesh.position.x,o.mesh.position.z,'#ffdd00',4,'★');}
-  // Player dot + direction
-  mmCtx.fillStyle='#ffffff';mmCtx.beginPath();mmCtx.arc(W/2,H/2,4,0,Math.PI*2);mmCtx.fill();
+  // Player dot
+  c.fillStyle='#ffffff';c.beginPath();c.arc(W/2,H/2,4,0,Math.PI*2);c.fill();
   const pYaw=isHuman?humanYaw:dYaw;
-  mmCtx.strokeStyle='#ffffff';mmCtx.lineWidth=2;
-  mmCtx.beginPath();mmCtx.moveTo(W/2,H/2);
-  mmCtx.lineTo(W/2+Math.sin(pYaw)*12,H/2+Math.cos(pYaw)*12);mmCtx.stroke();
+  c.strokeStyle='#ffffff';c.lineWidth=2;
+  c.beginPath();c.moveTo(W/2,H/2);c.lineTo(W/2+Math.sin(pYaw)*12,H/2+Math.cos(pYaw)*12);c.stroke();
+  // Player altitude bar on right edge
+  const altPct=Math.max(0,Math.min(1,(ref.y-0)/(120)));
+  c.fillStyle='rgba(100,200,255,0.6)';c.fillRect(W-5,H*(1-altPct),4,H*altPct);
+
+  // ── Composite with 3D perspective onto visible canvas ────────────────────
+  mmCtx.clearRect(0,0,W,H);
+  // Perspective: compress top (far) → expand bottom (near), tilt 35°
+  const tilt=0.55; // 0=flat, 1=edge-on
+  mmCtx.save();
+  // Draw offscreen map with vertical perspective squish
+  // Top of map = far away → squish. Bottom = near → full height.
+  // Achieved by drawing as a trapezoid using quadratic approach:
+  // We split the offscreen into horizontal strips and draw each with varying y-scale
+  const strips=40;
+  for(let s=0;s<strips;s++){
+    const fy=s/strips; // 0=top(far) 1=bottom(near)
+    const scale=tilt+(1-tilt)*fy; // perspective scale: smaller at top
+    const srcY=Math.round(fy*H);
+    const srcH=Math.ceil(H/strips)+1;
+    const dstH=(H/strips)*scale;
+    // vertical midpoint of this strip in destination space
+    const dstY=H*(fy*scale+(1-scale)*0.5)*1.1-dstH/2;
+    const dstX=(W-W*scale)/2;
+    if(srcY>=H)continue;
+    mmCtx.drawImage(mmOff,0,srcY,W,Math.min(srcH,H-srcY),dstX,dstY,W*scale,Math.max(1,dstH));
+  }
+  mmCtx.restore();
+  // Edge vignette for 3D depth feel
+  const vig=mmCtx.createRadialGradient(W/2,H/2,W*0.3,W/2,H/2,W*0.72);
+  vig.addColorStop(0,'rgba(0,0,0,0)');vig.addColorStop(1,'rgba(0,0,10,0.55)');
+  mmCtx.fillStyle=vig;mmCtx.fillRect(0,0,W,H);
   // Day/night tint
   const br=getDayBrightness(dayTime);
-  mmCtx.fillStyle=`rgba(0,0,20,${0.5-br*0.4})`;mmCtx.fillRect(0,0,W,H);
-  // Compass N
-  mmCtx.font='bold 7px sans-serif';mmCtx.fillStyle='rgba(255,255,255,0.6)';
+  mmCtx.fillStyle=`rgba(0,0,20,${0.4-br*0.35})`;mmCtx.fillRect(0,0,W,H);
+  // Compass
+  mmCtx.font='bold 7px sans-serif';mmCtx.fillStyle='rgba(255,255,255,0.7)';
   mmCtx.textAlign='center';mmCtx.textBaseline='top';mmCtx.fillText('N',W/2,2);
-  // Scale bar: 100 world units
-  const sbLen=100*MM_SCALE;
-  mmCtx.strokeStyle='rgba(255,255,255,0.4)';mmCtx.lineWidth=1.5;
-  mmCtx.beginPath();mmCtx.moveTo(6,H-6);mmCtx.lineTo(6+sbLen,H-6);mmCtx.stroke();
-  mmCtx.font='5px sans-serif';mmCtx.fillStyle='rgba(255,255,255,0.4)';
-  mmCtx.textAlign='left';mmCtx.textBaseline='bottom';mmCtx.fillText('100u',6,H-7);
+  // ALT label
+  mmCtx.font='5px sans-serif';mmCtx.fillStyle='rgba(100,200,255,0.5)';
+  mmCtx.textAlign='right';mmCtx.textBaseline='top';mmCtx.fillText('ALT',W-6,2);
 }
 
 // ── Main loop ─────────────────────────────────────────────────────────────────

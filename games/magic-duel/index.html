@@ -150,9 +150,10 @@ function drawPrev(ctx,ch,w,h){
   ctx.fillStyle=c;ctx.shadowBlur=3;ctx.fillRect(x-4,h-32,2,2);ctx.fillRect(x+2,h-32,2,2);ctx.shadowBlur=0;
 }
 
-let selChar=CHARS[0];
-CHARS.forEach(ch=>{
-  const card=document.createElement('div');card.className='mp'+(ch===selChar?' sel':'');
+let selChar=null;
+CHARS.forEach((ch,ci)=>{
+  const card=document.createElement('div');card.className='mp'+(ci===0?' sel':'');
+  if(ci===0)selChar=ch;
   const cv=document.createElement('canvas');cv.width=60;cv.height=52;
   drawPrev(cv.getContext('2d'),ch,60,52);card.appendChild(cv);
   card.innerHTML+=`<div class="mn">${ch.name}</div><div class="mt">${ch.type}</div>`;
@@ -613,6 +614,7 @@ function loop(ts){
 }
 
 function startFight(){
+  if(!selChar)selChar=CHARS[0];
   document.getElementById('title').style.display='none';document.getElementById('hud').style.display='block';
   document.getElementById('p1n').textContent=selChar.name;
   player=makePlayer(selChar);

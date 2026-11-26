@@ -8,15 +8,17 @@
 body{background:#000;overflow:hidden;font-family:'Georgia',serif;}
 canvas{display:block;}
 #ui{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;}
-#title{position:absolute;inset:0;background:rgba(3,0,15,0.97);display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:all;}
+#title{position:absolute;inset:0;background:rgba(3,0,15,0.97);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;pointer-events:all;overflow-y:auto;padding:24px 10px 30px;}
 #title h1{font-size:54px;color:#cc88ff;text-shadow:0 0 30px #8844ff,0 0 60px #4400aa,0 0 100px #2200aa;margin-bottom:10px;letter-spacing:4px;text-align:center;}
 #title .sub{color:#aa77cc;font-size:14px;margin-bottom:36px;text-align:center;line-height:1.8;}
-.mage-pick{display:flex;gap:14px;margin-bottom:36px;flex-wrap:wrap;justify-content:center;max-width:900px;}
-.mp{width:80px;padding:8px 4px;border:2px solid #442266;border-radius:8px;text-align:center;cursor:pointer;background:rgba(50,0,90,0.3);transition:all .2s;color:#fff;}
-.mp:hover,.mp.sel{border-color:#aa66ff;background:rgba(90,0,160,0.5);box-shadow:0 0 14px #8844ff;}
-.mp canvas{display:block;margin:0 auto 4px;}
-.mp .mn{font-size:11px;font-weight:bold;}
-.mp .mt{font-size:9px;opacity:.6;}
+.mage-pick{display:flex;gap:12px;margin-bottom:30px;flex-wrap:wrap;justify-content:center;max-width:960px;}
+.mp{width:92px;padding:12px 6px 10px;border:2px solid #442266;border-radius:12px;text-align:center;cursor:pointer;background:rgba(30,0,60,0.5);transition:all .18s;color:#fff;user-select:none;}
+.mp:hover{border-color:#8844cc;background:rgba(70,0,130,0.5);transform:translateY(-3px);}
+.mp.sel{border-color:#cc88ff;background:rgba(100,0,180,0.6);box-shadow:0 0 18px #aa66ff,0 0 6px #aa66ff inset;transform:translateY(-4px);}
+.mp .icon{font-size:34px;line-height:1;margin-bottom:6px;}
+.mp .mn{font-size:12px;font-weight:bold;margin-bottom:2px;}
+.mp .mt{font-size:10px;opacity:.6;}
+.mp .sp{font-size:9px;color:#cc99ff;margin-top:4px;line-height:1.3;}
 #play-btn{padding:16px 64px;font-size:26px;background:linear-gradient(135deg,#4400aa,#8800cc);color:#fff;border:2px solid #aa66ff;border-radius:12px;cursor:pointer;font-family:Georgia,serif;letter-spacing:3px;text-shadow:0 0 10px #fff;}
 #play-btn:hover{background:linear-gradient(135deg,#6600cc,#aa00ff);box-shadow:0 0 30px #8844ff;}
 #ctrl{color:#554477;font-size:11px;margin-top:16px;text-align:center;line-height:2;}
@@ -141,22 +143,14 @@ const CHARS=[
    desc:'Summons stone golem\nHeavy earth attacks'},
 ];
 
-function drawPrev(ctx,ch,w,h){
-  ctx.clearRect(0,0,w,h);const x=w/2,c=ch.pc;
-  ctx.shadowBlur=7;ctx.shadowColor=c;
-  ctx.fillStyle=c+'44';ctx.beginPath();ctx.moveTo(x-8,h);ctx.lineTo(x+8,h);ctx.lineTo(x+6,h-22);ctx.lineTo(x-6,h-22);ctx.closePath();ctx.fill();
-  ctx.fillStyle='#e8c59a';ctx.beginPath();ctx.arc(x,h-30,7,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle=c+'88';ctx.fillRect(x-9,h-21,18,3);ctx.beginPath();ctx.moveTo(x-7,h-21);ctx.lineTo(x,h-36);ctx.lineTo(x+7,h-21);ctx.closePath();ctx.fill();
-  ctx.fillStyle=c;ctx.shadowBlur=3;ctx.fillRect(x-4,h-32,2,2);ctx.fillRect(x+2,h-32,2,2);ctx.shadowBlur=0;
-}
+const CHAR_ICONS=['🔥','❄️','⚡','💀','🐉','☀️','👻','💣','🪨'];
 
 let selChar=null;
 CHARS.forEach((ch,ci)=>{
   const card=document.createElement('div');card.className='mp'+(ci===0?' sel':'');
   if(ci===0)selChar=ch;
-  const cv=document.createElement('canvas');cv.width=60;cv.height=52;
-  drawPrev(cv.getContext('2d'),ch,60,52);card.appendChild(cv);
-  card.innerHTML+=`<div class="mn">${ch.name}</div><div class="mt">${ch.type}</div>`;
+  const sp=ch.spells;
+  card.innerHTML=`<div class="icon">${CHAR_ICONS[ci]}</div><div class="mn">${ch.name}</div><div class="mt">${ch.type}</div><div class="sp">J: ${sp.q.n}<br>K: ${sp.h.n}<br>L: ${sp.u.n}</div>`;
   card.onclick=()=>{document.querySelectorAll('.mp').forEach(c=>c.classList.remove('sel'));card.classList.add('sel');selChar=ch;};
   document.getElementById('mage-pick').appendChild(card);
 });

@@ -309,7 +309,7 @@ renderer.shadowMap.enabled=false;
 
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x080018);
-scene.fog=new THREE.Fog(0x080018,250,1200);
+scene.fog=new THREE.Fog(0x080018,400,2800);
 
 const camera=new THREE.PerspectiveCamera(70,1,.5,1200);
 
@@ -355,21 +355,47 @@ function resize(){
 }
 resize();window.addEventListener('resize',resize);
 
+// ── World constants ───────────────────────────────────────────────────────────
+const ISLAND_CX=800,ISLAND_CZ=1500; // island center
+const ISLAND_R=5500;                 // island radius in world units
+
+// Island falloff: 1 at center → 0 at shore → negative in ocean
+function islandFalloff(x,z){
+  const dx=x-ISLAND_CX,dz=z-ISLAND_CZ;
+  const r=Math.sqrt(dx*dx+dz*dz);
+  return 1-Math.pow(r/ISLAND_R,2.2);
+}
+
 // ── Ground ────────────────────────────────────────────────────────────────────
-const GROUND_SIZE=4000;
-const groundGeo=new THREE.PlaneGeometry(GROUND_SIZE,GROUND_SIZE,60,60);
-// Heights — inline function matching groundY definition below
+const GROUND_SIZE=14000;
+const groundGeo=new THREE.PlaneGeometry(GROUND_SIZE,GROUND_SIZE,120,120);
 {const pos=groundGeo.attributes.position;
  for(let i=0;i<pos.count;i++){
-   const x=pos.getX(i),z=pos.getY(i);
-   const hills=Math.sin(x/80)*6+Math.sin(z/120)*8+Math.sin(x/35)*3+Math.sin(z/45)*4;
-   const broad=Math.sin(x/400)*15+Math.sin(z/350)*12+Math.sin((x+z)/600)*18;
-   pos.setZ(i,hills+Math.max(0,broad-6));
+   const wx=pos.getX(i)+ISLAND_CX,wz=pos.getY(i)+ISLAND_CZ;
+   const fo=islandFalloff(wx,wz);
+   if(fo<=0){pos.setZ(i,-6);continue;}
+   const hills=Math.sin(wx/80)*6+Math.sin(wz/120)*8+Math.sin(wx/35)*3+Math.sin(wz/45)*4;
+   const broad=Math.sin(wx/400)*15+Math.sin(wz/350)*12+Math.sin((wx+wz)/600)*18;
+   const h=hills+Math.max(0,broad-6);
+   pos.setZ(i,Math.max(-1,h*fo+fo*4));
  }
  groundGeo.computeVertexNormals();}
-const groundMat=new THREE.MeshLambertMaterial({color:0x1a4d08,flatShading:true});
+const groundMat=new THREE.MeshLambertMaterial({color:0x1a5c08,flatShading:true,vertexColors:false});
 const ground=new THREE.Mesh(groundGeo,groundMat);
-ground.rotation.x=-Math.PI/2;scene.add(ground);
+ground.rotation.x=-Math.PI/2;
+ground.position.set(ISLAND_CX,0,ISLAND_CZ);
+scene.add(ground);
+
+// ── Ocean ─────────────────────────────────────────────────────────────────────
+{const og=new THREE.PlaneGeometry(80000,80000,2,2);
+ const om=new THREE.MeshLambertMaterial({color:0x003a66,transparent:true,opacity:0.92});
+ const oMesh=new THREE.Mesh(og,om);
+ oMesh.rotation.x=-Math.PI/2;oMesh.position.y=-3.5;scene.add(oMesh);}
+// Ocean surface shimmer (additive layer)
+{const og2=new THREE.PlaneGeometry(80000,80000,2,2);
+ const om2=new THREE.MeshBasicMaterial({color:0x004488,transparent:true,opacity:0.25,blending:THREE.AdditiveBlending});
+ const oMesh2=new THREE.Mesh(og2,om2);
+ oMesh2.rotation.x=-Math.PI/2;oMesh2.position.y=-3.2;scene.add(oMesh2);}
 
 // Stars
 {const sg=new THREE.BufferGeometry();
@@ -1372,7 +1398,7 @@ function updateProjectiles(dt){
 }
 
 // ── World (zone-based infinite) ───────────────────────────────────────────────
-const ZONE=200,RD=4;
+const ZONE=400,RD=6;
 const zoneMap=new Map();
 let activeEnemies=[],activeBuildings=[];
 
@@ -1386,14 +1412,54 @@ function spawnZone(cx,cz){
   const wx0=cx*ZONE,wz0=cz*ZONE;
   const dist2=cx*cx+cz*cz;
 
+  // Skip ocean zones
+  const zoneCentX=wx0+ZONE/2,zoneCentZ=wz0+ZONE/2;
+  if(islandFalloff(zoneCentX,zoneCentZ)<=0.05){zoneMap.set(key,objects);return;}
+
   if(dist2>3){
-    // Trees
-    const nt=3+~~(Math.random()*4);
+    // Distance from island center in zone units
+    const icx=~~(ISLAND_CX/ZONE),icz=~~(ISLAND_CZ/ZONE);
+    const dFromCtr=Math.sqrt((cx-icx)*(cx-icx)+(cz-icz)*(cz-icz));
+    const isForest=dFromCtr<4&&Math.random()<0.7; // dense forest near center
+    const isRuins=dFromCtr<2&&Math.random()<0.55; // ancient ruins in core
+
+    // Forest biome — many trees
+    const nt=isForest?(8+~~(Math.random()*8)):(2+~~(Math.random()*3));
     for(let i=0;i<nt;i++){
       const t=makeTreeMesh();
       const tx=wx0+Math.random()*ZONE,tz=wz0+Math.random()*ZONE;
+      if(islandFalloff(tx,tz)<=0.05)continue;
       t.position.set(tx,groundY(tx,tz),tz);
+      if(isForest)t.scale.setScalar(0.8+Math.random()*0.8);
       scene.add(t);objects.push(t);
+    }
+
+    // Ancient ruins in island center
+    if(isRuins){
+      const rx=wx0+ZONE/2+(Math.random()-.5)*60,rz=wz0+ZONE/2+(Math.random()-.5)*60;
+      const gy=groundY(rx,rz);
+      const ruinMat=new THREE.MeshLambertMaterial({color:0x887766,flatShading:true});
+      // Broken walls
+      for(let wi=0;wi<4+~~(Math.random()*4);wi++){
+        const a=wi/8*Math.PI*2,rd2=15+Math.random()*12;
+        const wp=new THREE.Mesh(new THREE.BoxGeometry(3+Math.random()*3,4+Math.random()*8,2.5+Math.random()*2),ruinMat);
+        wp.position.set(rx+Math.cos(a)*rd2,gy+wp.geometry.parameters.height/2,rz+Math.sin(a)*rd2);
+        wp.rotation.y=a+Math.random()*0.4;
+        scene.add(wp);objects.push(wp);
+      }
+      // Standing columns
+      for(let ci=0;ci<2+~~(Math.random()*3);ci++){
+        const ca=Math.random()*Math.PI*2,cr=8+Math.random()*10;
+        const col=new THREE.Mesh(new THREE.CylinderGeometry(0.8,1.0,10+Math.random()*8,6),ruinMat.clone());
+        col.position.set(rx+Math.cos(ca)*cr,gy+col.geometry.parameters.height/2,rz+Math.sin(ca)*cr);
+        scene.add(col);objects.push(col);
+      }
+      // Central altar stone
+      const altar=new THREE.Mesh(new THREE.BoxGeometry(6,2,6),new THREE.MeshLambertMaterial({color:0x554433,flatShading:true}));
+      altar.position.set(rx,gy+1,rz);scene.add(altar);objects.push(altar);
+      // Rune glow
+      const rune=new THREE.Mesh(new THREE.CylinderGeometry(4,4,0.3,8),new THREE.MeshBasicMaterial({color:0x8800ff,transparent:true,opacity:0.35,blending:THREE.AdditiveBlending}));
+      rune.position.set(rx,gy+2.2,rz);scene.add(rune);objects.push(rune);
     }
 
     // Dragon Mountain safe zone — no hostile buildings or roaming enemies
@@ -1524,9 +1590,12 @@ function spawnZone(cx,cz){
 }
 
 function groundY(x,z){
+  const fo=islandFalloff(x,z);
+  if(fo<=0)return -20; // ocean floor
   const hills=Math.sin(x/80)*6+Math.sin(z/120)*8+Math.sin(x/35)*3+Math.sin(z/45)*4;
   const broad=Math.sin(x/400)*15+Math.sin(z/350)*12+Math.sin((x+z)/600)*18;
-  return hills+Math.max(0,broad-6);
+  const h=hills+Math.max(0,broad-6);
+  return Math.max(0.5, h*fo+fo*4);
 }
 // Returns floor Y inside Dragon Mountain cave, or null if outside cave
 function caveFloorY(x,z){
@@ -3724,7 +3793,7 @@ function startGame(){
   // Camera
   camPos.set(0,38,-20);camTarget.set(0,28,10);
   // Ground follows
-  ground.position.set(0,0,0);
+  ground.position.set(ISLAND_CX,0,ISLAND_CZ);
   document.getElementById('sel').style.display='none';
   document.getElementById('hud').style.display='block';
   document.getElementById('dead').style.display='none';
@@ -3819,6 +3888,10 @@ function update(ts){
       } else if(dragonMesh.position.y<landThreshold){
         dragonMesh.position.y=landThreshold;dPitchVel=Math.min(0,dPitchVel);
       }
+      // Don't let dragon go below sea level in ocean
+      if(dragonMesh.position.y<2&&islandFalloff(dragonMesh.position.x,dragonMesh.position.z)<=0){
+        dragonMesh.position.y=2;dPitchVel=Math.min(0,dPitchVel);
+      }
     }
 
     // ── KING ISLAND TRAP — cannot leave while boss is alive ──
@@ -3839,9 +3912,7 @@ function update(ts){
       break; // only one island at a time
     }
 
-    // Ground plane follows
-    ground.position.x=~~(dragonMesh.position.x/200)*200;
-    ground.position.z=~~(dragonMesh.position.z/200)*200;
+    // Ground is static island — no longer follows player
 
     // Dragon can collect orbs too
     if(!isHuman){

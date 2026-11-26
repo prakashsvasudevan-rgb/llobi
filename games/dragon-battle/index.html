@@ -1756,7 +1756,7 @@ function makeEnemy3d(type){
               mage:            {hp:30, maxHp:30, si:2+Math.random()*2,  spd:22,dmg:15, pts:100},
               dragon:          {hp:60, maxHp:60, si:3+Math.random()*2,  spd:10,dmg:25, pts:200},
               hunter:          {hp:35, maxHp:35, si:2+Math.random()*1.5,spd:20,dmg:18, pts:80},
-              shadowDragon:    {hp:120,maxHp:120,si:2+Math.random()*1.5,spd:14,dmg:35, pts:400},
+              shadowDragon:    {hp:4001,maxHp:4001,si:2+Math.random()*1.5,spd:14,dmg:35, pts:400},
               kingHunter:      {hp:200,maxHp:200,si:1.5,              spd:16,dmg:30, pts:1000},
               kingDeathDragon: {hp:546767,maxHp:546767,si:1.0,         spd:14,dmg:195,pts:50000},
               bloodDragon:     {hp:260,maxHp:260,si:1.5,              spd:16,dmg:30, pts:300}};
@@ -3495,7 +3495,7 @@ document.addEventListener('keydown',e=>{
     // Player bite (Z), tail (C), roar (V override for non-ice)
     if(e.code==='KeyZ'&&!dialogOpen&&!isHuman&&gs==='playing'){
       if(!abilityCooldown.pBite||abilityCooldown.pBite<=0){abilityCooldown.pBite=2;
-        if(dragonMesh.userData.jawGroup)dragonMesh.userData.jawT=1.0;
+        if(dragonMesh.userData.jawGroup){dragonMesh.userData.jawT=1.0;dragonMesh.userData.jawDur=1.0;}
         const ref=dragonMesh.position;let be=null,bd=60;for(const ae of activeEnemies){if(!ae.userData.alive)continue;const d=ref.distanceTo(ae.position);if(d<bd){bd=d;be=ae;}}
         if(be){spawnBeamFX(ref.clone().add(new THREE.Vector3(0,2,0)),be.position.clone(),0xff2200);hitEnemy(be,upgradedDmg()*5);spawnAbilityCloud(be.position.clone(),0xff2200,22,0.5);floatWorld(ref.clone().add(new THREE.Vector3(0,8,0)),'🦷 BITE!','#ff4400');}
         else floatWorld(ref.clone().add(new THREE.Vector3(0,8,0)),'No target!','#ff4444');
@@ -3513,7 +3513,7 @@ document.addEventListener('keydown',e=>{
     }
     if(e.code==='KeyR'&&!dialogOpen&&!isHuman&&gs==='playing'){
       if(!abilityCooldown.pRoar||abilityCooldown.pRoar<=0){abilityCooldown.pRoar=5;
-        if(dragonMesh.userData.jawGroup)dragonMesh.userData.jawT=1.4;
+        if(dragonMesh.userData.jawGroup){dragonMesh.userData.jawT=1.4;dragonMesh.userData.jawDur=1.4;}
         const ref=dragonMesh.position;
         spawnAbilityCloud(ref.clone(),dtype.color||0xff4400,100,2.0);spawnAbilityCloud(ref.clone(),0xffffff,60,1.2);
         for(const ae of activeEnemies){if(!ae.userData.alive)continue;const d=ref.distanceTo(ae.position);if(d<120){hitEnemy(ae,upgradedDmg()*2);ae.position.addScaledVector(new THREE.Vector3().subVectors(ae.position,ref).normalize(),30);}}
@@ -3711,6 +3711,12 @@ function fireAtkPower(a){
   const fwd=new THREE.Vector3(0,0,1).applyEuler(dragonMesh.rotation);
   const DMG=upgradedDmg?upgradedDmg():dtype.dmg;
   const nearEnemies=(maxR)=>activeEnemies.filter(e=>e.userData.alive&&e.position.distanceTo(ref)<maxR);
+  // Animate jaw/tail based on attack type
+  const ud=dragonMesh.userData;
+  const JAW_ATTACKS=['bite','roar','breath','ability_f','ability_x','ability_p','poison_cloud','spike_shoot','ghost_summon','soul_bomb','glacier','ice_multi','meteor','nova'];
+  const TAIL_ATTACKS=['tail','wave','quake','tornado','air_push','nova'];
+  if(JAW_ATTACKS.includes(a.id)&&ud.jawGroup){const jd=a.id==='roar'?1.4:1.0;ud.jawT=jd;ud.jawDur=jd;}
+  if(TAIL_ATTACKS.includes(a.id)&&ud.tailGroup){ud.tailSwingT=0.9;}
   switch(a.id){
     case 'ability_f':
       if(abilityCooldown.attack<=0){keys['KeyF']=true;setTimeout(()=>{delete keys['KeyF'];},120);}
@@ -3726,20 +3732,17 @@ function fireAtkPower(a){
       for(let i=-2;i<=2;i++){const ang=i*0.18;const d=new THREE.Vector3(Math.sin(ang),0,Math.cos(ang)).applyEuler(dragonMesh.rotation);spawnProjectile('fire',ref.clone().add(d.clone().multiplyScalar(8)),ref.clone().add(d.clone().multiplyScalar(60)));}
       spawnAbilityCloud(ref,0xff4400,30,0.6);break;
     case 'bite':// Lunge: big damage on nearest enemy + stun
-      {if(dragonMesh&&dragonMesh.userData.jawGroup)dragonMesh.userData.jawT=1.0;
-      screenFlash('#ff8800',0.6);
+      {if(dragonMesh&&dragonMesh.userData.jawGroup){dragonMesh.userData.jawT=1.0;dragonMesh.userData.jawDur=1.0;}
       let be=null,bd=80;for(const e of activeEnemies){if(!e.userData.alive)continue;const d=e.position.distanceTo(ref);if(d<bd){bd=d;be=e;}}
       if(be){hitEnemy(be,DMG*4);spawnAbilityCloud(be.position.clone(),0xff8800,25,0.8);floatWorld(be.position,'💢 CRUSH!','#ff8800');}
       else floatWorld(ref,'No target in range','#888');break;}
     case 'tail':// Spinning slam — AOE around player
       {if(dragonMesh&&dragonMesh.userData.tailGroup)dragonMesh.userData.tailSwingT=0.9;
-      screenFlash('#cc4400',0.5);
       const hits=nearEnemies(55);spawnAbilityCloud(ref,0xcc4400,55,1.0);spawnAbilityCloud(ref,0xff8844,35,0.6);
       hits.forEach(e=>{hitEnemy(e,DMG*2.5);const push=e.position.clone().sub(ref).normalize().multiplyScalar(30);e.position.add(push);});
       floatWorld(ref,'💥 TAIL SLAM x'+hits.length,'#cc4400');break;}
     case 'roar':// Fear roar — pushes all enemies back, stuns shoot timer
-      {if(dragonMesh&&dragonMesh.userData.jawGroup)dragonMesh.userData.jawT=1.4;
-      screenFlash('#aa66ff',0.5);
+      {if(dragonMesh&&dragonMesh.userData.jawGroup){dragonMesh.userData.jawT=1.4;dragonMesh.userData.jawDur=1.4;}
       const hits=nearEnemies(180);spawnAbilityCloud(ref,0xaa66ff,100,2.0);spawnAbilityCloud(ref,0xffffff,60,1.0);
       hits.forEach(e=>{e.userData.shootT=Math.max(e.userData.shootT,3);const push=e.position.clone().sub(ref).normalize().multiplyScalar(50);e.position.add(push);});
       floatWorld(ref,'🔊 FOES SCATTERED!','#aa66ff');break;}
@@ -4435,7 +4438,7 @@ function startGame(){
   // Reset dragon position
   dYaw=0;dPitch=0;dRoll=0;dYawVel=0;dPitchVel=0;isLanded=false;fireCooldown=0;isSitting=false;
   stormState='clear';stormT=60+Math.random()*60;rainPoints.visible=false;
-  dhp=dtype.hp;dmaxHp=dtype.hp;dfuel=dtype.fuel;dmaxFuel=dtype.fuel;
+  dhp=5000;dmaxHp=5000;dfuel=dtype.fuel;dmaxFuel=dtype.fuel;
   // Build new dragon mesh
   if(dragonMesh)scene.remove(dragonMesh);
   dragonMesh=buildDragonMesh(dtype);
@@ -4705,9 +4708,10 @@ function update(ts){
     const ud=dragonMesh.userData;
     if(ud.jawT>0){
       ud.jawT=Math.max(0,ud.jawT-dt);
-      const phase=ud.jawT>0.5?1-(ud.jawT-0.5)/0.5:ud.jawT/0.5; // 0→1→0 over 1s
-      if(ud.jawGroup)ud.jawGroup.rotation.x=phase*0.55; // open up to ~31°
-    } else if(ud.jawGroup){ud.jawGroup.rotation.x*=0.85;}
+      // sin curve: peaks in middle of duration regardless of jawDur
+      const phase=Math.sin((ud.jawT/(ud.jawDur||1.0))*Math.PI);
+      if(ud.jawGroup)ud.jawGroup.rotation.x=phase*0.6;
+    } else if(ud.jawGroup){ud.jawGroup.rotation.x*=0.82;}
     // Tail swing animation
     if(ud.tailSwingT>0){
       ud.tailSwingT=Math.max(0,ud.tailSwingT-dt);

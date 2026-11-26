@@ -5415,14 +5415,15 @@ function toggleWorldMap(){
 function drawWorldMap(){
   const W=WM_W,H=WM_H;
   wmCtx.clearRect(0,0,W,H);
-  // Dark terrain background with subtle grid
-  wmCtx.fillStyle='#0a1a0a';wmCtx.fillRect(0,0,W,H);
   const ref=isHuman&&humanMesh?humanMesh.position:dragonMesh.position;
   const cx=ref.x,cz=ref.z;
   // Large scale: 1px = ~12 world units
   const scale=1/12;
   const toMx=wx=>W/2+(wx-cx)*scale;
   const toMz=wz=>H/2+(wz-cz)*scale;
+
+  // Island + ocean background
+  drawIslandOnMap(wmCtx,W,H,toMx,toMz);
 
   // Grid lines
   wmCtx.strokeStyle='rgba(255,255,255,0.05)';wmCtx.lineWidth=0.5;
@@ -5496,15 +5497,41 @@ function drawWorldMap(){
   wmCtx.textAlign='right';wmCtx.fillText('W',10,H/2);
 }
 
+function drawIslandOnMap(ctx,W,H,toMx,toMz){
+  // Draw ocean background
+  ctx.fillStyle='#002244';ctx.fillRect(0,0,W,H);
+  // Draw island shape by sampling falloff on a grid
+  const step=Math.max(2,Math.round(ISLAND_R*2/80));
+  const ix0=ISLAND_CX-ISLAND_R,iz0=ISLAND_CZ-ISLAND_R;
+  for(let si=0;si<80;si++){for(let sj=0;sj<80;sj++){
+    const wx=ix0+si*step,wz=iz0+sj*step;
+    const fo=islandFalloff(wx,wz);
+    if(fo<=0)continue;
+    const mx=toMx(wx),mz=toMz(wz);
+    if(mx<0||mx>W||mz<0||mz>H)continue;
+    // Land gradient: deep green inland, sandy coast at edges
+    const green=Math.round(60+fo*110),r=Math.round(30+fo*20);
+    ctx.fillStyle=`rgba(${r},${green},20,${fo*0.85+0.15})`;
+    ctx.fillRect(mx,mz,Math.ceil(step*0.012*W/150+1),Math.ceil(step*0.012*H/150+1));
+  }}
+  // Coastline ring
+  ctx.strokeStyle='rgba(180,160,80,0.5)';ctx.lineWidth=1.5;
+  const imx=toMx(ISLAND_CX),imz=toMz(ISLAND_CZ);
+  const ir=ISLAND_R*((W/2)/Math.max(W,H));
+  // approximate island as ellipse on minimap
+  ctx.beginPath();ctx.ellipse(imx,imz,Math.abs(toMx(ISLAND_CX+ISLAND_R)-imx),Math.abs(toMz(ISLAND_CZ+ISLAND_R)-imz),0,0,Math.PI*2);ctx.stroke();
+}
+
 function drawMinimap(){
   if(gs!=='playing')return;
   const W=MM_SIZE,H=MM_SIZE;
   mmCtx.clearRect(0,0,W,H);
-  mmCtx.fillStyle='rgba(0,0,0,0.65)';mmCtx.fillRect(0,0,W,H);
   const ref=isHuman&&humanMesh?humanMesh.position:dragonMesh.position;
   const cx=ref.x,cz=ref.z;
   const toMx=wx=>W/2+(wx-cx)*MM_SCALE;
   const toMz=wz=>H/2+(wz-cz)*MM_SCALE;
+  // Island + ocean background
+  drawIslandOnMap(mmCtx,W,H,toMx,toMz);
   const dot=(wx,wz,col,r,label)=>{
     const mx=toMx(wx),mz=toMz(wz);
     if(mx<-r||mx>W+r||mz<-r||mz>H+r)return;

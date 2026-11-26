@@ -2659,6 +2659,38 @@ function spawnGreatCity(){
     po.position.set(CITY_X+200+(i%2)*20-10,cy+22,CITY_Z-200+(i<2?0:20));scene.add(po);
   }
 
+  // ── Wizard Shop (NW) — dark tower with magic runes ──
+  cb(44,36,44,mat(0x1a0a2e,{flatShading:true}),-200,0,-200); // main tower
+  cb(46,4,46,mat(0x2a0a44,{flatShading:true}),-200,36,-200); // parapet ring
+  // Pointy roof
+  const wizRoof=new THREE.Mesh(new THREE.ConeGeometry(24,22,8),mat(0x220044,{flatShading:true}));
+  wizRoof.position.set(CITY_X-200,cy+50,CITY_Z-200);scene.add(wizRoof);
+  // Rotating magic rings
+  for(let ri=0;ri<3;ri++){
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(18+ri*4,0.5,5,16),new THREE.MeshBasicMaterial({color:[0xaa44ff,0x4488ff,0xff44aa][ri],transparent:true,opacity:0.75,blending:THREE.AdditiveBlending}));
+    ring.position.set(CITY_X-200,cy+28+ri*5,CITY_Z-200);ring.userData.wizRing=ri;scene.add(ring);
+  }
+  // Glowing orb at top
+  const wizOrb=new THREE.Mesh(new THREE.SphereGeometry(5,8,6),new THREE.MeshBasicMaterial({color:0xdd88ff,transparent:true,opacity:0.9,blending:THREE.AdditiveBlending}));
+  wizOrb.position.set(CITY_X-200,cy+62,CITY_Z-200);scene.add(wizOrb);
+
+  // ── Cookie Shop (SE) — cozy pink bakery ──
+  cb(44,20,44,mat(0xffaabb,{flatShading:true}),200,0,200); // main building
+  cb(48,4,48,mat(0xff88aa,{flatShading:true}),200,20,200); // awning ring
+  // Cookie sign (golden disc)
+  const cookieSign=new THREE.Mesh(new THREE.CylinderGeometry(10,10,1.5,12),mat(0xddaa33,{flatShading:true}));
+  cookieSign.position.set(CITY_X+200,cy+26,CITY_Z+175);scene.add(cookieSign);
+  // Chocolate chips on sign
+  for(let ci=0;ci<6;ci++){
+    const chip=new THREE.Mesh(new THREE.SphereGeometry(1.5,5,4),mat(0x442200,{flatShading:true}));
+    chip.position.set(CITY_X+200+(Math.cos(ci/6*Math.PI*2)*6),cy+28,CITY_Z+175+(Math.sin(ci/6*Math.PI*2)*6));scene.add(chip);
+  }
+  // Warm glow from windows
+  for(let wi=0;wi<4;wi++){
+    const wg=new THREE.Mesh(new THREE.BoxGeometry(5,5,0.5),new THREE.MeshBasicMaterial({color:0xffee88,transparent:true,opacity:0.6,blending:THREE.AdditiveBlending}));
+    wg.position.set(CITY_X+200+(wi<2?-16:16),cy+10,CITY_Z+200+(wi%2===0?-22:22));scene.add(wg);
+  }
+
   // ── Houses: 40 scattered houses ──
   for(let i=0;i<40;i++){
     const hx=(Math.random()-0.5)*1000,hz=(Math.random()-0.5)*1000;
@@ -2711,6 +2743,19 @@ function spawnGreatCity(){
     {q:'Do potions work on dragons?',a:'Yes! When you are bonded to your dragon, whatever heals you heals it.'},
   ]});
 
+  // Wizard Shop keeper
+  spawnCityNPC(CITY_X-200,cy+1,CITY_Z-200,'I am Zephyrus, arcane master of the city! I sell forbidden magic.\n\n[B] Browse spells  [N] Next spell  [M] Cast active spell','shopkeeper',{isCityWizardShop:true,choices:[
+    {q:'What magic do you sell?',a:'Seven schools of arcane power: Meteor Storm, Time Freeze, God Lightning, Soul Vortex, Mega Quake, Ice Age, and Fire God. Each costs 250-400 pts. Press [N] to cycle spells, [B] to buy & equip, [M] to cast!'},
+    {q:'How do I cast spells?',a:'First buy a spell here with [B]. Then press [M] from anywhere in the world to unleash it! Spells last 6-10 seconds of devastating power. You can only have one spell equipped at a time.'},
+    {q:'Are these safe to use near the city?',a:'...Probably. I would aim away from the cookie shop.'},
+  ]});
+  // Cookie shop keeper
+  spawnCityNPC(CITY_X+200,cy+1,CITY_Z+200,'Welcome to Madame Crumble\'s Cookie Emporium! 🍪\nOur legendary cookies grant 20 seconds of immortality, healing, and speed!\n\n[B] Buy a Cookie (200pts)','shopkeeper',{isCityCookieShop:true,choices:[
+    {q:'What do cookies do?',a:'For 20 glorious seconds: you cannot die (complete immortality!), your HP heals 5 per second, and your dragon flies at triple speed. That\'s the Crumble Guarantee!'},
+    {q:'Are these really magic cookies?',a:'Ancient recipe, passed down from the Dragon Witches of the Eastern Peaks. Each cookie contains crystallised starlight and three drops of phoenix tears. Completely delicious.'},
+    {q:'Can I eat more than one?',a:'You can! But the effects don\'t stack — eating a second cookie simply refreshes the 20-second timer. So eat wisely, or eat immediately!'},
+  ]});
+
   // Citizens — wander & chatter
   const citizenLines=[
     'Have you seen the dragon riders lately? Incredible sight!',
@@ -2746,7 +2791,20 @@ function spawnGreatCity(){
   floatWorld(new THREE.Vector3(CITY_X,cy+40,CITY_Z),'🏙 GREAT CITY — WELCOME!','#ffdd44');
 }
 
-let greatCityWeaponIdx=cityWeaponBought; // which weapon tier bought
+// Cookie & Wizard state
+let cookieT=0; // seconds of cookie immortality/speed/heal buff remaining
+let wizardMagicT=0; // seconds of active wizard spell remaining
+let wizardMagicType=''; // which spell is active
+const WIZARD_SPELLS=[
+  {id:'meteor_storm', name:'☄ Meteor Storm',   cost:300, desc:'Rain meteors on ALL enemies for 8s',      color:'#ff6600'},
+  {id:'time_stop',    name:'⏱ Time Freeze',    cost:400, desc:'Freeze all enemies solid for 6s',         color:'#88ffff'},
+  {id:'lightning_god',name:'⚡ God Lightning',  cost:350, desc:'Chain lightning hits every enemy for 10s', color:'#ffff00'},
+  {id:'soul_vortex',  name:'👻 Soul Vortex',    cost:300, desc:'Soul beams drain all enemies for 8s',     color:'#cc88ff'},
+  {id:'earth_quake',  name:'🌍 Mega Quake',     cost:250, desc:'Massive AOE quake damage for 6s',         color:'#886644'},
+  {id:'ice_age',      name:'🧊 Ice Age',        cost:350, desc:'Freeze + shatter all enemies for 8s',     color:'#88ccff'},
+  {id:'fire_god',     name:'🔥 Fire God',       cost:400, desc:'Endless fire walls engulf all foes for 8s',color:'#ff2200'},
+];
+let wizardSpellIdx=0; // which spell player currently has selected
 const KING_RUINS_CFG=[
   {id:'fire_water',  elem1:'fire',  elem2:'water',   name:'INFERNO TIDE',
    pos:{x:DM_X+800,z:DM_Z+600},   bossColor:0xff6633, weaponName:'METEOR STRIKE',  weaponColor:0xff4400,weaponEmoji:'☄'},
@@ -3816,6 +3874,13 @@ document.addEventListener('keydown',e=>{
       ref.set(CITY_X,groundY(CITY_X,CITY_Z)+5,CITY_Z);
       floatWorld(ref.clone().add(new THREE.Vector3(0,8,0)),'🏙 GREAT CITY','#ffdd44');
     }
+    // Cast wizard spell with M key (outside dialog)
+    if(e.code==='KeyM'&&!dialogOpen&&wizardMagicType){
+      wizardMagicT=8;
+      const sp=WIZARD_SPELLS.find(s=>s.id===wizardMagicType);
+      const ref=dragonMesh?dragonMesh.position:humanMesh?.position;
+      if(ref)floatWorld(ref.clone().add(new THREE.Vector3(0,20,0)),'✨ '+sp.name+' CAST!',sp.color||'#cc88ff');
+    }
     if(e.code==='Backquote'&&!dialogOpen){
       // Teleport to Blane
       if(blaneNPC){
@@ -4711,6 +4776,8 @@ function openDialog(npc){
   const isCityHospital=!!npc.userData.isCityHospital;
   const isCityTavern=!!npc.userData.isCityTavern;
   const isCityPotionShop=!!npc.userData.isCityPotionShop;
+  const isCityWizardShop=!!npc.userData.isCityWizardShop;
+  const isCityCookieShop=!!npc.userData.isCityCookieShop;
   // Build shop text for city shops
   if(isCityWeaponShop){
     const avail=CITY_WEAPONS.filter((_,i)=>i>=cityWeaponBought);
@@ -4725,6 +4792,8 @@ function openDialog(npc){
   if(isCityHospital)document.getElementById('dialog-text').textContent+='\n\n[ B ] Minor Heal (80pts +30HP) | [N] Greater Heal (200pts +80HP) | [M] Full Restore (500pts)';
   if(isCityTavern)document.getElementById('dialog-text').textContent+='\n\n[ B ] Bread (30pts +15HP) | [N] Stew (60pts +35HP) | [M] Feast (150pts +100HP)';
   if(isCityPotionShop)document.getElementById('dialog-text').textContent+='\n\n[ B ] Minor Heal (80pts +30HP) | [N] Greater Heal (200pts +80HP) | [M] Full Restore (500pts)';
+  if(isCityWizardShop){const sp=WIZARD_SPELLS[wizardSpellIdx];document.getElementById('dialog-text').textContent+='\n\nSelected: '+sp.name+' ('+sp.cost+'pts) — '+sp.desc+'\n[B] Buy & Equip  [N] Next Spell  [M] Cast Now'+(wizardMagicT>0?' | Active: '+WIZARD_SPELLS.find(s=>s.id===wizardMagicType)?.name+' ('+~~wizardMagicT+'s)':'');}
+  if(isCityCookieShop)document.getElementById('dialog-text').textContent+='\n\n🍪 Cookie — 200pts — 20s IMMORTALITY + HEAL + 3× SPEED\n[ B ] Buy & Eat'+(cookieT>0?' | 🍪 Active: '+~~cookieT+'s remaining':'');
   const onKey=e=>{
     if(e.code==='KeyB'&&dialogOpen&&isBlane){
       if(blaneQuest==='inactive'){
@@ -4792,6 +4861,30 @@ function openDialog(npc){
     if(dialogOpen&&isCityTavern){
       const foods=[{key:'KeyB',cost:30,hp:15,name:'Bread'},{key:'KeyN',cost:60,hp:35,name:'Stew'},{key:'KeyM',cost:150,hp:100,name:'Feast'}];
       foods.forEach(f=>{if(e.code===f.key){if(score>=f.cost){score-=f.cost;humanHP=Math.min(humanMaxHP,humanHP+f.hp);floatWorld(npc.position,'🍖 '+f.name+'! +'+f.hp+' HP','#aaffaa');}else{floatWorld(npc.position,'❌ Need '+f.cost+' pts','#ff4444');}}});
+    }
+    // Cookie Shop: B=Buy cookie
+    if(dialogOpen&&isCityCookieShop){
+      if(e.code==='KeyB'){
+        if(score>=200){score-=200;cookieT=20;floatWorld(npc.position,'🍪 COOKIE! 20s IMMORTALITY + HEAL + SPEED!','#ffaaff');}
+        else{floatWorld(npc.position,'❌ Need 200 pts','#ff4444');}
+      }
+    }
+    // Wizard Shop: N=Next Spell, B=Buy&Equip, M=Cast
+    if(dialogOpen&&isCityWizardShop){
+      if(e.code==='KeyN'){
+        wizardSpellIdx=(wizardSpellIdx+1)%WIZARD_SPELLS.length;
+        const sp=WIZARD_SPELLS[wizardSpellIdx];
+        document.getElementById('dialog-text').textContent=npc.userData.text+'\n\nSelected: '+sp.name+' ('+sp.cost+'pts) — '+sp.desc+'\n[B] Buy & Equip  [N] Next Spell  [M] Cast Now';
+      }
+      if(e.code==='KeyB'){
+        const sp=WIZARD_SPELLS[wizardSpellIdx];
+        if(score>=sp.cost){score-=sp.cost;wizardMagicType=sp.id;floatWorld(npc.position,'🔮 '+sp.name+' EQUIPPED!',sp.color||'#cc88ff');}
+        else{floatWorld(npc.position,'❌ Need '+sp.cost+' pts','#ff4444');}
+      }
+      if(e.code==='KeyM'){
+        if(wizardMagicType){wizardMagicT=8;floatWorld(npc.position,'✨ '+WIZARD_SPELLS.find(s=>s.id===wizardMagicType)?.name+' CAST!','#cc88ff');}
+        else{floatWorld(npc.position,'No spell equipped — press [B] to buy one','#aaaaaa');}
+      }
     }
     if(e.code==='KeyB'&&dialogOpen&&isSmith&&armorLevel<3){
       const tier=ARMOR_TIERS[armorLevel];
@@ -4913,6 +5006,7 @@ function startGame(){
   blaneQuest='inactive';shadowKills=0;wildDragons=[];
   princeMeshes=[];princesSpawned=false;princeAttackPhase=false;princeAttackT=0;blaneEastLeadActive=false;blaneEastLeadT=0;blaneEastDone=false;
   greatCitySpawned=false;cityHunters=[];cityFriendlyNPCs=[];cityWeaponBought=0;cityArmorBought=0;
+  cookieT=0;wizardMagicT=0;wizardMagicType='';wizardSpellIdx=0;
   mapOpen=false;wmEl.classList.remove('show');
   // Spawn Dragon Mountain (always at world north, zone 0,5)
   setTimeout(()=>{if(gs==='playing')spawnDragonMountain();},100);
@@ -5028,7 +5122,9 @@ function update(ts){
       const fwd=new THREE.Vector3(0,0,1);
       fwd.applyEuler(dragonMesh.rotation);
       if(playerSlowT>0){playerSlowT-=dt;if(Math.random()<0.15)spawnAbilityCloud(dragonMesh.position.clone(),0x00ccaa,12,0.3);}
-      const speedMult=playerSlowT>0?0.4:1.0;
+      // Cookie buff: immortality + heal + speed
+      if(cookieT>0){cookieT-=dt;earthInvT=Math.max(earthInvT,0.1);dhp=Math.min(dmaxHp,dhp+5*dt);if(Math.random()<0.1)spawnAbilityCloud(dragonMesh.position.clone(),0xff88ff,10,0.4);}
+      const speedMult=playerSlowT>0?0.4:cookieT>0?3.0:1.0;
       dragonMesh.position.addScaledVector(fwd,dtype.speed*2.2*dt*speedMult);
       // Land if descend to ground
       if(dragonMesh.position.y<=landThreshold&&dPitch>=0.1){
@@ -5145,6 +5241,34 @@ function update(ts){
     // Ability cooldowns
     for(const k in abilityCooldown)if(abilityCooldown[k]>0)abilityCooldown[k]-=dt;
     if(earthInvT>0){earthInvT-=dt;dinvT=Math.max(dinvT,earthInvT);}
+    // Wizard spell effects
+    if(wizardMagicT>0){
+      wizardMagicT-=dt;
+      const wPos=dragonMesh?dragonMesh.position:new THREE.Vector3();
+      if(wizardMagicType==='meteor_storm'&&Math.random()<0.4){
+        activeEnemies.forEach(en=>{if(en.mesh&&en.userData){hitEnemy(en,80+Math.random()*40,wPos);spawnAbilityCloud(en.mesh.position.clone(),0xff4400,14,0.5);}});
+      }
+      if(wizardMagicType==='time_stop'){
+        activeEnemies.forEach(en=>{if(en.mesh&&en.userData)en.userData.frozen=(en.userData.frozen||0)+dt*2;});
+        if(Math.random()<0.2)spawnAbilityCloud(wPos.clone().add(new THREE.Vector3((Math.random()-0.5)*200,0,(Math.random()-0.5)*200)),0x88ffff,20,0.3);
+      }
+      if(wizardMagicType==='lightning_god'&&Math.random()<0.35){
+        activeEnemies.forEach(en=>{if(en.mesh&&en.userData){hitEnemy(en,60+Math.random()*30,wPos);spawnBeamFX(wPos,en.mesh.position,0xffff00,0.5);}});
+      }
+      if(wizardMagicType==='soul_vortex'&&Math.random()<0.3){
+        activeEnemies.forEach(en=>{if(en.mesh&&en.userData){hitEnemy(en,40+Math.random()*20,wPos);dhp=Math.min(dmaxHp,dhp+5);}});
+        if(Math.random()<0.2)spawnAbilityCloud(wPos.clone(),0xcc88ff,18,0.4);
+      }
+      if(wizardMagicType==='earth_quake'&&Math.random()<0.4){
+        activeEnemies.forEach(en=>{if(en.mesh&&en.userData&&en.mesh.position.distanceTo(wPos)<800){hitEnemy(en,70+Math.random()*35,wPos);spawnAbilityCloud(en.mesh.position.clone(),0x886644,12,0.5);}});
+      }
+      if(wizardMagicType==='ice_age'&&Math.random()<0.3){
+        activeEnemies.forEach(en=>{if(en.mesh&&en.userData){en.userData.frozen=(en.userData.frozen||0)+dt*3;hitEnemy(en,50+Math.random()*25,wPos);spawnAbilityCloud(en.mesh.position.clone(),0x88ccff,14,0.4);}});
+      }
+      if(wizardMagicType==='fire_god'&&Math.random()<0.45){
+        activeEnemies.forEach(en=>{if(en.mesh&&en.userData){hitEnemy(en,90+Math.random()*50,wPos);spawnAbilityCloud(en.mesh.position.clone(),0xff2200,16,0.6);}});
+      }
+    }
     // Ghost dragon lifetime
     for(let gi=dragonArmy.length-1;gi>=0;gi--){const ga=dragonArmy[gi];if(!ga.isGhost)continue;if(ga.mesh.userData.ghostLife!==undefined)ga.mesh.userData.ghostLife-=dt;if((ga.mesh.userData.ghostLife||0)<=0){scene.remove(ga.mesh);dragonArmy.splice(gi,1);}}
     // Burn DoT

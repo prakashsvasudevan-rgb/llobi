@@ -157,6 +157,12 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
   <!-- Minimap -->
   <div id="minimap"><canvas id="mm-canvas" width="150" height="150"></canvas></div>
 
+  <!-- Attack radial menu -->
+  <div id="atk-ring" style="display:none;position:absolute;inset:0;z-index:8;pointer-events:all;background:rgba(0,0,0,0.55)">
+    <canvas id="atk-canvas" style="position:absolute;inset:0;width:100%;height:100%"></canvas>
+    <div id="atk-label" style="position:absolute;bottom:40%;left:50%;transform:translateX(-50%);font-family:'Press Start 2P',monospace;font-size:.55rem;color:#fff;text-shadow:0 0 8px #ff8800;pointer-events:none;white-space:nowrap"></div>
+  </div>
+
   <!-- Dialog -->
   <div id="dialog">
     <div id="dialog-name"></div>
@@ -212,7 +218,10 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
         <div class="mc-btn" id="mc-recruit" style="font-size:.45rem;width:40px;height:40px">🤝<br><span style="font-size:.2rem">R</span></div>
         <div class="mc-btn" id="mc-talk" style="font-size:.45rem;width:40px;height:40px">💬<br><span style="font-size:.2rem">E</span></div>
       </div>
-      <div class="mc-fire" id="mc-fire">🔥</div>
+      <div style="display:flex;gap:6px;align-items:center;margin-top:2px">
+        <div class="mc-fire" id="mc-fire">🔥</div>
+        <div id="mc-atk" style="width:64px;height:64px;background:rgba(255,180,0,.22);border:3px solid rgba(255,200,0,.5);border-radius:50%;color:#ffcc00;font-size:.7rem;display:grid;place-items:center;cursor:pointer;pointer-events:all;flex-shrink:0;-webkit-tap-highlight-color:transparent;user-select:none;text-align:center;line-height:1.2;font-family:'Press Start 2P',monospace">⚔<br><span style="font-size:.22rem">ATTACK</span></div>
+      </div>
     </div>
     <!-- Right joystick: fly up/down -->
     <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
@@ -3539,9 +3548,9 @@ function initMobile(){
   // Left stick: walk/turn (yaw left/right, forward/back)
   const joyL=document.getElementById('joy-left');
   if(joyL)makeJoystick(joyL,(ax,ay)=>{
-    mk.lf=ax<-0.25;mk.rt=ax>0.25;
-    mk.fwd=ay<-0.25;mk.bk=ay>0.25;
-    if(!isHuman)dYawVel-=ax*0.028;
+    mk.lf=ax<-0.3;mk.rt=ax>0.3;
+    mk.fwd=ay<-0.3;mk.bk=ay>0.3;
+    if(!isHuman){dYawVel-=ax*0.032;} // smooth yaw always
   },null,null);
 
   // Right stick: fly up/down + pitch
@@ -3621,6 +3630,123 @@ function pickDevice(type){
 }
 // Auto-pick based on device
 if(isMob())pickDevice('ipad'); else pickDevice('pc');
+
+// ── Attack radial menu ────────────────────────────────────────────────────────
+const ATK_ACTIONS=[
+  {label:'🔥 BREATH',   key:'Space',   desc:'Fire breath',    color:'#ff4400'},
+  {label:'🦷 BITE',     key:'KeyQ',    desc:'Bite attack',    color:'#ff8800'},
+  {label:'💥 TAIL',     key:'KeyX',    desc:'Tail slam',      color:'#cc4400'},
+  {label:'🔊 ROAR',     key:'KeyR',    desc:'Dragon roar',    color:'#aa66ff'},
+  {label:'⚡ POWER',    key:'KeyF',    desc:'Power surge',    color:'#ffff00'},
+  {label:'👑 WEAPON',   key:'KeyG',    desc:'King weapon',    color:'#ffd700'},
+  {label:'🌟 SOUL',     key:'KeyV',    desc:'Soul blast',     color:'#8888ff'},
+  {label:'❄ ICE',       key:'KeyC',    desc:'Ice breath',     color:'#88eeff'},
+];
+let atkRingOpen=false,atkSelected=-1;
+const atkRingEl=document.getElementById('atk-ring');
+const atkCanvas=document.getElementById('atk-canvas');
+const atkLabel=document.getElementById('atk-label');
+const atkCtx=atkCanvas.getContext('2d');
+
+function resizeAtkCanvas(){atkCanvas.width=atkCanvas.offsetWidth;atkCanvas.height=atkCanvas.offsetHeight;}
+window.addEventListener('resize',resizeAtkCanvas);setTimeout(resizeAtkCanvas,100);
+
+function drawAtkRing(hovered){
+  const W=atkCanvas.width,H=atkCanvas.height;
+  atkCtx.clearRect(0,0,W,H);
+  const cx=W/2,cy=H/2;
+  const outerR=Math.min(W,H)*0.38,innerR=outerR*0.32;
+  const n=ATK_ACTIONS.length;
+  for(let i=0;i<n;i++){
+    const a=ATK_ACTIONS[i];
+    const startA=(i/n)*Math.PI*2-Math.PI/2;
+    const endA=((i+1)/n)*Math.PI*2-Math.PI/2;
+    const isHov=i===hovered;
+    // Slice fill
+    atkCtx.beginPath();
+    atkCtx.moveTo(cx,cy);
+    atkCtx.arc(cx,cy,isHov?outerR*1.1:outerR,startA,endA);
+    atkCtx.closePath();
+    atkCtx.fillStyle=isHov?a.color+'cc':a.color+'44';
+    atkCtx.fill();
+    atkCtx.strokeStyle=isHov?a.color:'rgba(255,255,255,0.2)';
+    atkCtx.lineWidth=isHov?2.5:1;
+    atkCtx.stroke();
+    // Icon label
+    const midA=(startA+endA)/2;
+    const lr=(outerR+innerR)*0.5*(isHov?1.08:1);
+    const ex=cx+Math.cos(midA)*lr,ey=cy+Math.sin(midA)*lr;
+    atkCtx.font=isHov?'bold 22px sans-serif':'18px sans-serif';
+    atkCtx.fillStyle='#fff';atkCtx.textAlign='center';atkCtx.textBaseline='middle';
+    atkCtx.fillText(a.label.split(' ')[0],ex,ey);
+    atkCtx.font=isHov?'bold 7px sans-serif':'6px sans-serif';
+    atkCtx.fillText(a.label.split(' ').slice(1).join(' '),ex,ey+14);
+  }
+  // Center hole
+  atkCtx.beginPath();atkCtx.arc(cx,cy,innerR,0,Math.PI*2);
+  atkCtx.fillStyle='rgba(0,0,0,0.75)';atkCtx.fill();
+  atkCtx.strokeStyle='rgba(255,255,255,0.3)';atkCtx.lineWidth=1.5;atkCtx.stroke();
+  atkCtx.font='bold 10px sans-serif';atkCtx.fillStyle='rgba(255,255,255,0.5)';
+  atkCtx.textAlign='center';atkCtx.textBaseline='middle';atkCtx.fillText('ATK',cx,cy);
+}
+
+function getAtkSlice(ex,ey){
+  const W=atkCanvas.width,H=atkCanvas.height;
+  const dx=ex-W/2,dy=ey-H/2;
+  const dist=Math.sqrt(dx*dx+dy*dy);
+  const innerR=Math.min(W,H)*0.38*0.32;
+  if(dist<innerR)return -1;
+  let angle=Math.atan2(dy,dx)+Math.PI/2;
+  if(angle<0)angle+=Math.PI*2;
+  return Math.floor(angle/(Math.PI*2)*ATK_ACTIONS.length)%ATK_ACTIONS.length;
+}
+
+function openAtkRing(){
+  if(gs!=='playing')return;
+  atkRingOpen=true;atkSelected=-1;
+  resizeAtkCanvas();
+  atkRingEl.style.display='block';
+  drawAtkRing(-1);atkLabel.textContent='';
+}
+function closeAtkRing(fire){
+  atkRingOpen=false;
+  atkRingEl.style.display='none';
+  if(fire&&atkSelected>=0){
+    const a=ATK_ACTIONS[atkSelected];
+    keys[a.key]=true;
+    setTimeout(()=>{delete keys[a.key];},120);
+    floatWorld(dragonMesh?dragonMesh.position:new THREE.Vector3(),a.label,'#ffcc00');
+  }
+}
+
+// Touch/click on atk ring
+atkRingEl.addEventListener('touchmove',e=>{
+  e.preventDefault();
+  const t=e.touches[0],r=atkCanvas.getBoundingClientRect();
+  const idx=getAtkSlice(t.clientX-r.left,t.clientY-r.top);
+  atkSelected=idx;
+  drawAtkRing(idx);
+  atkLabel.textContent=idx>=0?ATK_ACTIONS[idx].desc:'';
+},{passive:false});
+atkRingEl.addEventListener('touchend',e=>{e.preventDefault();closeAtkRing(true);},{passive:false});
+atkRingEl.addEventListener('mousemove',e=>{
+  const r=atkCanvas.getBoundingClientRect();
+  const idx=getAtkSlice(e.clientX-r.left,e.clientY-r.top);
+  atkSelected=idx;drawAtkRing(idx);
+  atkLabel.textContent=idx>=0?ATK_ACTIONS[idx].desc:'';
+});
+atkRingEl.addEventListener('mouseup',e=>{closeAtkRing(true);});
+atkRingEl.addEventListener('click',e=>{if(e.target===atkRingEl)closeAtkRing(false);});
+
+// Wire the ATK button
+const atkBtnEl=document.getElementById('mc-atk');
+if(atkBtnEl){
+  atkBtnEl.addEventListener('touchstart',e=>{e.preventDefault();openAtkRing();},{passive:false});
+  atkBtnEl.addEventListener('click',()=>openAtkRing());
+}
+// Keyboard shortcut: Tab opens ring
+document.addEventListener('keydown',e=>{if(e.code==='Tab'&&gs==='playing'){e.preventDefault();openAtkRing();}});
+document.addEventListener('keyup',e=>{if(e.code==='Escape'&&atkRingOpen)closeAtkRing(false);});
 
 // Pointer lock on click when in human mode
 canvas.addEventListener('click',()=>{
@@ -3932,8 +4058,8 @@ function update(ts){
     // ArrowUp/Space = take off (fly); W/S = walk forward/back when landed
     const up=keys['ArrowUp']||keys['Space']||mk.up;
     const dn=keys['ArrowDown']||mk.dn;
-    const fw=keys['KeyW']||mk.up; // forward walk (ground only)
-    const bk=keys['KeyS']||mk.dn; // backward walk (ground only)
+    const fw=keys['KeyW']||mk.fwd||mk.up; // forward walk (ground only)
+    const bk=keys['KeyS']||mk.bk; // backward walk (ground only)
     const doFire=(keys['Space']||keys['KeyZ']||mk.fire)&&!isHuman;
 
     const gy=groundY(dragonMesh.position.x,dragonMesh.position.z);

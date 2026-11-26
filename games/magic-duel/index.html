@@ -38,7 +38,7 @@ canvas{display:block;}
     <div class="mage-pick" id="mage-pick"></div>
     <button id="play-btn" onclick="startFight()">⚔ FIGHT! ⚔</button>
     <div id="ctrl">
-      <b style="color:#cc99ff">A/D</b> Move &nbsp;|&nbsp; <b style="color:#cc99ff">W</b> Jump &nbsp;|&nbsp; <b style="color:#cc99ff">S</b> Block<br>
+      <b style="color:#cc99ff">←/→</b> Move &nbsp;|&nbsp; <b style="color:#cc99ff">↑</b> Jump &nbsp;|&nbsp; <b style="color:#cc99ff">↓</b> Block<br>
       <b style="color:#ffcc44">J</b> Quick Spell &nbsp;|&nbsp; <b style="color:#ffcc44">K</b> Heavy Spell &nbsp;|&nbsp; <b style="color:#ffcc44">L</b> Ultimate
     </div>
   </div>
@@ -82,7 +82,7 @@ const renderer=new THREE.WebGLRenderer({canvas:document.getElementById('c'),anti
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.shadowMap.enabled=true;
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x040010);scene.fog=new THREE.FogExp2(0x040010,0.025);
 const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,0.1,80);
-camera.position.set(0,6,18);camera.lookAt(0,2.5,0);
+camera.position.set(0,1.7,0);camera.lookAt(12,1.4,0);
 function resize(){renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();}
 resize();window.addEventListener('resize',resize);
 
@@ -157,9 +157,9 @@ CHARS.forEach((ch,ci)=>{
 
 let torchLights=[];
 function buildArena(){
-  const floor=new THREE.Mesh(new THREE.PlaneGeometry(18,12),new THREE.MeshLambertMaterial({color:0x1a0a30}));
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(32,20),new THREE.MeshLambertMaterial({color:0x1a0a30}));
   floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;scene.add(floor);
-  for(let tx=-4;tx<=4;tx++)for(let tz=-2;tz<=2;tz++){
+  for(let tx=-7;tx<=7;tx++)for(let tz=-3;tz<=3;tz++){
     const t=new THREE.Mesh(new THREE.PlaneGeometry(1.9,1.9),new THREE.MeshLambertMaterial({color:(tx+tz)%2===0?0x1a0a30:0x150828}));
     t.rotation.x=-Math.PI/2;t.position.set(tx*2,0.01,tz*2);scene.add(t);
   }
@@ -167,7 +167,7 @@ function buildArena(){
     const rune=new THREE.Mesh(new THREE.RingGeometry(r,r+0.07,48),new THREE.MeshBasicMaterial({color:0x6622aa,side:THREE.DoubleSide}));
     rune.rotation.x=-Math.PI/2;rune.position.y=0.02;scene.add(rune);
   }
-  for(let px of[-7,7])for(let pz of[-2,2]){
+  for(let px of[-12,12])for(let pz of[-3,3]){
     const pil=new THREE.Mesh(new THREE.CylinderGeometry(0.35,0.45,7,8),new THREE.MeshLambertMaterial({color:0x1a1030}));
     pil.position.set(px,3.5,pz);scene.add(pil);
     addBox(null,0.9,0.4,0.9,0x221840,px,0.2,pz);addBox(null,0.8,0.4,0.8,0x221840,px,7.0,pz);
@@ -176,9 +176,9 @@ function buildArena(){
     const tl=new THREE.PointLight(0xff8800,2.5,8);tl.position.set(px+(px>0?-0.5:0.5),5.9,pz);scene.add(tl);
     torchLights.push({light:tl,base:2.5,t:Math.random()*6.28});
   }
-  const wall=new THREE.Mesh(new THREE.PlaneGeometry(20,10),new THREE.MeshLambertMaterial({color:0x0a0520}));
-  wall.position.set(0,5,-4);scene.add(wall);
-  for(let bx=-9;bx<=9;bx+=2)for(let by=0;by<=8;by+=1.2){
+  const wall=new THREE.Mesh(new THREE.PlaneGeometry(32,12),new THREE.MeshLambertMaterial({color:0x0a0520}));
+  wall.position.set(0,6,-6);scene.add(wall);
+  for(let bx=-14;bx<=14;bx+=2)for(let by=0;by<=10;by+=1.2){
     if(Math.random()<0.3)addBox(null,1.8,1.0,0.1,by%2===0?0x0f0825:0x0c061e,bx+(by%2===0?0:1),by,-3.95);
   }
   const sp=[];for(let i=0;i<300;i++)sp.push((Math.random()-.5)*60,Math.random()*20+5,(Math.random()-.5)*60-10);
@@ -268,7 +268,7 @@ let gs='select',player,playerMesh,playerGolem=null;
 let enemies=[],spellMeshes=[],enemyProj=[],particles3d=[],summoned=[];
 let level=1,score=0,totalKills=0,waveNum=0,waveActive=false,pendingSpawns=0;
 let keys={},shakeT=0,shakeAmt=0,lastTime=0;
-const ARENA=6.4,GROUND=0,MAX_HP=130,MAX_MP=100;
+const ARENA=11,GROUND=0,MAX_HP=130,MAX_MP=100;
 
 function makePlayer(ch){
   return{x:-4,y:GROUND,vx:0,vy:0,hp:MAX_HP,maxHp:MAX_HP,mp:MAX_MP,maxMp:MAX_MP,
@@ -581,29 +581,33 @@ function showBanner(txt,sub){
 
 document.addEventListener('keydown',e=>{
   keys[e.code]=true;if(gs!=='fight')return;
-  if(e.code==='KeyA'){player.vx=-3.5;if(player.state!=='attack')player.state='walk';}
-  if(e.code==='KeyD'){player.vx=3.5;if(player.state!=='attack')player.state='walk';}
-  if(e.code==='KeyW'&&player.onGround)player.vy=9;
-  if(e.code==='KeyS'&&player.state!=='attack'){player.state='block';player.vx=0;}
+  if(e.code==='ArrowLeft'){player.vx=-3.5;if(player.state!=='attack')player.state='walk';}
+  if(e.code==='ArrowRight'){player.vx=3.5;if(player.state!=='attack')player.state='walk';}
+  if(e.code==='ArrowUp'&&player.onGround)player.vy=9;
+  if(e.code==='ArrowDown'&&player.state!=='attack'){player.state='block';player.vx=0;}
   if(e.code==='KeyJ')fireSpell('q');if(e.code==='KeyK')fireSpell('h');if(e.code==='KeyL')fireSpell('u');
   e.preventDefault();
 });
 document.addEventListener('keyup',e=>{
   keys[e.code]=false;
-  if(e.code==='KeyA'&&player&&player.vx<0)player.vx=0;
-  if(e.code==='KeyD'&&player&&player.vx>0)player.vx=0;
-  if(e.code==='KeyS'&&player&&player.state==='block')player.state='idle';
+  if(e.code==='ArrowLeft'&&player&&player.vx<0)player.vx=0;
+  if(e.code==='ArrowRight'&&player&&player.vx>0)player.vx=0;
+  if(e.code==='ArrowDown'&&player&&player.state==='block')player.state='idle';
 });
 
 function loop(ts){
   requestAnimationFrame(loop);const dt=Math.min((ts-lastTime)/1000,0.05);lastTime=ts;
   torchLights.forEach(t=>{t.t+=dt*5;t.light.intensity=t.base*(0.85+Math.sin(t.t)*0.15+Math.random()*0.05);});
   if(gs!=='fight'){renderer.render(scene,camera);return;}
-  if(!keys['KeyA']&&!keys['KeyD']&&player)player.vx*=0.6;
+  if(!keys['ArrowLeft']&&!keys['ArrowRight']&&player)player.vx*=0.6;
   updatePlayer(dt);enemies.forEach(en=>updateEnemy(en,dt));
   updateSpells(dt);updateEnemyProj(dt);updateSummoned(dt);updatePlayerGolem(dt);updateParticles(dt);
   animateMage(playerMesh,player,dt);
-  if(shakeT>0){shakeT-=dt;camera.position.x=Math.sin(shakeT*30)*(shakeAmt*shakeT*0.1);}else camera.position.x=0;
+  const eyeX=player.x+(shakeT>0?Math.sin(shakeT*30)*(shakeAmt*shakeT*0.08):0);
+  const eyeY=player.y+1.7+(shakeT>0?Math.sin(shakeT*23)*(shakeAmt*shakeT*0.04):0);
+  if(shakeT>0)shakeT-=dt;
+  camera.position.set(eyeX,eyeY,0.3);
+  camera.lookAt(eyeX+player.facing*14,eyeY-0.15,0);
   renderer.render(scene,camera);
 }
 
@@ -612,7 +616,7 @@ function startFight(){
   document.getElementById('title').style.display='none';document.getElementById('hud').style.display='block';
   document.getElementById('p1n').textContent=selChar.name;
   player=makePlayer(selChar);
-  if(playerMesh)scene.remove(playerMesh);playerMesh=buildMage(selChar);scene.add(playerMesh);
+  if(playerMesh)scene.remove(playerMesh);playerMesh=buildMage(selChar);playerMesh.visible=false;scene.add(playerMesh);
   gs='fight';level=1;score=0;totalKills=0;waveNum=0;
   updateBars();updateHUD();setTimeout(startWave,1200);
 }

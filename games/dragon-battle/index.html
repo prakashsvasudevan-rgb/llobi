@@ -3633,12 +3633,16 @@ if(isMob())pickDevice('ipad'); else pickDevice('pc');
 
 // ── Attack radial menu ────────────────────────────────────────────────────────
 const ATK_BASE=[
-  {label:'🔥 BREATH',   key:'Space',   desc:'Fire breath',    color:'#ff4400'},
-  {label:'🦷 BITE',     key:'KeyQ',    desc:'Bite attack',    color:'#ff8800'},
-  {label:'💥 TAIL',     key:'KeyX',    desc:'Tail slam',      color:'#cc4400'},
-  {label:'🔊 ROAR',     key:'KeyR',    desc:'Dragon roar',    color:'#aa66ff'},
-  {label:'⚡ POWER',    key:'KeyF',    desc:'Power surge',    color:'#ffff00'},
-  {label:'🌟 SOUL',     key:'KeyV',    desc:'Soul blast',     color:'#8888ff'},
+  {label:'🔥 BREATH',  key:'Space',        desc:'Fire breath',      color:'#ff4400'},
+  {label:'🦷 BITE',    mk:'bite',          desc:'Bite nearby foe',  color:'#ff8800'},
+  {label:'💥 TAIL',    mk:'tail',          desc:'Tail slam',        color:'#cc4400'},
+  {label:'🔊 ROAR',    mk:'roar',          desc:'Dragon roar',      color:'#aa66ff'},
+  {label:'⚡ ABILITY', key:'KeyF',         desc:'Dragon ability',   color:'#ffff00'},
+  {label:'🌟 POWER',   key:'KeyV',         desc:'Special power',    color:'#8888ff'},
+  {label:'💚 HEAL',    key:'KeyH',         desc:'Heal (Nature)',     color:'#44ff88'},
+  {label:'🐉 CALL',    key:'KeyD',         desc:'Call army',        color:'#44ccff'},
+  {label:'🛡 ARMOR',   key:'ShiftLeft',    desc:'Bone armor',       color:'#aaaaaa'},
+  {label:'🔄 SWAP',    mk:'tab',           desc:'Swap weapon',      color:'#ffcc44'},
 ];
 // ATK_ACTIONS is built dynamically from base + collected king weapons
 let ATK_ACTIONS=ATK_BASE.slice();
@@ -3721,10 +3725,12 @@ function closeAtkRing(fire){
   if(fire&&atkSelected>=0){
     const a=ATK_ACTIONS[atkSelected];
     if(a.kingIdx!==undefined){
-      // Fire the specific king weapon
       activeKingWeaponIdx=a.kingIdx;
       useKingWeapon();
-    } else {
+    } else if(a.mk){
+      mk[a.mk]=true;
+      setTimeout(()=>{mk[a.mk]=false;},120);
+    } else if(a.key){
       keys[a.key]=true;
       setTimeout(()=>{delete keys[a.key];},120);
     }

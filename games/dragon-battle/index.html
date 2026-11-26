@@ -185,7 +185,7 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
     [1][2][3] Dragon Specials &nbsp;[/] Power Wheel<br>
     [6] ⚡ All Powers at once<br>
     <span style="color:#ffdd44">── WORLD ──</span><br>
-    [7] 🐉 Army → You &nbsp;[4] Dragon Mtn<br>
+    [7] 🐉 Army → You &nbsp;[4] Dragon Mtn &nbsp;[5] 🏙 City<br>
     [F] 🔥 Fire &nbsp;[X] ❄ Ice &nbsp;[P] ☠ Poison<br>
     [H] 💚 Heal &nbsp;[`] Find Blane<br>
     <span style="color:#88ffcc">[?] Full Help Guide</span>
@@ -2545,7 +2545,208 @@ function spawnLegendCastle(){
   for(let i=0;i<16;i++){const a=i/16*Math.PI*2;spawnLC('mage',LC_X+Math.cos(a)*68,LC_Z+Math.sin(a)*68,6,4);}
 }
 
-// ── KING RUINS — 8 islands, each with a King Dragon skeleton boss ─────────────
+// ── GREAT CITY — 301,111 units east of Dragon Mountain ───────────────────────
+const CITY_X=DM_X+301111, CITY_Z=DM_Z;
+let greatCitySpawned=false;
+let cityHunters=[]; // hostile when player is on dragon
+let cityFriendlyNPCs=[]; // shopkeepers & citizens
+
+const CITY_WEAPONS=[
+  {name:'Iron Sword',   cost:150,  bonus:{dmg:1},  desc:'Basic iron blade. +1 damage tier.'},
+  {name:'Steel Blade',  cost:400,  bonus:{dmg:2},  desc:'Sharp city-forged steel. +2 damage tier.'},
+  {name:'Dragon Lance', cost:900,  bonus:{dmg:3},  desc:'Tip carved from dragon bone. +3 damage tier.'},
+];
+const CITY_POTIONS=[
+  {name:'Minor Heal',   cost:80,   hp:30,  desc:'Restores 30 HP.'},
+  {name:'Greater Heal', cost:200,  hp:80,  desc:'Restores 80 HP.'},
+  {name:'Full Restore', cost:500,  hp:9999,desc:'Fully restores HP.'},
+];
+const CITY_ARMORS=[
+  {name:'Leather Vest', cost:120,  hpBonus:30,  desc:'Light armor, +30 max HP.'},
+  {name:'Chain Mail',   cost:350,  hpBonus:70,  desc:'Linked iron rings, +70 max HP.'},
+  {name:'Plate Armor',  cost:800,  hpBonus:140, desc:'Heavy city-forged plate, +140 max HP.'},
+];
+const CITY_FOODS=[
+  {name:'Bread',   cost:30, hp:15, desc:'Simple bread, restores 15 HP.'},
+  {name:'Stew',    cost:60, hp:35, desc:'Hot stew, restores 35 HP.'},
+  {name:'Feast',   cost:150,hp:100,desc:'Full tavern feast, restores 100 HP.'},
+];
+let cityWeaponBought=0, cityArmorBought=0;
+
+function makeCitizenMesh(color){
+  const g=new THREE.Group();const FS={flatShading:true};
+  const cm=mat(color||0x886644,FS);
+  addBox(g,0.6,1.1,0.5,cm,0,0.55,0);
+  addBox(g,0.55,0.55,0.5,mat(0xddbb99,FS),0,1.38,0); // head
+  addBox(g,0.22,0.9,0.22,cm,-0.42,0,0);addBox(g,0.22,0.9,0.22,cm,0.42,0,0); // arms
+  addBox(g,0.26,1.0,0.26,mat(0x334466,FS),-0.17,-0.6,0);addBox(g,0.26,1.0,0.26,mat(0x334466,FS),0.17,-0.6,0); // legs
+  return g;
+}
+function makeHunterNPCMesh(){
+  const g=makeCitizenMesh(0x4a3520);
+  // bow
+  const bow=new THREE.Mesh(new THREE.BoxGeometry(0.08,1.2,0.08),mat(0x5a3010,{flatShading:true}));
+  bow.position.set(0.55,0.5,0.2);bow.rotation.z=0.3;g.add(bow);
+  return g;
+}
+
+function spawnGreatCity(){
+  if(greatCitySpawned)return;
+  greatCitySpawned=true;
+  const cy=groundY(CITY_X,CITY_Z);
+  const g=new THREE.Group();
+  g.position.set(CITY_X,cy,CITY_Z);
+  scene.add(g);
+
+  function cb(w,h,d,m,ox,oy,oz){
+    const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);
+    mesh.position.set(ox,oy+h/2,oz);g.add(mesh);return mesh;
+  }
+  const stone=mat(0x889988,{flatShading:true});
+  const wood=mat(0x775533,{flatShading:true});
+  const roof=mat(0x993322,{flatShading:true});
+  const wall=mat(0xaabb99,{flatShading:true});
+  const gold=mat(0xddaa33,{flatShading:true});
+
+  // City wall perimeter
+  for(let i=0;i<36;i++){
+    const a=i/36*Math.PI*2;const r=600;
+    cb(18,22,18,stone,Math.cos(a)*r,0,Math.sin(a)*r);
+  }
+  // Corner towers
+  [[580,580],[580,-580],[-580,580],[-580,-580]].forEach(([tx,tz])=>{
+    cb(30,40,30,stone,tx,0,tz);
+    cb(32,4,32,mat(0x667766,{flatShading:true}),tx,40,tz); // parapet
+  });
+
+  // Central plaza / market
+  cb(300,2,300,mat(0x888877,{flatShading:true}),0,0,0); // plaza floor
+
+  // Market stalls — ring of 12
+  const stallColors=[0xdd4422,0x44aa22,0x2244cc,0xddaa22,0xaa44cc,0x22aacc];
+  for(let i=0;i<12;i++){
+    const sa=i/12*Math.PI*2,sr=180;
+    const sx=Math.cos(sa)*sr,sz=Math.sin(sa)*sr;
+    cb(14,8,10,mat(stallColors[i%stallColors.length],{flatShading:true}),sx,0,sz); // stall body
+    cb(16,0.8,12,mat(0xcc6633,{flatShading:true}),sx,8.4,sz); // awning
+    cb(1.5,8,1.5,wood,sx-6,0,sz-4);cb(1.5,8,1.5,wood,sx+6,0,sz-4); // poles
+  }
+
+  // ── Weapon Shop (north) ──
+  cb(60,24,50,stone,0,0,-250);cb(62,4,52,mat(0x667766,{flatShading:true}),0,24,-250);
+  cb(60,2,50,roof,0,26,-250);
+  const wsSign=new THREE.Mesh(new THREE.BoxGeometry(28,8,1),mat(0xddaa22,{flatShading:true}));
+  wsSign.position.set(0,28,-225);g.add(wsSign);
+
+  // ── Armor Shop (south) ──
+  cb(60,24,50,stone,0,0,250);cb(60,2,50,mat(0x224466,{flatShading:true}),0,26,250);
+
+  // ── Hospital (east) — white cross ──
+  cb(60,24,50,mat(0xeeeedd,{flatShading:true}),250,0,0);
+  cb(10,30,6,mat(0xff2222,{flatShading:true}),250,20,25); // cross vertical
+  cb(24,6,6,mat(0xff2222,{flatShading:true}),250,32,25); // cross horizontal
+
+  // ── Tavern (west) ──
+  cb(60,20,50,wood,-250,0,0);cb(60,3,52,roof,-250,20,0);
+  cb(14,24,8,wood,-250,0,-20); // chimney
+  cb(6,28,6,mat(0x553311,{flatShading:true}),-250,20,-20);
+
+  // ── Potion Shop (NE) ──
+  cb(40,18,40,mat(0x334455,{flatShading:true}),200,0,-200);
+  // Purple glow orbs
+  for(let i=0;i<4;i++){
+    const po=new THREE.Mesh(new THREE.SphereGeometry(3,6,5),new THREE.MeshBasicMaterial({color:0xaa44ff,transparent:true,opacity:0.8,blending:THREE.AdditiveBlending}));
+    po.position.set(CITY_X+200+(i%2)*20-10,cy+22,CITY_Z-200+(i<2?0:20));scene.add(po);
+  }
+
+  // ── Houses: 40 scattered houses ──
+  for(let i=0;i<40;i++){
+    const hx=(Math.random()-0.5)*1000,hz=(Math.random()-0.5)*1000;
+    if(Math.abs(hx)<120&&Math.abs(hz)<120)continue; // no house in plaza
+    cb(28,16,22,mat([0x886644,0x776655,0x998877,0x667788][i%4],{flatShading:true}),hx,0,hz);
+    cb(30,4,24,mat([0x993322,0x772211,0xaa4433][i%3],{flatShading:true}),hx,16,hz);
+  }
+
+  g.userData={type:'city',isCity:true,safe:true,alive:true,hp:999999,maxHp:999999,radius:700};
+  activeBuildings.push(g);
+
+  // ── City NPC factory ──
+  function spawnCityNPC(wx,wz,name,text,role,extraData){
+    const mesh=role==='hunter'?makeHunterNPCMesh():makeCitizenMesh(
+      role==='shopkeeper'?0x885533:role==='doctor'?0xeeeedd:0x887766
+    );
+    mesh.scale.set(1.5,1.5,1.5);
+    const ny=groundY(wx,wz);
+    mesh.position.set(wx,ny+1.1,wz);
+    mesh.userData={npcName:name,npcText:text,isCity:true,...(extraData||{})};
+    scene.add(mesh);objects.push(mesh);
+    if(role==='hunter'){cityHunters.push(mesh);}
+    else{cityFriendlyNPCs.push(mesh);friendlyNPCs.push(mesh);}
+    return mesh;
+  }
+
+  // Weapon shop keeper
+  spawnCityNPC(CITY_X,cy+1,CITY_Z-250,'Welcome to my forge! I sell the finest blades.\n\n[B] Browse weapons','shopkeeper',{isCityWeaponShop:true,choices:[
+    {q:'What do you sell?',a:'Iron Sword (150pts), Steel Blade (400pts), Dragon Lance (900pts). Each upgrades your melee damage. Press [B] in this dialog to browse!'},
+    {q:'Are these for dragon riders?',a:'Any warrior with coin! But dragon riders tell me the blades help even when mounted.'},
+  ]});
+  // Armor shop keeper
+  spawnCityNPC(CITY_X,cy+1,CITY_Z+250,'Strong armor for brave souls!\n\n[B] Browse armor','shopkeeper',{isCityArmorShop:true,choices:[
+    {q:'What armor do you have?',a:'Leather Vest (120pts +30HP), Chain Mail (350pts +70HP), Plate Armor (800pts +140HP). Press [B] to buy.'},
+  ]});
+  // Doctor / hospital
+  spawnCityNPC(CITY_X+250,cy+1,CITY_Z,'The city hospital — we heal all wounds.\n\n[B] Buy healing','shopkeeper',{isCityHospital:true,choices:[
+    {q:'How do I heal?',a:'Press [B] here to buy healing items. We have Minor Heal (80pts), Greater Heal (200pts), or Full Restore (500pts).'},
+    {q:'Can you heal my dragon?',a:'Your bond with your dragon means your healing transfers to them too. Buy the Full Restore if your dragon is low!'},
+  ]});
+  // Tavern keeper
+  spawnCityNPC(CITY_X-250,cy+1,CITY_Z,'Welcome to the Golden Flagon! Food, drink, tales!\n\n[B] Buy food','shopkeeper',{isCityTavern:true,choices:[
+    {q:'What news?',a:'Strange dark shapes were seen flying south — giant black dragons with glowing eyes. The Princes of Death, some say. The city guard doubled the hunters on the walls.'},
+    {q:'Do you know of Blane?',a:'The legendary rider Blane? Of course! He trained half the riders in this city. If you find him, tell him the Flagon still has his favourite table.'},
+    {q:'What food do you serve?',a:'Bread (30pts, +15HP), Hearty Stew (60pts, +35HP), or the full Feast (150pts, +100HP). Press [B] to order!'},
+  ]});
+  // Potion seller
+  spawnCityNPC(CITY_X+200,cy+1,CITY_Z-200,'Potions, elixirs, and rare draughts!\n\n[B] Browse potions','shopkeeper',{isCityPotionShop:true,choices:[
+    {q:'What potions do you have?',a:'Minor Heal (80pts +30HP), Greater Heal (200pts +80HP), and the legendary Full Restore (500pts — full HP). Press [B] to buy.'},
+    {q:'Do potions work on dragons?',a:'Yes! When you are bonded to your dragon, whatever heals you heals it.'},
+  ]});
+
+  // Citizens — wander & chatter
+  const citizenLines=[
+    'Have you seen the dragon riders lately? Incredible sight!',
+    'The market is busiest at sunrise. Come back then for the best deals.',
+    'I heard dragons attacked a village to the west. Stay safe!',
+    'My family has lived in this city for seven generations.',
+    'The hospital is the best in all the land. Even dragon wounds heal there.',
+    'Watch out for pickpockets near the market stalls!',
+    'The hunters keep us safe from dragon raids. Good folk, every one.',
+    'If you see a rider on a dragon flying over the city — report it to the guard!',
+    'I would love to ride a dragon someday.',
+    'The armor shop has new stock — go check it out!',
+  ];
+  for(let i=0;i<30;i++){
+    const cx2=CITY_X+(Math.random()-0.5)*1000;
+    const cz2=CITY_Z+(Math.random()-0.5)*1000;
+    spawnCityNPC(cx2,groundY(cx2,cz2)+1,cz2,'Citizen '+(i+1),citizenLines[i%citizenLines.length],'citizen',{
+      isCitizen:true,wanderX:cx2,wanderZ:cz2,wanderR:60+Math.random()*80,wanderA:Math.random()*Math.PI*2,
+      choices:[{q:'Any news?',a:citizenLines[(i+3)%citizenLines.length]}],
+    });
+  }
+
+  // Hunters — hostile to dragon, friendly in human mode (40 posted around city)
+  for(let i=0;i<40;i++){
+    const ha=(i/40)*Math.PI*2;const hr=500+Math.random()*80;
+    const hx=CITY_X+Math.cos(ha)*hr,hz=CITY_Z+Math.sin(ha)*hr;
+    const h=spawnCityNPC(hx,groundY(hx,hz)+1,hz,'City Hunter','I keep the city safe from rogue dragon raids!','hunter',{
+      isCityHunter:true,shootT:0,shootRange:600,dmg:18,
+    });
+    h.userData.baseX=hx;h.userData.baseZ=hz;
+  }
+
+  floatWorld(new THREE.Vector3(CITY_X,cy+40,CITY_Z),'🏙 GREAT CITY — WELCOME!','#ffdd44');
+}
+
+let greatCityWeaponIdx=cityWeaponBought; // which weapon tier bought
 const KING_RUINS_CFG=[
   {id:'fire_water',  elem1:'fire',  elem2:'water',   name:'INFERNO TIDE',
    pos:{x:DM_X+800,z:DM_Z+600},   bossColor:0xff6633, weaponName:'METEOR STRIKE',  weaponColor:0xff4400,weaponEmoji:'☄'},
@@ -3580,6 +3781,12 @@ document.addEventListener('keydown',e=>{
       ref.set(DM_X,groundY(DM_X,DM_Z-10)+3,DM_Z-10);
       floatWorld(ref.clone().add(new THREE.Vector3(0,8,0)),'🏔 DRAGON MOUNTAIN','#44aaff');
     }
+    if(e.code==='Digit5'&&!dialogOpen){
+      // Teleport to Great City
+      const ref=isHuman&&humanMesh?humanMesh.position:dragonMesh.position;
+      ref.set(CITY_X,groundY(CITY_X,CITY_Z)+5,CITY_Z);
+      floatWorld(ref.clone().add(new THREE.Vector3(0,8,0)),'🏙 GREAT CITY','#ffdd44');
+    }
     if(e.code==='Backquote'&&!dialogOpen){
       // Teleport to Blane
       if(blaneNPC){
@@ -4470,6 +4677,25 @@ function openDialog(npc){
   // B key to buy food / armor / Blane dragon reassign while dialog open
   const isFoodShop=!!npc.userData.isFoodShop;
   const isBlane=!!npc.userData.isBlane;
+  const isCityWeaponShop=!!npc.userData.isCityWeaponShop;
+  const isCityArmorShop=!!npc.userData.isCityArmorShop;
+  const isCityHospital=!!npc.userData.isCityHospital;
+  const isCityTavern=!!npc.userData.isCityTavern;
+  const isCityPotionShop=!!npc.userData.isCityPotionShop;
+  // Build shop text for city shops
+  if(isCityWeaponShop){
+    const avail=CITY_WEAPONS.filter((_,i)=>i>=cityWeaponBought);
+    if(avail.length>0){const w=avail[0];document.getElementById('dialog-text').textContent+='\n\n[ B ] BUY '+w.name+': '+w.desc+' — '+w.cost+' pts';}
+    else{document.getElementById('dialog-text').textContent+='\n\nYou have my finest blade already!';}
+  }
+  if(isCityArmorShop){
+    const avail=CITY_ARMORS.filter((_,i)=>i>=cityArmorBought);
+    if(avail.length>0){const a=avail[0];document.getElementById('dialog-text').textContent+='\n\n[ B ] BUY '+a.name+': '+a.desc+' — '+a.cost+' pts';}
+    else{document.getElementById('dialog-text').textContent+='\n\nYou are wearing our best armor already!';}
+  }
+  if(isCityHospital)document.getElementById('dialog-text').textContent+='\n\n[ B ] Minor Heal (80pts +30HP) | [N] Greater Heal (200pts +80HP) | [M] Full Restore (500pts)';
+  if(isCityTavern)document.getElementById('dialog-text').textContent+='\n\n[ B ] Bread (30pts +15HP) | [N] Stew (60pts +35HP) | [M] Feast (150pts +100HP)';
+  if(isCityPotionShop)document.getElementById('dialog-text').textContent+='\n\n[ B ] Minor Heal (80pts +30HP) | [N] Greater Heal (200pts +80HP) | [M] Full Restore (500pts)';
   const onKey=e=>{
     if(e.code==='KeyB'&&dialogOpen&&isBlane){
       if(blaneQuest==='inactive'){
@@ -4513,6 +4739,30 @@ function openDialog(npc){
       } else {
         floatWorld(npc.position,'❌ NEED 50 PTS','#ff4444');
       }
+    }
+    // City Weapon Shop
+    if(e.code==='KeyB'&&dialogOpen&&isCityWeaponShop){
+      const avail=CITY_WEAPONS.filter((_,i)=>i>=cityWeaponBought);
+      if(avail.length===0){floatWorld(npc.position,'You have the best weapon!','#aaaaaa');}
+      else if(score>=avail[0].cost){score-=avail[0].cost;upgrades.dmg+=avail[0].bonus.dmg;cityWeaponBought++;floatWorld(npc.position,'⚔ '+avail[0].name+'! +'+avail[0].bonus.dmg+' DMG','#ffee44');}
+      else{floatWorld(npc.position,'❌ Need '+avail[0].cost+' pts','#ff4444');}
+    }
+    // City Armor Shop
+    if(e.code==='KeyB'&&dialogOpen&&isCityArmorShop){
+      const avail=CITY_ARMORS.filter((_,i)=>i>=cityArmorBought);
+      if(avail.length===0){floatWorld(npc.position,'You have the best armor!','#aaaaaa');}
+      else if(score>=avail[0].cost){score-=avail[0].cost;humanMaxHP+=avail[0].hpBonus;humanHP=humanMaxHP;cityArmorBought++;floatWorld(npc.position,'🛡 '+avail[0].name+'! +'+avail[0].hpBonus+' MAX HP','#88ff44');}
+      else{floatWorld(npc.position,'❌ Need '+avail[0].cost+' pts','#ff4444');}
+    }
+    // Hospital / Potion Shop: B=Minor, N=Greater, M=Full
+    if(dialogOpen&&(isCityHospital||isCityPotionShop)){
+      const heals=[{key:'KeyB',cost:80,hp:30,name:'Minor Heal'},{key:'KeyN',cost:200,hp:80,name:'Greater Heal'},{key:'KeyM',cost:500,hp:9999,name:'Full Restore'}];
+      heals.forEach(h=>{if(e.code===h.key){if(score>=h.cost){score-=h.cost;humanHP=Math.min(humanMaxHP,humanHP+h.hp);floatWorld(npc.position,'💊 '+h.name+'! HP restored','#44ff88');}else{floatWorld(npc.position,'❌ Need '+h.cost+' pts','#ff4444');}}});
+    }
+    // Tavern: B=Bread, N=Stew, M=Feast
+    if(dialogOpen&&isCityTavern){
+      const foods=[{key:'KeyB',cost:30,hp:15,name:'Bread'},{key:'KeyN',cost:60,hp:35,name:'Stew'},{key:'KeyM',cost:150,hp:100,name:'Feast'}];
+      foods.forEach(f=>{if(e.code===f.key){if(score>=f.cost){score-=f.cost;humanHP=Math.min(humanMaxHP,humanHP+f.hp);floatWorld(npc.position,'🍖 '+f.name+'! +'+f.hp+' HP','#aaffaa');}else{floatWorld(npc.position,'❌ Need '+f.cost+' pts','#ff4444');}}});
     }
     if(e.code==='KeyB'&&dialogOpen&&isSmith&&armorLevel<3){
       const tier=ARMOR_TIERS[armorLevel];
@@ -4633,12 +4883,14 @@ function startGame(){
   dmShieldMesh=null;dmShieldRing=null;dmShieldFlashT=0;
   blaneQuest='inactive';shadowKills=0;wildDragons=[];
   princeMeshes=[];princesSpawned=false;princeAttackPhase=false;princeAttackT=0;blaneEastLeadActive=false;blaneEastLeadT=0;blaneEastDone=false;
+  greatCitySpawned=false;cityHunters=[];cityFriendlyNPCs=[];cityWeaponBought=0;cityArmorBought=0;
   mapOpen=false;wmEl.classList.remove('show');
   // Spawn Dragon Mountain (always at world north, zone 0,5)
   setTimeout(()=>{if(gs==='playing')spawnDragonMountain();},100);
   // Spawn Volcano at edge (zone 15,15)
   setTimeout(()=>{if(gs==='playing')spawnVolcano();},200);
   setTimeout(()=>{if(gs==='playing')spawnLegendCastle();},300);
+  setTimeout(()=>{if(gs==='playing')spawnGreatCity();},500);
   isHuman=false;humanHP=100;humanMaxHP=100;humanVY=0;armorLevel=0;mouseDX=0;mouseDY=0;nearNPC=null;dialogOpen=false;
   if(humanMesh){scene.remove(humanMesh);humanMesh=null;}
   document.getElementById('human-badge').style.display='none';
@@ -5901,6 +6153,41 @@ function update(ts){
         if(blaneNPC&&legendCastleSpawned){
           blaneLeadPhase='leading_to_castle';
         }
+      }
+    }
+
+    // ── GREAT CITY AI ────────────────────────────────────────────────────────
+    if(greatCitySpawned&&frame%3===0){
+      const playerRef=isHuman&&humanMesh?humanMesh.position:dragonMesh.position;
+      // Citizens wander their patrol area
+      cityFriendlyNPCs.forEach(npc2=>{
+        if(!npc2.userData.wanderX)return;
+        npc2.userData.wanderA=(npc2.userData.wanderA||0)+dt*0.4*(Math.random()<0.02?-1:1);
+        const wx=npc2.userData.wanderX+Math.cos(npc2.userData.wanderA)*(npc2.userData.wanderR||50);
+        const wz=npc2.userData.wanderZ+Math.sin(npc2.userData.wanderA)*(npc2.userData.wanderR||50);
+        const toW=new THREE.Vector3(wx-npc2.position.x,0,wz-npc2.position.z);
+        if(toW.length()>2){toW.normalize();npc2.position.addScaledVector(toW,3*dt);npc2.rotation.y=Math.atan2(toW.x,toW.z);}
+        npc2.position.y=groundY(npc2.position.x,npc2.position.z)+1.1;
+      });
+      // Hunters: shoot at player dragon if on dragon within range
+      if(!isHuman){
+        cityHunters.forEach(h=>{
+          if(!h.userData.isCityHunter)return;
+          const dist=playerRef.distanceTo(h.position);
+          if(dist>h.userData.shootRange)return;
+          h.userData.shootT=(h.userData.shootT||0)-dt*3; // 3 updates/frame
+          if(h.userData.shootT<=0){
+            h.userData.shootT=2.5+Math.random()*2;
+            h.lookAt(playerRef.x,h.position.y,playerRef.z);
+            // Spawn arrow projectile
+            const arrow=new THREE.Mesh(new THREE.BoxGeometry(0.3,0.3,3),new THREE.MeshBasicMaterial({color:0xddaa44}));
+            arrow.position.copy(h.position).add(new THREE.Vector3(0,2.5,0));
+            const toP=new THREE.Vector3().subVectors(playerRef,arrow.position).normalize();
+            arrow.userData={vel:toP.clone().multiplyScalar(55),dmg:h.userData.dmg||18,life:5,isCityArrow:true,friendly:false};
+            scene.add(arrow);projectiles.push(arrow);
+            if(dist<300)floatWorld(h.position,'🏹','#ffee44');
+          }
+        });
       }
     }
 

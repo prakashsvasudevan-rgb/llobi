@@ -15,10 +15,11 @@ body{background:#000;overflow:hidden;user-select:none;display:flex;flex-directio
 canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
 
 /* Select Screen */
-#sel{position:absolute;inset:0;background:linear-gradient(#080018,#200030);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:5;gap:10px;transform:translateZ(0)}
+#sel{position:absolute;inset:0;background:linear-gradient(#080018,#200030);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:12px;overflow-y:auto;z-index:5;gap:8px;transform:translateZ(0)}
 #sel h1{font-size:1.1rem;color:#ff4444;text-shadow:0 0 20px #ff0000}
 #sel .sub{font-size:.45rem;color:#aaa}
-#cards{display:flex;gap:6px;padding:6px 8px;overflow-x:auto;width:100%;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+@media(max-height:600px){#sel-hint{display:none}#sel h1{font-size:.8rem}#sel{padding-top:6px;gap:4px}}
+#cards{display:flex;gap:6px;padding:6px 8px;overflow-x:auto;width:100%;min-height:120px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 #cards::-webkit-scrollbar{display:none}
 #sel-start{margin:8px 0;padding:16px 40px;background:#cc0000;border:4px solid #ff6666;color:#fff;font-family:'Press Start 2P',monospace;font-size:.65rem;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;text-shadow:0 0 10px #ff0000;box-shadow:0 0 20px #ff0000}
 #sel-start:active,#sel-start:hover{background:#ff2222;color:#fff}
@@ -123,7 +124,7 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
       <button class="d-btn" id="btn-pc" onclick="pickDevice('pc')">🖥 COMPUTER</button>
       <button class="d-btn" id="btn-ipad" onclick="pickDevice('ipad')">📱 iPAD / TOUCH</button>
     </div>
-    <p id="sel-hint">◀ ▶ · SPACE=FIRE · T=HUMAN · C=SIT · M=MAP · SHIFT=SWORD · J=JUMP · D=CALL · E=TALK · B=ARMOR</p>
+    <p id="sel-hint" style="font-size:.28rem;color:#555;text-align:center;padding:0 8px">◀ ▶ · SPACE=FIRE · T=HUMAN · C=SIT · M=MAP · SHIFT=SWORD · J=JUMP</p>
     <p id="sel-best"></p>
   </div>
 

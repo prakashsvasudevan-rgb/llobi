@@ -179,7 +179,16 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
   <!-- King Weapon HUD -->
   <div id="king-weapon-hud" style="display:none;position:absolute;bottom:60px;left:50%;transform:translateX(-50%);font-family:monospace;font-size:.32rem;color:#ffee00;background:rgba(0,0,0,.7);padding:4px 10px;border-radius:4px;pointer-events:none;z-index:4;text-align:center"></div>
   <!-- Teleport hint -->
-  <div id="teleport-hint" style="position:absolute;top:52px;right:8px;font-family:monospace;font-size:.28rem;color:#88aaff;background:rgba(0,0,0,.55);padding:3px 8px;border-radius:3px;pointer-events:none;z-index:4;text-align:right;line-height:1.9">[1][2][3] Dragon Specials&nbsp;[6] All Powers&nbsp;[7] Army→You<br>[4] Dragon Mtn&nbsp;[`] Blane&nbsp;[Z]Bite [C]Tail [R]Roar [/]Power</div>
+  <div id="teleport-hint" style="position:absolute;top:52px;right:8px;font-family:monospace;font-size:.27rem;color:#cce4ff;background:rgba(0,0,0,.62);padding:5px 10px;border-radius:5px;pointer-events:none;z-index:4;text-align:right;line-height:2.0">
+    <span style="color:#ffdd44">── ATTACKS ──</span><br>
+    [Z] 🦷 Bite &nbsp;[C] 💥 Tail &nbsp;[R] 🔊 Roar<br>
+    [1][2][3] Dragon Specials &nbsp;[/] Power Wheel<br>
+    [6] ⚡ All Powers at once<br>
+    <span style="color:#ffdd44">── WORLD ──</span><br>
+    [7] 🐉 Army → You &nbsp;[4] Dragon Mtn<br>
+    [F] 🔥 Fire &nbsp;[X] ❄ Ice &nbsp;[P] ☠ Poison<br>
+    [H] 💚 Heal &nbsp;[`] Find Blane
+  </div>
 
   <!-- Full-screen world map (M key) -->
   <div id="worldmap">
@@ -1548,6 +1557,7 @@ function spawnZone(cx,cz){
       const e=makeEnemy3d(eType);
       const ex=wx0+Math.random()*ZONE,ez=wz0+Math.random()*ZONE;
       e.position.set(ex,groundY(ex,ez)+1.5,ez);
+      const ds=diffScale();e.userData.hp=~~(e.userData.hp*ds);e.userData.maxHp=e.userData.hp;e.userData.dmg=~~(e.userData.dmg*ds);
       scene.add(e);objects.push(e);activeEnemies.push(e);
     }
 
@@ -1557,6 +1567,7 @@ function spawnZone(cx,cz){
       const sdx=wx0+Math.random()*ZONE,sdz=wz0+Math.random()*ZONE;
       sd.position.set(sdx,groundY(sdx,sdz)+45+Math.random()*25,sdz);
       sd.userData.baseY=sd.position.y;sd.userData.flyOrbit=Math.random()*Math.PI*2;
+      const ds2=diffScale();sd.userData.hp=~~(sd.userData.hp*ds2);sd.userData.maxHp=sd.userData.hp;sd.userData.dmg=~~(sd.userData.dmg*ds2);
       // Mage rider sitting on its back
       const mr=makeMageMesh();mr.scale.set(0.55,0.55,0.55);mr.position.set(0,2.2,0.5);sd.add(mr);
       scene.add(sd);objects.push(sd);activeEnemies.push(sd);
@@ -1568,6 +1579,7 @@ function spawnZone(cx,cz){
       const edx=wx0+Math.random()*ZONE,edz=wz0+Math.random()*ZONE;
       ed.position.set(edx,groundY(edx,edz)+35+Math.random()*30,edz);
       ed.userData.baseY=ed.position.y;
+      const ds3=diffScale();ed.userData.hp=~~(ed.userData.hp*ds3);ed.userData.maxHp=ed.userData.hp;ed.userData.dmg=~~(ed.userData.dmg*ds3);
       scene.add(ed);objects.push(ed);activeEnemies.push(ed);
     }
 
@@ -3106,6 +3118,8 @@ document.addEventListener('mousemove',e=>{
 
 try{best=parseInt(localStorage.getItem('dragonbattle_best')||'0');}catch(e){}
 function enemyBudget(){return Math.max(1,~~(score/400));}
+// Enemy strength scales with score: 1× at start, up to 6× at high score
+function diffScale(){return 1+Math.min(5,score/8000);}
 
 // ── Input ─────────────────────────────────────────────────────────────────────
 const keys={};

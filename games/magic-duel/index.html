@@ -38,7 +38,7 @@ canvas{display:block;}
     <div class="mage-pick" id="mage-pick"></div>
     <button id="play-btn" onclick="startFight()">⚔ FIGHT! ⚔</button>
     <div id="ctrl">
-      <b style="color:#cc99ff">←/→</b> Move &nbsp;|&nbsp; <b style="color:#cc99ff">↑</b> Jump &nbsp;|&nbsp; <b style="color:#cc99ff">↓</b> Block<br>
+      <b style="color:#cc99ff">←/→</b> Move &nbsp;|&nbsp; <b style="color:#cc99ff">↑</b> Jump &nbsp;|&nbsp; <b style="color:#cc99ff">↓</b> Block &nbsp;|&nbsp; <b style="color:#cc99ff">Mouse</b> Turn (click to lock)<br>
       <b style="color:#ffcc44">J</b> Quick Spell &nbsp;|&nbsp; <b style="color:#ffcc44">K</b> Heavy Spell &nbsp;|&nbsp; <b style="color:#ffcc44">L</b> Ultimate
     </div>
   </div>
@@ -267,7 +267,7 @@ function buildBossTitan(){
 let gs='select',player,playerMesh,playerGolem=null;
 let enemies=[],spellMeshes=[],enemyProj=[],particles3d=[],summoned=[];
 let level=1,score=0,totalKills=0,waveNum=0,waveActive=false,pendingSpawns=0;
-let keys={},shakeT=0,shakeAmt=0,lastTime=0;
+let keys={},shakeT=0,shakeAmt=0,lastTime=0,camYaw=0;
 const ARENA=11,GROUND=0,MAX_HP=130,MAX_MP=100;
 
 function makePlayer(ch){
@@ -595,6 +595,16 @@ document.addEventListener('keyup',e=>{
   if(e.code==='ArrowDown'&&player&&player.state==='block')player.state='idle';
 });
 
+document.getElementById('c').addEventListener('click',()=>{
+  if(gs==='fight')document.getElementById('c').requestPointerLock();
+});
+document.addEventListener('pointerlockchange',()=>{});
+document.addEventListener('mousemove',e=>{
+  if(gs!=='fight'||!document.pointerLockElement)return;
+  camYaw-=e.movementX*0.002;
+  camYaw=Math.max(-Math.PI*0.45,Math.min(Math.PI*0.45,camYaw));
+});
+
 function loop(ts){
   requestAnimationFrame(loop);const dt=Math.min((ts-lastTime)/1000,0.05);lastTime=ts;
   torchLights.forEach(t=>{t.t+=dt*5;t.light.intensity=t.base*(0.85+Math.sin(t.t)*0.15+Math.random()*0.05);});
@@ -607,7 +617,7 @@ function loop(ts){
   const eyeY=player.y+1.7+(shakeT>0?Math.sin(shakeT*23)*(shakeAmt*shakeT*0.04):0);
   if(shakeT>0)shakeT-=dt;
   camera.position.set(eyeX,eyeY,0.3);
-  camera.lookAt(eyeX+player.facing*14,eyeY-0.15,0);
+  camera.lookAt(eyeX+Math.cos(camYaw)*14,eyeY-0.15,Math.sin(camYaw)*14);
   renderer.render(scene,camera);
 }
 
@@ -617,7 +627,7 @@ function startFight(){
   document.getElementById('p1n').textContent=selChar.name;
   player=makePlayer(selChar);
   if(playerMesh)scene.remove(playerMesh);playerMesh=buildMage(selChar);playerMesh.visible=false;scene.add(playerMesh);
-  gs='fight';level=1;score=0;totalKills=0;waveNum=0;
+  gs='fight';camYaw=0;level=1;score=0;totalKills=0;waveNum=0;
   updateBars();updateHUD();setTimeout(startWave,1200);
 }
 

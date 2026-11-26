@@ -3632,16 +3632,16 @@ function pickDevice(type){
 if(isMob())pickDevice('ipad'); else pickDevice('pc');
 
 // ── Attack radial menu ────────────────────────────────────────────────────────
-const ATK_ACTIONS=[
+const ATK_BASE=[
   {label:'🔥 BREATH',   key:'Space',   desc:'Fire breath',    color:'#ff4400'},
   {label:'🦷 BITE',     key:'KeyQ',    desc:'Bite attack',    color:'#ff8800'},
   {label:'💥 TAIL',     key:'KeyX',    desc:'Tail slam',      color:'#cc4400'},
   {label:'🔊 ROAR',     key:'KeyR',    desc:'Dragon roar',    color:'#aa66ff'},
   {label:'⚡ POWER',    key:'KeyF',    desc:'Power surge',    color:'#ffff00'},
-  {label:'👑 WEAPON',   key:'KeyG',    desc:'King weapon',    color:'#ffd700'},
   {label:'🌟 SOUL',     key:'KeyV',    desc:'Soul blast',     color:'#8888ff'},
-  {label:'❄ ICE',       key:'KeyC',    desc:'Ice breath',     color:'#88eeff'},
 ];
+// ATK_ACTIONS is built dynamically from base + collected king weapons
+let ATK_ACTIONS=ATK_BASE.slice();
 let atkRingOpen=false,atkSelected=-1;
 const atkRingEl=document.getElementById('atk-ring');
 const atkCanvas=document.getElementById('atk-canvas');
@@ -3703,6 +3703,13 @@ function getAtkSlice(ex,ey){
 
 function openAtkRing(){
   if(gs!=='playing')return;
+  // Rebuild action list: base attacks + collected king weapons
+  ATK_ACTIONS=ATK_BASE.slice();
+  for(let i=0;i<playerKingWeapons.length;i++){
+    const w=playerKingWeapons[i];
+    const col='#'+w.color.toString(16).padStart(6,'0');
+    ATK_ACTIONS.push({label:w.emoji+' '+w.name,desc:'King Weapon: '+w.name,color:col,kingIdx:i});
+  }
   atkRingOpen=true;atkSelected=-1;
   resizeAtkCanvas();
   atkRingEl.style.display='block';
@@ -3713,8 +3720,14 @@ function closeAtkRing(fire){
   atkRingEl.style.display='none';
   if(fire&&atkSelected>=0){
     const a=ATK_ACTIONS[atkSelected];
-    keys[a.key]=true;
-    setTimeout(()=>{delete keys[a.key];},120);
+    if(a.kingIdx!==undefined){
+      // Fire the specific king weapon
+      activeKingWeaponIdx=a.kingIdx;
+      useKingWeapon();
+    } else {
+      keys[a.key]=true;
+      setTimeout(()=>{delete keys[a.key];},120);
+    }
     floatWorld(dragonMesh?dragonMesh.position:new THREE.Vector3(),a.label,'#ffcc00');
   }
 }

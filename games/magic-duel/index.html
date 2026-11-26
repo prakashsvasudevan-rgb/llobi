@@ -8,20 +8,18 @@
 body{background:#000;overflow:hidden;font-family:'Georgia',serif;}
 canvas{display:block;}
 #ui{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;}
-#select{position:absolute;inset:0;background:rgba(3,0,15,0.97);display:flex;flex-direction:column;align-items:center;overflow-y:auto;pointer-events:all;padding:18px 10px 30px;}
-#select h1{font-size:44px;color:#cc88ff;text-shadow:0 0 30px #8844ff,0 0 60px #4400aa;margin-bottom:4px;letter-spacing:3px;text-align:center;}
-#select .sub{color:#aa77cc;font-size:13px;margin-bottom:20px;text-align:center;}
-#char-row{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;justify-content:center;max-width:980px;}
-.cc{width:122px;padding:11px 7px 10px;border:2px solid #442266;border-radius:10px;text-align:center;cursor:pointer;background:rgba(50,0,90,0.3);transition:all .2s;color:#fff;}
-.cc:hover,.cc.sel{border-color:#aa66ff;background:rgba(90,0,160,0.5);box-shadow:0 0 16px #8844ff;}
-.cc canvas{display:block;margin:0 auto 6px;}
-.cc .cn{font-size:13px;font-weight:bold;margin-bottom:2px;}
-.cc .ct{font-size:10px;opacity:.7;margin-bottom:4px;}
-.cc .cd{font-size:9px;color:#cc99ff;line-height:1.3;}
-#sel-hint{color:#996699;font-size:12px;margin-bottom:12px;}
-#fight-btn{padding:15px 56px;font-size:22px;background:linear-gradient(135deg,#4400aa,#8800cc);color:#fff;border:2px solid #aa66ff;border-radius:10px;cursor:pointer;font-family:Georgia,serif;letter-spacing:2px;display:none;}
-#fight-btn:hover{background:linear-gradient(135deg,#6600cc,#aa00ff);box-shadow:0 0 25px #8844ff;}
-#ctrl{color:#554477;font-size:11px;margin-top:14px;text-align:center;line-height:2;}
+#title{position:absolute;inset:0;background:rgba(3,0,15,0.97);display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:all;}
+#title h1{font-size:54px;color:#cc88ff;text-shadow:0 0 30px #8844ff,0 0 60px #4400aa,0 0 100px #2200aa;margin-bottom:10px;letter-spacing:4px;text-align:center;}
+#title .sub{color:#aa77cc;font-size:14px;margin-bottom:36px;text-align:center;line-height:1.8;}
+.mage-pick{display:flex;gap:14px;margin-bottom:36px;flex-wrap:wrap;justify-content:center;max-width:900px;}
+.mp{width:80px;padding:8px 4px;border:2px solid #442266;border-radius:8px;text-align:center;cursor:pointer;background:rgba(50,0,90,0.3);transition:all .2s;color:#fff;}
+.mp:hover,.mp.sel{border-color:#aa66ff;background:rgba(90,0,160,0.5);box-shadow:0 0 14px #8844ff;}
+.mp canvas{display:block;margin:0 auto 4px;}
+.mp .mn{font-size:11px;font-weight:bold;}
+.mp .mt{font-size:9px;opacity:.6;}
+#play-btn{padding:16px 64px;font-size:26px;background:linear-gradient(135deg,#4400aa,#8800cc);color:#fff;border:2px solid #aa66ff;border-radius:12px;cursor:pointer;font-family:Georgia,serif;letter-spacing:3px;text-shadow:0 0 10px #fff;}
+#play-btn:hover{background:linear-gradient(135deg,#6600cc,#aa00ff);box-shadow:0 0 30px #8844ff;}
+#ctrl{color:#554477;font-size:11px;margin-top:16px;text-align:center;line-height:2;}
 #hud{position:absolute;top:0;left:0;width:100%;padding:9px 16px;display:none;}
 #banner{position:absolute;top:38%;left:50%;transform:translateX(-50%);font-size:46px;color:#fff;text-shadow:0 0 28px #cc88ff;opacity:0;transition:opacity .3s;white-space:nowrap;text-align:center;pointer-events:none;line-height:1.3;}
 #gameover{position:absolute;inset:0;background:rgba(0,0,0,0.9);display:none;flex-direction:column;align-items:center;justify-content:center;color:#fff;pointer-events:all;}
@@ -32,12 +30,11 @@ canvas{display:block;}
 <body>
 <canvas id="c"></canvas>
 <div id="ui">
-  <div id="select">
+  <div id="title">
     <h1>✨ MAGIC DUEL 3D ✨</h1>
-    <div class="sub">⚔ Choose your mage and battle endless evil armies! ⚔</div>
-    <div id="char-row"></div>
-    <div id="sel-hint">← Click a mage to select →</div>
-    <button id="fight-btn" onclick="startFight()">⚔ ENTER THE ARENA! ⚔</button>
+    <div class="sub">Battle endless evil armies — Knights, Hunters, Dragons & mighty Bosses!<br>A new Boss appears every 10 levels. How far can you go?</div>
+    <div class="mage-pick" id="mage-pick"></div>
+    <button id="play-btn" onclick="startFight()">⚔ FIGHT! ⚔</button>
     <div id="ctrl">
       <b style="color:#cc99ff">A/D</b> Move &nbsp;|&nbsp; <b style="color:#cc99ff">W</b> Jump &nbsp;|&nbsp; <b style="color:#cc99ff">S</b> Block<br>
       <b style="color:#ffcc44">J</b> Quick Spell &nbsp;|&nbsp; <b style="color:#ffcc44">K</b> Heavy Spell &nbsp;|&nbsp; <b style="color:#ffcc44">L</b> Ultimate
@@ -144,25 +141,23 @@ const CHARS=[
    desc:'Summons stone golem\nHeavy earth attacks'},
 ];
 
-function drawPrev(ctx,ch){
-  ctx.clearRect(0,0,70,75);const x=35,c=ch.pc;
-  ctx.shadowBlur=8;ctx.shadowColor=c;
-  ctx.fillStyle=c+'44';
-  ctx.beginPath();ctx.moveTo(x-10,70);ctx.lineTo(x+10,70);ctx.lineTo(x+8,42);ctx.lineTo(x-8,42);ctx.closePath();ctx.fill();
-  ctx.fillStyle='#e8c59a';ctx.beginPath();ctx.arc(x,34,8,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle=c+'88';ctx.fillRect(x-10,41,20,4);
-  ctx.beginPath();ctx.moveTo(x-8,41);ctx.lineTo(x,24);ctx.lineTo(x+8,41);ctx.closePath();ctx.fill();
-  ctx.fillStyle=c;ctx.shadowBlur=4;ctx.fillRect(x-5,32,3,2);ctx.fillRect(x+2,32,3,2);ctx.shadowBlur=0;
+function drawPrev(ctx,ch,w,h){
+  ctx.clearRect(0,0,w,h);const x=w/2,c=ch.pc;
+  ctx.shadowBlur=7;ctx.shadowColor=c;
+  ctx.fillStyle=c+'44';ctx.beginPath();ctx.moveTo(x-8,h);ctx.lineTo(x+8,h);ctx.lineTo(x+6,h-22);ctx.lineTo(x-6,h-22);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#e8c59a';ctx.beginPath();ctx.arc(x,h-30,7,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle=c+'88';ctx.fillRect(x-9,h-21,18,3);ctx.beginPath();ctx.moveTo(x-7,h-21);ctx.lineTo(x,h-36);ctx.lineTo(x+7,h-21);ctx.closePath();ctx.fill();
+  ctx.fillStyle=c;ctx.shadowBlur=3;ctx.fillRect(x-4,h-32,2,2);ctx.fillRect(x+2,h-32,2,2);ctx.shadowBlur=0;
 }
 
-let selChar=null;
+let selChar=CHARS[0];
 CHARS.forEach(ch=>{
-  const card=document.createElement('div');card.className='cc';
-  const cv=document.createElement('canvas');cv.width=70;cv.height=75;
-  drawPrev(cv.getContext('2d'),ch);card.appendChild(cv);
-  card.innerHTML+=`<div class="cn">${ch.name}</div><div class="ct">${ch.type}</div><div class="cd">${ch.desc.replace('\n','<br>')}</div>`;
-  card.onclick=()=>{document.querySelectorAll('.cc').forEach(c=>c.classList.remove('sel'));card.classList.add('sel');selChar=ch;document.getElementById('fight-btn').style.display='block';document.getElementById('sel-hint').textContent='✓ '+ch.name+' selected!';};
-  document.getElementById('char-row').appendChild(card);
+  const card=document.createElement('div');card.className='mp'+(ch===selChar?' sel':'');
+  const cv=document.createElement('canvas');cv.width=60;cv.height=52;
+  drawPrev(cv.getContext('2d'),ch,60,52);card.appendChild(cv);
+  card.innerHTML+=`<div class="mn">${ch.name}</div><div class="mt">${ch.type}</div>`;
+  card.onclick=()=>{document.querySelectorAll('.mp').forEach(c=>c.classList.remove('sel'));card.classList.add('sel');selChar=ch;};
+  document.getElementById('mage-pick').appendChild(card);
 });
 
 let torchLights=[];
@@ -388,8 +383,8 @@ function spawnEnemy(type,lv){
     frozenT:0,animT:0,state:'walk',dead:false,lv});
 }
 function spawnBoss(lv){
-  const idx=Math.floor(lv/10)%3;
-  const type=['dragon','knight','titan'][idx];
+  const idx=Math.floor(lv/10)%6;
+  const type=['dragon','knight','titan','dragon','knight','titan'][idx];
   const mesh=type==='dragon'?buildMiniDragon(0x880000):type==='titan'?buildBossTitan():buildBossKnight();
   if(type==='dragon'){mesh.scale.set(2.5,2.5,2.5);mesh.rotation.y=Math.PI;}
   const sx=ARENA+2;const sy=type==='dragon'?3:0;
@@ -400,25 +395,40 @@ function spawnBoss(lv){
   const barY=type==='dragon'?7.5:5.5;
   bg.position.set(sx,barY,0);scene.add(bg);
   const hp=350+lv*20;
-  const names={dragon:'DRAGON LORD',knight:'SHADOW KNIGHT',titan:'BONE TITAN'};
+  const tier=Math.floor(lv/10);
+  const dragonNames=['DRAGON LORD','INFERNO WYRM','CHAOS DRAGON','ELDER SERPENT','VOID DRAGON','DEATH WYVERN'];
+  const knightNames=['SHADOW KNIGHT','DARK PALADIN','IRON TYRANT','CHAOS WARRIOR','DOOM KNIGHT','BLOOD WARDEN'];
+  const titanNames=['BONE TITAN','STONE GIANT','IRON GOLEM','EARTH COLOSSUS','ROCK TITAN','MOUNTAIN LORD'];
+  const nameMap={dragon:dragonNames,knight:knightNames,titan:titanNames};
+  const bossName=(nameMap[type]||nameMap.dragon)[Math.min(tier-1,5)];
   enemies.push({type:'boss',bossType:type,x:sx,y:sy,z:0,vx:0,vy:0,
-    hp,maxHp:hp,dmg:20+lv*2,spd:1.8,atkSpd:type==='knight'?0.6:1.4,atkCD:1.5,atkRange:type==='knight'?2.5:7,
+    hp,maxHp:hp,dmg:20+lv*2,spd:1.8+lv*0.01,atkSpd:type==='knight'?0.6:1.4,atkCD:1.5,atkRange:type==='knight'?2.5:7,
     hitW:type==='dragon'?2.5:1.3,hitH:type==='dragon'?1.5:2.5,barY,
     mesh,barGroup:bg,barFg:fg,frozenT:0,animT:0,state:'walk',dead:false,lv});
-  showBanner('⚔ '+names[type]+'!','Level '+lv+' BOSS');shakeT=1.0;shakeAmt=10;
+  showBanner('⚔ '+bossName+'!','Level '+lv+' BOSS');shakeT=1.0;shakeAmt=10;
 }
 
 function getEnemyTypes(lv){
-  const t=['knight'];if(lv>=3)t.push('hunter');if(lv>=5)t.push('dragon');if(lv>=8)t.push('knight','knight');if(lv>=12)t.push('hunter','dragon');return t;
+  const t=['knight'];
+  if(lv>=3)t.push('hunter');
+  if(lv>=5)t.push('dragon');
+  if(lv>=8)t.push('knight','knight');
+  if(lv>=12)t.push('hunter','dragon');
+  if(lv>=18)t.push('dragon','dragon','knight');
+  if(lv>=25)t.push('hunter','dragon','dragon');
+  if(lv>=35)t.push('dragon','dragon','dragon','hunter');
+  if(lv>=50)t.push('dragon','dragon','dragon','dragon','knight');
+  return t;
 }
 function startWave(){
   waveNum++;waveActive=true;
   const isBoss=level%10===0;
   if(isBoss){pendingSpawns=1;setTimeout(()=>{spawnBoss(level);pendingSpawns=0;},2500);}
   else{
-    const count=Math.min(3+~~(level*0.7),14);pendingSpawns=count;
+    const count=Math.min(3+~~(level*0.9),22);pendingSpawns=count;
     const types=getEnemyTypes(level);showBanner('LEVEL '+level,'Wave '+waveNum);
-    for(let i=0;i<count;i++)setTimeout(()=>{if(gs!=='fight')return;spawnEnemy(types[~~(Math.random()*types.length)],level);pendingSpawns--;},i*1100+1000);
+    const interval=Math.max(400,1100-level*8);
+    for(let i=0;i<count;i++)setTimeout(()=>{if(gs!=='fight')return;spawnEnemy(types[~~(Math.random()*types.length)],level);pendingSpawns--;},i*interval+900);
   }
   updateHUD();
 }
@@ -603,8 +613,7 @@ function loop(ts){
 }
 
 function startFight(){
-  if(!selChar)return;
-  document.getElementById('select').style.display='none';document.getElementById('hud').style.display='block';
+  document.getElementById('title').style.display='none';document.getElementById('hud').style.display='block';
   document.getElementById('p1n').textContent=selChar.name;
   player=makePlayer(selChar);
   if(playerMesh)scene.remove(playerMesh);playerMesh=buildMage(selChar);scene.add(playerMesh);

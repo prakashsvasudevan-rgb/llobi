@@ -34,6 +34,13 @@ canvas{display:block;}
 #crosshair{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#88ff00;font-size:20px;opacity:0.7;text-shadow:0 0 6px #44ff00;}
 #kills-box{position:absolute;top:14px;left:50%;transform:translateX(-50%);color:#ff4444;font-size:13px;text-shadow:0 0 8px #ff0000;}
 #float-wrap{position:absolute;inset:0;pointer-events:none;}
+/* Joysticks */
+#joy-move{position:absolute;bottom:90px;left:40px;width:120px;height:120px;pointer-events:all;touch-action:none;}
+#joy-aim{position:absolute;bottom:90px;right:40px;width:120px;height:120px;pointer-events:all;touch-action:none;}
+.joy-base{width:120px;height:120px;border-radius:50%;background:rgba(100,180,0,0.15);border:2px solid rgba(100,200,0,0.4);}
+.joy-knob{position:absolute;width:50px;height:50px;border-radius:50%;background:rgba(100,200,0,0.6);border:2px solid #88ff00;top:35px;left:35px;box-shadow:0 0 12px #44ff00;}
+#shoot-btn{position:absolute;bottom:230px;right:40px;width:70px;height:70px;border-radius:50%;background:rgba(255,100,0,0.7);border:3px solid #ff8800;color:#fff;font-size:28px;display:flex;align-items:center;justify-content:center;pointer-events:all;touch-action:none;text-shadow:0 0 8px #ff4400;box-shadow:0 0 16px #ff4400;}
+#reload-btn{position:absolute;bottom:150px;left:170px;width:52px;height:52px;border-radius:50%;background:rgba(0,100,200,0.7);border:2px solid #44aaff;color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;pointer-events:all;touch-action:none;text-align:center;}
 </style>
 </head>
 <body>
@@ -62,6 +69,11 @@ canvas{display:block;}
   <div id="gun-box">🔫 <span id="gun-name">Pistol</span></div>
   <div id="msg"></div>
   <div id="float-wrap"></div>
+  <!-- Virtual joysticks (shown on touch devices) -->
+  <div id="joy-move" style="display:none"><div class="joy-base"><div class="joy-knob" id="jm-knob"></div></div></div>
+  <div id="joy-aim"  style="display:none"><div class="joy-base"><div class="joy-knob" id="ja-knob"></div></div></div>
+  <div id="shoot-btn" style="display:none">🔫</div>
+  <div id="reload-btn" style="display:none">🔄<br>RELOAD</div>
 </div>
 <canvas id="c"></canvas>
 <script>
@@ -619,20 +631,16 @@ function gameLoop(ts){
   camX=player.x; camY=player.y;
 
   // Movement
-  let dx=0,dy=0;
-  if(keys['KeyW']||keys['ArrowUp'])dy=-1;
-  if(keys['KeyS']||keys['ArrowDown'])dy=1;
-  if(keys['KeyA']||keys['ArrowLeft'])dx=-1;
-  if(keys['KeyD']||keys['ArrowRight'])dx=1;
+  const {dx,dy}=getMoveDelta();
   const spd=player.speed*player.speedMult;
-  if(dx!==0&&dy!==0){dx*=0.707;dy*=0.707;}
   const nx=player.x+dx*spd*dt;
   const ny=player.y+dy*spd*dt;
   if(!isSolid(nx,player.y))player.x=nx;
   if(!isSolid(player.x,ny))player.y=ny;
 
-  // Auto-shoot
-  if((mouseDown||keys['Space'])&&player.guns[player.gunIdx].auto)shoot();
+  // Auto-shoot (keyboard/mouse or touch shoot button)
+  if((mouseDown||keys['Space']||touchShooting)&&player.guns[player.gunIdx].auto)shoot();
+  if(touchShooting&&!player.guns[player.gunIdx].auto)shoot();
   if(shootCooldown>0)shootCooldown-=dt;
 
   // Reload
@@ -808,10 +816,111 @@ function die(){
   },2000);
 }
 
+// ===== VIRTUAL JOYSTICK =====
+const isTouchDevice=()=>'ontouchstart' in window||navigator.maxTouchPoints>0;
+const joyMove={active:false,id:-1,startX:0,startY:0,dx:0,dy:0};
+const joyAim={active:false,id:-1,startX:0,startY:0,dx:0,dy:0};
+let touchShooting=false;
+
+function setupJoysticks(){
+  if(!isTouchDevice())return;
+  ['joy-move','joy-aim','shoot-btn','reload-btn'].forEach(id=>document.getElementById(id).style.display='flex');
+  document.getElementById('crosshair').style.display='none';
+
+  const R=50; // max knob radius
+  function updateKnob(el,dx,dy){
+    const dist=Math.min(R,Math.sqrt(dx*dx+dy*dy));
+    const a=Math.atan2(dy,dx);
+    el.style.left=(35+Math.cos(a)*dist)+'px';
+    el.style.top=(35+Math.sin(a)*dist)+'px';
+  }
+
+  const jmEl=document.getElementById('jm-knob');
+  const jaEl=document.getElementById('ja-knob');
+  const joyMoveDiv=document.getElementById('joy-move');
+  const joyAimDiv=document.getElementById('joy-aim');
+
+  document.addEventListener('touchstart',e=>{
+    if(gs!=='playing')return;
+    for(const t of e.changedTouches){
+      const el=document.elementFromPoint(t.clientX,t.clientY);
+      if(joyMoveDiv.contains(el)||el===joyMoveDiv){
+        joyMove.active=true;joyMove.id=t.identifier;
+        joyMove.startX=t.clientX;joyMove.startY=t.clientY;
+        joyMove.dx=0;joyMove.dy=0;
+      } else if(joyAimDiv.contains(el)||el===joyAimDiv){
+        joyAim.active=true;joyAim.id=t.identifier;
+        joyAim.startX=t.clientX;joyAim.startY=t.clientY;
+        joyAim.dx=0;joyAim.dy=0;
+      } else if(el===document.getElementById('shoot-btn')){
+        touchShooting=true;
+      } else if(el===document.getElementById('reload-btn')){
+        startReload();
+      }
+    }
+    e.preventDefault();
+  },{passive:false});
+
+  document.addEventListener('touchmove',e=>{
+    for(const t of e.changedTouches){
+      if(joyMove.active&&t.identifier===joyMove.id){
+        joyMove.dx=t.clientX-joyMove.startX;
+        joyMove.dy=t.clientY-joyMove.startY;
+        updateKnob(jmEl,joyMove.dx,joyMove.dy);
+      }
+      if(joyAim.active&&t.identifier===joyAim.id){
+        joyAim.dx=t.clientX-joyAim.startX;
+        joyAim.dy=t.clientY-joyAim.startY;
+        updateKnob(jaEl,joyAim.dx,joyAim.dy);
+        // Translate aim joystick to world aim direction
+        if(Math.abs(joyAim.dx)>5||Math.abs(joyAim.dy)>5){
+          const aimAngle=Math.atan2(joyAim.dy,joyAim.dx);
+          const dist=200;
+          mouseX=W/2+Math.cos(aimAngle)*dist;
+          mouseY=H/2+Math.sin(aimAngle)*dist;
+        }
+      }
+    }
+    e.preventDefault();
+  },{passive:false});
+
+  document.addEventListener('touchend',e=>{
+    for(const t of e.changedTouches){
+      if(joyMove.active&&t.identifier===joyMove.id){
+        joyMove.active=false;joyMove.dx=0;joyMove.dy=0;
+        jmEl.style.left='35px';jmEl.style.top='35px';
+      }
+      if(joyAim.active&&t.identifier===joyAim.id){
+        joyAim.active=false;joyAim.dx=0;joyAim.dy=0;
+        jaEl.style.left='35px';jaEl.style.top='35px';
+      }
+    }
+    touchShooting=false;
+    e.preventDefault();
+  },{passive:false});
+}
+
+// Override movement to use joystick when active
+function getMoveDelta(){
+  if(joyMove.active){
+    const len=Math.sqrt(joyMove.dx*joyMove.dx+joyMove.dy*joyMove.dy);
+    if(len<8)return{dx:0,dy:0};
+    return{dx:joyMove.dx/len,dy:joyMove.dy/len};
+  }
+  let dx=0,dy=0;
+  if(keys['KeyW']||keys['ArrowUp'])dy=-1;
+  if(keys['KeyS']||keys['ArrowDown'])dy=1;
+  if(keys['KeyA']||keys['ArrowLeft'])dx=-1;
+  if(keys['KeyD']||keys['ArrowRight'])dx=1;
+  const len=Math.sqrt(dx*dx+dy*dy);
+  return len>0?{dx:dx/len,dy:dy/len}:{dx:0,dy:0};
+}
+
 function startGame(){
   document.getElementById('start').style.display='none';
   generateMap();
   player.x=0;player.y=0;
+  setupJoysticks();
   gs='playing';
   lastTime=performance.now();
   updateBars();updateAmmoUI();

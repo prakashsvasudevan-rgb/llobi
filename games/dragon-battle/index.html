@@ -389,12 +389,12 @@ scene.add(ground);
 
 // ── Ocean ─────────────────────────────────────────────────────────────────────
 {const og=new THREE.PlaneGeometry(80000,80000,2,2);
- const om=new THREE.MeshLambertMaterial({color:0x003a66,transparent:true,opacity:0.92});
+ const om=new THREE.MeshLambertMaterial({color:0x0055aa,transparent:true,opacity:0.95});
  const oMesh=new THREE.Mesh(og,om);
  oMesh.rotation.x=-Math.PI/2;oMesh.position.y=-3.5;scene.add(oMesh);}
 // Ocean surface shimmer (additive layer)
 {const og2=new THREE.PlaneGeometry(80000,80000,2,2);
- const om2=new THREE.MeshBasicMaterial({color:0x004488,transparent:true,opacity:0.25,blending:THREE.AdditiveBlending});
+ const om2=new THREE.MeshBasicMaterial({color:0x0088dd,transparent:true,opacity:0.35,blending:THREE.AdditiveBlending});
  const oMesh2=new THREE.Mesh(og2,om2);
  oMesh2.rotation.x=-Math.PI/2;oMesh2.position.y=-3.2;scene.add(oMesh2);}
 

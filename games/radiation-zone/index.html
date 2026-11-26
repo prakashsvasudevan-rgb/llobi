@@ -112,11 +112,15 @@ const player={
   angle:0,
   gunIdx:0,
   guns:[
-    {name:'Pistol',   ammo:12, maxAmmo:12, reserve:60,  dmg:25, rate:0.35, spread:0.05, auto:false, reload:1.2, bullet:{spd:420,size:4,color:'#ffcc00'}},
-    {name:'Shotgun',  ammo:6,  maxAmmo:6,  reserve:30,  dmg:20, rate:0.8,  spread:0.25, auto:false, reload:2.0, pellets:6, bullet:{spd:380,size:3,color:'#ff8800'}},
-    {name:'Rifle',    ammo:30, maxAmmo:30, reserve:120, dmg:40, rate:0.1,  spread:0.02, auto:true,  reload:2.2, bullet:{spd:600,size:3,color:'#88ffff'}},
+    {name:'Pistol',      ammo:12, maxAmmo:12, reserve:60,  dmg:25,  rate:0.35, spread:0.05, auto:false, reload:1.2, bullet:{spd:420,size:4,color:'#ffcc00'}},
+    {name:'Shotgun',     ammo:6,  maxAmmo:6,  reserve:30,  dmg:20,  rate:0.8,  spread:0.25, auto:false, reload:2.0, pellets:6, bullet:{spd:380,size:3,color:'#ff8800'}},
+    {name:'Rifle',       ammo:30, maxAmmo:30, reserve:120, dmg:40,  rate:0.1,  spread:0.02, auto:true,  reload:2.2, bullet:{spd:600,size:3,color:'#88ffff'}},
+    {name:'SMG',         ammo:35, maxAmmo:35, reserve:140, dmg:18,  rate:0.07, spread:0.12, auto:true,  reload:1.5, bullet:{spd:480,size:3,color:'#ffff44'}},
+    {name:'Sniper',      ammo:5,  maxAmmo:5,  reserve:25,  dmg:150, rate:1.2,  spread:0.0,  auto:false, reload:2.5, bullet:{spd:900,size:3,color:'#ff44ff'},pierce:true},
+    {name:'Rocket',      ammo:4,  maxAmmo:4,  reserve:16,  dmg:120, rate:1.5,  spread:0.03, auto:false, reload:3.0, bullet:{spd:280,size:7,color:'#ff6600'},aoe:120},
+    {name:'Flamethrower',ammo:60, maxAmmo:60, reserve:180, dmg:12,  rate:0.06, spread:0.3,  auto:true,  reload:2.0, bullet:{spd:200,size:5,color:'#ff4400'},flame:true},
   ],
-  unlocked:[true,false,false],
+  unlocked:[true,false,false,false,false,false,false],
   dmgMult:1,
   speedMult:1,
   lifesteal:0,
@@ -129,8 +133,12 @@ const ALL_UPGRADES=[
   {id:'speed',    name:'Adrenaline',      desc:'+20% move speed',          apply:()=>{player.speedMult+=0.2;}},
   {id:'dmg',      name:'Hollow Points',   desc:'+25% bullet damage',       apply:()=>{player.dmgMult+=0.25;}},
   {id:'armor',    name:'Scrap Armor',     desc:'+40 max armor',            apply:()=>{maxArmor+=40;armor=Math.min(maxArmor,armor+40);updateBars();}},
-  {id:'shotgun',  name:'Unlock Shotgun',  desc:'Get the Shotgun',          apply:()=>{player.unlocked[1]=true;},once:true},
-  {id:'rifle',    name:'Unlock Rifle',    desc:'Get the Assault Rifle',    apply:()=>{player.unlocked[2]=true;},once:true},
+  {id:'shotgun',  name:'Unlock Shotgun',      desc:'Get the Shotgun',           apply:()=>{player.unlocked[1]=true;},once:true},
+  {id:'rifle',    name:'Unlock Rifle',        desc:'Get the Assault Rifle',     apply:()=>{player.unlocked[2]=true;},once:true},
+  {id:'smg',      name:'Unlock SMG',          desc:'Get the SMG (fast auto)',   apply:()=>{player.unlocked[3]=true;},once:true},
+  {id:'sniper',   name:'Unlock Sniper',       desc:'Get the Sniper (150 dmg)',  apply:()=>{player.unlocked[4]=true;},once:true},
+  {id:'rocket',   name:'Unlock Rocket Launcher',desc:'Get the Rocket Launcher', apply:()=>{player.unlocked[5]=true;},once:true},
+  {id:'flamer',   name:'Unlock Flamethrower', desc:'Get the Flamethrower',      apply:()=>{player.unlocked[6]=true;},once:true},
   {id:'lifesteal',name:'Vampiric Rounds', desc:'5% lifesteal on hit',      apply:()=>{player.lifesteal+=0.05;}},
   {id:'armor_regen',name:'Shield Cell',   desc:'Armor slowly regens',      apply:()=>{player.armorRegen+=5;}},
   {id:'ammo',     name:'Bandolier',       desc:'+50% reserve ammo',        apply:()=>{player.guns.forEach(g=>g.reserve=~~(g.reserve*1.5));}},
@@ -272,14 +280,26 @@ function drawPlayer(){
   const g=player.guns[player.gunIdx];
   ctx.fillStyle='#333';
   if(g.name==='Shotgun'){
-    ctx.fillRect(6,-4,22,8);
-    ctx.fillRect(26,-6,6,12);
+    ctx.fillRect(6,-4,22,8);ctx.fillRect(26,-6,6,12);
   } else if(g.name==='Rifle'){
-    ctx.fillRect(6,-3,28,6);
-    ctx.fillRect(32,-5,4,10);
+    ctx.fillRect(6,-3,28,6);ctx.fillRect(32,-5,4,10);
+  } else if(g.name==='SMG'){
+    ctx.fillRect(6,-3,20,6);ctx.fillRect(24,-4,4,8);
+    ctx.fillStyle='#555';ctx.fillRect(10,-7,8,4);
+  } else if(g.name==='Sniper'){
+    ctx.fillRect(6,-2,36,4);ctx.fillRect(40,-3,4,6);
+    ctx.fillStyle='#666';ctx.fillRect(14,-6,6,4);// scope
+  } else if(g.name==='Rocket'){
+    ctx.fillStyle='#444';ctx.fillRect(4,-7,26,14);
+    ctx.fillStyle='#ff6600';ctx.fillRect(28,-5,8,10);
+    ctx.fillStyle='#333';ctx.fillRect(0,-4,6,8);
+  } else if(g.name==='Flamethrower'){
+    ctx.fillRect(4,-5,22,10);
+    ctx.fillStyle='#886600';ctx.fillRect(14,-9,8,18);// tank
+    ctx.fillStyle='#ff4400';
+    ctx.beginPath();ctx.arc(28,0,5,0,Math.PI*2);ctx.fill();// flame nozzle
   } else {
-    ctx.fillRect(6,-3,18,6);
-    ctx.fillRect(22,-4,4,8);
+    ctx.fillRect(6,-3,18,6);ctx.fillRect(22,-4,4,8);
   }
   ctx.restore();
   // Reload indicator
@@ -503,12 +523,14 @@ function shoot(){
     const spread=(Math.random()-0.5)*g.spread;
     const ang=player.angle+spread;
     const spd=g.bullet.spd;
+    const bLife=g.flame?0.18:g.aoe?1.2:0.7;
     bullets.push({
       x:player.x+Math.cos(player.angle)*20,
       y:player.y+Math.sin(player.angle)*20,
       vx:Math.cos(ang)*spd, vy:Math.sin(ang)*spd,
       dmg:g.dmg*player.dmgMult,
-      life:0.7, color:g.bullet.color, size:g.bullet.size, isEnemy:false,
+      life:bLife, color:g.bullet.color, size:g.bullet.size, isEnemy:false,
+      aoe:g.aoe||0, pierce:g.pierce||false, flame:g.flame||false,
     });
   }
   // Muzzle flash
@@ -616,6 +638,28 @@ function showUpgrades(){
   document.getElementById('upgrades').style.display='flex';
 }
 
+function aoeBurst(bx,by,radius,dmg){
+  for(let j=enemies.length-1;j>=0;j--){
+    const en=enemies[j];
+    const dx=en.x-bx,dy=en.y-by;
+    if(dx*dx+dy*dy<radius*radius){
+      en.hp-=dmg;
+      floatText('-'+~~dmg+'💥','#ff8800',en.x,en.y-20);
+      if(player.lifesteal>0){hp=Math.min(maxHp,hp+dmg*player.lifesteal*0.5);updateBars();}
+      if(en.hp<=0){
+        score+=en.pts;kills++;xp+=en.pts;
+        floatText('+'+en.pts+'pts','#88ff00',en.x,en.y-30);
+        if(Math.random()<0.5)spawnDrop(en.x,en.y);
+        spawnParticle(en.x,en.y,'#ff4400',12,4);
+        enemies.splice(j,1);checkLevelUp();updateBars();
+      }
+    }
+  }
+  // Also hurt player if too close
+  const pd=Math.sqrt((player.x-bx)**2+(player.y-by)**2);
+  if(pd<radius*0.5){damagePlayer(dmg*0.3);}
+}
+
 // ===== MAIN LOOP =====
 function gameLoop(ts){
   requestAnimationFrame(gameLoop);
@@ -669,16 +713,31 @@ function gameLoop(ts){
         bullets.splice(i,1);
       }
     } else {
+      // AOE rocket: explode on wall hit or timeout
+      if(b.aoe&&isSolid(b.x,b.y)){
+        aoeBurst(b.x,b.y,b.aoe,b.dmg);
+        spawnParticle(b.x,b.y,'#ff6600',20,6);
+        spawnParticle(b.x,b.y,'#ffcc00',10,4);
+        bullets.splice(i,1);continue;
+      }
       let hit=false;
       for(let j=enemies.length-1;j>=0;j--){
         const en=enemies[j];
         const ex=b.x-en.x,ey=b.y-en.y;
-        if(ex*ex+ey*ey<(en.size+b.size)*(en.size+b.size)){
+        const hitR=b.flame?en.size+b.size+6:en.size+b.size;
+        if(ex*ex+ey*ey<hitR*hitR){
+          if(b.aoe){
+            // Rocket: AOE burst on first enemy touch
+            aoeBurst(b.x,b.y,b.aoe,b.dmg);
+            spawnParticle(b.x,b.y,'#ff6600',20,6);
+            spawnParticle(b.x,b.y,'#ffcc00',10,4);
+            bullets.splice(i,1);hit=true;break;
+          }
           const dmg=b.dmg;
           en.hp-=dmg;
           if(player.lifesteal>0){hp=Math.min(maxHp,hp+dmg*player.lifesteal);updateBars();}
-          floatText('-'+~~dmg,'#ff4400',en.x,en.y-20);
-          spawnParticle(en.x,en.y,'#ff6600',4,3);
+          floatText('-'+~~dmg,b.flame?'#ff4400':'#ff4400',en.x,en.y-20);
+          spawnParticle(en.x,en.y,b.flame?'#ff4400':'#ff6600',b.flame?2:4,3);
           if(en.hp<=0){
             score+=en.pts; kills++;
             xp+=en.pts;
@@ -689,7 +748,7 @@ function gameLoop(ts){
             checkLevelUp();
             updateBars();
           }
-          bullets.splice(i,1);hit=true;break;
+          if(!b.pierce){bullets.splice(i,1);hit=true;break;}
         }
       }
     }
@@ -796,6 +855,10 @@ document.addEventListener('keydown',e=>{
   if(e.code==='Digit1'&&player.unlocked[0]){player.gunIdx=0;updateAmmoUI();}
   if(e.code==='Digit2'&&player.unlocked[1]){player.gunIdx=1;updateAmmoUI();}
   if(e.code==='Digit3'&&player.unlocked[2]){player.gunIdx=2;updateAmmoUI();}
+  if(e.code==='Digit4'&&player.unlocked[3]){player.gunIdx=3;updateAmmoUI();}
+  if(e.code==='Digit5'&&player.unlocked[4]){player.gunIdx=4;updateAmmoUI();}
+  if(e.code==='Digit6'&&player.unlocked[5]){player.gunIdx=5;updateAmmoUI();}
+  if(e.code==='Digit7'&&player.unlocked[6]){player.gunIdx=6;updateAmmoUI();}
   if(e.code==='Space'&&!player.guns[player.gunIdx].auto)shoot();
 });
 document.addEventListener('keyup',e=>keys[e.code]=false);

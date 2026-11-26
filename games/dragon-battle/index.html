@@ -3254,7 +3254,11 @@ function collectOrb(o){
     floatWorld(o.pos,'🐉 ULTRA ORB! '+atNames[upgrades.attack-1],'#ffdd00');
   }
 }
-const SWORD_TYPES={fire:'FLAME',nature:'LIFE',soul:'SPIRIT',ice:'FROST',earth:'STONE'};
+const SWORD_TYPES={
+  fire:'FLAME',nature:'LIFE',soul:'SPIRIT',ice:'FROST',earth:'STONE',
+  air:'WIND',lightning:'STORM',lava:'INFERNO',water:'TIDE',
+  smoke:'SHADOW',thunder:'THUNDER',glass:'CRYSTAL',sun:'RADIANCE',blood:'BLOOD'
+};
 let legendSwordMesh=null,legendSwordTaken=false,legendSwordSpinT=0;
 function upgradedDmg(){
   const base=dtype.dmg*(1+upgrades.dmg*0.4)*8*2; // 2× base player damage
@@ -5785,12 +5789,12 @@ function update(ts){
         if(arrivedH&&distToPlayer<40){
           blaneLeadPhase='leading_to_castle';
           playHorn();
-          floatWorld(bPos,'🎺 TO THE CASTLE! RIDERS — FLY!','#ffdd44');
+          floatWorld(bPos,'🎺 TO THE LEGEND CASTLE! BOND WITH YOUR SWORD!','#ffdd44');
           blaneTalkT=5;
         }
       } else if(blaneLeadPhase==='leading_to_castle'){
-        // Lead toward nearest enemy castle — Blane flies (moves in 3D)
-        const nearCastle=activeBuildings.find(b=>b.userData.type==='castle'&&!b.userData.safe);
+        // Lead toward Legend Castle — Blane flies (moves in 3D)
+        const nearCastle=activeBuildings.find(b=>b.userData.isLegend)||activeBuildings.find(b=>b.userData.type==='castle'&&!b.userData.safe);
         if(nearCastle){
           const flyY=groundY(nearCastle.position.x,nearCastle.position.z)+30;
           const toC=new THREE.Vector3(nearCastle.position.x-bPos.x,flyY-bPos.y,nearCastle.position.z-bPos.z);
@@ -5808,7 +5812,7 @@ function update(ts){
             }
           }
           blaneTalkT-=dt;
-          if(blaneTalkT<=0){playHorn();floatWorld(bPos,'🎺 Keep up! Castle ahead!','#ffdd44');blaneTalkT=8;}
+          if(blaneTalkT<=0){playHorn();floatWorld(bPos,'🎺 Keep up! Legend Castle ahead — your sword awaits!','#ffdd44');blaneTalkT=8;}
           if(distC<20){blaneLeadPhase='idle';}
         } else {blaneLeadPhase='idle';}
       }
@@ -6166,8 +6170,9 @@ function update(ts){
       const sPos=isHuman&&humanMesh?humanMesh.position:dragonMesh.position;
       const sDist=sPos.distanceTo(legendSwordMesh.position);
       const hint=document.getElementById('interact-hint');
-      if(sDist<10&&SWORD_TYPES[dtype.id]){
-        hint.textContent='[ E ] Take the Legend Sword ('+SWORD_TYPES[dtype.id]+' POWER)';
+      const swordTitle=SWORD_TYPES[dtype.id]||'LEGEND';
+      if(sDist<10){
+        hint.textContent='[ E ] Take the '+swordTitle+' Sword — '+dtype.name+' POWER UPGRADE';
         hint.style.display='block';
         if(keys['KeyE']&&!dialogOpen){
           legendSwordTaken=true;
@@ -6176,7 +6181,7 @@ function update(ts){
           // Dragon HP doubles on sword pickup
           dmaxHp*=2;dhp=dmaxHp;
           playHorn();
-          floatWorld(sPos,'⚔ LEGEND SWORD! '+dtype.name.toUpperCase()+' → '+SWORD_TYPES[dtype.id]+'  200x POWER + 2× HP!','#ffee00');
+          floatWorld(sPos,'⚔ '+swordTitle+' BLADE BONDED! '+dtype.name.toUpperCase()+' → 200× POWER + 2× HP!','#ffee00');
           // Dragon power-up burst: 40 gold particles
           for(let _i=0;_i<40;_i++){
             const pg=new THREE.Mesh(new THREE.SphereGeometry(0.5,4,3),new THREE.MeshBasicMaterial({color:0xffee00,transparent:true,opacity:1,blending:THREE.AdditiveBlending}));

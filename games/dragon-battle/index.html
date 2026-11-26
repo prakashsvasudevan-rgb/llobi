@@ -3020,10 +3020,18 @@ function nearestEnemy(pos){
   return best;
 }
 
-// ── Mouse drag turning (no pointer lock needed) ───────────────────────────────
-let mouseDown=false,lastMouseX=0;
-canvas.addEventListener('mousedown',e=>{mouseDown=true;lastMouseX=e.clientX;});
-document.addEventListener('mouseup',()=>{mouseDown=false;});
+// ── Mouse flight controls ─────────────────────────────────────────────────────
+let mouseDown=false,mouseRDown=false,lastMouseX=0,lastMouseY=0;
+canvas.addEventListener('mousedown',e=>{
+  if(e.button===0){mouseDown=true;lastMouseX=e.clientX;lastMouseY=e.clientY;}
+  if(e.button===2){mouseRDown=true;keys['Space']=true;}// right-click = fire
+  e.preventDefault();
+});
+document.addEventListener('mouseup',e=>{
+  if(e.button===0)mouseDown=false;
+  if(e.button===2){mouseRDown=false;delete keys['Space'];}
+});
+canvas.addEventListener('contextmenu',e=>e.preventDefault());
 document.addEventListener('mousemove',e=>{
   if(gs!=='playing'||dialogOpen)return;
   const dx=e.movementX||0,dy=e.movementY||0;
@@ -3032,8 +3040,11 @@ document.addEventListener('mousemove',e=>{
   } else if(isHuman&&mouseDown){
     mouseDX+=(e.clientX-lastMouseX)*0.005;lastMouseX=e.clientX;
   } else if(!isHuman&&mouseDown){
-    // Drag to turn dragon (ground walk or fly)
-    dYawVel-=(e.clientX-lastMouseX)*0.0012;lastMouseX=e.clientX;
+    // Left-drag = flight stick: horizontal=yaw, vertical=pitch
+    const mdx=e.clientX-lastMouseX,mdy=e.clientY-lastMouseY;
+    dYawVel-=mdx*0.0014;
+    dPitchVel+=mdy*0.0012;
+    lastMouseX=e.clientX;lastMouseY=e.clientY;
   }
 });
 

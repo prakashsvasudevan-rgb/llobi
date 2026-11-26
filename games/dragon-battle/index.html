@@ -2359,16 +2359,16 @@ function spawnKingRuin(cfg){
   const dx=ref.x-x,dz=ref.z-z,d=Math.sqrt(dx*dx+dz*dz);
   if(d<400){const nx=d>0?dx/d:1,nz=d>0?dz/d:0;ref.x=x+nx*400;ref.z=z+nz*400;
   floatWorld(ref.clone().add(new THREE.Vector3(0,8,0)),'⚔ KING RUIN: '+cfg.name,'#ff4444');}}
-  const baseY=groundY(x,z);
-  const islandH=28;
+  const baseY=-3; // king ruin islands sit in the ocean at sea level
+  const islandH=32;
   const plateauY=baseY+islandH;
   // Island
-  const islBase=new THREE.Mesh(new THREE.CylinderGeometry(70,95,islandH,8),new THREE.MeshBasicMaterial({color:0x2a1a08}));
+  const islBase=new THREE.Mesh(new THREE.CylinderGeometry(70,95,islandH+6,8),new THREE.MeshBasicMaterial({color:0x2a1a08}));
   islBase.position.set(x,baseY+islandH/2,z);scene.add(islBase);
   const islTop=new THREE.Mesh(new THREE.CylinderGeometry(70,70,2,8),new THREE.MeshBasicMaterial({color:0x3a2a10}));
   islTop.position.set(x,plateauY+1,z);scene.add(islTop);
-  const waterRing=new THREE.Mesh(new THREE.CylinderGeometry(130,130,0.5,12),new THREE.MeshBasicMaterial({color:0x003366,transparent:true,opacity:0.6}));
-  waterRing.position.set(x,baseY+0.3,z);scene.add(waterRing);
+  const waterRing=new THREE.Mesh(new THREE.CylinderGeometry(140,140,0.5,12),new THREE.MeshBasicMaterial({color:0x003366,transparent:true,opacity:0.65}));
+  waterRing.position.set(x,-2.5,z);scene.add(waterRing);
   // Moat snakes — 6 sea-serpents circling the island
   for(let si=0;si<6;si++){
     const ang=si/6*Math.PI*2;

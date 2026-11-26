@@ -179,7 +179,7 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
   <!-- King Weapon HUD -->
   <div id="king-weapon-hud" style="display:none;position:absolute;bottom:60px;left:50%;transform:translateX(-50%);font-family:monospace;font-size:.32rem;color:#ffee00;background:rgba(0,0,0,.7);padding:4px 10px;border-radius:4px;pointer-events:none;z-index:4;text-align:center"></div>
   <!-- Teleport hint -->
-  <div id="teleport-hint" style="position:absolute;top:52px;right:8px;font-family:monospace;font-size:.28rem;color:#88aaff;background:rgba(0,0,0,.55);padding:3px 8px;border-radius:3px;pointer-events:none;z-index:4;text-align:right;line-height:1.9">[4] Dragon Mountain&nbsp;&nbsp;[`] Blane<br>[Z]Bite [C]Tail [R]Roar [/]Power</div>
+  <div id="teleport-hint" style="position:absolute;top:52px;right:8px;font-family:monospace;font-size:.28rem;color:#88aaff;background:rgba(0,0,0,.55);padding:3px 8px;border-radius:3px;pointer-events:none;z-index:4;text-align:right;line-height:1.9">[1][2][3] Dragon Specials&nbsp;[6] All Powers&nbsp;[7] Army→You<br>[4] Dragon Mtn&nbsp;[`] Blane&nbsp;[Z]Bite [C]Tail [R]Roar [/]Power</div>
 
   <!-- Full-screen world map (M key) -->
   <div id="worldmap">
@@ -627,7 +627,9 @@ function buildDragonMesh(dt){
 
   // ── HEAD ──
   addBox(g,1.25,1.05,1.9,mB, 0,1.1,5.5);
-  addBox(g,1.15,0.42,1.7,mD, 0,0.62,5.5); // lower jaw
+  // Lower jaw pivot group (pivots at back of jaw, z=4.8 y=0.62)
+  const jawGroup=new THREE.Group();jawGroup.position.set(0,0.62,4.8);g.add(jawGroup);
+  addBox(jawGroup,1.15,0.42,1.7,mD, 0,0,0.75); // jaw body, offset from pivot
   // Snout
   addBox(g,0.95,0.68,1.35,mL, 0,0.88,6.95);
   addBox(g,0.62,0.48,0.62,mD, 0,0.82,7.95); // tip
@@ -687,13 +689,21 @@ function buildDragonMesh(dt){
     }
   }
 
-  // ── TAIL ──
-  for(let i=0;i<8;i++){
+  // ── TAIL ── (first 4 segments fixed to body, last 4 in tailGroup pivot)
+  for(let i=0;i<4;i++){
     const s=0.88-i*0.09;
     addBox(g,s*1.1,s,1.1,i<2?mB:mD, 0,-i*0.1,-3.3-i*1.0,i*0.09);
-    if(i>0&&i<5) addBox(g,0.14,0.28-i*0.04,0.14,mD, 0,s*0.5+0.14,-3.3-i*1.0);
+    if(i>0) addBox(g,0.14,0.28-i*0.04,0.14,mD, 0,s*0.5+0.14,-3.3-i*1.0);
   }
-  addBox(g,0.3,0.3,0.65,mH, 0,-0.72,-11.6,0.5);
+  // Tail swing pivot group at base of rear tail (-7.3 z)
+  const tailGroup=new THREE.Group();tailGroup.position.set(0,-0.4,-7.3);g.add(tailGroup);
+  for(let i=4;i<8;i++){
+    const s=0.88-i*0.09;
+    const lz=-3.3-i*1.0-(-7.3); // local z relative to pivot
+    addBox(tailGroup,s*1.1,s,1.1,mD, 0,-i*0.1+0.4,lz,i*0.09);
+    if(i<5) addBox(tailGroup,0.14,0.28-i*0.04,0.14,mD, 0,s*0.5+0.14,lz);
+  }
+  addBox(tailGroup,0.3,0.3,0.65,mH, 0,-0.72-0.4,-11.6+7.3,0.5);
 
   // ── LEGS & CLAWS (pivot groups for walk animation) ──
   const cm=mat(dt.horn,FS);
@@ -714,7 +724,7 @@ function buildDragonMesh(dt){
   const llg=makeLeg(-1),rlg=makeLeg(1);
   g.add(llg);g.add(rlg);
 
-  g.userData={lwp,rwp,llg,rlg,wingAngle:0,tailF:0,legCycle:0};
+  g.userData={lwp,rwp,llg,rlg,jawGroup,tailGroup,wingAngle:0,tailF:0,legCycle:0,jawT:0,tailSwingT:0};
   return g;
 }
 
@@ -1273,11 +1283,11 @@ function spawnAbilityCloud(pos,color,radius,duration){
   // Create several overlapping additive spheres for a glowing cloud look
   const group=new THREE.Group();
   group.position.copy(pos);
-  const count=6+~~(radius/8);
+  const count=8+~~(radius/7);
   for(let i=0;i<count;i++){
-    const r=radius*(0.4+Math.random()*0.6);
+    const r=radius*(0.45+Math.random()*0.65);
     const geo=new THREE.SphereGeometry(r,6,6);
-    const mat=new THREE.MeshBasicMaterial({color,transparent:true,opacity:0.22+Math.random()*0.18,
+    const mat=new THREE.MeshBasicMaterial({color,transparent:true,opacity:0.28+Math.random()*0.22,
       blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide});
     const m=new THREE.Mesh(geo,mat);
     m.position.set((Math.random()-.5)*radius*0.6,(Math.random()-.5)*radius*0.3,(Math.random()-.5)*radius*0.6);
@@ -2943,6 +2953,23 @@ function floatWorld(worldPos,text,col){
   const sx=(tmpV.x+1)/2*cW,sy=(1-tmpV.y)/2*cH;
   if(tmpV.z<1)floaters2d.push({sx,sy,text,col,life:60});
 }
+let _flashEl=null,_atkHitEl=null;
+function screenFlash(color,alpha){
+  if(!_flashEl){_flashEl=document.createElement('div');_flashEl.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:999;transition:opacity 0.35s';document.body.appendChild(_flashEl);}
+  _flashEl.style.background=color;_flashEl.style.opacity=alpha;
+  clearTimeout(_flashEl._t);_flashEl._t=setTimeout(()=>{_flashEl.style.opacity=0;},90);
+}
+function atkHitBanner(label,color){
+  if(!_atkHitEl){
+    _atkHitEl=document.createElement('div');
+    _atkHitEl.style.cssText='position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:1000;text-align:center;transition:opacity 0.4s';
+    document.body.appendChild(_atkHitEl);
+  }
+  _atkHitEl.style.opacity=1;
+  _atkHitEl.innerHTML='<div style="font-size:2.2rem;line-height:1;text-shadow:0 0 18px '+color+',0 0 36px '+color+'">'+label+'</div>';
+  clearTimeout(_atkHitEl._t);
+  _atkHitEl._t=setTimeout(()=>{_atkHitEl.style.opacity=0;},480);
+}
 
 // ── Game state ────────────────────────────────────────────────────────────────
 let gs='select',score=0,best=0,kills=0,frame=0;
@@ -2954,6 +2981,7 @@ let earthInvT=0;    // invincibility timer
 let burnMap=new Map();  // enemy→burnT
 let freezeMap=new Map(); // enemy→freezeT
 let poisonMap=new Map(); // enemy→poisonT (nature dragon 10s DoT)
+let poisonDoTMap=new Map(); // enemy→{t,rate} for nature poison cloud (123+50/s for 20s)
 let dtype=DT[1],selectedType=1; // 0=lightning (unlockable), start on fire
 let dragonMesh=null;
 let dYaw=0,dPitch=0,dRoll=0,dYawVel=0,dPitchVel=0;
@@ -3364,6 +3392,48 @@ document.addEventListener('keydown',e=>{
       }
     }
     if(e.code==='KeyQ'&&!dialogOpen)useKingWeapon();
+    // 1/2/3 = fire first/second/third unique attack from this dragon's wheel
+    if((e.code==='Digit1'||e.code==='Digit2'||e.code==='Digit3')&&!dialogOpen&&gs==='playing'&&!isHuman){
+      const idx={'Digit1':0,'Digit2':1,'Digit3':2}[e.code];
+      const id=dtype?dtype.id:'fire';
+      const set=DRAGON_ATK_SETS[id]||DRAGON_ATK_SETS.fire;
+      // Get only the unique attacks (not bite/tail/roar/heal/call/shield)
+      const unique=set.filter(a=>!['bite','tail','roar','heal','call','shield'].includes(a.id));
+      const a=unique[idx];
+      if(a){
+        fireAtkPower(a);
+        atkHitBanner(a.label,a.color||'#ffcc00');
+        screenFlash(a.color||'#ffcc00',0.35);
+        floatWorld(dragonMesh.position,a.label,a.color||'#ffcc00');
+      }
+    }
+    // 6 = Fire ALL current dragon's attacks at once (ultimate combo)
+    if(e.code==='Digit6'&&!dialogOpen&&gs==='playing'&&!isHuman){
+      const id=dtype?dtype.id:'fire';
+      const set=DRAGON_ATK_SETS[id]||DRAGON_ATK_SETS.fire;
+      openAtkRing(); // build ATK_ACTIONS for this dragon
+      closeAtkRing(false); // close without firing (just to populate)
+      set.forEach(a=>{
+        if(a.id!=='heal'&&a.id!=='call'&&a.id!=='shield'&&a.id!=='earth_shield')
+          fireAtkPower(a);
+      });
+      screenFlash('#ffffff',0.6);
+      atkHitBanner('⚡ ALL POWERS!','#ffffff');
+      floatWorld(dragonMesh.position.clone().add(new THREE.Vector3(0,12,0)),'⚡ UNLEASH ALL!','#ffffff');
+    }
+    // 7 = Teleport whole army to player
+    if(e.code==='Digit7'&&!dialogOpen&&gs==='playing'){
+      const ref=isHuman&&humanMesh?humanMesh.position:dragonMesh.position;
+      let count=0;
+      dragonArmy.forEach((a,i)=>{
+        if(!a.mesh||!a.mesh.userData.alive)return;
+        const ang=(i/Math.max(1,dragonArmy.length))*Math.PI*2;
+        a.mesh.position.set(ref.x+Math.sin(ang)*18,ref.y+6+i*2,ref.z+Math.cos(ang)*18);
+        spawnAbilityCloud(a.mesh.position.clone(),0x44ccff,20,0.5);
+        count++;
+      });
+      floatWorld(ref.clone().add(new THREE.Vector3(0,12,0)),count>0?'🐉 ARMY ASSEMBLED! x'+count:'No army yet','#44ccff');
+    }
     // / = Dragon Power (fire/ice/soul/nature/earth special)
     if(e.code==='Slash'&&!dialogOpen&&!isHuman&&gs==='playing'){
       if(abilityCooldown.power===undefined)abilityCooldown.power=0;
@@ -3425,6 +3495,7 @@ document.addEventListener('keydown',e=>{
     // Player bite (Z), tail (C), roar (V override for non-ice)
     if(e.code==='KeyZ'&&!dialogOpen&&!isHuman&&gs==='playing'){
       if(!abilityCooldown.pBite||abilityCooldown.pBite<=0){abilityCooldown.pBite=2;
+        if(dragonMesh.userData.jawGroup)dragonMesh.userData.jawT=1.0;
         const ref=dragonMesh.position;let be=null,bd=60;for(const ae of activeEnemies){if(!ae.userData.alive)continue;const d=ref.distanceTo(ae.position);if(d<bd){bd=d;be=ae;}}
         if(be){spawnBeamFX(ref.clone().add(new THREE.Vector3(0,2,0)),be.position.clone(),0xff2200);hitEnemy(be,upgradedDmg()*5);spawnAbilityCloud(be.position.clone(),0xff2200,22,0.5);floatWorld(ref.clone().add(new THREE.Vector3(0,8,0)),'🦷 BITE!','#ff4400');}
         else floatWorld(ref.clone().add(new THREE.Vector3(0,8,0)),'No target!','#ff4444');
@@ -3432,6 +3503,7 @@ document.addEventListener('keydown',e=>{
     }
     if(e.code==='KeyC'&&!dialogOpen&&!isHuman&&gs==='playing'){
       if(!abilityCooldown.pTail||abilityCooldown.pTail<=0){abilityCooldown.pTail=3;
+        if(dragonMesh.userData.tailGroup)dragonMesh.userData.tailSwingT=0.9;
         const ref=dragonMesh.position;
         spawnAbilityCloud(ref.clone(),0xff8800,70,1.5);
         for(let ti=0;ti<16;ti++){const ta=ti/16*Math.PI*2;spawnAbilityCloud(ref.clone().add(new THREE.Vector3(Math.cos(ta)*40,0,Math.sin(ta)*40)),0xff8800,16,0.5);}
@@ -3441,6 +3513,7 @@ document.addEventListener('keydown',e=>{
     }
     if(e.code==='KeyR'&&!dialogOpen&&!isHuman&&gs==='playing'){
       if(!abilityCooldown.pRoar||abilityCooldown.pRoar<=0){abilityCooldown.pRoar=5;
+        if(dragonMesh.userData.jawGroup)dragonMesh.userData.jawT=1.4;
         const ref=dragonMesh.position;
         spawnAbilityCloud(ref.clone(),dtype.color||0xff4400,100,2.0);spawnAbilityCloud(ref.clone(),0xffffff,60,1.2);
         for(const ae of activeEnemies){if(!ae.userData.alive)continue;const d=ref.distanceTo(ae.position);if(d<120){hitEnemy(ae,upgradedDmg()*2);ae.position.addScaledVector(new THREE.Vector3().subVectors(ae.position,ref).normalize(),30);}}
@@ -3649,29 +3722,37 @@ function fireAtkPower(a){
       if(abilityCooldown.power<=0){keys['Slash']=true;setTimeout(()=>{delete keys['Slash'];},120);}
       else floatWorld(ref,'Cooldown: '+~~abilityCooldown.power+'s','#ff4444');break;
     case 'breath':// Fan of fire projectiles
+      screenFlash('#ff4400',0.4);
       for(let i=-2;i<=2;i++){const ang=i*0.18;const d=new THREE.Vector3(Math.sin(ang),0,Math.cos(ang)).applyEuler(dragonMesh.rotation);spawnProjectile('fire',ref.clone().add(d.clone().multiplyScalar(8)),ref.clone().add(d.clone().multiplyScalar(60)));}
       spawnAbilityCloud(ref,0xff4400,30,0.6);break;
     case 'bite':// Lunge: big damage on nearest enemy + stun
-      {let be=null,bd=80;for(const e of activeEnemies){if(!e.userData.alive)continue;const d=e.position.distanceTo(ref);if(d<bd){bd=d;be=e;}}
+      {if(dragonMesh&&dragonMesh.userData.jawGroup)dragonMesh.userData.jawT=1.0;
+      screenFlash('#ff8800',0.6);
+      let be=null,bd=80;for(const e of activeEnemies){if(!e.userData.alive)continue;const d=e.position.distanceTo(ref);if(d<bd){bd=d;be=e;}}
       if(be){hitEnemy(be,DMG*4);spawnAbilityCloud(be.position.clone(),0xff8800,25,0.8);floatWorld(be.position,'💢 CRUSH!','#ff8800');}
       else floatWorld(ref,'No target in range','#888');break;}
     case 'tail':// Spinning slam — AOE around player
-      {const hits=nearEnemies(55);spawnAbilityCloud(ref,0xcc4400,55,1.0);spawnAbilityCloud(ref,0xff8844,35,0.6);
+      {if(dragonMesh&&dragonMesh.userData.tailGroup)dragonMesh.userData.tailSwingT=0.9;
+      screenFlash('#cc4400',0.5);
+      const hits=nearEnemies(55);spawnAbilityCloud(ref,0xcc4400,55,1.0);spawnAbilityCloud(ref,0xff8844,35,0.6);
       hits.forEach(e=>{hitEnemy(e,DMG*2.5);const push=e.position.clone().sub(ref).normalize().multiplyScalar(30);e.position.add(push);});
       floatWorld(ref,'💥 TAIL SLAM x'+hits.length,'#cc4400');break;}
     case 'roar':// Fear roar — pushes all enemies back, stuns shoot timer
-      {const hits=nearEnemies(180);spawnAbilityCloud(ref,0xaa66ff,100,2.0);spawnAbilityCloud(ref,0xffffff,60,1.0);
+      {if(dragonMesh&&dragonMesh.userData.jawGroup)dragonMesh.userData.jawT=1.4;
+      screenFlash('#aa66ff',0.5);
+      const hits=nearEnemies(180);spawnAbilityCloud(ref,0xaa66ff,100,2.0);spawnAbilityCloud(ref,0xffffff,60,1.0);
       hits.forEach(e=>{e.userData.shootT=Math.max(e.userData.shootT,3);const push=e.position.clone().sub(ref).normalize().multiplyScalar(50);e.position.add(push);});
       floatWorld(ref,'🔊 FOES SCATTERED!','#aa66ff');break;}
     case 'storm':// Lightning hits every enemy
-      {const hits=nearEnemies(400);hits.forEach(e=>{hitEnemy(e,DMG*1.8);spawnAbilityCloud(e.position.clone(),0xffff44,20,0.4);spawnProjectile('bolt',ref.clone(),e.position.clone());});
+      {screenFlash('#ffff44',0.4);
+      const hits=nearEnemies(400);hits.forEach(e=>{hitEnemy(e,DMG*1.8);spawnAbilityCloud(e.position.clone(),0xffff44,20,0.4);spawnProjectile('bolt',ref.clone(),e.position.clone());});
       spawnAbilityCloud(ref,0xffffaa,80,1.5);floatWorld(ref,'⚡ LIGHTNING STORM x'+hits.length,'#ffff44');break;}
     case 'wave':// Water wave — large push + damage
       {const hits=nearEnemies(220);const wDir=fwd.clone();hits.forEach(e=>{hitEnemy(e,DMG*1.5);const push=wDir.clone().multiplyScalar(60);e.position.add(push);});
       spawnAbilityCloud(ref,0x44aaff,120,1.8);spawnAbilityCloud(ref.clone().add(fwd.clone().multiplyScalar(60)),0x0088cc,80,1.2);
       floatWorld(ref,'🌊 WAVE CRASH!','#44aaff');break;}
     case 'heal':// Restore HP
-      {const healAmt=~~(dmaxHp*0.35);dhp=Math.min(dmaxHp,dhp+healAmt);spawnAbilityCloud(ref,0x44ff88,40,1.2);floatWorld(ref,'💚 +'+healAmt+' HP','#44ff88');break;}
+      {screenFlash('#44ff88',0.3);const healAmt=~~(dmaxHp*0.35);dhp=Math.min(dmaxHp,dhp+healAmt);spawnAbilityCloud(ref,0x44ff88,40,1.2);floatWorld(ref,'💚 +'+healAmt+' HP','#44ff88');break;}
     case 'call':// All army members charge nearest foe each
       {let called=0;for(const a of dragonArmy){if(!a.mesh||!a.mesh.userData.alive)continue;let be=null,bd=600;for(const e of activeEnemies){if(!e.userData.alive)continue;const d=a.mesh.position.distanceTo(e.position);if(d<bd){bd=d;be=e;}}
       if(be){hitEnemy(be,DMG*2);spawnAbilityCloud(be.position.clone(),0x44ccff,20,0.5);called++;}};
@@ -3687,10 +3768,130 @@ function fireAtkPower(a){
       hits.forEach(e=>{hitEnemy(e,DMG*2.2);e.userData.shootT=Math.max(e.userData.shootT,4);e.position.y=Math.max(e.position.y-5,groundY(e.position.x,e.position.z));});
       floatWorld(ref,'🌍 EARTHQUAKE x'+hits.length,'#88cc44');break;}
     case 'nova':// Fire nova — huge burst all directions
-      {for(let i=0;i<12;i++){const ang=(i/12)*Math.PI*2;const d=new THREE.Vector3(Math.sin(ang),0,Math.cos(ang));spawnProjectile('fire',ref.clone().add(d.clone().multiplyScalar(10)),ref.clone().add(d.clone().multiplyScalar(80)));}
+      {screenFlash('#ff6600',0.5);
+      for(let i=0;i<12;i++){const ang=(i/12)*Math.PI*2;const d=new THREE.Vector3(Math.sin(ang),0,Math.cos(ang));spawnProjectile('fire',ref.clone().add(d.clone().multiplyScalar(10)),ref.clone().add(d.clone().multiplyScalar(80)));}
       spawnAbilityCloud(ref,0xff6600,80,1.5);spawnAbilityCloud(ref,0xff2200,50,1.0);
       nearEnemies(70).forEach(e=>{hitEnemy(e,DMG*3);});
       floatWorld(ref,'🔥 NOVA BURST!','#ff6600');break;}
+    case 'meteor':// Meteor shower — fireballs rain from sky
+      {screenFlash('#ff2200',0.5);
+      spawnAbilityCloud(ref,0xff4400,100,2.0);
+      const hits=nearEnemies(300);
+      hits.forEach(e=>{
+        const start=e.position.clone().add(new THREE.Vector3((Math.random()-.5)*40,120+Math.random()*60,(Math.random()-.5)*40));
+        spawnProjectile('fire',start,e.position.clone().add(new THREE.Vector3(0,-5,0)));
+        setTimeout(()=>{if(e.userData.alive){hitEnemy(e,DMG*4);spawnAbilityCloud(e.position.clone(),0xff4400,35,0.9);}},400+Math.random()*600);
+      });
+      floatWorld(ref,'🌠 METEOR SHOWER x'+hits.length,'#ff2200');break;}
+    case 'poison_cloud':// Nature: 123 initial + 50/s DoT for 20s
+      {screenFlash('#55cc22',0.4);
+      const ph=nearEnemies(180);
+      spawnAbilityCloud(ref,0x44cc00,120,3.5);spawnAbilityCloud(ref,0x228800,80,2.5);
+      ph.forEach(e=>{
+        hitEnemy(e,123);
+        poisonDoTMap.set(e,{t:20,rate:50});
+        spawnAbilityCloud(e.position.clone(),0x55cc22,30,1.5);
+      });
+      floatWorld(ref,'☠ POISON CLOUD! x'+ph.length,'#55cc22');break;}
+    case 'spike_shoot':// Nature: spinning thorn spikes
+      {screenFlash('#44aa00',0.4);
+      spawnAbilityCloud(ref,0x44cc00,50,1.0);
+      for(let i=0;i<16;i++){
+        const ang=(i/16)*Math.PI*2;
+        const spin=new THREE.Vector3(Math.cos(ang),Math.sin(ang)*0.3,Math.sin(ang));
+        spawnProjectile('arrow',ref.clone().add(spin.clone().multiplyScalar(6)),ref.clone().add(spin.clone().multiplyScalar(90)));
+      }
+      nearEnemies(60).forEach(e=>{hitEnemy(e,DMG*2);});
+      floatWorld(ref,'🌿 SPIKE SPIN!','#44aa00');break;}
+    case 'earth_shield':// Earth: stone armor — massive DR for 12s
+      {screenFlash('#aabb55',0.4);
+      earthInvT=12;dinvT=Math.max(dinvT,12);
+      spawnAbilityCloud(ref,0xaa8844,60,2.5);spawnAbilityCloud(ref,0x886622,40,2.0);
+      for(let i=0;i<8;i++){const ang=i/8*Math.PI*2;spawnAbilityCloud(ref.clone().add(new THREE.Vector3(Math.cos(ang)*20,0,Math.sin(ang)*20)),0x886633,20,1.5);}
+      floatWorld(ref,'🛡 STONE ARMOR 12s!','#aabb55');break;}
+    case 'ghost_summon':// Soul: summon 3 ghost dragons
+      {screenFlash('#cc44ff',0.5);
+      spawnAbilityCloud(ref,0xcc44ff,80,2.0);
+      let spawned=0;
+      for(let i=0;i<3;i++){
+        const ang=(i/3)*Math.PI*2;
+        const gpos=ref.clone().add(new THREE.Vector3(Math.cos(ang)*25,8,Math.sin(ang)*25));
+        // Ghost dragon: ethereal wild dragon that fights for player briefly
+        const gm=makeEnemyDragonMesh?makeEnemyDragonMesh():null;
+        if(gm){
+          gm.position.copy(gpos);
+          gm.traverse(c=>{if(c.isMesh&&c.material){c.material=c.material.clone();c.material.color.set(0xaa66ff);c.material.transparent=true;c.material.opacity=0.6;c.material.blending=THREE.AdditiveBlending;}});
+          scene.add(gm);
+          gm.userData.alive=true;gm.userData.hp=200;gm.userData.maxHp=200;gm.userData.friendly=true;gm.userData.ghostT=12;
+          dragonArmy.push({mesh:gm,name:'Ghost',elem:'soul',isGhost:true});
+          spawned++;
+        }
+      }
+      spawnAbilityCloud(ref,0x8800ff,50,1.5);
+      floatWorld(ref,'👻 GHOST DRAGONS x'+spawned,'#cc44ff');break;}
+    case 'soul_bomb':// Soul: massive AoE soul explosion
+      {screenFlash('#8800ff',0.6);
+      const sbhits=nearEnemies(300);
+      spawnAbilityCloud(ref,0xcc44ff,200,2.5);spawnAbilityCloud(ref,0x8800ff,140,2.0);spawnAbilityCloud(ref,0xffffff,80,1.0);
+      sbhits.forEach(e=>{
+        const dist=e.position.distanceTo(ref);
+        const dmg=DMG*6*(1-dist/300);
+        hitEnemy(e,dmg);
+        spawnAbilityCloud(e.position.clone(),0xaa44ff,30,0.8);
+      });
+      floatWorld(ref,'💣 SOUL BOMB x'+sbhits.length,'#8800ff');break;}
+    case 'ice_multi':// Ice: fan of 7 ice arrows
+      {screenFlash('#44ddff',0.4);
+      spawnAbilityCloud(ref,0x88eeff,50,1.0);
+      for(let i=-3;i<=3;i++){
+        const ang=i*0.22;
+        const d=new THREE.Vector3(Math.sin(ang),0,Math.cos(ang)).applyEuler(dragonMesh.rotation);
+        const target=ref.clone().add(d.clone().multiplyScalar(140));
+        spawnProjectile('arrow',ref.clone().add(d.clone().multiplyScalar(8)),target);
+      }
+      nearEnemies(100).forEach(e=>{freezeMap.set(e,(freezeMap.get(e)||0)+8);e.userData.si=(e.userData.si||3)*2;});
+      floatWorld(ref,'❄ ICE VOLLEY!','#44ddff');break;}
+    case 'glacier':// Ice: giant ice spear that impales through foes
+      {screenFlash('#88eeff',0.5);
+      spawnAbilityCloud(ref,0xaaeeff,70,1.5);
+      let be=null,bd=400;
+      for(const e of activeEnemies){if(!e.userData.alive)continue;const d=e.position.distanceTo(ref);if(d<bd){bd=d;be=e;}}
+      if(be){
+        spawnBeamFX(ref.clone(),be.position.clone(),0xaaeeff);
+        // Hit all in a line toward target
+        const lineDir=be.position.clone().sub(ref).normalize();
+        nearEnemies(300).forEach(e=>{
+          const dot=lineDir.dot(e.position.clone().sub(ref).normalize());
+          if(dot>0.7){hitEnemy(e,DMG*6);freezeMap.set(e,(freezeMap.get(e)||0)+10);spawnAbilityCloud(e.position.clone(),0x88eeff,25,0.9);}
+        });
+      }
+      floatWorld(ref,'🧊 GLACIER SPEAR!','#88eeff');break;}
+    case 'tornado':// Air: tornado throws all nearby foes
+      {screenFlash('#aaffee',0.4);
+      spawnAbilityCloud(ref,0xaaffee,100,2.0);spawnAbilityCloud(ref,0xffffff,60,1.5);
+      const tnhits=nearEnemies(90);
+      tnhits.forEach(e=>{
+        hitEnemy(e,DMG*2);
+        const push=e.position.clone().sub(ref).normalize().multiplyScalar(80+Math.random()*40);
+        push.y=30+Math.random()*20;
+        e.position.add(push);
+        e.userData.si=(e.userData.si||3)*3;
+      });
+      floatWorld(ref,'🌪 TORNADO x'+tnhits.length,'#aaffee');break;}
+    case 'air_push':// Air: gust blasts all foes far back
+      {screenFlash('#88ffdd',0.4);
+      spawnAbilityCloud(ref,0xaaffee,160,1.8);
+      const aphits=nearEnemies(250);
+      aphits.forEach(e=>{
+        hitEnemy(e,DMG*1.5);
+        const push=e.position.clone().sub(ref).normalize().multiplyScalar(120);
+        e.position.add(push);
+      });
+      for(let i=0;i<8;i++){
+        const ang=i/8*Math.PI*2;
+        spawnProjectile('magic',ref.clone(),ref.clone().add(new THREE.Vector3(Math.sin(ang)*180,0,Math.cos(ang)*180)));
+      }
+      floatWorld(ref,'💨 AIR BLAST x'+aphits.length,'#88ffdd');break;}
     default:// Fallback: key press
       if(a.key){keys[a.key]=true;setTimeout(()=>{delete keys[a.key];},120);}
       else if(a.mk){mk[a.mk]=true;setTimeout(()=>{mk[a.mk]=false;},120);}
@@ -3719,46 +3920,93 @@ const atkCanvas=document.getElementById('atk-canvas');
 const atkLabel=document.getElementById('atk-label');
 const atkCtx=atkCanvas.getContext('2d');
 
-function resizeAtkCanvas(){atkCanvas.width=atkCanvas.offsetWidth;atkCanvas.height=atkCanvas.offsetHeight;}
-window.addEventListener('resize',resizeAtkCanvas);setTimeout(resizeAtkCanvas,100);
+function resizeAtkCanvas(){
+  const r=atkCanvas.parentElement.getBoundingClientRect();
+  atkCanvas.width=Math.round(r.width)||window.innerWidth;
+  atkCanvas.height=Math.round(r.height)||window.innerHeight;
+}
+window.addEventListener('resize',()=>{if(atkRingOpen){resizeAtkCanvas();drawAtkRing(atkSelected);}});
+
+// Convert #rrggbb hex to rgba string
+function hexRgba(hex,a){
+  const h=hex.replace('#','');
+  const r=parseInt(h.substring(0,2),16),g=parseInt(h.substring(2,4),16),b=parseInt(h.substring(4,6),16);
+  return 'rgba('+r+','+g+','+b+','+a+')';
+}
 
 function drawAtkRing(hovered){
   const W=atkCanvas.width,H=atkCanvas.height;
+  if(!W||!H)return;
   atkCtx.clearRect(0,0,W,H);
-  const cx=W/2,cy=H/2;
-  const outerR=Math.min(W,H)*0.38,innerR=outerR*0.32;
+  const cx=W/2,cy=H*0.5;
+  const outerR=Math.min(W,H)*0.44,innerR=outerR*0.26;
   const n=ATK_ACTIONS.length;
+  const GAP=0.025;
   for(let i=0;i<n;i++){
     const a=ATK_ACTIONS[i];
-    const startA=(i/n)*Math.PI*2-Math.PI/2;
-    const endA=((i+1)/n)*Math.PI*2-Math.PI/2;
+    const baseStart=(i/n)*Math.PI*2-Math.PI/2;
+    const baseEnd=((i+1)/n)*Math.PI*2-Math.PI/2;
+    const startA=baseStart+GAP,endA=baseEnd-GAP;
     const isHov=i===hovered;
-    // Slice fill
+    const r=isHov?outerR*1.1:outerR;
+    // Glow on hovered slice
+    if(isHov){
+      atkCtx.shadowColor=a.color;
+      atkCtx.shadowBlur=28;
+    }
+    // Slice path
     atkCtx.beginPath();
-    atkCtx.moveTo(cx,cy);
-    atkCtx.arc(cx,cy,isHov?outerR*1.1:outerR,startA,endA);
+    atkCtx.moveTo(cx+Math.cos(startA)*innerR,cy+Math.sin(startA)*innerR);
+    atkCtx.arc(cx,cy,r,startA,endA);
+    atkCtx.arc(cx,cy,innerR,endA,startA,true);
     atkCtx.closePath();
-    atkCtx.fillStyle=isHov?a.color+'ee':a.color+'88';
+    // Gradient fill for depth
+    const midA=(baseStart+baseEnd)/2;
+    const gx=cx+Math.cos(midA)*(innerR+r)*0.5,gy=cy+Math.sin(midA)*(innerR+r)*0.5;
+    const grad=atkCtx.createRadialGradient(gx,gy,4,gx,gy,r*0.6);
+    grad.addColorStop(0,hexRgba(a.color,isHov?1:0.9));
+    grad.addColorStop(1,hexRgba(a.color,isHov?0.65:0.45));
+    atkCtx.fillStyle=grad;
     atkCtx.fill();
-    atkCtx.strokeStyle=isHov?a.color:'rgba(255,255,255,0.2)';
-    atkCtx.lineWidth=isHov?2.5:1;
+    atkCtx.shadowBlur=0;
+    // Bright border
+    atkCtx.strokeStyle=isHov?'#ffffff':hexRgba(a.color,1);
+    atkCtx.lineWidth=isHov?3:1.5;
     atkCtx.stroke();
-    // Icon label
-    const midA=(startA+endA)/2;
-    const lr=(outerR+innerR)*0.5*(isHov?1.08:1);
+    // Icon + name
+    const lr=(r+innerR)*0.52;
     const ex=cx+Math.cos(midA)*lr,ey=cy+Math.sin(midA)*lr;
-    atkCtx.font=isHov?'bold 22px sans-serif':'18px sans-serif';
-    atkCtx.fillStyle='#fff';atkCtx.textAlign='center';atkCtx.textBaseline='middle';
-    atkCtx.fillText(a.label.split(' ')[0],ex,ey);
-    atkCtx.font=isHov?'bold 7px sans-serif':'6px sans-serif';
-    atkCtx.fillText(a.label.split(' ').slice(1).join(' '),ex,ey+14);
+    const parts=a.label.split(' ');
+    const emoji=parts[0],name=parts.slice(1).join(' ');
+    atkCtx.textAlign='center';atkCtx.textBaseline='middle';
+    // emoji glow
+    if(isHov){atkCtx.shadowColor=a.color;atkCtx.shadowBlur=14;}
+    atkCtx.font=(isHov?'28':'21')+'px sans-serif';
+    atkCtx.fillText(emoji,ex,ey-(isHov?10:7));
+    atkCtx.shadowBlur=0;
+    atkCtx.font='bold '+(isHov?'10':'7.5')+'px sans-serif';
+    atkCtx.fillStyle='#fff';
+    atkCtx.shadowColor='#000';atkCtx.shadowBlur=5;
+    atkCtx.fillText(name,ex,ey+(isHov?13:10));
+    atkCtx.shadowBlur=0;
+    // Tap hint on each slice
+    if(!isHov){
+      atkCtx.font='5px sans-serif';
+      atkCtx.fillStyle='rgba(255,255,255,0.4)';
+      atkCtx.fillText('TAP',ex,ey+(isHov?26:20));
+    }
   }
-  // Center hole
+  // Center circle glow
+  atkCtx.shadowColor='rgba(255,255,255,0.6)';atkCtx.shadowBlur=16;
   atkCtx.beginPath();atkCtx.arc(cx,cy,innerR,0,Math.PI*2);
-  atkCtx.fillStyle='rgba(0,0,0,0.75)';atkCtx.fill();
-  atkCtx.strokeStyle='rgba(255,255,255,0.3)';atkCtx.lineWidth=1.5;atkCtx.stroke();
-  atkCtx.font='bold 10px sans-serif';atkCtx.fillStyle='rgba(255,255,255,0.5)';
-  atkCtx.textAlign='center';atkCtx.textBaseline='middle';atkCtx.fillText('ATK',cx,cy);
+  atkCtx.fillStyle='rgba(10,0,25,0.95)';atkCtx.fill();
+  atkCtx.shadowBlur=0;
+  atkCtx.strokeStyle='rgba(180,180,255,0.7)';atkCtx.lineWidth=2.5;atkCtx.stroke();
+  atkCtx.font='bold 15px sans-serif';atkCtx.fillStyle='#fff';
+  atkCtx.textAlign='center';atkCtx.textBaseline='middle';
+  atkCtx.fillText('⚔',cx,cy-7);
+  atkCtx.font='bold 7px sans-serif';atkCtx.fillStyle='rgba(200,200,255,0.9)';
+  atkCtx.fillText('TAP ATTACK',cx,cy+8);
 }
 
 function getAtkSlice(ex,ey){
@@ -3772,35 +4020,78 @@ function getAtkSlice(ex,ey){
   return Math.floor(angle/(Math.PI*2)*ATK_ACTIONS.length)%ATK_ACTIONS.length;
 }
 
+// Per-dragon attack wheel definitions
+const DRAGON_ATK_SETS={
+  fire:[
+    {label:'🔥 BREATH',    id:'breath',      desc:'Breathe fire forward',          color:'#ff4400'},
+    {label:'💥 NOVA',      id:'nova',         desc:'12-direction fire burst',       color:'#ff6600'},
+    {label:'🌠 METEOR',    id:'meteor',       desc:'Rain meteors on all foes',      color:'#ff2200'},
+    {label:'🦷 BITE',      id:'bite',         desc:'Lunge & crush nearest foe',     color:'#cc6600'},
+    {label:'💥 TAIL',      id:'tail',         desc:'Spinning tail slam',            color:'#cc4400'},
+    {label:'🔊 ROAR',      id:'roar',         desc:'Fear roar pushes foes back',    color:'#aa66ff'},
+    {label:'💚 HEAL',      id:'heal',         desc:'Restore 35% HP',                color:'#44ff88'},
+    {label:'🐉 CALL',      id:'call',         desc:'Army attacks all foes',         color:'#44ccff'},
+  ],
+  nature:[
+    {label:'☠ POISON',    id:'poison_cloud', desc:'123 dmg + 50/s DoT for 20s',   color:'#55cc22'},
+    {label:'🌿 SPIKE',     id:'spike_shoot',  desc:'Spinning thorn spikes burst',   color:'#44aa00'},
+    {label:'🦷 BITE',      id:'bite',         desc:'Vine grab & crush',             color:'#cc6600'},
+    {label:'💥 TAIL',      id:'tail',         desc:'Spinning tail slam',            color:'#cc4400'},
+    {label:'🔊 ROAR',      id:'roar',         desc:'Fear roar pushes foes back',    color:'#aa66ff'},
+    {label:'💚 HEAL',      id:'heal',         desc:'Restore 35% HP',                color:'#44ff88'},
+    {label:'🐉 CALL',      id:'call',         desc:'Army attacks all foes',         color:'#44ccff'},
+  ],
+  earth:[
+    {label:'🌍 QUAKE',     id:'quake',        desc:'Earthquake stuns grounded foes',color:'#88cc44'},
+    {label:'🛡 SHIELD',    id:'earth_shield', desc:'Stone armor — block 90% damage',color:'#aabb55'},
+    {label:'🦷 BITE',      id:'bite',         desc:'Rock slam bite',                color:'#cc6600'},
+    {label:'💥 TAIL',      id:'tail',         desc:'Spinning tail slam',            color:'#cc4400'},
+    {label:'🔊 ROAR',      id:'roar',         desc:'Fear roar pushes foes back',    color:'#aa66ff'},
+    {label:'💚 HEAL',      id:'heal',         desc:'Restore 35% HP',                color:'#44ff88'},
+    {label:'🐉 CALL',      id:'call',         desc:'Army attacks all foes',         color:'#44ccff'},
+  ],
+  soul:[
+    {label:'👻 GHOSTS',    id:'ghost_summon', desc:'Summon ghost dragons to fight', color:'#cc44ff'},
+    {label:'💣 SOUL BOMB', id:'soul_bomb',    desc:'Massive soul explosion AoE',    color:'#8800ff'},
+    {label:'🦷 BITE',      id:'bite',         desc:'Soul drain bite',               color:'#cc6600'},
+    {label:'💥 TAIL',      id:'tail',         desc:'Spinning tail slam',            color:'#cc4400'},
+    {label:'🔊 ROAR',      id:'roar',         desc:'Fear roar pushes foes back',    color:'#aa66ff'},
+    {label:'💚 HEAL',      id:'heal',         desc:'Restore 35% HP',                color:'#44ff88'},
+    {label:'🛡 SHIELD',    id:'shield',       desc:'Soul shield absorbs hits',      color:'#8888ff'},
+    {label:'🐉 CALL',      id:'call',         desc:'Army attacks all foes',         color:'#44ccff'},
+  ],
+  ice:[
+    {label:'❄ MULTI',      id:'ice_multi',    desc:'Fan of 7 ice arrows',           color:'#44ddff'},
+    {label:'🧊 GLACIER',   id:'glacier',      desc:'Giant ice spear impales foes',  color:'#88eeff'},
+    {label:'🦷 BITE',      id:'bite',         desc:'Frost bite freezes foe',        color:'#cc6600'},
+    {label:'💥 TAIL',      id:'tail',         desc:'Spinning tail slam',            color:'#cc4400'},
+    {label:'🔊 ROAR',      id:'roar',         desc:'Fear roar pushes foes back',    color:'#aa66ff'},
+    {label:'💚 HEAL',      id:'heal',         desc:'Restore 35% HP',                color:'#44ff88'},
+    {label:'🐉 CALL',      id:'call',         desc:'Army attacks all foes',         color:'#44ccff'},
+  ],
+  air:[
+    {label:'🌪 TORNADO',   id:'tornado',      desc:'Tornado flings all nearby foes',color:'#aaffee'},
+    {label:'💨 AIR PUSH',  id:'air_push',     desc:'Gust blasts all foes far back', color:'#88ffdd'},
+    {label:'🦷 BITE',      id:'bite',         desc:'Wind claw bite',                color:'#cc6600'},
+    {label:'💥 TAIL',      id:'tail',         desc:'Spinning tail slam',            color:'#cc4400'},
+    {label:'🔊 ROAR',      id:'roar',         desc:'Fear roar pushes foes back',    color:'#aa66ff'},
+    {label:'💚 HEAL',      id:'heal',         desc:'Restore 35% HP',                color:'#44ff88'},
+    {label:'🐉 CALL',      id:'call',         desc:'Army attacks all foes',         color:'#44ccff'},
+  ],
+};
+
 function openAtkRing(){
   if(gs!=='playing')return;
   const id=dtype?dtype.id:'fire';
-  // Dragon-specific named moves
-  const fName={fire:'Fire Cloud',nature:'Poison Cloud',ice:'Ice Shards',soul:'Soul Beam',earth:'Boulder',air:'Gust Burst',lightning:'Storm Cloud',sun:'Solar Flare',lava:'Lava Burst',water:'Tidal Wave',smoke:'Smoke Bomb',acid:'Acid Rain',bone:'Bone Spear',metal:'Metal Crush',glass:'Glass Shatter',thunder:'Thunder Clap'}[id]||'Special';
-  const xName={lightning:'Chain Bite',fire:'Fire Bite',ice:'Frost Bite',earth:'Slam',air:'Tornado',nature:'Vine Grab',soul:'Soul Drain',lava:'Lava Spit',water:'Water Whip',smoke:'Smoke Cloud',acid:'Acid Spit',bone:'Bone Crush',metal:'Metal Shred',glass:'Glass Shatter',thunder:'Thunder Stomp',sun:'Solar Burst'}[id]||'Bite';
-  const pName={fire:'Mega Fireball',ice:'Ice Beam',soul:'Ghost Dragons',nature:'Life Beam',earth:'Ground Smash',air:'Power Blast',lightning:'Volt Surge',sun:'Solar Nova',lava:'Eruption',water:'Maelstrom',bone:'Bone Wall',metal:'Iron Storm'}[id]||'Power Blast';
-  const col=dtype?('#'+dtype.eyeC.replace('#','')):'#ff4400';
-  ATK_ACTIONS=[
-    {label:'🔥 '+fName,    id:'ability_f',  desc:fName+' (dragon special)',   color:col,       cd:'attack'},
-    {label:'👊 '+xName,    id:'ability_x',  desc:xName+' (secondary move)',   color:'#ff8800', cd:'bite'},
-    {label:'✨ '+pName,    id:'ability_p',  desc:pName+' (power move)',       color:'#ffdd00', cd:'power'},
-    {label:'🦷 BITE',      id:'bite',        desc:'Lunge & crush nearest foe', color:'#cc6600'},
-    {label:'💥 TAIL',      id:'tail',        desc:'Spinning AOE tail slam',    color:'#cc4400'},
-    {label:'🔊 ROAR',      id:'roar',        desc:'Fear roar pushes foes back',color:'#aa66ff'},
-    {label:'💚 HEAL',      id:'heal',        desc:'Restore 35% HP',            color:'#44ff88'},
-    {label:'🛡 SHIELD',    id:'shield',      desc:'Soul shield 8s',            color:'#8888ff'},
-    {label:'💀 DEATH',     id:'death',       desc:'Poison cloud heavy DoT',    color:'#aa44cc'},
-    {label:'🌍 QUAKE',     id:'quake',       desc:'Earthquake stuns foes',     color:'#88cc44'},
-    {label:'🔥 NOVA',      id:'nova',        desc:'12-dir fire burst',         color:'#ff6600'},
-    {label:'🐉 CALL',      id:'call',        desc:'Army attacks all foes',     color:'#44ccff'},
-  ];
+  const base=DRAGON_ATK_SETS[id]||DRAGON_ATK_SETS.fire;
+  ATK_ACTIONS=base.slice();
   // Collected King Weapons as extra slices
   for(let i=0;i<playerKingWeapons.length;i++){
     const w=playerKingWeapons[i];
     ATK_ACTIONS.push({label:w.emoji+' '+w.name,desc:'King Weapon: '+w.name,color:'#'+w.color.toString(16).padStart(6,'0'),kingIdx:i});
   }
   atkRingOpen=true;atkSelected=-1;
-  atkRingEl.style.display='block';  // show BEFORE resizing so offsetWidth/Height are correct
+  atkRingEl.style.display='block';
   resizeAtkCanvas();
   drawAtkRing(-1);atkLabel.textContent='';
 }
@@ -3813,28 +4104,54 @@ function closeAtkRing(fire){
       activeKingWeaponIdx=a.kingIdx;
       useKingWeapon();
     } else { fireAtkPower(a); }
-    floatWorld(dragonMesh?dragonMesh.position:new THREE.Vector3(),a.label,a.color||'#ffcc00');
+    atkHitBanner(a.label,a.color||'#ffcc00');
+    screenFlash(a.color||'#ffcc00',0.35);
+    if(dragonMesh)floatWorld(dragonMesh.position,a.label,a.color||'#ffcc00');
   }
 }
 
-// Touch/click on atk ring
+// Touch/click on atk ring — TAP fires immediately
+function atkHandlePoint(clientX,clientY){
+  const r=atkCanvas.getBoundingClientRect();
+  const idx=getAtkSlice(clientX-r.left,clientY-r.top);
+  if(idx>=0){
+    atkSelected=idx;
+    drawAtkRing(idx);
+    // Brief highlight then fire
+    setTimeout(()=>{closeAtkRing(true);},120);
+  } else {
+    // Tapped center or outside — close without firing
+    closeAtkRing(false);
+  }
+}
+atkRingEl.addEventListener('touchstart',e=>{
+  e.preventDefault();
+  const t=e.changedTouches[0];
+  // Hover highlight on touch start
+  const r=atkCanvas.getBoundingClientRect();
+  const idx=getAtkSlice(t.clientX-r.left,t.clientY-r.top);
+  atkSelected=idx;drawAtkRing(idx);
+  atkLabel.textContent=idx>=0?ATK_ACTIONS[idx].desc:'Tap a power';
+},{passive:false});
 atkRingEl.addEventListener('touchmove',e=>{
   e.preventDefault();
   const t=e.touches[0],r=atkCanvas.getBoundingClientRect();
   const idx=getAtkSlice(t.clientX-r.left,t.clientY-r.top);
-  atkSelected=idx;
-  drawAtkRing(idx);
-  atkLabel.textContent=idx>=0?ATK_ACTIONS[idx].desc:'';
+  atkSelected=idx;drawAtkRing(idx);
+  atkLabel.textContent=idx>=0?ATK_ACTIONS[idx].desc:'Tap a power';
 },{passive:false});
-atkRingEl.addEventListener('touchend',e=>{e.preventDefault();closeAtkRing(true);},{passive:false});
+atkRingEl.addEventListener('touchend',e=>{
+  e.preventDefault();
+  const t=e.changedTouches[0];
+  atkHandlePoint(t.clientX,t.clientY);
+},{passive:false});
 atkRingEl.addEventListener('mousemove',e=>{
   const r=atkCanvas.getBoundingClientRect();
   const idx=getAtkSlice(e.clientX-r.left,e.clientY-r.top);
   atkSelected=idx;drawAtkRing(idx);
-  atkLabel.textContent=idx>=0?ATK_ACTIONS[idx].desc:'';
+  atkLabel.textContent=idx>=0?ATK_ACTIONS[idx].desc:'Click a power';
 });
-atkRingEl.addEventListener('mouseup',e=>{closeAtkRing(true);});
-atkRingEl.addEventListener('click',e=>{if(e.target===atkRingEl)closeAtkRing(false);});
+atkRingEl.addEventListener('click',e=>{atkHandlePoint(e.clientX,e.clientY);});
 
 // Wire the ATK button
 const atkBtnEl=document.getElementById('mc-atk');
@@ -4348,6 +4665,14 @@ function update(ts){
       if(frame%30===0){hitEnemy(en,upgradedDmg()*0.8);floatWorld(en.position,'☠','#44ff44');}
       if(t-dt<=0)poisonMap.delete(en);
     }
+    // Poison Cloud DoT (nature special — 50/s for 20s)
+    for(const[en,p] of poisonDoTMap){
+      if(!en.userData.alive){poisonDoTMap.delete(en);continue;}
+      p.t-=dt;
+      hitEnemy(en,p.rate*dt);
+      if(frame%20===0){spawnAbilityCloud(en.position.clone(),0x44cc00,16,0.4);floatWorld(en.position,'☠ '+~~(p.rate)+'/s','#55cc22');}
+      if(p.t<=0)poisonDoTMap.delete(en);
+    }
     // Freeze slow expiry
     for(const[en,t] of freezeMap){
       if(!en.userData.alive){freezeMap.delete(en);continue;}
@@ -4375,6 +4700,19 @@ function update(ts){
       dragonMesh.userData.rwp.rotation.z=-wa;
     }
     dragonMesh.userData.tailF+=dt*4;
+
+    // Jaw animation (bite/roar)
+    const ud=dragonMesh.userData;
+    if(ud.jawT>0){
+      ud.jawT=Math.max(0,ud.jawT-dt);
+      const phase=ud.jawT>0.5?1-(ud.jawT-0.5)/0.5:ud.jawT/0.5; // 0→1→0 over 1s
+      if(ud.jawGroup)ud.jawGroup.rotation.x=phase*0.55; // open up to ~31°
+    } else if(ud.jawGroup){ud.jawGroup.rotation.x*=0.85;}
+    // Tail swing animation
+    if(ud.tailSwingT>0){
+      ud.tailSwingT=Math.max(0,ud.tailSwingT-dt);
+      if(ud.tailGroup)ud.tailGroup.rotation.y=Math.sin((1-ud.tailSwingT/0.9)*Math.PI*3)*0.8;
+    } else if(ud.tailGroup){ud.tailGroup.rotation.y*=0.8;}
 
     // Camera: smooth third-person follow
     const camOff=new THREE.Vector3(0,8,-18);
@@ -5496,6 +5834,7 @@ function update(ts){
     updateFireParticles(dt);
     updateProjectiles(dt);
     updateAbilityFX(dt);
+
 
     // ── DM SHIELD ───────────────────────────────────────────────────────────
     if(dmShieldMesh){

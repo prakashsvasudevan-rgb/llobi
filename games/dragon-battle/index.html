@@ -3632,17 +3632,75 @@ function pickDevice(type){
 if(isMob())pickDevice('ipad'); else pickDevice('pc');
 
 // ── Attack radial menu ────────────────────────────────────────────────────────
+function fireAtkPower(a){
+  if(!dragonMesh||gs!=='playing')return;
+  const ref=dragonMesh.position.clone();
+  const fwd=new THREE.Vector3(0,0,1).applyEuler(dragonMesh.rotation);
+  const DMG=upgradedDmg?upgradedDmg():dtype.dmg;
+  const nearEnemies=(maxR)=>activeEnemies.filter(e=>e.userData.alive&&e.position.distanceTo(ref)<maxR);
+  switch(a.id){
+    case 'breath':// Fan of fire projectiles
+      for(let i=-2;i<=2;i++){const ang=i*0.18;const d=new THREE.Vector3(Math.sin(ang),0,Math.cos(ang)).applyEuler(dragonMesh.rotation);spawnProjectile('fire',ref.clone().add(d.clone().multiplyScalar(8)),ref.clone().add(d.clone().multiplyScalar(60)));}
+      spawnAbilityCloud(ref,0xff4400,30,0.6);break;
+    case 'bite':// Lunge: big damage on nearest enemy + stun
+      {let be=null,bd=80;for(const e of activeEnemies){if(!e.userData.alive)continue;const d=e.position.distanceTo(ref);if(d<bd){bd=d;be=e;}}
+      if(be){hitEnemy(be,DMG*4);spawnAbilityCloud(be.position.clone(),0xff8800,25,0.8);floatWorld(be.position,'💢 CRUSH!','#ff8800');}
+      else floatWorld(ref,'No target in range','#888');break;}
+    case 'tail':// Spinning slam — AOE around player
+      {const hits=nearEnemies(55);spawnAbilityCloud(ref,0xcc4400,55,1.0);spawnAbilityCloud(ref,0xff8844,35,0.6);
+      hits.forEach(e=>{hitEnemy(e,DMG*2.5);const push=e.position.clone().sub(ref).normalize().multiplyScalar(30);e.position.add(push);});
+      floatWorld(ref,'💥 TAIL SLAM x'+hits.length,'#cc4400');break;}
+    case 'roar':// Fear roar — pushes all enemies back, stuns shoot timer
+      {const hits=nearEnemies(180);spawnAbilityCloud(ref,0xaa66ff,100,2.0);spawnAbilityCloud(ref,0xffffff,60,1.0);
+      hits.forEach(e=>{e.userData.shootT=Math.max(e.userData.shootT,3);const push=e.position.clone().sub(ref).normalize().multiplyScalar(50);e.position.add(push);});
+      floatWorld(ref,'🔊 FOES SCATTERED!','#aa66ff');break;}
+    case 'storm':// Lightning hits every enemy
+      {const hits=nearEnemies(400);hits.forEach(e=>{hitEnemy(e,DMG*1.8);spawnAbilityCloud(e.position.clone(),0xffff44,20,0.4);spawnProjectile('bolt',ref.clone(),e.position.clone());});
+      spawnAbilityCloud(ref,0xffffaa,80,1.5);floatWorld(ref,'⚡ LIGHTNING STORM x'+hits.length,'#ffff44');break;}
+    case 'wave':// Water wave — large push + damage
+      {const hits=nearEnemies(220);const wDir=fwd.clone();hits.forEach(e=>{hitEnemy(e,DMG*1.5);const push=wDir.clone().multiplyScalar(60);e.position.add(push);});
+      spawnAbilityCloud(ref,0x44aaff,120,1.8);spawnAbilityCloud(ref.clone().add(fwd.clone().multiplyScalar(60)),0x0088cc,80,1.2);
+      floatWorld(ref,'🌊 WAVE CRASH!','#44aaff');break;}
+    case 'heal':// Restore HP
+      {const healAmt=~~(dmaxHp*0.35);dhp=Math.min(dmaxHp,dhp+healAmt);spawnAbilityCloud(ref,0x44ff88,40,1.2);floatWorld(ref,'💚 +'+healAmt+' HP','#44ff88');break;}
+    case 'call':// All army members charge nearest foe each
+      {let called=0;for(const a of dragonArmy){if(!a.mesh||!a.mesh.userData.alive)continue;let be=null,bd=600;for(const e of activeEnemies){if(!e.userData.alive)continue;const d=a.mesh.position.distanceTo(e.position);if(d<bd){bd=d;be=e;}}
+      if(be){hitEnemy(be,DMG*2);spawnAbilityCloud(be.position.clone(),0x44ccff,20,0.5);called++;}};
+      spawnAbilityCloud(ref,0x44ccff,60,1.0);floatWorld(ref,'🐉 ARMY ATTACKS x'+called,'#44ccff');break;}
+    case 'shield':// Soul shield — absorb next 5 hits
+      {dinvT=Math.max(dinvT,8);spawnAbilityCloud(ref,0x8888ff,50,2.0);spawnAbilityCloud(ref,0xaaaaff,30,1.5);floatWorld(ref,'🛡 SOUL SHIELD ACTIVE!','#8888ff');break;}
+    case 'death':// Poison cloud — heavy DoT on all nearby
+      {const hits=nearEnemies(160);spawnAbilityCloud(ref,0xaa44cc,100,2.5);spawnAbilityCloud(ref,0x440066,60,2.0);
+      hits.forEach(e=>{hitEnemy(e,DMG*3);spawnAbilityCloud(e.position.clone(),0x880055,18,0.4);});
+      floatWorld(ref,'💀 DEATH CLOUD x'+hits.length,'#aa44cc');break;}
+    case 'quake':// Earthquake — stuns grounded foes, big damage
+      {const hits=nearEnemies(250).filter(e=>e.position.y<20);spawnAbilityCloud(ref,0x88cc44,120,2.0);
+      hits.forEach(e=>{hitEnemy(e,DMG*2.2);e.userData.shootT=Math.max(e.userData.shootT,4);e.position.y=Math.max(e.position.y-5,groundY(e.position.x,e.position.z));});
+      floatWorld(ref,'🌍 EARTHQUAKE x'+hits.length,'#88cc44');break;}
+    case 'nova':// Fire nova — huge burst all directions
+      {for(let i=0;i<12;i++){const ang=(i/12)*Math.PI*2;const d=new THREE.Vector3(Math.sin(ang),0,Math.cos(ang));spawnProjectile('fire',ref.clone().add(d.clone().multiplyScalar(10)),ref.clone().add(d.clone().multiplyScalar(80)));}
+      spawnAbilityCloud(ref,0xff6600,80,1.5);spawnAbilityCloud(ref,0xff2200,50,1.0);
+      nearEnemies(70).forEach(e=>{hitEnemy(e,DMG*3);});
+      floatWorld(ref,'🔥 NOVA BURST!','#ff6600');break;}
+    default:// Fallback: key press
+      if(a.key){keys[a.key]=true;setTimeout(()=>{delete keys[a.key];},120);}
+      else if(a.mk){mk[a.mk]=true;setTimeout(()=>{mk[a.mk]=false;},120);}
+  }
+}
+
 const ATK_BASE=[
-  {label:'🔥 BREATH',  key:'Space',        desc:'Fire breath',      color:'#ff4400'},
-  {label:'🦷 BITE',    mk:'bite',          desc:'Bite nearby foe',  color:'#ff8800'},
-  {label:'💥 TAIL',    mk:'tail',          desc:'Tail slam',        color:'#cc4400'},
-  {label:'🔊 ROAR',    mk:'roar',          desc:'Dragon roar',      color:'#aa66ff'},
-  {label:'⚡ ABILITY', key:'KeyF',         desc:'Dragon ability',   color:'#ffff00'},
-  {label:'🌟 POWER',   key:'KeyV',         desc:'Special power',    color:'#8888ff'},
-  {label:'💚 HEAL',    key:'KeyH',         desc:'Heal (Nature)',     color:'#44ff88'},
-  {label:'🐉 CALL',    key:'KeyD',         desc:'Call army',        color:'#44ccff'},
-  {label:'🛡 ARMOR',   key:'ShiftLeft',    desc:'Bone armor',       color:'#aaaaaa'},
-  {label:'🔄 SWAP',    mk:'tab',           desc:'Swap weapon',      color:'#ffcc44'},
+  {label:'🔥 BREATH',  id:'breath',  desc:'Breathe fire forward',         color:'#ff4400'},
+  {label:'🦷 BITE',    id:'bite',    desc:'Lunge & crush nearest enemy',   color:'#ff8800'},
+  {label:'💥 TAIL',    id:'tail',    desc:'Spinning tail hits all nearby', color:'#cc4400'},
+  {label:'🔊 ROAR',    id:'roar',    desc:'Fear roar pushes foes back',    color:'#aa66ff'},
+  {label:'⚡ STORM',   id:'storm',   desc:'Lightning strike all enemies',  color:'#ffff44'},
+  {label:'🌊 WAVE',    id:'wave',    desc:'Tidal wave knocks foes away',   color:'#44aaff'},
+  {label:'💚 HEAL',    id:'heal',    desc:'Restore your health',           color:'#44ff88'},
+  {label:'🐉 CALL',    id:'call',    desc:'Army dragons rush all foes',    color:'#44ccff'},
+  {label:'🛡 SHIELD',  id:'shield',  desc:'Soul shield absorbs damage',    color:'#8888ff'},
+  {label:'💀 DEATH',   id:'death',   desc:'Shadow cloud poisons all foes', color:'#aa44cc'},
+  {label:'🌍 QUAKE',   id:'quake',   desc:'Earthquake stuns ground foes',  color:'#88cc44'},
+  {label:'🔥 NOVA',    id:'nova',    desc:'Fire nova bursts all around',   color:'#ff6600'},
 ];
 // ATK_ACTIONS is built dynamically from base + collected king weapons
 let ATK_ACTIONS=ATK_BASE.slice();
@@ -3727,14 +3785,8 @@ function closeAtkRing(fire){
     if(a.kingIdx!==undefined){
       activeKingWeaponIdx=a.kingIdx;
       useKingWeapon();
-    } else if(a.mk){
-      mk[a.mk]=true;
-      setTimeout(()=>{mk[a.mk]=false;},120);
-    } else if(a.key){
-      keys[a.key]=true;
-      setTimeout(()=>{delete keys[a.key];},120);
-    }
-    floatWorld(dragonMesh?dragonMesh.position:new THREE.Vector3(),a.label,'#ffcc00');
+    } else { fireAtkPower(a); }
+    floatWorld(dragonMesh?dragonMesh.position:new THREE.Vector3(),a.label,a.color||'#ffcc00');
   }
 }
 

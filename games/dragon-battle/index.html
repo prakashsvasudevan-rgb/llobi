@@ -3253,6 +3253,35 @@ function hitEnemy(e,dmgAmt){
       score+=bonus;
       floatWorld(e.position,'👑 KING OF DEATH FALLS! PEACE REIGNS! +'+bonus,'#ffdd44');
       if(liberatedVillages>0)floatWorld(e.position,'🏘 ALL '+liberatedVillages+' VILLAGES ARE FREE!','#44ffcc');
+      // Great City celebrates — hunters become friendly, citizens cheer
+      const peaceCelebration=[
+        'The King of Death is dead! Hail the dragonrider!',
+        '🎉 PEACE HAS COME! Welcome, hero!',
+        'You saved us all! The city is yours!',
+        'No more fear of dragons! Ride freely, friend!',
+        'The hunters put down their bows. You are welcome here!',
+        'Come celebrate — the tavern is open to all riders tonight!',
+        'Three cheers for the dragonrider! The world is free!',
+        'The stolen elements are restored! Joy to the city!',
+      ];
+      cityFriendlyNPCs.forEach((n,i)=>{if(n.userData.isCitizen)n.userData.npcText=peaceCelebration[i%peaceCelebration.length];});
+      cityHunters.forEach(h=>{
+        h.userData.npcText='🎉 You did it! The King of Death is slain! Welcome to the city, dragonrider! No bows today!';
+        // Turn hunters green to show they're friendly
+        h.traverse(c=>{if(c.isMesh&&c.material)c.material=c.material.clone();});
+        h.traverse(c=>{if(c.isMesh&&c.material&&c.material.color)c.material.color.set(0x44aa44);});
+      });
+      // Celebration fireworks over the city
+      for(let fi=0;fi<60;fi++){
+        setTimeout(()=>{
+          if(!greatCitySpawned)return;
+          const fx=CITY_X+(Math.random()-0.5)*800,fz=CITY_Z+(Math.random()-0.5)*800;
+          const fy=groundY(fx,fz)+60+Math.random()*80;
+          const col=[0xffdd00,0xff4400,0x44ffcc,0xaa44ff,0xff88ff][Math.floor(Math.random()*5)];
+          spawnAbilityCloud(new THREE.Vector3(fx,fy,fz),col,20,0.8);
+        },fi*180);
+      }
+      floatWorld(new THREE.Vector3(CITY_X,groundY(CITY_X,CITY_Z)+60,CITY_Z),'🏙 THE GREAT CITY CELEBRATES! PRESS [5] TO VISIT!','#ffdd44');
       // Clear all hostile enemies
       setTimeout(()=>{
         for(let i=activeEnemies.length-1;i>=0;i--){
@@ -6169,8 +6198,8 @@ function update(ts){
         if(toW.length()>2){toW.normalize();npc2.position.addScaledVector(toW,3*dt);npc2.rotation.y=Math.atan2(toW.x,toW.z);}
         npc2.position.y=groundY(npc2.position.x,npc2.position.z)+1.1;
       });
-      // Hunters: shoot at player dragon if on dragon within range
-      if(!isHuman){
+      // Hunters: shoot at player dragon if on dragon within range (stop after King of Death dies)
+      if(!isHuman&&!gameAtPeace){
         cityHunters.forEach(h=>{
           if(!h.userData.isCityHunter)return;
           const dist=playerRef.distanceTo(h.position);

@@ -5,53 +5,72 @@
 <title>Lawn Defense</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
-body{background:#1a0a00;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-height:100vh;font-family:'Georgia',serif;overflow:hidden;}
-#topbar{width:800px;height:52px;background:rgba(0,0,0,0.6);display:flex;align-items:center;gap:8px;padding:0 10px;flex-shrink:0;}
-#sun-count{color:#ffe000;font-size:20px;font-weight:bold;min-width:70px;text-shadow:0 0 8px #ffaa00;}
-.plant-btn{width:60px;height:60px;border:3px solid #554400;border-radius:8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(20,40,0,0.8);color:#fff;font-size:9px;text-align:center;position:relative;transition:border-color .15s;user-select:none;}
-.plant-btn:hover:not(.disabled){border-color:#aacc00;background:rgba(40,70,0,0.9);}
-.plant-btn.selected{border-color:#ffee00;box-shadow:0 0 10px #ffee00;}
-.plant-btn.disabled{opacity:0.4;cursor:not-allowed;}
-.plant-btn .cost{position:absolute;bottom:2px;right:3px;color:#ffe000;font-size:9px;}
-.plant-btn .icon{font-size:26px;line-height:1;}
-#shovel-btn{width:48px;height:48px;border:3px solid #554400;border-radius:8px;cursor:pointer;background:rgba(60,30,0,0.8);color:#fff;font-size:28px;display:flex;align-items:center;justify-content:center;transition:border-color .15s;}
-#shovel-btn:hover{border-color:#cc8800;}
-#shovel-btn.selected{border-color:#ffee00;box-shadow:0 0 10px #ffee00;}
-#wave-info{margin-left:auto;color:#ffcc88;font-size:13px;}
+body{background:#0d1a00;display:flex;flex-direction:column;align-items:center;min-height:100vh;font-family:'Georgia',serif;overflow:hidden;}
+#topbar{width:900px;height:68px;background:linear-gradient(180deg,#1a3a00,#0d2000);border-bottom:3px solid #3a7a00;display:flex;align-items:center;gap:6px;padding:0 10px;flex-shrink:0;box-shadow:0 3px 12px rgba(0,0,0,0.6);}
+#sun-count{color:#ffe000;font-size:22px;font-weight:bold;min-width:76px;text-shadow:0 0 10px #ffaa00;background:rgba(0,0,0,0.4);padding:4px 8px;border-radius:8px;border:2px solid #664400;}
+.plant-btn{width:68px;height:64px;border:2px solid #2a5500;border-radius:10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(160deg,#1a4000,#0d2800);color:#fff;font-size:9px;text-align:center;position:relative;transition:all .15s;user-select:none;overflow:hidden;}
+.plant-btn::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,0.08),transparent);pointer-events:none;}
+.plant-btn:hover:not(.disabled){border-color:#88cc00;background:linear-gradient(160deg,#2a6000,#1a4000);transform:translateY(-2px);box-shadow:0 4px 12px rgba(80,200,0,0.3);}
+.plant-btn.selected{border-color:#ffee00;box-shadow:0 0 14px #ffee00,0 0 4px #ffee00 inset;}
+.plant-btn.disabled{opacity:0.35;cursor:not-allowed;filter:grayscale(0.4);}
+.plant-btn .cost{position:absolute;bottom:2px;right:3px;color:#ffe000;font-size:9px;font-weight:bold;text-shadow:0 1px 3px rgba(0,0,0,0.8);}
+.plant-btn .icon{font-size:28px;line-height:1.1;}
+.plant-btn .pname{font-size:8px;opacity:0.85;margin-top:1px;}
+#shovel-btn{width:52px;height:52px;border:2px solid #664400;border-radius:10px;cursor:pointer;background:linear-gradient(160deg,#3a1a00,#1a0a00);color:#fff;font-size:28px;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;}
+#shovel-btn:hover{border-color:#cc8800;transform:translateY(-2px);}
+#shovel-btn.selected{border-color:#ffee00;box-shadow:0 0 14px #ffee00;}
+#wave-info{margin-left:auto;color:#bbff88;font-size:13px;font-weight:bold;text-shadow:0 0 8px #44ff00;white-space:nowrap;flex-shrink:0;}
 canvas{display:block;cursor:crosshair;}
-#overlay{position:fixed;inset:0;background:rgba(0,0,0,0.88);display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;z-index:10;}
-#overlay h1{font-size:52px;color:#88ff44;text-shadow:0 0 30px #44ff00,0 0 60px #22aa00;margin-bottom:12px;}
-#overlay .sub{color:#aaddaa;font-size:15px;margin-bottom:32px;text-align:center;line-height:1.9;}
-#overlay button{padding:14px 56px;font-size:22px;background:linear-gradient(135deg,#226600,#44aa00);color:#fff;border:2px solid #88ff44;border-radius:10px;cursor:pointer;font-family:Georgia,serif;letter-spacing:2px;}
-#overlay button:hover{background:linear-gradient(135deg,#338800,#66cc00);}
-#gameover{position:fixed;inset:0;background:rgba(0,0,0,0.9);display:none;flex-direction:column;align-items:center;justify-content:center;color:#fff;z-index:10;}
-#gameover h2{font-size:54px;color:#ff4422;text-shadow:0 0 28px #ff0000;margin-bottom:10px;}
-#gameover p{font-size:18px;color:#ffbbaa;margin-bottom:28px;}
-#gameover button{padding:12px 44px;font-size:18px;background:linear-gradient(135deg,#226600,#44aa00);color:#fff;border:2px solid #88ff44;border-radius:8px;cursor:pointer;font-family:Georgia,serif;}
-#win{position:fixed;inset:0;background:rgba(0,0,0,0.9);display:none;flex-direction:column;align-items:center;justify-content:center;color:#fff;z-index:10;}
-#win h2{font-size:54px;color:#ffee00;text-shadow:0 0 28px #ffaa00;margin-bottom:10px;}
-#win p{font-size:18px;color:#ffffaa;margin-bottom:28px;}
-#win button{padding:12px 44px;font-size:18px;background:linear-gradient(135deg,#226600,#44aa00);color:#fff;border:2px solid #88ff44;border-radius:8px;cursor:pointer;font-family:Georgia,serif;}
+
+/* ── Title screen ── */
+#overlay{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;z-index:10;overflow:hidden;}
+#overlay canvas{position:absolute;inset:0;width:100%;height:100%;z-index:0;}
+#overlay-content{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;}
+#overlay h1{font-size:68px;background:linear-gradient(135deg,#ffee44,#88ff22,#44ffaa,#22aaff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-shadow:none;filter:drop-shadow(0 0 20px rgba(80,255,0,0.6));margin-bottom:4px;letter-spacing:3px;animation:titlePulse 2s ease-in-out infinite;}
+@keyframes titlePulse{0%,100%{filter:drop-shadow(0 0 20px rgba(80,255,0,0.6));}50%{filter:drop-shadow(0 0 40px rgba(255,220,0,0.8));}}
+.title-sub{font-size:18px;color:#ccffaa;margin-bottom:6px;text-shadow:0 0 10px rgba(100,255,0,0.5);letter-spacing:1px;}
+.plant-preview{display:flex;gap:10px;margin:16px 0;flex-wrap:wrap;justify-content:center;max-width:600px;}
+.pp{background:rgba(0,60,0,0.6);border:2px solid #336600;border-radius:10px;padding:6px 10px;text-align:center;font-size:11px;color:#aaffaa;min-width:70px;}
+.pp .ppi{font-size:28px;}
+.inst{color:#88ddaa;font-size:14px;margin-bottom:28px;text-align:center;line-height:2;background:rgba(0,0,0,0.5);padding:12px 24px;border-radius:12px;border:1px solid rgba(100,200,0,0.3);}
+#start-btn{padding:16px 72px;font-size:26px;background:linear-gradient(135deg,#227700,#55cc00,#227700);color:#fff;border:3px solid #aaff44;border-radius:14px;cursor:pointer;font-family:Georgia,serif;letter-spacing:3px;text-shadow:0 2px 6px rgba(0,0,0,0.6);box-shadow:0 0 30px rgba(80,220,0,0.4),0 4px 16px rgba(0,0,0,0.5);animation:btnGlow 2s ease-in-out infinite;}
+@keyframes btnGlow{0%,100%{box-shadow:0 0 30px rgba(80,220,0,0.4),0 4px 16px rgba(0,0,0,0.5);}50%{box-shadow:0 0 60px rgba(150,255,0,0.7),0 4px 16px rgba(0,0,0,0.5);}}
+#start-btn:hover{background:linear-gradient(135deg,#338800,#77ee00,#338800);transform:scale(1.05);}
+
+/* ── Overlays ── */
+#gameover{position:fixed;inset:0;background:radial-gradient(ellipse at center,rgba(60,0,0,0.95),rgba(0,0,0,0.98));display:none;flex-direction:column;align-items:center;justify-content:center;color:#fff;z-index:10;}
+#gameover h2{font-size:58px;color:#ff4422;text-shadow:0 0 40px #ff0000,0 0 80px #880000;margin-bottom:10px;animation:shake 0.5s ease-in-out 3;}
+@keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-8px);}75%{transform:translateX(8px);}}
+#gameover p{font-size:20px;color:#ffbbaa;margin-bottom:30px;}
+#gameover button{padding:14px 50px;font-size:20px;background:linear-gradient(135deg,#550000,#aa2200);color:#fff;border:2px solid #ff6644;border-radius:10px;cursor:pointer;font-family:Georgia,serif;}
+#win{position:fixed;inset:0;background:radial-gradient(ellipse at center,rgba(20,60,0,0.95),rgba(0,0,0,0.98));display:none;flex-direction:column;align-items:center;justify-content:center;color:#fff;z-index:10;}
+#win h2{font-size:58px;background:linear-gradient(135deg,#ffee00,#88ff44,#ffee00);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 0 20px rgba(255,220,0,0.8));margin-bottom:10px;}
+#win p{font-size:20px;color:#ffffaa;margin-bottom:30px;}
+#win button{padding:14px 50px;font-size:20px;background:linear-gradient(135deg,#226600,#55cc00);color:#fff;border:2px solid #aaff44;border-radius:10px;cursor:pointer;font-family:Georgia,serif;}
 </style>
 </head>
 <body>
 <div id="topbar">
   <div id="sun-count">☀ 150</div>
   <div id="plant-bar"></div>
-  <div id="shovel-btn" title="Shovel (remove plant)">🪠</div>
-  <div id="wave-info">Wave 1</div>
+  <div id="shovel-btn" title="Shovel — remove plant">🪠</div>
+  <div id="wave-info">Wave 1 / 10</div>
 </div>
 <canvas id="c"></canvas>
 
+<!-- ── Animated title screen ── -->
 <div id="overlay">
-  <h1>🌻 LAWN DEFENSE 🧟</h1>
-  <div class="sub">
-    Place plants to stop the zombie horde!<br>
-    <b style="color:#88ff44">Click</b> a plant card, then <b style="color:#88ff44">click</b> a lawn tile to plant.<br>
-    Sunflowers generate ☀ sun. Click falling suns to collect!<br>
-    Zombies breach at the left — don't let them reach your house!
+  <canvas id="bg-canvas"></canvas>
+  <div id="overlay-content">
+    <h1>🌻 LAWN DEFENSE 🧟</h1>
+    <div class="title-sub">Stop the zombie horde with an army of plants!</div>
+    <div class="plant-preview" id="plant-preview"></div>
+    <div class="inst">
+      <b style="color:#aaff66">Click</b> a plant card → <b style="color:#aaff66">click</b> a lawn tile to plant &nbsp;|&nbsp; <b style="color:#ffee44">☀</b> Click falling suns to collect<br>
+      Zombies attack from the <b style="color:#ff8866">right</b> — don't let them cross!
+    </div>
+    <button id="start-btn" onclick="startGame()">🌿 START GAME 🌿</button>
   </div>
-  <button onclick="startGame()">🌿 START GAME 🌿</button>
 </div>
 
 <div id="gameover">
@@ -60,175 +79,256 @@ canvas{display:block;cursor:crosshair;}
   <button onclick="location.reload()">Try Again</button>
 </div>
 <div id="win">
-  <h2>🏆 YOU WIN! 🏆</h2>
+  <h2>🏆 VICTORY! 🏆</h2>
   <p id="win-score"></p>
   <button onclick="location.reload()">Play Again</button>
 </div>
 
 <script>
-const COLS=9,ROWS=5,CW=80,CH=100,OX=0,OY=0;
-const canvas=document.getElementById('c');
-const ctx=canvas.getContext('2d');
-canvas.width=800;canvas.height=ROWS*CH+20;
-canvas.style.width='800px';
-
-// ─── Plant definitions ───
+// ═══════════════════════════════════════════════
+// PLANT DEFINITIONS — 13 plants
+// ═══════════════════════════════════════════════
 const PLANT_DEFS=[
-  {id:'sunflower',name:'Sunflower',icon:'🌻',cost:50,hp:100,color:'#ffdd00',desc:'Produces ☀ sun'},
-  {id:'peashooter',name:'Peashooter',icon:'🌿',cost:100,hp:100,color:'#44cc00',desc:'Shoots peas'},
-  {id:'snowpea',name:'Snow Pea',icon:'❄️',cost:175,hp:100,color:'#44aaff',desc:'Slows & shoots'},
-  {id:'wallnut',name:'Wall-nut',icon:'🌰',cost:50,hp:400,color:'#cc7700',desc:'Tough barrier'},
-  {id:'cherrybomb',name:'Cherry Bomb',icon:'🍒',cost:150,hp:1,color:'#cc0000',desc:'Big explosion!'},
-  {id:'potatomine',name:'Potato Mine',icon:'🥔',cost:25,hp:1,color:'#886600',desc:'Explodes on contact'},
-  {id:'sunshroom',name:'Sun-shroom',icon:'🍄',cost:25,hp:100,color:'#ffaa00',desc:'Small→big sun'},
-  {id:'repeater',name:'Repeater',icon:'🌱',cost:200,hp:100,color:'#228800',desc:'Shoots 2 peas'},
+  {id:'sunflower',  name:'Sunflower',   icon:'🌻', cost:50,  hp:150, color:'#ffdd00', desc:'Generates ☀ sun every 8s'},
+  {id:'peashooter', name:'Peashooter',  icon:'🫛', cost:100, hp:120, color:'#44cc00', desc:'Shoots peas at zombies'},
+  {id:'snowpea',    name:'Snow Pea',    icon:'❄️', cost:175, hp:120, color:'#44aaff', desc:'Shoots chilled peas, slows'},
+  {id:'wallnut',    name:'Wall-nut',    icon:'🌰', cost:50,  hp:600, color:'#cc7700', desc:'Super tough barrier'},
+  {id:'repeater',   name:'Repeater',   icon:'🌱', cost:200, hp:120, color:'#228800', desc:'Shoots 2 peas at once'},
+  {id:'cherrybomb', name:'Cherry Bomb', icon:'🍒', cost:150, hp:1,   color:'#cc0000', desc:'Huge explosion in 2s!'},
+  {id:'potatomine', name:'Potato Mine', icon:'🥔', cost:25,  hp:1,   color:'#886600', desc:'Arms after 1.5s, big boom'},
+  {id:'sunshroom',  name:'Sun-shroom',  icon:'🍄', cost:25,  hp:120, color:'#ffaa00', desc:'Grows and makes bigger sun'},
+  {id:'chomper',    name:'Chomper',     icon:'👄', cost:150, hp:200, color:'#cc44cc', desc:'Chomps zombies whole!'},
+  {id:'spikeweed',  name:'Spikeweed',   icon:'🌵', cost:100, hp:300, color:'#558800', desc:'Pops tires, hurts all'},
+  {id:'lightning',  name:'Lightning',   icon:'⚡', cost:225, hp:120, color:'#8888ff', desc:'Chains lightning to 3 foes'},
+  {id:'jalapeno',   name:'Jalapeño',    icon:'🌶️', cost:125, hp:1,   color:'#ff4400', desc:'Burns entire row!'},
+  {id:'iceberg',    name:'Iceberg',     icon:'🧊', cost:175, hp:1,   color:'#aaddff', desc:'Freezes entire row!'},
 ];
 
-// ─── Zombie definitions ───
+// ═══════════════════════════════════════════════
+// ZOMBIE DEFINITIONS
+// ═══════════════════════════════════════════════
 const ZOMBIE_DEFS={
-  basic:  {name:'Zombie',    hp:200, spd:0.3, dmg:1,  reward:10, color:'#88aa66'},
-  cone:   {name:'Conehead',  hp:370, spd:0.3, dmg:1,  reward:15, color:'#99bb77'},
-  bucket: {name:'Buckethead',hp:650, spd:0.25,dmg:1.2,reward:25, color:'#aabb88'},
-  flag:   {name:'Flag',      hp:200, spd:0.4, dmg:1,  reward:10, color:'#88aa66'},
-  giga:   {name:'Giga-conehead',hp:1400,spd:0.22,dmg:2,reward:50,color:'#bbccaa'},
+  basic:  {name:'Zombie',       hp:200,  spd:0.28,dmg:1,  reward:10, color:'#88aa66',head:'#b0c890'},
+  cone:   {name:'Conehead',     hp:380,  spd:0.28,dmg:1,  reward:15, color:'#99bb77',head:'#b8d090'},
+  bucket: {name:'Buckethead',   hp:700,  spd:0.24,dmg:1.3,reward:25, color:'#aabb88',head:'#c0cc99'},
+  flag:   {name:'Flag Zombie',  hp:200,  spd:0.42,dmg:1,  reward:10, color:'#88aa66',head:'#b0c890'},
+  football:{name:'Football',    hp:800,  spd:0.5, dmg:1.5,reward:35, color:'#cc8844',head:'#ddaa66'},
+  giga:   {name:'Giga-cone',    hp:1500, spd:0.22,dmg:2,  reward:50, color:'#bbccaa',head:'#ccdabb'},
+  dancer: {name:'Dancer',       hp:450,  spd:0.35,dmg:1.2,reward:30, color:'#884488',head:'#aa66aa'},
 };
 
-// ─── Wave definitions ───
+// ═══════════════════════════════════════════════
+// WAVES
+// ═══════════════════════════════════════════════
 const WAVES=[
   [{type:'basic',count:5,interval:4}],
-  [{type:'basic',count:5,interval:3},{type:'cone',count:2,interval:5}],
-  [{type:'basic',count:7,interval:2.5},{type:'cone',count:3,interval:4}],
-  [{type:'cone',count:5,interval:3},{type:'bucket',count:1,interval:8}],
+  [{type:'basic',count:6,interval:3},{type:'cone',count:2,interval:5}],
+  [{type:'basic',count:7,interval:2.5},{type:'cone',count:3,interval:3.5}],
+  [{type:'cone',count:5,interval:3},{type:'bucket',count:1,interval:8},{type:'flag',count:1,interval:12}],
   [{type:'basic',count:8,interval:2},{type:'cone',count:4,interval:3},{type:'bucket',count:2,interval:6}],
-  [{type:'cone',count:6,interval:2.5},{type:'bucket',count:3,interval:5}],
-  [{type:'bucket',count:4,interval:4},{type:'basic',count:10,interval:1.5}],
-  [{type:'cone',count:8,interval:2},{type:'bucket',count:4,interval:4},{type:'giga',count:1,interval:12}],
-  [{type:'bucket',count:6,interval:3},{type:'giga',count:2,interval:10}],
-  [{type:'giga',count:5,interval:5},{type:'bucket',count:8,interval:2},{type:'cone',count:10,interval:1.5}],
+  [{type:'cone',count:6,interval:2.5},{type:'bucket',count:3,interval:4},{type:'football',count:1,interval:12}],
+  [{type:'bucket',count:5,interval:3.5},{type:'dancer',count:3,interval:5},{type:'basic',count:8,interval:2}],
+  [{type:'cone',count:8,interval:2},{type:'bucket',count:4,interval:3.5},{type:'giga',count:1,interval:12}],
+  [{type:'football',count:3,interval:5},{type:'bucket',count:6,interval:3},{type:'giga',count:2,interval:10}],
+  [{type:'giga',count:5,interval:4},{type:'football',count:4,interval:5},{type:'bucket',count:8,interval:2},{type:'dancer',count:4,interval:3}],
 ];
 
-let grid=[], plants=[], zombies=[], projectiles=[], suns=[], particles=[];
-let sunAmount=150, score=0, selectedPlant=null, usingShovel=false;
-let waveIdx=0, waveTimer=0, waveActive=false, spawnQueue=[], spawnTimer=0;
-let betweenWaves=false, betweenTimer=0;
-let gameRunning=false, gameOver=false;
-let lastTime=0, animT=0;
+// ═══════════════════════════════════════════════
+// GAME STATE
+// ═══════════════════════════════════════════════
+const COLS=9,ROWS=5,CW=88,CH=96;
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d');
+canvas.width=900;canvas.height=ROWS*CH+8;
 
+let grid=[],plants=[],zombies=[],projectiles=[],suns=[],particles=[];
+let sunAmount=150,score=0,selectedPlant=null,usingShovel=false;
+let waveIdx=0,waveActive=false,spawnQueue=[],spawnTimer=0;
+let betweenWaves=false,betweenTimer=0;
+let gameRunning=false,gameOver=false;
+let lastTime=0,animT=0,hoverR=-1,hoverC=-1;
+
+// ─── Animated title background ───
+const bgC=document.getElementById('bg-canvas');
+const bgX=bgC.getContext('2d');
+bgC.width=window.innerWidth;bgC.height=window.innerHeight;
+const bubbles=[];
+for(let i=0;i<40;i++)bubbles.push({x:Math.random()*bgC.width,y:Math.random()*bgC.height+bgC.height,r:8+Math.random()*20,spd:0.3+Math.random()*0.6,col:[`#22ff44`,`#ffee00`,`#44aaff`,`#ff8844`,`#cc44ff`,`#44ffdd`][Math.floor(Math.random()*6)]});
+
+function animBg(ts){
+  if(!document.getElementById('overlay').style.display||document.getElementById('overlay').style.display!=='none'){
+    requestAnimationFrame(animBg);
+    bgX.clearRect(0,0,bgC.width,bgC.height);
+    const gr=bgX.createRadialGradient(bgC.width/2,bgC.height/2,0,bgC.width/2,bgC.height/2,bgC.width*0.7);
+    gr.addColorStop(0,'#0d3a00');gr.addColorStop(0.5,'#061a00');gr.addColorStop(1,'#000800');
+    bgX.fillStyle=gr;bgX.fillRect(0,0,bgC.width,bgC.height);
+    const t=ts/1000;
+    // grass strips
+    for(let i=0;i<6;i++){
+      bgX.fillStyle=`rgba(${30+i*8},${80+i*12},0,${0.15+i*0.04})`;
+      bgX.fillRect(0,bgC.height*(0.5+i*0.08),bgC.width,bgC.height*0.1);
+    }
+    bubbles.forEach(b=>{
+      b.y-=b.spd;if(b.y<-b.r)b.y=bgC.height+b.r;
+      bgX.save();bgX.globalAlpha=0.25+0.15*Math.sin(t*2+b.x);
+      bgX.fillStyle=b.col;bgX.beginPath();bgX.arc(b.x,b.y,b.r,0,Math.PI*2);bgX.fill();
+      bgX.restore();
+    });
+    // floating emoji
+    const emojis=['🌻','🧟','🌿','⚡','🍒','🌵','🌱','❄️'];
+    emojis.forEach((e,i)=>{
+      const x=bgC.width*0.1+i*(bgC.width*0.11)+Math.sin(t*0.6+i)*18;
+      const y=bgC.height*0.15+Math.sin(t*0.4+i*1.3)*25;
+      bgX.save();bgX.globalAlpha=0.18+0.08*Math.sin(t+i);bgX.font='40px serif';bgX.textAlign='center';bgX.textBaseline='middle';
+      bgX.fillText(e,x,y);bgX.restore();
+    });
+  }
+}
+requestAnimationFrame(animBg);
+
+// build plant preview on title
+const ppEl=document.getElementById('plant-preview');
+PLANT_DEFS.slice(0,8).forEach(p=>{
+  const d=document.createElement('div');d.className='pp';
+  d.innerHTML=`<div class="ppi">${p.icon}</div><div>${p.name}</div><div style="color:#ffee88;font-size:10px">☀${p.cost}</div>`;
+  ppEl.appendChild(d);
+});
+
+// ═══════════════════════════════════════════════
+// START
+// ═══════════════════════════════════════════════
 function startGame(){
   document.getElementById('overlay').style.display='none';
-  buildUI();
-  buildGrid();
-  gameRunning=true;
-  betweenWaves=true;betweenTimer=5;
+  buildUI();buildGrid();
+  gameRunning=true;betweenWaves=true;betweenTimer=5;
   requestAnimationFrame(loop);
-  setInterval(dropFreeSun,7000);
+  setInterval(dropFreeSun,6500);
 }
 
 function buildUI(){
-  const bar=document.getElementById('plant-bar');
-  bar.innerHTML='';
-  PLANT_DEFS.forEach((p,i)=>{
-    const btn=document.createElement('div');
-    btn.className='plant-btn';btn.id='btn-'+p.id;
-    btn.innerHTML=`<div class="icon">${p.icon}</div><div>${p.name}</div><div class="cost">☀${p.cost}</div>`;
-    btn.title=p.desc;
-    btn.onclick=()=>selectPlant(p);
-    bar.appendChild(btn);
+  const bar=document.getElementById('plant-bar');bar.innerHTML='';
+  PLANT_DEFS.forEach(p=>{
+    const btn=document.createElement('div');btn.className='plant-btn';btn.id='btn-'+p.id;
+    btn.innerHTML=`<div class="icon">${p.icon}</div><div class="pname">${p.name}</div><div class="cost">☀${p.cost}</div>`;
+    btn.title=p.desc;btn.onclick=()=>selectPlant(p);bar.appendChild(btn);
   });
   document.getElementById('shovel-btn').onclick=()=>{
     usingShovel=!usingShovel;selectedPlant=null;
     document.querySelectorAll('.plant-btn').forEach(b=>b.classList.remove('selected'));
     document.getElementById('shovel-btn').classList.toggle('selected',usingShovel);
   };
+  updateButtonStates();
 }
 
 function selectPlant(p){
   if(p.cost>sunAmount)return;
-  usingShovel=false;
-  document.getElementById('shovel-btn').classList.remove('selected');
+  usingShovel=false;document.getElementById('shovel-btn').classList.remove('selected');
   selectedPlant=p;
   document.querySelectorAll('.plant-btn').forEach(b=>b.classList.remove('selected'));
   document.getElementById('btn-'+p.id).classList.add('selected');
 }
 
-function buildGrid(){
-  grid=[];
-  for(let r=0;r<ROWS;r++){grid[r]=[];for(let c=0;c<COLS;c++)grid[r][c]=null;}
-}
+function buildGrid(){grid=[];for(let r=0;r<ROWS;r++){grid[r]=[];for(let c=0;c<COLS;c++)grid[r][c]=null;}}
 
-function cellX(c){return OX+c*CW+CW/2;}
-function cellY(r){return OY+r*CH+CH/2+10;}
-function tileX(c){return OX+c*CW;}
-function tileY(r){return OY+r*CH+10;}
+function tileX(c){return c*CW;}
+function tileY(r){return r*CH+8;}
+function cellX(c){return c*CW+CW/2;}
+function cellY(r){return r*CH+CH/2+8;}
 
-// ─── Planting ───
-canvas.addEventListener('click',e=>{
-  if(!gameRunning)return;
+// ═══════════════════════════════════════════════
+// INPUT
+// ═══════════════════════════════════════════════
+canvas.addEventListener('mousemove',e=>{
   const rect=canvas.getBoundingClientRect();
   const mx=e.clientX-rect.left,my=e.clientY-rect.top;
-  const c=Math.floor((mx-OX)/CW),r=Math.floor((my-OY-10)/CH);
+  hoverC=Math.floor(mx/CW);hoverR=Math.floor((my-8)/CH);
+});
+canvas.addEventListener('mouseleave',()=>{hoverR=-1;hoverC=-1;});
+
+canvas.addEventListener('click',e=>{
+  if(!gameRunning||gameOver)return;
+  const rect=canvas.getBoundingClientRect();
+  const mx=e.clientX-rect.left,my=e.clientY-rect.top;
+  // sun click
+  for(const s of suns){if(!s.collected&&Math.hypot(mx-s.x,my-s.y)<24){collectSun(s);return;}}
+  const c=Math.floor(mx/CW),r=Math.floor((my-8)/CH);
   if(c<0||c>=COLS||r<0||r>=ROWS)return;
-
-  if(usingShovel){
-    if(grid[r][c]){removePlant(r,c);}
-    return;
-  }
-  if(!selectedPlant)return;
-  if(grid[r][c])return;
+  if(usingShovel){if(grid[r][c])removePlant(r,c);return;}
+  if(!selectedPlant||grid[r][c])return;
   if(selectedPlant.cost>sunAmount)return;
-
   sunAmount-=selectedPlant.cost;
   placePlant(r,c,selectedPlant);
-  updateSunDisplay();
-  updateButtonStates();
-  selectedPlant=null;
-  document.querySelectorAll('.plant-btn').forEach(b=>b.classList.remove('selected'));
+  updateSunDisplay();updateButtonStates();
+  selectedPlant=null;document.querySelectorAll('.plant-btn').forEach(b=>b.classList.remove('selected'));
 });
 
+// ═══════════════════════════════════════════════
+// PLANTS
+// ═══════════════════════════════════════════════
 function placePlant(r,c,def){
   const p={row:r,col:c,def,hp:def.hp,maxHp:def.hp,
     shootTimer:0,sunTimer:0,active:true,armedT:0,
-    stage:def.id==='sunshroom'?0:1};
+    chomping:false,chompT:0,chompTarget:null,
+    stage:def.id==='sunshroom'?0:1,animT:0};
   grid[r][c]=p;plants.push(p);
-  if(def.id==='cherrybomb'){
-    setTimeout(()=>cherryExplode(p),2000);
-  }
+  if(def.id==='cherrybomb')setTimeout(()=>cherryExplode(p),2000);
+  if(def.id==='jalapeno')setTimeout(()=>jalapenoExplode(p),200);
+  if(def.id==='iceberg')setTimeout(()=>icebergExplode(p),200);
 }
 
 function removePlant(r,c){
   const p=grid[r][c];if(!p)return;
-  plants=plants.filter(x=>x!==p);
-  grid[r][c]=null;
-  spawnParticles(cellX(c),cellY(r),p.def.color,8);
+  plants=plants.filter(x=>x!==p);grid[r][c]=null;
+  spawnParticles(cellX(c),cellY(r),p.def.color,10);
 }
 
-// ─── Sun ───
+function cherryExplode(p){
+  if(!plants.includes(p))return;
+  const cx=cellX(p.col),cy=cellY(p.row);
+  for(let r=p.row-1;r<=p.row+1;r++)for(let c=p.col-1;c<=p.col+1;c++){
+    if(r<0||r>=ROWS||c<0||c>=COLS)continue;
+    if(grid[r][c]&&grid[r][c]!==p){/*don't destroy other plants*/}
+  }
+  zombies.forEach(z=>{
+    if(Math.abs(z.row-p.row)<=1&&z.x>tileX(p.col-1)&&z.x<tileX(p.col+2)+CW){
+      z.hp-=1800;spawnParticles(z.x,cellY(z.row),'#ff4400',14);
+    }
+  });
+  for(let i=0;i<30;i++)spawnParticles(cx+Math.random()*80-40,cy+Math.random()*40-20,'#ff'+(Math.floor(Math.random()*8)*32).toString(16).padStart(2,'0')+'00',1);
+  removePlant(p.row,p.col);
+}
+
+function jalapenoExplode(p){
+  if(!plants.includes(p))return;
+  const row=p.row;
+  zombies.forEach(z=>{if(z.row===row){z.hp-=9999;spawnParticles(z.x,cellY(row),'#ff6600',12);}});
+  for(let c=0;c<COLS;c++)spawnParticles(cellX(c),cellY(row),'#ff4400',6);
+  removePlant(p.row,p.col);
+}
+
+function icebergExplode(p){
+  if(!plants.includes(p))return;
+  const row=p.row;
+  zombies.forEach(z=>{if(z.row===row){z.frozen=3.5;z.spd=0;spawnParticles(z.x,cellY(row),'#aaddff',10);}});
+  for(let c=0;c<COLS;c++)spawnParticles(cellX(c),cellY(row),'#aaddff',5);
+  removePlant(p.row,p.col);
+}
+
+// ═══════════════════════════════════════════════
+// SUN
+// ═══════════════════════════════════════════════
 function dropFreeSun(){
   if(!gameRunning||gameOver)return;
-  const x=80+Math.random()*640,y=-20;
-  suns.push({x,y,vy:1.2,land:60+Math.random()*200,collected:false,life:8,big:false});
+  suns.push({x:60+Math.random()*780,y:-20,vy:1.0,land:60+Math.random()*200,collected:false,life:9,big:false});
 }
 
-function collectSun(sun,big){
-  sunAmount+=big?50:25;
-  updateSunDisplay();
-  updateButtonStates();
-  sun.collected=true;
-  spawnParticles(sun.x,sun.y,'#ffee00',6);
+function collectSun(sun){
+  sunAmount+=sun.big?75:50;
+  updateSunDisplay();updateButtonStates();
+  sun.collected=true;spawnParticles(sun.x,sun.y,'#ffee00',8);
 }
 
-canvas.addEventListener('click',e=>{
-  if(!gameRunning)return;
-  const rect=canvas.getBoundingClientRect();
-  const mx=e.clientX-rect.left,my=e.clientY-rect.top;
-  for(const s of suns){
-    if(!s.collected&&Math.hypot(mx-s.x,my-s.y)<22){collectSun(s,s.big);return;}
-  }
-});
-
-function updateSunDisplay(){
-  document.getElementById('sun-count').textContent='☀ '+sunAmount;
-}
+function updateSunDisplay(){document.getElementById('sun-count').textContent='☀ '+sunAmount;}
 function updateButtonStates(){
   PLANT_DEFS.forEach(p=>{
     const btn=document.getElementById('btn-'+p.id);
@@ -236,359 +336,420 @@ function updateButtonStates(){
   });
 }
 
-// ─── Wave spawning ───
+// ═══════════════════════════════════════════════
+// WAVES
+// ═══════════════════════════════════════════════
 function startWave(){
-  if(waveIdx>=WAVES.length){setTimeout(()=>winGame(),2000);return;}
   betweenWaves=false;waveActive=true;spawnQueue=[];
   const waveDef=WAVES[waveIdx];
   document.getElementById('wave-info').textContent='Wave '+(waveIdx+1)+' / '+WAVES.length;
-  waveDef.forEach(group=>{
-    for(let i=0;i<group.count;i++){
-      spawnQueue.push({type:group.type,delay:i*group.interval+Math.random()*1.5});
-    }
+  waveDef.forEach(g=>{
+    for(let i=0;i<g.count;i++)spawnQueue.push({type:g.type,delay:i*g.interval+Math.random()*1.2});
   });
-  spawnQueue.sort((a,b)=>a.delay-b.delay);
-  spawnTimer=0;
+  spawnQueue.sort((a,b)=>a.delay-b.delay);spawnTimer=0;
 }
 
 function updateWaves(dt){
-  if(betweenWaves){
-    betweenTimer-=dt;
-    if(betweenTimer<=0){startWave();}
-    return;
-  }
+  if(betweenWaves){betweenTimer-=dt;if(betweenTimer<=0)startWave();return;}
   if(!waveActive)return;
   spawnTimer+=dt;
-  while(spawnQueue.length&&spawnQueue[0].delay<=spawnTimer){
-    const e=spawnQueue.shift();
-    spawnZombie(e.type);
-  }
-  if(spawnQueue.length===0&&zombies.length===0){
+  while(spawnQueue.length&&spawnQueue[0].delay<=spawnTimer){spawnZombie(spawnQueue.shift().type);}
+  if(!spawnQueue.length&&!zombies.length){
     waveIdx++;
-    if(waveIdx>=WAVES.length){setTimeout(()=>winGame(),2000);return;}
-    betweenWaves=true;betweenTimer=8;waveActive=false;
-    document.getElementById('wave-info').textContent='Next wave in 8s…';
+    if(waveIdx>=WAVES.length){setTimeout(()=>winGame(),2500);return;}
+    betweenWaves=true;betweenTimer=9;waveActive=false;
+    document.getElementById('wave-info').textContent='⏳ Next wave in 9s';
   }
 }
 
 function spawnZombie(type){
   const def=ZOMBIE_DEFS[type]||ZOMBIE_DEFS.basic;
   const row=Math.floor(Math.random()*ROWS);
-  zombies.push({type,row,x:820,hp:def.hp,maxHp:def.hp,
-    spd:def.spd,dmg:def.dmg,reward:def.reward,def,
-    atkTimer:0,eating:false,animT:0,dead:false});
+  zombies.push({type,row,x:910,hp:def.hp,maxHp:def.hp,
+    spd:def.spd,baseSpd:def.spd,dmg:def.dmg,reward:def.reward,def,
+    atkTimer:0,eating:false,animT:0,dead:false,frozen:0});
 }
 
-// ─── Cherry bomb ───
-function cherryExplode(p){
-  if(!plants.includes(p))return;
-  const cx=cellX(p.col),cy=cellY(p.row);
-  for(let r=p.row-1;r<=p.row+1;r++)for(let c=p.col-1;c<=p.col+1;c++){
-    if(r<0||r>=ROWS||c<0||c>=COLS)continue;
-    if(grid[r][c]&&grid[r][c]!==p)continue;
-  }
-  zombies.forEach(z=>{
-    if(Math.abs(z.row-p.row)<=1&&z.x>=tileX(p.col-1)&&z.x<=tileX(p.col+1)+CW*2){
-      z.hp-=1800;spawnParticles(z.x,cellY(z.row),'#ff4400',12);
-    }
-  });
-  spawnParticles(cx,cy,'#ff6600',20);
-  spawnParticles(cx,cy,'#ffee00',12);
-  removePlant(p.row,p.col);
-}
-
-// ─── Potato mine ───
-function potatoDetonate(mine){
-  if(!plants.includes(mine))return;
-  spawnParticles(cellX(mine.col),cellY(mine.row),'#cc8800',14);
-  removePlant(mine.row,mine.col);
-}
-
-// ─── Particles ───
+// ═══════════════════════════════════════════════
+// PARTICLES
+// ═══════════════════════════════════════════════
 function spawnParticles(x,y,col,n){
   for(let i=0;i<n;i++){
-    const a=Math.random()*Math.PI*2,s=1+Math.random()*4;
-    particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-2,col,life:0.7,maxLife:0.7,r:3+Math.random()*4});
+    const a=Math.random()*Math.PI*2,s=1.5+Math.random()*5;
+    particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-2,col,life:0.7,maxLife:0.7,r:2+Math.random()*5});
   }
 }
 
-// ─── Main update ───
+function firePea(plant,offset){
+  const slow=plant.def.id==='snowpea',lightning=plant.def.id==='lightning';
+  const col=slow?'#88ddff':lightning?'#aaaaff':'#88cc00';
+  const dmg=slow?20:lightning?35:28;
+  const startX=cellX(plant.col)+CW/2+(offset||0);
+  projectiles.push({row:plant.row,x:startX,spd:5.5,dmg,col,slow,lightning,row:plant.row});
+}
+
+// ═══════════════════════════════════════════════
+// UPDATE
+// ═══════════════════════════════════════════════
 function update(dt){
   animT+=dt;
-  // update suns
+  // suns
   suns=suns.filter(s=>{
-    if(s.collected)return false;
-    s.life-=dt;if(s.life<=0)return false;
-    if(s.y<s.land)s.y+=s.vy*60*dt;
-    return true;
+    if(s.collected)return false;s.life-=dt;if(s.life<=0)return false;
+    if(s.y<s.land)s.y+=s.vy*60*dt;return true;
   });
 
-  // update plants
+  // plants
   plants.forEach(p=>{
+    p.animT+=dt;
     if(!p.active)return;
     if(p.def.id==='potatomine'){p.armedT+=dt;return;}
-    if(p.def.id==='cherrybomb')return;
-    // sunflower / sunshroom
+    if(p.def.id==='cherrybomb'||p.def.id==='jalapeno'||p.def.id==='iceberg')return;
+
+    // sun producers
     if(p.def.id==='sunflower'||p.def.id==='sunshroom'){
-      const rate=p.def.id==='sunshroom'?(p.stage===0?12:p.stage===1?8:5):8;
+      const rate=p.def.id==='sunshroom'?(p.stage===0?12:p.stage===1?7:4):7;
       p.sunTimer+=dt;
       if(p.sunTimer>=rate){
         p.sunTimer=0;
         const big=p.def.id==='sunshroom'&&p.stage===2;
-        suns.push({x:cellX(p.col),y:cellY(p.row),vy:0,land:cellY(p.row)-30,collected:false,life:10,big});
-        if(p.def.id==='sunshroom'){p.stage=Math.min(2,p.stage+1);}
+        suns.push({x:cellX(p.col),y:cellY(p.row)-20,vy:0,land:cellY(p.row)-40,collected:false,life:11,big});
+        if(p.def.id==='sunshroom')p.stage=Math.min(2,p.stage+1);
       }
     }
+
+    // spikeweed — hurts all zombies walking over it
+    if(p.def.id==='spikeweed'){
+      p.sunTimer+=dt;
+      if(p.sunTimer>0.5){p.sunTimer=0;
+        zombies.forEach(z=>{
+          if(z.row===p.row&&z.x>=tileX(p.col)&&z.x<=tileX(p.col)+CW){
+            z.hp-=10;if(Math.random()<0.3)spawnParticles(z.x,cellY(z.row),'#558800',3);
+          }
+        });
+      }
+      return;
+    }
+
+    // chomper
+    if(p.def.id==='chomper'){
+      if(p.chomping){p.chompT-=dt;if(p.chompT<=0)p.chomping=false;return;}
+      const target=zombies.find(z=>z.row===p.row&&z.x<=tileX(p.col)+CW&&z.x>=tileX(p.col)-20&&!z.dead);
+      if(target){target.hp=0;target.dead=true;p.chomping=true;p.chompT=4;spawnParticles(cellX(p.col),cellY(p.row),'#cc44cc',12);}
+      return;
+    }
+
     // shooters
-    if(p.def.id==='peashooter'||p.def.id==='snowpea'||p.def.id==='repeater'){
+    if(['peashooter','snowpea','repeater','lightning'].includes(p.def.id)){
       const hasTarget=zombies.some(z=>z.row===p.row&&z.x>tileX(p.col)&&!z.dead);
       if(hasTarget){
         p.shootTimer+=dt;
-        const rate=p.def.id==='repeater'?0.75:1.5;
+        const rate=p.def.id==='repeater'?0.65:p.def.id==='lightning'?2.5:1.4;
         if(p.shootTimer>=rate){
-          p.shootTimer=0;
-          firePea(p);
-          if(p.def.id==='repeater')setTimeout(()=>firePea(p),200);
+          p.shootTimer=0;firePea(p);
+          if(p.def.id==='repeater')setTimeout(()=>{if(plants.includes(p))firePea(p,8);},250);
+          if(p.def.id==='lightning'){
+            // chain lightning hits up to 3 zombies in adjacent rows
+            const hit=[];
+            const inRow=zombies.filter(z=>!z.dead&&z.row===p.row).sort((a,b)=>a.x-b.x);
+            if(inRow.length){hit.push(inRow[0]);
+              const adj=zombies.filter(z=>!z.dead&&Math.abs(z.row-p.row)===1&&!hit.includes(z));
+              if(adj.length){adj.sort((a,b)=>a.x-b.x);hit.push(adj[0]);}
+              const adj2=zombies.filter(z=>!z.dead&&Math.abs(z.row-p.row)===2&&!hit.includes(z));
+              if(adj2.length){adj2.sort((a,b)=>a.x-b.x);hit.push(adj2[0]);}
+              hit.forEach((z,i)=>{setTimeout(()=>{z.hp-=55;spawnParticles(z.x,cellY(z.row),'#aaaaff',8);},i*120);});
+            }
+          }
         }
       } else p.shootTimer=0;
     }
   });
 
-  // update projectiles
+  // projectiles
   projectiles=projectiles.filter(pr=>{
-    pr.x+=pr.spd*60*dt;
-    if(pr.x>820)return false;
+    pr.x+=pr.spd*60*dt;if(pr.x>910)return false;
     for(const z of zombies){
       if(z.dead)continue;
       if(z.row===pr.row&&Math.abs(z.x-pr.x)<20){
         z.hp-=pr.dmg;
-        if(pr.slow)z.spd=ZOMBIE_DEFS[z.type].spd*0.5;
-        spawnParticles(pr.x,cellY(pr.row),pr.col,5);
-        return false;
+        if(pr.slow){z.frozen=Math.max(z.frozen||0,2.0);z.spd=z.baseSpd*0.4;}
+        spawnParticles(pr.x,cellY(pr.row),pr.col,4);return false;
       }
     }
     return true;
   });
 
-  // update zombies
+  // zombies
   zombies.forEach(z=>{
-    if(z.dead)return;
-    z.animT+=dt;
-    // check if eating
+    if(z.dead)return;z.animT+=dt;
+    // frozen
+    if(z.frozen>0){z.frozen-=dt;if(z.frozen<=0){z.frozen=0;z.spd=z.baseSpd;}return;}
+    // find blocking plant
     let blocked=null;
-    for(let c=0;c<COLS;c++){
-      const p=grid[z.row][c];
-      if(!p)continue;
+    for(let c=COLS-1;c>=0;c--){
+      const p=grid[z.row][c];if(!p)continue;
       const px=cellX(c);
-      if(z.x<=px+CW/2&&z.x>=px-CW/2+10){blocked=p;break;}
+      if(z.x<=px+CW/2+5&&z.x>=px-CW*0.6){blocked=p;break;}
     }
     if(blocked){
       z.eating=true;z.atkTimer+=dt;
-      if(z.atkTimer>=1){
-        z.atkTimer=0;
+      if(z.atkTimer>=0.9){z.atkTimer=0;
         blocked.hp-=z.dmg*35;
-        spawnParticles(cellX(blocked.col),cellY(blocked.row),'#884400',4);
+        spawnParticles(cellX(blocked.col),cellY(blocked.row),'#884400',5);
         if(blocked.hp<=0){
-          // potato mine explodes instead of dying quietly
           if(blocked.def.id==='potatomine'&&blocked.armedT>1.5){
-            const ez=zombies.filter(oz=>oz.row===z.row&&Math.abs(oz.x-z.x)<90);
-            ez.forEach(oz=>{oz.hp-=1200;spawnParticles(oz.x,cellY(z.row),'#cc8800',10);});
-            spawnParticles(cellX(blocked.col),cellY(blocked.row),'#ffaa00',16);
+            const pz=zombies.filter(o=>o.row===z.row&&Math.abs(o.x-z.x)<100);
+            pz.forEach(o=>{o.hp-=1200;spawnParticles(o.x,cellY(z.row),'#cc8800',12);});
+            spawnParticles(cellX(blocked.col),cellY(blocked.row),'#ffaa00',18);
           }
           removePlant(blocked.row,blocked.col);
         }
       }
-    } else {
-      z.eating=false;z.atkTimer=0;
-      z.x-=z.spd*60*dt;
-    }
-    // restore slow speed gradually
-    if(!z.eating&&z.spd<ZOMBIE_DEFS[z.type].spd){z.spd=Math.min(ZOMBIE_DEFS[z.type].spd,z.spd+dt*0.1);}
-    // reached the house
+    } else {z.eating=false;z.atkTimer=0;z.x-=z.spd*60*dt;}
     if(z.x<-10){endGame();return;}
-    if(z.hp<=0){
-      z.dead=true;score+=z.reward;
-      spawnParticles(z.x,cellY(z.row),'#55aa33',10);
-    }
+    if(z.hp<=0){z.dead=true;score+=z.reward;spawnParticles(z.x,cellY(z.row),'#55aa33',12);}
   });
   zombies=zombies.filter(z=>!z.dead);
-
-  // update particles
-  particles=particles.filter(p=>{
-    p.x+=p.vx;p.y+=p.vy;p.vy+=0.2;p.life-=dt;return p.life>0;
-  });
-
+  particles=particles.filter(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=0.18;p.life-=dt;return p.life>0;});
   updateWaves(dt);
 }
 
-function firePea(plant){
-  const slow=plant.def.id==='snowpea';
-  const col=slow?'#88ddff':'#88cc00';
-  const dmg=slow?20:30;
-  projectiles.push({row:plant.row,x:cellX(plant.col)+CW/2,spd:4,dmg,col,slow,row:plant.row});
-}
-
-// ─── Drawing ───
+// ═══════════════════════════════════════════════
+// DRAW
+// ═══════════════════════════════════════════════
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  // lawn rows
+  // sky strip
+  const sky=ctx.createLinearGradient(0,0,0,8);
+  sky.addColorStop(0,'#1a4a00');sky.addColorStop(1,'#226600');
+  ctx.fillStyle=sky;ctx.fillRect(0,0,900,8);
+
+  // lawn tiles
   for(let r=0;r<ROWS;r++){
     for(let c=0;c<COLS;c++){
       const even=(r+c)%2===0;
-      ctx.fillStyle=even?'#3a7a20':'#348a1c';
+      ctx.fillStyle=even?'#3c8a22':'#348a1c';
       ctx.fillRect(tileX(c),tileY(r),CW,CH);
+      // subtle texture lines
+      ctx.strokeStyle='rgba(0,0,0,0.06)';ctx.lineWidth=1;
+      for(let l=0;l<5;l++){ctx.beginPath();ctx.moveTo(tileX(c),tileY(r)+l*20);ctx.lineTo(tileX(c)+CW,tileY(r)+l*20);ctx.stroke();}
     }
   }
 
   // hover highlight
-  if(selectedPlant||usingShovel){
-    canvas.addEventListener('mousemove',onMouseMove,{passive:true});
+  if((selectedPlant||usingShovel)&&hoverR>=0&&hoverR<ROWS&&hoverC>=0&&hoverC<COLS){
+    ctx.fillStyle=usingShovel?'rgba(200,80,0,0.35)':'rgba(255,240,0,0.3)';
+    ctx.fillRect(tileX(hoverC),tileY(hoverR),CW,CH);
+    ctx.strokeStyle=usingShovel?'#ff6600':'#ffee00';ctx.lineWidth=2;
+    ctx.strokeRect(tileX(hoverC)+1,tileY(hoverR)+1,CW-2,CH-2);
   }
 
   // grid lines
-  ctx.strokeStyle='rgba(0,0,0,0.12)';ctx.lineWidth=1;
-  for(let r=0;r<=ROWS;r++){ctx.beginPath();ctx.moveTo(0,tileY(r));ctx.lineTo(canvas.width,tileY(r));ctx.stroke();}
+  ctx.strokeStyle='rgba(0,0,0,0.15)';ctx.lineWidth=1;
+  for(let r=0;r<=ROWS;r++){ctx.beginPath();ctx.moveTo(0,tileY(r));ctx.lineTo(900,tileY(r));ctx.stroke();}
   for(let c=0;c<=COLS;c++){ctx.beginPath();ctx.moveTo(tileX(c),tileY(0));ctx.lineTo(tileX(c),tileY(ROWS));ctx.stroke();}
 
-  // house on left
-  ctx.fillStyle='#8B4513';ctx.fillRect(0,tileY(0),10,ROWS*CH);
-  ctx.fillStyle='#D2691E';ctx.fillRect(0,tileY(0),6,ROWS*CH);
+  // house (left edge)
+  const hg=ctx.createLinearGradient(0,0,14,0);
+  hg.addColorStop(0,'#5a2a0a');hg.addColorStop(1,'#8B4513');
+  ctx.fillStyle=hg;ctx.fillRect(0,tileY(0),14,ROWS*CH);
+  ctx.fillStyle='#D2691E';
+  for(let r=0;r<ROWS;r++){ctx.fillRect(0,tileY(r)+4,8,CH-8);}
+  // door
+  ctx.fillStyle='#3a1a00';ctx.fillRect(1,tileY(2)+10,8,CH-16);
 
   // plants
   plants.forEach(p=>drawPlant(p));
-
   // projectiles
   projectiles.forEach(pr=>{
-    ctx.beginPath();ctx.arc(pr.x,cellY(pr.row),pr.slow?8:7,0,Math.PI*2);
-    ctx.fillStyle=pr.col;ctx.fill();
-    ctx.strokeStyle='rgba(255,255,255,0.4)';ctx.lineWidth=1;ctx.stroke();
+    ctx.save();
+    if(pr.slow){
+      // icy orb
+      const rg=ctx.createRadialGradient(pr.x,cellY(pr.row),0,pr.x,cellY(pr.row),10);
+      rg.addColorStop(0,'#ffffff');rg.addColorStop(1,'#44aaff');
+      ctx.fillStyle=rg;
+    } else if(pr.lightning){
+      ctx.fillStyle='#ffffff';ctx.shadowColor='#aaaaff';ctx.shadowBlur=15;
+    } else {
+      const rg=ctx.createRadialGradient(pr.x,cellY(pr.row),0,pr.x,cellY(pr.row),9);
+      rg.addColorStop(0,'#aaffaa');rg.addColorStop(1,'#226600');
+      ctx.fillStyle=rg;
+    }
+    ctx.beginPath();ctx.arc(pr.x,cellY(pr.row),pr.slow?8:7,0,Math.PI*2);ctx.fill();
+    ctx.restore();
   });
-
   // zombies
   zombies.forEach(z=>drawZombie(z));
-
   // suns
   suns.forEach(s=>{
     if(s.collected)return;
-    const pulse=Math.sin(animT*4)*2;
-    ctx.save();ctx.globalAlpha=Math.min(1,s.life*0.5);
-    ctx.font=(s.big?36:28+pulse)+'px serif';ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.shadowColor='#ffee00';ctx.shadowBlur=12;
-    ctx.fillText('☀',s.x,s.y);
-    ctx.restore();
+    ctx.save();ctx.globalAlpha=Math.min(1,s.life*0.4);
+    ctx.font=(s.big?42:34+Math.sin(animT*5)*2)+'px serif';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.shadowColor='#ffee00';ctx.shadowBlur=16;
+    ctx.fillText('☀',s.x,s.y);ctx.restore();
   });
-
   // particles
   particles.forEach(p=>{
-    ctx.save();ctx.globalAlpha=p.life/p.maxLife;
-    ctx.fillStyle=p.col;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();
-    ctx.restore();
+    ctx.save();ctx.globalAlpha=p.life/p.maxLife*0.9;
+    ctx.fillStyle=p.col;ctx.shadowColor=p.col;ctx.shadowBlur=6;
+    ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();ctx.restore();
   });
-
-  // next wave countdown
+  // countdown
   if(betweenWaves&&betweenTimer>0&&gameRunning){
-    ctx.save();ctx.font='bold 16px Georgia';ctx.fillStyle='rgba(255,220,100,0.9)';
-    ctx.textAlign='center';
-    ctx.fillText('Next wave in '+Math.ceil(betweenTimer)+'s',400,tileY(ROWS)+10);
-    ctx.restore();
+    ctx.save();ctx.font='bold 15px Georgia';
+    ctx.fillStyle='rgba(200,255,100,0.9)';ctx.textAlign='center';
+    ctx.fillText('⏳ Next wave in '+Math.ceil(betweenTimer)+'s',450,tileY(ROWS)+6);ctx.restore();
   }
-}
-
-let hoverCell={r:-1,c:-1};
-function onMouseMove(e){
-  const rect=canvas.getBoundingClientRect();
-  const mx=e.clientX-rect.left,my=e.clientY-rect.top;
-  hoverCell.c=Math.floor((mx-OX)/CW);hoverCell.r=Math.floor((my-OY-10)/CH);
 }
 
 function drawPlant(p){
   const x=cellX(p.col),y=cellY(p.row);
-  const def=p.def;
   // hp bar
-  const hpRatio=p.hp/p.maxHp;
-  if(hpRatio<1){
-    ctx.fillStyle='#440000';ctx.fillRect(x-24,y-36,48,5);
-    ctx.fillStyle=hpRatio>0.5?'#44cc00':'#ff6600';ctx.fillRect(x-24,y-36,48*hpRatio,5);
+  if(p.hp<p.maxHp){
+    const r=p.hp/p.maxHp;
+    ctx.fillStyle='#330000';ctx.fillRect(x-26,y-38,52,6);
+    ctx.fillStyle=r>0.6?'#44ee00':r>0.3?'#ffaa00':'#ff2200';
+    ctx.fillRect(x-26,y-38,52*r,6);
+    ctx.strokeStyle='rgba(0,0,0,0.5)';ctx.lineWidth=1;ctx.strokeRect(x-26,y-38,52,6);
   }
-  // cherry bomb countdown flash
+  const def=p.def;
+  ctx.save();
   if(def.id==='cherrybomb'){
-    ctx.save();ctx.globalAlpha=0.5+0.5*Math.sin(animT*8);
-    ctx.font='36px serif';ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText(def.icon,x,y);ctx.restore();
-    return;
+    ctx.globalAlpha=0.6+0.4*Math.abs(Math.sin(animT*8));
+    ctx.font='38px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('🍒',x,y);
+    ctx.font='12px Georgia';ctx.fillStyle='#ff8800';ctx.fillText('BOOM!',x,y+26);
+    ctx.restore();return;
   }
-  // potato mine arming
+  if(def.id==='jalapeno'){
+    ctx.font='36px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('🌶️',x,y);
+    ctx.font='10px Georgia';ctx.fillStyle='#ff6600';ctx.fillText('BURN!',x,y+26);ctx.restore();return;
+  }
+  if(def.id==='iceberg'){
+    ctx.font='36px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('🧊',x,y);
+    ctx.font='10px Georgia';ctx.fillStyle='#aaddff';ctx.fillText('FREEZE!',x,y+26);ctx.restore();return;
+  }
   if(def.id==='potatomine'){
     ctx.font='34px serif';ctx.textAlign='center';ctx.textBaseline='middle';
     ctx.fillText(p.armedT>1.5?'💥':'🥔',x,y);
-    if(p.armedT<=1.5){ctx.fillStyle='rgba(255,200,0,0.5)';ctx.font='11px Georgia';ctx.fillText('arming…',x,y+22);}
-    return;
+    if(p.armedT<=1.5){ctx.font='10px Georgia';ctx.fillStyle='#ffcc00';ctx.fillText('arming…',x,y+26);}
+    ctx.restore();return;
   }
-  // sunshroom stages
   if(def.id==='sunshroom'){
     const icons=['🍄','🌸','🌺'];
     ctx.font='34px serif';ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText(icons[p.stage]||'🍄',x,y+Math.sin(animT*2)*2);return;
+    ctx.fillText(icons[p.stage]||'🍄',x,y+Math.sin(animT*2)*2);ctx.restore();return;
   }
-  // others: bounce animation
-  const bob=def.id==='peashooter'||def.id==='repeater'?Math.sin(animT*2)*2:0;
-  ctx.font='34px serif';ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillText(def.icon,x,y+bob);
+  if(def.id==='chomper'){
+    const open=p.chomping?Math.abs(Math.sin(animT*8)):Math.abs(Math.sin(animT*2)*0.3);
+    ctx.font=(34+open*8)+'px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('👄',x,y);
+    ctx.restore();return;
+  }
+  if(def.id==='spikeweed'){
+    ctx.font='34px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('🌵',x,y+8);
+    ctx.restore();return;
+  }
+  if(def.id==='lightning'){
+    const flicker=Math.random()<0.1?'⚡':'🌿';
+    ctx.font='34px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.shadowColor='#aaaaff';ctx.shadowBlur=Math.random()<0.1?20:0;ctx.fillText('⚡',x,y);
+    ctx.restore();return;
+  }
+  // default animated
+  const bob=Math.sin(p.animT*2+p.col)*2.5;
+  ctx.font='34px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(def.icon,x,y+bob);
+  ctx.restore();
 }
 
 function drawZombie(z){
   if(z.dead)return;
   const x=z.x,y=cellY(z.row);
-  const walk=z.eating?0:Math.sin(z.animT*4)*4;
+  const walk=z.eating?0:Math.sin(z.animT*(z.type==='football'?6:4))*5;
+  const frozen=z.frozen>0;
   ctx.save();
+  if(frozen){ctx.globalAlpha=0.8;ctx.filter='hue-rotate(180deg) saturate(0.5) brightness(1.4)';}
   // shadow
-  ctx.fillStyle='rgba(0,0,0,0.25)';ctx.beginPath();ctx.ellipse(x,y+28,16,6,0,0,Math.PI*2);ctx.fill();
+  ctx.globalAlpha*=0.9;
+  ctx.fillStyle='rgba(0,0,0,0.3)';ctx.beginPath();ctx.ellipse(x,y+30,18,7,0,0,Math.PI*2);ctx.fill();
+  ctx.globalAlpha=frozen?0.8:1;
   // body
-  const col=z.def.color;
-  ctx.fillStyle=col;ctx.fillRect(x-13,y-25+walk,26,36);
+  const bodyCol=z.def.color;
+  const rg=ctx.createLinearGradient(x-13,y-25,x+13,y+10);
+  rg.addColorStop(0,bodyCol);rg.addColorStop(1,'#445533');
+  ctx.fillStyle=rg;ctx.beginPath();ctx.roundRect(x-14,y-26+walk,28,38,4);ctx.fill();
   // head
-  ctx.fillStyle='#b8d4a0';ctx.fillRect(x-10,y-45+walk,20,22);
+  const hg2=ctx.createLinearGradient(x-10,y-45,x+10,y-24);
+  hg2.addColorStop(0,z.def.head);hg2.addColorStop(1,bodyCol);
+  ctx.fillStyle=hg2;ctx.beginPath();ctx.roundRect(x-11,y-46+walk,22,24,5);ctx.fill();
   // eyes
-  ctx.fillStyle='#ff2200';ctx.fillRect(x-6,y-38+walk,5,5);ctx.fillRect(x+1,y-38+walk,5,5);
+  ctx.fillStyle='#ff1100';ctx.shadowColor='#ff0000';ctx.shadowBlur=6;
+  ctx.fillRect(x-7,y-39+walk,5,6);ctx.fillRect(x+2,y-39+walk,5,6);
+  ctx.shadowBlur=0;
   // mouth
-  ctx.fillStyle='#330000';ctx.fillRect(x-5,y-28+walk,10,3);
+  ctx.fillStyle='#220000';ctx.fillRect(x-5,y-29+walk,10,3);
   // accessory
-  if(z.type==='cone'){ctx.fillStyle='#ffaa00';ctx.beginPath();ctx.moveTo(x,y-56+walk);ctx.lineTo(x-10,y-45+walk);ctx.lineTo(x+10,y-45+walk);ctx.closePath();ctx.fill();}
-  if(z.type==='bucket'){ctx.fillStyle='#aaaaaa';ctx.fillRect(x-12,y-50+walk,24,12);ctx.strokeStyle='#888';ctx.lineWidth=2;ctx.strokeRect(x-12,y-50+walk,24,12);}
-  if(z.type==='giga'){ctx.fillStyle='#ff8800';ctx.beginPath();ctx.moveTo(x,y-60+walk);ctx.lineTo(x-13,y-45+walk);ctx.lineTo(x+13,y-45+walk);ctx.closePath();ctx.fill();}
-  if(z.type==='flag'){ctx.fillStyle='#cc0000';ctx.fillRect(x-18,y-55+walk,16,10);}
+  if(z.type==='cone'){
+    ctx.fillStyle='#ff9900';ctx.beginPath();ctx.moveTo(x,y-60+walk);ctx.lineTo(x-11,y-46+walk);ctx.lineTo(x+11,y-46+walk);ctx.closePath();ctx.fill();
+    ctx.strokeStyle='#cc6600';ctx.lineWidth=1;ctx.stroke();
+  }
+  if(z.type==='bucket'){
+    ctx.fillStyle='#999999';ctx.fillRect(x-13,y-55+walk,26,14);
+    ctx.strokeStyle='#777';ctx.lineWidth=2;ctx.strokeRect(x-13,y-55+walk,26,14);
+    ctx.fillStyle='#aaaaaa';ctx.fillRect(x-11,y-53+walk,22,3);
+  }
+  if(z.type==='giga'){
+    ctx.fillStyle='#ff8800';ctx.shadowColor='#ffaa00';ctx.shadowBlur=10;
+    ctx.beginPath();ctx.moveTo(x,y-65+walk);ctx.lineTo(x-14,y-46+walk);ctx.lineTo(x+14,y-46+walk);ctx.closePath();ctx.fill();
+    ctx.shadowBlur=0;
+  }
+  if(z.type==='flag'){
+    ctx.fillStyle='#cc0000';ctx.fillRect(x-20,y-62+walk,20,13);
+    ctx.fillStyle='#ff4444';ctx.fillRect(x-19,y-61+walk,18,5);
+    ctx.strokeStyle='#884400';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x-20,y-62+walk);ctx.lineTo(x-20,y-30+walk);ctx.stroke();
+  }
+  if(z.type==='football'){
+    ctx.fillStyle='#cc6600';ctx.beginPath();ctx.ellipse(x,y-50+walk,15,10,0,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#ffffff';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(x-10,y-50+walk);ctx.lineTo(x+10,y-50+walk);ctx.stroke();
+  }
+  if(z.type==='dancer'){
+    ctx.fillStyle='#ff44ff';ctx.shadowColor='#cc00cc';ctx.shadowBlur=8;
+    ctx.fillRect(x-13,y-55+walk,26,10);ctx.shadowBlur=0;
+  }
   // arms
-  ctx.fillStyle=col;
-  const armY=y-18+walk+(z.eating?Math.sin(animT*8)*4:0);
-  ctx.fillRect(x-24,armY,12,8);ctx.fillRect(x+12,armY,12,8);
+  const armWave=z.eating?Math.sin(animT*8)*8:walk*0.5;
+  ctx.fillStyle=bodyCol;
+  ctx.beginPath();ctx.roundRect(x-28,y-20+walk+armWave,14,10,3);ctx.fill();
+  ctx.beginPath();ctx.roundRect(x+14,y-20+walk-armWave,14,10,3);ctx.fill();
   // hp bar
-  const hpR=z.hp/z.maxHp;
-  ctx.fillStyle='#440000';ctx.fillRect(x-20,y-62+walk,40,5);
-  ctx.fillStyle=hpR>0.5?'#44ee00':'#ff6600';ctx.fillRect(x-20,y-62+walk,40*hpR,5);
+  const hpR=Math.max(0,z.hp/z.maxHp);
+  ctx.fillStyle='#330000';ctx.fillRect(x-22,y-66+walk,44,5);
+  ctx.fillStyle=hpR>0.5?'#44ee00':hpR>0.25?'#ffaa00':'#ff2200';
+  ctx.fillRect(x-22,y-66+walk,44*hpR,5);
+  ctx.strokeStyle='rgba(0,0,0,0.5)';ctx.lineWidth=1;ctx.strokeRect(x-22,y-66+walk,44,5);
+  if(frozen){ctx.fillStyle='rgba(150,220,255,0.35)';ctx.fillRect(x-15,y-50+walk,30,55);}
   ctx.restore();
 }
 
-// ─── Game loop ───
+// ═══════════════════════════════════════════════
+// GAME LOOP
+// ═══════════════════════════════════════════════
 function loop(ts){
-  if(!gameRunning){return;}
+  if(!gameRunning)return;
   requestAnimationFrame(loop);
   const dt=Math.min((ts-lastTime)/1000,0.05);lastTime=ts;
-  if(!gameOver){update(dt);}
+  if(!gameOver)update(dt);
   draw();
 }
 
 function endGame(){
-  if(gameOver)return;
-  gameOver=true;gameRunning=false;
-  document.getElementById('go-score').textContent='Score: '+score;
+  if(gameOver)return;gameOver=true;gameRunning=false;
+  document.getElementById('go-score').textContent='Score: '+score+' points';
   document.getElementById('gameover').style.display='flex';
 }
-
 function winGame(){
-  if(gameOver)return;
-  gameOver=true;gameRunning=false;
-  document.getElementById('win-score').textContent='Final Score: '+score;
+  if(gameOver)return;gameOver=true;gameRunning=false;
+  document.getElementById('win-score').textContent='Final Score: '+score+' points';
   document.getElementById('win').style.display='flex';
 }
 </script>

@@ -3639,6 +3639,15 @@ function fireAtkPower(a){
   const DMG=upgradedDmg?upgradedDmg():dtype.dmg;
   const nearEnemies=(maxR)=>activeEnemies.filter(e=>e.userData.alive&&e.position.distanceTo(ref)<maxR);
   switch(a.id){
+    case 'ability_f':
+      if(abilityCooldown.attack<=0){keys['KeyF']=true;setTimeout(()=>{delete keys['KeyF'];},120);}
+      else floatWorld(ref,'Cooldown: '+~~abilityCooldown.attack+'s','#ff4444');break;
+    case 'ability_x':
+      if(abilityCooldown.bite<=0){keys['KeyX']=true;setTimeout(()=>{delete keys['KeyX'];},120);}
+      else floatWorld(ref,'Cooldown: '+~~abilityCooldown.bite+'s','#ff4444');break;
+    case 'ability_p':
+      if(abilityCooldown.power<=0){keys['Slash']=true;setTimeout(()=>{delete keys['Slash'];},120);}
+      else floatWorld(ref,'Cooldown: '+~~abilityCooldown.power+'s','#ff4444');break;
     case 'breath':// Fan of fire projectiles
       for(let i=-2;i<=2;i++){const ang=i*0.18;const d=new THREE.Vector3(Math.sin(ang),0,Math.cos(ang)).applyEuler(dragonMesh.rotation);spawnProjectile('fire',ref.clone().add(d.clone().multiplyScalar(8)),ref.clone().add(d.clone().multiplyScalar(60)));}
       spawnAbilityCloud(ref,0xff4400,30,0.6);break;
@@ -3765,12 +3774,30 @@ function getAtkSlice(ex,ey){
 
 function openAtkRing(){
   if(gs!=='playing')return;
-  // Rebuild action list: base attacks + collected king weapons
-  ATK_ACTIONS=ATK_BASE.slice();
+  const id=dtype?dtype.id:'fire';
+  // Dragon-specific named moves
+  const fName={fire:'Fire Cloud',nature:'Poison Cloud',ice:'Ice Shards',soul:'Soul Beam',earth:'Boulder',air:'Gust Burst',lightning:'Storm Cloud',sun:'Solar Flare',lava:'Lava Burst',water:'Tidal Wave',smoke:'Smoke Bomb',acid:'Acid Rain',bone:'Bone Spear',metal:'Metal Crush',glass:'Glass Shatter',thunder:'Thunder Clap'}[id]||'Special';
+  const xName={lightning:'Chain Bite',fire:'Fire Bite',ice:'Frost Bite',earth:'Slam',air:'Tornado',nature:'Vine Grab',soul:'Soul Drain',lava:'Lava Spit',water:'Water Whip',smoke:'Smoke Cloud',acid:'Acid Spit',bone:'Bone Crush',metal:'Metal Shred',glass:'Glass Shatter',thunder:'Thunder Stomp',sun:'Solar Burst'}[id]||'Bite';
+  const pName={fire:'Mega Fireball',ice:'Ice Beam',soul:'Ghost Dragons',nature:'Life Beam',earth:'Ground Smash',air:'Power Blast',lightning:'Volt Surge',sun:'Solar Nova',lava:'Eruption',water:'Maelstrom',bone:'Bone Wall',metal:'Iron Storm'}[id]||'Power Blast';
+  const col=dtype?('#'+dtype.eyeC.replace('#','')):'#ff4400';
+  ATK_ACTIONS=[
+    {label:'🔥 '+fName,    id:'ability_f',  desc:fName+' (dragon special)',   color:col,       cd:'attack'},
+    {label:'👊 '+xName,    id:'ability_x',  desc:xName+' (secondary move)',   color:'#ff8800', cd:'bite'},
+    {label:'✨ '+pName,    id:'ability_p',  desc:pName+' (power move)',       color:'#ffdd00', cd:'power'},
+    {label:'🦷 BITE',      id:'bite',        desc:'Lunge & crush nearest foe', color:'#cc6600'},
+    {label:'💥 TAIL',      id:'tail',        desc:'Spinning AOE tail slam',    color:'#cc4400'},
+    {label:'🔊 ROAR',      id:'roar',        desc:'Fear roar pushes foes back',color:'#aa66ff'},
+    {label:'💚 HEAL',      id:'heal',        desc:'Restore 35% HP',            color:'#44ff88'},
+    {label:'🛡 SHIELD',    id:'shield',      desc:'Soul shield 8s',            color:'#8888ff'},
+    {label:'💀 DEATH',     id:'death',       desc:'Poison cloud heavy DoT',    color:'#aa44cc'},
+    {label:'🌍 QUAKE',     id:'quake',       desc:'Earthquake stuns foes',     color:'#88cc44'},
+    {label:'🔥 NOVA',      id:'nova',        desc:'12-dir fire burst',         color:'#ff6600'},
+    {label:'🐉 CALL',      id:'call',        desc:'Army attacks all foes',     color:'#44ccff'},
+  ];
+  // Collected King Weapons as extra slices
   for(let i=0;i<playerKingWeapons.length;i++){
     const w=playerKingWeapons[i];
-    const col='#'+w.color.toString(16).padStart(6,'0');
-    ATK_ACTIONS.push({label:w.emoji+' '+w.name,desc:'King Weapon: '+w.name,color:col,kingIdx:i});
+    ATK_ACTIONS.push({label:w.emoji+' '+w.name,desc:'King Weapon: '+w.name,color:'#'+w.color.toString(16).padStart(6,'0'),kingIdx:i});
   }
   atkRingOpen=true;atkSelected=-1;
   resizeAtkCanvas();

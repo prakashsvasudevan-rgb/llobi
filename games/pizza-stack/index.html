@@ -6,23 +6,60 @@
 <title>Pizza Stack</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100%;height:100%;overflow:hidden;background:#1a0a00;font-family:'Segoe UI',sans-serif;user-select:none}
-canvas{display:block}
-#ui{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
-#hud{display:flex;gap:8px;padding:10px 14px;flex-wrap:wrap}
-.pill{background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:5px 16px;text-align:center;color:#fff}
+html,body{width:100%;height:100%;overflow:hidden;background:#1a0800;font-family:'Segoe UI',sans-serif;user-select:none}
+canvas{display:block;position:absolute;inset:0}
+#ui{position:absolute;inset:0;pointer-events:none;display:flex;flex-direction:column}
+
+/* HUD */
+#hud{display:flex;gap:8px;padding:10px 14px;flex-wrap:wrap;pointer-events:none}
+.pill{background:rgba(0,0,0,.6);border:1px solid rgba(255,180,0,.2);border-radius:20px;padding:5px 14px;text-align:center;color:#fff}
 .pill span{display:block;font-size:.58rem;opacity:.55;text-transform:uppercase;letter-spacing:.06em}
 .pill strong{font-size:1.1rem;font-weight:800}
-#msg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;color:#fff;pointer-events:all;background:rgba(10,5,0,.92);padding:28px 44px;border-radius:20px;border:1px solid rgba(255,180,0,.2)}
-#msg h2{font-size:2rem;font-weight:900;color:#ffd700}
-#msg p{margin:.5rem 0 1.4rem;opacity:.8;font-size:.95rem}
-#msg button{font-weight:800;font-size:1rem;padding:12px 36px;border:none;border-radius:50px;cursor:pointer;background:linear-gradient(135deg,#ff6b00,#ff3300);color:#fff;box-shadow:0 5px 0 #991100;transition:transform .1s,box-shadow .1s;margin:4px}
-#msg button:active{transform:translateY(3px);box-shadow:0 2px 0 #991100}
-#msg button.sec{background:linear-gradient(135deg,#cc8800,#aa6600);box-shadow:0 5px 0 #664400}
-#hint{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);color:rgba(255,220,120,.7);font-size:.85rem;text-align:center;background:rgba(0,0,0,.4);padding:5px 18px;border-radius:16px}
-#perfectEl{position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);font-size:2rem;font-weight:900;color:#ffd700;text-shadow:0 0 20px #ff9900;pointer-events:none;opacity:0;transition:none}
-#perfectEl.show{animation:pfloat .9s ease forwards}
-@keyframes pfloat{0%{opacity:1;transform:translate(-50%,-50%) scale(.8)}40%{opacity:1;transform:translate(-50%,-60%) scale(1.15)}100%{opacity:0;transform:translate(-50%,-80%) scale(1)}}
+#timerBar{width:calc(100% - 28px);height:7px;margin:0 14px;background:rgba(255,255,255,.1);border-radius:4px;overflow:hidden}
+#timerFill{height:100%;width:100%;background:linear-gradient(90deg,#ff6b00,#ffd700);border-radius:4px;transition:width .1s linear}
+
+/* Order card */
+#orderCard{position:absolute;top:60px;right:12px;background:rgba(20,10,0,.9);border:2px solid rgba(255,180,0,.35);border-radius:16px;padding:12px 16px;min-width:140px;color:#fff;pointer-events:none}
+#orderCard h3{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:#ffd700;margin-bottom:8px}
+.req{display:flex;align-items:center;gap:7px;margin:4px 0;font-size:.9rem}
+.req .dot{width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.3);flex-shrink:0}
+.req.done .dot{background:#4ade80;border-color:#4ade80}
+.req.done{opacity:.6}
+
+/* Ingredient tray */
+#tray{position:absolute;bottom:0;left:0;width:100%;background:linear-gradient(0deg,rgba(10,5,0,.98),rgba(10,5,0,.8));border-top:2px solid rgba(255,180,0,.2);display:flex;align-items:center;overflow-x:auto;padding:8px 10px 10px;gap:8px;pointer-events:all;scrollbar-width:none}
+#tray::-webkit-scrollbar{display:none}
+.ing{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:6px 10px;border-radius:12px;border:2px solid rgba(255,255,255,.08);background:rgba(255,255,255,.05);transition:background .1s,border-color .1s;flex-shrink:0}
+.ing:hover,.ing:active{background:rgba(255,180,0,.18);border-color:rgba(255,180,0,.5)}
+.ing span{font-size:1.6rem}
+.ing label{font-size:.6rem;color:rgba(255,220,160,.7);pointer-events:none}
+.ing.selected{background:rgba(255,180,0,.25);border-color:#ffd700}
+
+/* Screens */
+.screen{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:50}
+.screen.hidden{display:none}
+#menuScreen{background:rgba(10,5,0,.95)}
+#menuScreen h1{font-size:2.6rem;font-weight:900;color:#ffd700;text-shadow:0 0 30px #ff6b00}
+#menuScreen p{color:rgba(255,200,120,.75);margin:.5rem 0 2rem;font-size:.95rem;text-align:center}
+.bigBtn{font-size:1rem;font-weight:800;padding:13px 36px;border:none;border-radius:50px;cursor:pointer;margin:5px;transition:transform .1s,box-shadow .1s}
+.bigBtn.orange{background:linear-gradient(135deg,#ff7700,#cc3300);color:#fff;box-shadow:0 5px 0 #881100}
+.bigBtn.orange:active{transform:translateY(3px);box-shadow:0 2px 0 #881100}
+.bigBtn.grey{background:rgba(255,255,255,.12);color:#fff;box-shadow:0 3px 0 rgba(0,0,0,.4)}
+#modeRow{display:flex;gap:10px;margin-bottom:1.5rem;flex-wrap:wrap;justify-content:center}
+.mBtn{padding:8px 20px;border:2px solid rgba(255,180,0,.3);border-radius:30px;background:transparent;color:rgba(255,220,160,.8);font-size:.85rem;font-weight:700;cursor:pointer}
+.mBtn.active{background:rgba(255,180,0,.2);border-color:#ffd700;color:#ffd700}
+
+/* Score popup */
+.spop{position:absolute;pointer-events:none;font-weight:900;font-size:1.3rem;color:#ffd700;text-shadow:0 0 10px #ff9900;animation:spopAnim .9s ease forwards}
+@keyframes spopAnim{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-55px) scale(.8)}}
+
+/* Result overlay */
+#resultBox{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:60;background:rgba(0,0,0,.7)}
+#resultBox.hidden{display:none}
+#resultInner{background:linear-gradient(135deg,#200e00,#120500);border:2px solid rgba(255,180,0,.35);border-radius:20px;padding:28px 40px;text-align:center;color:#fff;min-width:260px}
+#resultInner h2{font-size:1.9rem;font-weight:900}
+#resultInner .rscore{font-size:2.8rem;font-weight:900;color:#ffd700}
+#resultInner p{opacity:.7;margin:.5rem 0 1.4rem;font-size:.9rem}
 </style>
 </head>
 <body>
@@ -30,17 +67,39 @@ canvas{display:block}
 <div id="ui">
   <div id="hud">
     <div class="pill"><span>Score</span><strong id="scoreEl">0</strong></div>
-    <div class="pill"><span>Level</span><strong id="levelEl">1</strong></div>
-    <div class="pill"><span>High</span><strong id="hiEl">0</strong></div>
+    <div class="pill"><span>Order</span><strong id="orderNumEl">1</strong></div>
+    <div class="pill"><span>Streak</span><strong id="streakEl">0</strong></div>
   </div>
-  <div id="msg">
-    <div style="font-size:3.5rem">🍕</div>
-    <h2>Pizza Stack</h2>
-    <p>Stack the slices perfectly!<br>Tap or click to drop.</p>
-    <button id="startBtn">Stack It!</button>
+  <div id="timerBar"><div id="timerFill"></div></div>
+  <div id="orderCard">
+    <h3>📋 Order</h3>
+    <div id="reqList"></div>
   </div>
-  <div id="hint" style="display:none">Tap / Click to drop the slice</div>
-  <div id="perfectEl"></div>
+  <div id="tray"></div>
+</div>
+
+<!-- Menu -->
+<div class="screen" id="menuScreen">
+  <div style="font-size:4rem;margin-bottom:.4rem">🍕</div>
+  <h1>Pizza Stack</h1>
+  <p>Build the perfect pizza!<br>Match the order before time runs out.</p>
+  <div id="modeRow">
+    <button class="mBtn active" data-mode="classic">Classic</button>
+    <button class="mBtn" data-mode="rush">⚡ Rush</button>
+    <button class="mBtn" data-mode="zen">🌿 Zen</button>
+  </div>
+  <button class="bigBtn orange" id="playBtn">Start Cooking!</button>
+</div>
+
+<!-- Result -->
+<div id="resultBox" class="hidden">
+  <div id="resultInner">
+    <h2 id="resTitle">Order Done!</h2>
+    <div class="rscore" id="resScore">0</div>
+    <p id="resDetail"></p>
+    <button class="bigBtn orange" id="nextBtn">Next Order</button>
+    <button class="bigBtn grey" id="menuBtn">Menu</button>
+  </div>
 </div>
 
 <script>
@@ -48,299 +107,307 @@ const canvas=document.getElementById('c');
 const ctx=canvas.getContext('2d');
 let W,H;
 function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight;}
-resize();window.addEventListener('resize',()=>{resize();if(gameActive)drawAll();});
+resize();window.addEventListener('resize',()=>{resize();draw();});
 
-// ═══ GAME DATA ═══
-const SLICE_H=28;         // height of each layer
-const BASE_W=160;         // width of base plate
-const BASE_H=20;
-const SWING_SPEED_BASE=1.6; // px per frame base swing speed
-const MAX_LAYERS=20;
+// ═══ INGREDIENTS ═══
+const INGREDIENTS=[
+  {id:'dough',   label:'Dough',   emoji:'🫓', layer:'base',  col:'#f5c97a'},
+  {id:'sauce',   label:'Sauce',   emoji:'🍅', layer:'sauce', col:'#cc2200'},
+  {id:'cheese',  label:'Cheese',  emoji:'🧀', layer:'cheese',col:'#f5c518'},
+  {id:'pepperoni',label:'Pepperoni',emoji:'🥩',layer:'top',col:'#aa2200'},
+  {id:'mushroom',label:'Mushroom',emoji:'🍄', layer:'top',  col:'#997755'},
+  {id:'pepper',  label:'Pepper',  emoji:'🫑', layer:'top',  col:'#228833'},
+  {id:'olive',   label:'Olive',   emoji:'🫒', layer:'top',  col:'#334411'},
+  {id:'onion',   label:'Onion',   emoji:'🧅', layer:'top',  col:'#ddcc44'},
+  {id:'bacon',   label:'Bacon',   emoji:'🥓', layer:'top',  col:'#cc5522'},
+  {id:'chilli',  label:'Chilli',  emoji:'🌶️', layer:'top',  col:'#dd1100'},
+  {id:'pineapple',label:'Pineapple',emoji:'🍍',layer:'top',col:'#ffcc00'},
+  {id:'basil',   label:'Basil',   emoji:'🌿', layer:'top',  col:'#226622'},
+];
+const ING_BY_ID=Object.fromEntries(INGREDIENTS.map(i=>[i.id,i]));
 
-let gameActive=false,gameOver=false;
-let stack=[],swinging=null,score=0,level=1,hi=0,combo=0;
-let swingX=0,swingDir=1,swingSpeed=0;
-let cameraY=0,targetCameraY=0; // scroll up as stack grows
-let flashMsg='',flashTimer=0;
-let particles=[];
-let frameId=null;
+// Layers order required: dough → sauce → cheese → toppings
+const LAYER_ORDER=['base','sauce','cheese','top'];
 
-// Topping emojis for decoration
-const TOPPINGS=['🍅','🧀','🫑','🍄','🥓','🌶️','🫒','🧅'];
-// Colour layers
-const CRUST_COL='#c8762a';
-const SAUCE_COL='#cc3300';
-const CHEESE_COL='#f5c518';
-const LAYER_COLS=['#f5c518','#e8b010','#f0bc14','#dca80e','#f2c218'];
+// ═══ MODES ═══
+const MODES={
+  classic:{label:'Classic',time:45,orders:5,maxTops:3},
+  rush:   {label:'Rush',   time:25,orders:8,maxTops:4},
+  zen:    {label:'Zen',    time:0, orders:5,maxTops:5},
+};
+
+// ═══ GAME STATE ═══
+let mode='classic',cfg=MODES.classic;
+let gameActive=false,score=0,streak=0,orderNum=0,hi=0;
+let currentOrder=[],pizzaLayers=[];  // layers placed on pizza
+let timerLeft=0,timerMax=1,timerInterval=null;
+let selectedIng=null;
+let pizzaParticles=[];
+let wrongShake=0,wrongShakeX=0;
+let lastLayer=''; // last layer type placed
+
+// ═══ MENU ═══
+document.querySelectorAll('.mBtn').forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll('.mBtn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');mode=b.dataset.mode;cfg=MODES[mode];
+  };
+});
+document.getElementById('playBtn').onclick=()=>{
+  score=0;streak=0;orderNum=0;
+  document.getElementById('menuScreen').classList.add('hidden');
+  nextOrder();
+};
+document.getElementById('nextBtn').onclick=()=>{document.getElementById('resultBox').classList.add('hidden');nextOrder();};
+document.getElementById('menuBtn').onclick=()=>{document.getElementById('resultBox').classList.add('hidden');document.getElementById('menuScreen').classList.remove('hidden');gameActive=false;clearInterval(timerInterval);};
+
+// ═══ BUILD TRAY ═══
+function buildTray(){
+  const tray=document.getElementById('tray');tray.innerHTML='';
+  INGREDIENTS.forEach(ing=>{
+    const div=document.createElement('div');div.className='ing';div.dataset.id=ing.id;
+    div.innerHTML=`<span>${ing.emoji}</span><label>${ing.label}</label>`;
+    div.onclick=()=>addIngredient(ing.id);
+    tray.appendChild(div);
+  });
+}
+buildTray();
+
+// ═══ ORDER GENERATION ═══
+function genOrder(){
+  const toppingPool=INGREDIENTS.filter(i=>i.layer==='top');
+  const numTops=1+Math.floor(Math.random()*(cfg.maxTops));
+  const tops=shuffle([...toppingPool]).slice(0,numTops).map(i=>i.id);
+  return['dough','sauce','cheese',...tops];
+}
+
+function nextOrder(){
+  orderNum++;pizzaLayers=[];selectedIng=null;wrongShake=0;
+  currentOrder=genOrder();
+  renderOrderCard();
+  if(cfg.time>0){timerLeft=cfg.time+Math.floor(orderNum*.5);timerMax=timerLeft;startTimer();}
+  else{document.getElementById('timerFill').style.width='100%';}
+  gameActive=true;
+  document.getElementById('orderNumEl').textContent=orderNum;
+  document.getElementById('streakEl').textContent=streak;
+  draw();
+}
+
+function renderOrderCard(){
+  const list=document.getElementById('reqList');list.innerHTML='';
+  currentOrder.forEach(id=>{
+    const ing=ING_BY_ID[id];
+    const placed=pizzaLayers.includes(id);
+    const div=document.createElement('div');div.className='req'+(placed?' done':'');div.dataset.id=id;
+    div.innerHTML=`<div class="dot"></div><span>${ing.emoji} ${ing.label}</span>`;
+    list.appendChild(div);
+  });
+}
+
+// ═══ ADD INGREDIENT ═══
+function addIngredient(id){
+  if(!gameActive)return;
+  const ing=ING_BY_ID[id];
+
+  // Already placed?
+  if(pizzaLayers.includes(id)){shake();return;}
+
+  // Check layer order: dough first, then sauce, then cheese, then tops
+  const needBase=!pizzaLayers.includes('dough');
+  const needSauce=pizzaLayers.includes('dough')&&!pizzaLayers.includes('sauce');
+  const needCheese=pizzaLayers.includes('sauce')&&!pizzaLayers.includes('cheese');
+
+  if(ing.layer==='base'&&!needBase){shake();return;}
+  if(ing.layer==='sauce'&&!needSauce&&!pizzaLayers.includes('sauce')){shake();}
+  if(ing.layer==='cheese'&&!needCheese&&!pizzaLayers.includes('cheese')){shake();}
+
+  // Must place in order: base → sauce → cheese before toppings
+  if(ing.layer==='sauce'&&!pizzaLayers.includes('dough')){shake();return;}
+  if(ing.layer==='cheese'&&!pizzaLayers.includes('sauce')){shake();return;}
+  if(ing.layer==='top'&&!pizzaLayers.includes('cheese')){shake();return;}
+
+  // Not in order? (ingredient not part of this order but allowed as mistake)
+  const isRequired=currentOrder.includes(id);
+
+  pizzaLayers.push(id);
+  renderOrderCard();
+  spawnIngParticles(ing);
+
+  // Check completion
+  const allPlaced=currentOrder.every(id=>pizzaLayers.includes(id));
+  const extraIngredients=pizzaLayers.filter(id=>!currentOrder.includes(id));
+
+  if(allPlaced){
+    const perfect=extraIngredients.length===0;
+    const pts=calcScore(perfect);
+    score+=pts;streak++;
+    document.getElementById('scoreEl').textContent=score;
+    document.getElementById('streakEl').textContent=streak;
+    clearInterval(timerInterval);
+    gameActive=false;
+    setTimeout(()=>showResult(true,perfect,pts),400);
+  }
+  draw();
+}
+
+function calcScore(perfect){
+  const base=200;
+  const timeBonus=cfg.time>0?Math.round(timerLeft/timerMax*100):0;
+  const streakBonus=streak*15;
+  const perfectBonus=perfect?150:0;
+  return base+timeBonus+streakBonus+perfectBonus;
+}
+
+function shake(){wrongShake=10;}
+
+function showResult(success,perfect,pts){
+  document.getElementById('resTitle').textContent=perfect?'🌟 Perfect Pizza!':success?'✅ Pizza Done!':'⏰ Time\'s Up!';
+  document.getElementById('resScore').textContent='+'+pts;
+  document.getElementById('resDetail').textContent=perfect?`Streak: ${streak} · No extras!`:`Streak: ${streak}`;
+  document.getElementById('resultBox').classList.remove('hidden');
+}
+
+// ═══ TIMER ═══
+function startTimer(){
+  clearInterval(timerInterval);
+  document.getElementById('timerFill').style.width='100%';
+  timerInterval=setInterval(()=>{
+    timerLeft--;
+    document.getElementById('timerFill').style.width=(timerLeft/timerMax*100)+'%';
+    document.getElementById('timerFill').style.background=timerLeft<10?'linear-gradient(90deg,#ef4444,#ff6b00)':'linear-gradient(90deg,#ff6b00,#ffd700)';
+    if(timerLeft<=0){clearInterval(timerInterval);gameActive=false;streak=0;document.getElementById('streakEl').textContent=0;setTimeout(()=>showResult(false,false,0),200);}
+  },1000);
+}
 
 // ═══ PARTICLES ═══
-function spawnParticles(x,y,n,col){
-  for(let i=0;i<n;i++){
-    const a=Math.random()*Math.PI*2,s=1+Math.random()*4;
-    particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-2,life:1,col,r:3+Math.random()*4});
+function spawnIngParticles(ing){
+  const px=W/2,py=H*.38;
+  for(let i=0;i<16;i++){
+    const a=Math.random()*Math.PI*2,s=1.5+Math.random()*4;
+    pizzaParticles.push({x:px,y:py,vx:Math.cos(a)*s,vy:Math.sin(a)*s-1.5,life:1,col:ing.col,r:3+Math.random()*5,emoji:Math.random()>.7?ing.emoji:null});
   }
-}
-
-// ═══ INIT ═══
-function startGame(){
-  score=0;level=1;combo=0;
-  stack=[];particles=[];
-  cameraY=0;targetCameraY=0;
-  gameOver=false;gameActive=true;
-  document.getElementById('msg').style.display='none';
-  document.getElementById('hint').style.display='block';
-  document.getElementById('scoreEl').textContent='0';
-  document.getElementById('levelEl').textContent='1';
-  buildBase();
-  spawnSwing();
-  if(frameId)cancelAnimationFrame(frameId);
-  loop();
-}
-document.getElementById('startBtn').onclick=startGame;
-
-function buildBase(){
-  // Base plate at bottom center
-  const bx=(W-BASE_W)/2,by=H-80;
-  stack.push({x:bx,y:by,w:BASE_W,h:BASE_H,type:'base'});
-}
-
-function spawnSwing(){
-  const topLayer=stack[stack.length-1];
-  const prevW=topLayer.w;
-  // New slice same width as top (will be trimmed on drop)
-  const sliceW=Math.min(prevW+10, BASE_W); // allow slight overhang spawn
-  swingX=W*0.05; // start from left edge
-  swingDir=1;
-  swingSpeed=SWING_SPEED_BASE+level*0.18+Math.min(combo*.08,1.5);
-  swinging={w:Math.min(prevW,BASE_W),h:SLICE_H};
-}
-
-// ═══ INPUT ═══
-function dropSlice(){
-  if(!gameActive||gameOver||!swinging)return;
-  const topLayer=stack[stack.length-1];
-  const topX=topLayer.x,topW=topLayer.w;
-  const sliceX=swingX,sliceW=swinging.w;
-
-  // Overlap calculation
-  const left=Math.max(topX,sliceX);
-  const right=Math.min(topX+topW,sliceX+sliceW);
-  const overlap=right-left;
-
-  if(overlap<=2){
-    // Miss — game over
-    endGame();return;
-  }
-
-  const perfect=Math.abs(sliceX-topX)<3&&Math.abs(sliceW-topW)<3;
-  const keptX=left,keptW=overlap;
-  const layerY=topLayer.y-SLICE_H;
-  const layerIdx=stack.length;
-
-  stack.push({x:keptX,y:layerY,w:keptW,h:SLICE_H,type:'slice',col:LAYER_COLS[layerIdx%LAYER_COLS.length]});
-
-  // Scroll camera up
-  targetCameraY=Math.max(0,(stack.length-8)*SLICE_H);
-
-  // Score
-  const pts=perfect?150:Math.round(50+(overlap/topW)*80);
-  if(perfect){combo++;score+=pts+combo*20;showPerfect();}
-  else{combo=0;score+=pts;}
-
-  // Particles
-  spawnParticles(keptX+keptW/2,layerY+W/H+targetCameraY,8,perfect?'#ffd700':'#ff9900');
-
-  level=1+Math.floor(stack.length/4);
-  document.getElementById('scoreEl').textContent=score;
-  document.getElementById('levelEl').textContent=level;
-  if(hi<score){hi=score;document.getElementById('hiEl').textContent=hi;}
-
-  swinging=null;
-  setTimeout(spawnSwing,120);
-}
-
-canvas.addEventListener('mousedown',dropSlice);
-canvas.addEventListener('touchstart',e=>{e.preventDefault();dropSlice();},{passive:false});
-document.addEventListener('keydown',e=>{if(e.code==='Space'||e.code==='ArrowDown')dropSlice();});
-
-function showPerfect(){
-  const el=document.getElementById('perfectEl');
-  el.textContent=combo>1?`🔥 PERFECT x${combo}!`:'✨ PERFECT!';
-  el.classList.remove('show');void el.offsetWidth;el.classList.add('show');
-}
-
-function endGame(){
-  gameActive=false;gameOver=true;
-  if(hi<score)hi=score;
-  document.getElementById('hiEl').textContent=hi;
-  const msg=document.getElementById('msg');
-  msg.querySelector('div').textContent='😬';
-  msg.querySelector('h2').textContent='Pizza Fell!';
-  msg.querySelector('p').textContent=`Score: ${score} · Level: ${level}\nHigh Score: ${hi}`;
-  msg.querySelector('button').textContent='Try Again';
-  msg.style.display='block';
-  document.getElementById('hint').style.display='none';
 }
 
 // ═══ DRAW ═══
-function drawAll(){
+const PIZZA_R=Math.min(window.innerWidth,window.innerHeight)*.28;
+const PIZZA_CX=()=>W/2;
+const PIZZA_CY=()=>H*.4;
+
+function draw(){
   ctx.clearRect(0,0,W,H);
 
-  // Background gradient
-  const bg=ctx.createLinearGradient(0,0,0,H);
-  bg.addColorStop(0,'#1a0a00');bg.addColorStop(1,'#2d1200');
+  // Background
+  const bg=ctx.createRadialGradient(W/2,H*.4,10,W/2,H*.4,H*.8);
+  bg.addColorStop(0,'#2a1200');bg.addColorStop(1,'#0d0500');
   ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
 
-  // Subtle checkered floor
-  for(let fy=H-20;fy<H;fy+=10)for(let fx=0;fx<W;fx+=10){
-    ctx.fillStyle=(((fx/10|0)+(fy/10|0))%2===0)?'rgba(255,255,255,.04)':'rgba(0,0,0,0)';
-    ctx.fillRect(fx,fy,10,10);
-  }
+  // Counter / table
+  ctx.fillStyle='#2d1800';
+  ctx.beginPath();ctx.ellipse(W/2,H*.44,PIZZA_R*1.3,PIZZA_R*.35,0,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='rgba(255,180,0,.18)';ctx.lineWidth=2;
+  ctx.beginPath();ctx.ellipse(W/2,H*.44,PIZZA_R*1.3,PIZZA_R*.35,0,0,Math.PI*2);ctx.stroke();
 
-  // Camera offset — scroll up smoothly
-  cameraY+=(targetCameraY-cameraY)*.14;
-  const camOff=cameraY;
+  const shakeOff=wrongShake>0?(Math.sin(wrongShake*1.5)*6)*(wrongShake/10):0;
+  if(wrongShake>0)wrongShake--;
+  const px=PIZZA_CX()+shakeOff,py=PIZZA_CY();
+  const r=PIZZA_R;
 
-  ctx.save();
-  ctx.translate(0,camOff);
+  // Shadow
+  ctx.fillStyle='rgba(0,0,0,.35)';
+  ctx.beginPath();ctx.ellipse(px,py+r*.12,r*.9,r*.18,0,0,Math.PI*2);ctx.fill();
 
-  // Draw stacked layers bottom-up
-  for(let i=0;i<stack.length;i++){
-    const layer=stack[i];
-    const cx=layer.x+layer.w/2,cy=layer.y;
-    if(layer.type==='base'){
-      // Plate / table
-      ctx.fillStyle='#4a3010';
-      roundRect(ctx,layer.x-6,cy,layer.w+12,layer.h+6,8);ctx.fill();
-      ctx.fillStyle='#6a4518';
-      roundRect(ctx,layer.x,cy,layer.w,layer.h,6);ctx.fill();
-      ctx.strokeStyle='rgba(255,200,100,.3)';ctx.lineWidth=2;
-      roundRect(ctx,layer.x,cy,layer.w,layer.h,6);ctx.stroke();
-      // Plate shine
-      ctx.fillStyle='rgba(255,255,255,.12)';
-      roundRect(ctx,layer.x+8,cy+3,layer.w-16,6,3);ctx.fill();
-    } else {
-      // Shadow under slice
-      ctx.fillStyle='rgba(0,0,0,.28)';
-      ctx.fillRect(layer.x+2,cy+layer.h-2,layer.w,4);
+  // --- Draw pizza layers ---
+  const hasDough=pizzaLayers.includes('dough');
+  const hasSauce=pizzaLayers.includes('sauce');
+  const hasCheese=pizzaLayers.includes('cheese');
+  const toppings=pizzaLayers.filter(id=>ING_BY_ID[id].layer==='top');
 
-      // Cheese base
-      ctx.fillStyle=CHEESE_COL;
-      roundRect(ctx,layer.x,cy,layer.w,layer.h,6);ctx.fill();
-
-      // Sauce stripe
-      ctx.fillStyle=SAUCE_COL;
-      ctx.fillRect(layer.x+2,cy+8,layer.w-4,10);
-
-      // Crust at top of slice (decorative top line)
-      ctx.fillStyle=CRUST_COL;
-      roundRect(ctx,layer.x,cy,layer.w,8,{tl:6,tr:6,bl:0,br:0});ctx.fill();
-
-      // Topping dots
-      ctx.font='9px serif';
-      ctx.textAlign='center';
-      const topping=TOPPINGS[i%TOPPINGS.length];
-      for(let t=0;t<Math.min(3,Math.floor(layer.w/35));t++){
-        const tx=layer.x+16+t*Math.floor((layer.w-20)/(Math.min(3,Math.floor(layer.w/35))||1));
-        ctx.fillText(topping,tx,cy+21);
-      }
-
-      // Edge highlight
-      ctx.strokeStyle='rgba(255,230,100,.25)';ctx.lineWidth=1.5;
-      roundRect(ctx,layer.x,cy,layer.w,layer.h,6);ctx.stroke();
-    }
-  }
-
-  // Swinging slice
-  if(swinging&&gameActive){
-    const sw=swinging.w,sh=swinging.h;
-    const topLayer=stack[stack.length-1];
-    const sy=topLayer.y-sh;
-
-    // Shadow
-    ctx.fillStyle='rgba(0,0,0,.18)';
-    ctx.fillRect(swingX+2,sy+sh-2,sw,4);
-
-    // Cheese
-    ctx.fillStyle=CHEESE_COL;
-    roundRect(ctx,swingX,sy,sw,sh,6);ctx.fill();
-    ctx.fillStyle=SAUCE_COL;
-    ctx.fillRect(swingX+2,sy+8,sw-4,10);
-    ctx.fillStyle=CRUST_COL;
-    roundRect(ctx,swingX,sy,sw,8,{tl:6,tr:6,bl:0,br:0});ctx.fill();
-    // Topping
-    ctx.font='9px serif';ctx.textAlign='center';
-    const tp=TOPPINGS[stack.length%TOPPINGS.length];
-    for(let t=0;t<Math.min(3,Math.floor(sw/35));t++){
-      const tx=swingX+16+t*Math.floor((sw-20)/(Math.min(3,Math.floor(sw/35))||1));
-      ctx.fillText(tp,tx,sy+21);
-    }
-    ctx.strokeStyle='rgba(255,180,0,.5)';ctx.lineWidth=2;
-    roundRect(ctx,swingX,sy,sw,sh,6);ctx.stroke();
-
-    // Guide line from above
-    ctx.setLineDash([4,6]);ctx.strokeStyle='rgba(255,180,0,.2)';ctx.lineWidth=1;
-    ctx.beginPath();ctx.moveTo(swingX+sw/2,sy-H);ctx.lineTo(swingX+sw/2,sy);ctx.stroke();
+  if(!hasDough){
+    // Empty plate hint
+    ctx.strokeStyle='rgba(255,180,0,.2)';ctx.lineWidth=3;ctx.setLineDash([10,8]);
+    ctx.beginPath();ctx.arc(px,py,r*.82,0,Math.PI*2);ctx.stroke();
     ctx.setLineDash([]);
+    ctx.fillStyle='rgba(255,180,0,.12)';ctx.beginPath();ctx.arc(px,py,r*.82,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(255,200,100,.35)';ctx.font=`${r*.35}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('🫓',px,py);
+    ctx.fillStyle='rgba(255,200,100,.4)';ctx.font=`${r*.12}px Segoe UI`;ctx.fillText('Add dough first!',px,py+r*.5);
+  } else {
+    // Dough
+    ctx.fillStyle='#e8b56a';
+    ctx.beginPath();ctx.arc(px,py,r,0,Math.PI*2);ctx.fill();
+    // Crust ring
+    const cg=ctx.createRadialGradient(px,py,r*.75,px,py,r);
+    cg.addColorStop(0,'#c8862a');cg.addColorStop(.5,'#d99a3a');cg.addColorStop(1,'#b87030');
+    ctx.fillStyle=cg;ctx.beginPath();ctx.arc(px,py,r,0,Math.PI*2);ctx.fill();
+    // Inner dough
+    const dg=ctx.createRadialGradient(px-r*.2,py-r*.15,0,px,py,r*.82);
+    dg.addColorStop(0,'#f5d890');dg.addColorStop(.6,'#f0c860');dg.addColorStop(1,'#d8a840');
+    ctx.fillStyle=dg;ctx.beginPath();ctx.arc(px,py,r*.78,0,Math.PI*2);ctx.fill();
+
+    if(hasSauce){
+      // Sauce
+      const sg=ctx.createRadialGradient(px,py,0,px,py,r*.75);
+      sg.addColorStop(0,'#dd3300');sg.addColorStop(1,'#aa1500');
+      ctx.fillStyle=sg;ctx.beginPath();ctx.arc(px,py,r*.74,0,Math.PI*2);ctx.fill();
+    }
+
+    if(hasCheese){
+      // Cheese blobs
+      ctx.fillStyle='#f5d040';
+      for(let a=0;a<Math.PI*2;a+=Math.PI/5){
+        const bx=px+Math.cos(a)*r*.38,by=py+Math.sin(a)*r*.38;
+        ctx.beginPath();ctx.arc(bx,by,r*.22,0,Math.PI*2);ctx.fill();
+      }
+      ctx.beginPath();ctx.arc(px,py,r*.28,0,Math.PI*2);ctx.fill();
+      // Melt lines
+      ctx.strokeStyle='rgba(230,180,0,.3)';ctx.lineWidth=1.5;
+      for(let a=0;a<Math.PI*2;a+=Math.PI/4){
+        ctx.beginPath();ctx.moveTo(px+Math.cos(a)*r*.1,py+Math.sin(a)*r*.1);
+        ctx.lineTo(px+Math.cos(a)*r*.65,py+Math.sin(a)*r*.65);ctx.stroke();
+      }
+    }
+
+    // Toppings scattered on pizza
+    ctx.font=`${r*.16}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+    toppings.forEach((id,ti)=>{
+      const ing=ING_BY_ID[id];
+      const angleOff=(ti/toppings.length)*Math.PI*2;
+      const positions=[];
+      const nPos=4+ti;
+      for(let p=0;p<nPos;p++){
+        const a=angleOff+(p/nPos)*Math.PI*2;
+        const dist=r*(.18+Math.sin(p*.7)*.45);
+        positions.push({x:px+Math.cos(a)*dist,y:py+Math.sin(a)*dist});
+      }
+      positions.forEach(pos=>{ctx.fillText(ing.emoji,pos.x,pos.y);});
+    });
+
+    // Shine
+    const shine=ctx.createRadialGradient(px-r*.3,py-r*.3,0,px,py,r);
+    shine.addColorStop(0,'rgba(255,255,255,.18)');shine.addColorStop(.5,'rgba(255,255,255,.0)');
+    ctx.fillStyle=shine;ctx.beginPath();ctx.arc(px,py,r,0,Math.PI*2);ctx.fill();
   }
 
   // Particles
-  for(const p of particles){
-    ctx.globalAlpha=p.life;
-    ctx.fillStyle=p.col;
-    ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();
+  for(let i=pizzaParticles.length-1;i>=0;i--){
+    const p=pizzaParticles[i];
+    p.x+=p.vx;p.y+=p.vy;p.vy+=.15;p.life-=.025;
+    if(p.life<=0){pizzaParticles.splice(i,1);continue;}
+    if(p.emoji){
+      ctx.globalAlpha=p.life;ctx.font=`${p.r*2}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(p.emoji,p.x,p.y);ctx.globalAlpha=1;
+    } else {
+      ctx.globalAlpha=p.life;ctx.fillStyle=p.col;
+      ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
+    }
   }
-  ctx.globalAlpha=1;
 
-  ctx.restore();
-
-  // Combo indicator (screen-space, not scrolled)
-  if(combo>1){
-    ctx.fillStyle=`rgba(255,200,0,${Math.min(1,combo*.15)})`;
-    ctx.font=`bold ${16+combo}px Segoe UI`;ctx.textAlign='left';
-    ctx.fillText(`🔥 x${combo} Combo`,14,H-50);
-  }
+  requestAnimationFrame(draw);
 }
 
-function roundRect(ctx,x,y,w,h,r){
-  if(typeof r==='number')r={tl:r,tr:r,bl:r,br:r};
-  ctx.beginPath();
-  ctx.moveTo(x+r.tl,y);ctx.lineTo(x+w-r.tr,y);
-  ctx.quadraticCurveTo(x+w,y,x+w,y+r.tr);
-  ctx.lineTo(x+w,y+h-r.br);ctx.quadraticCurveTo(x+w,y+h,x+w-r.br,y+h);
-  ctx.lineTo(x+r.bl,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r.bl);
-  ctx.lineTo(x,y+r.tl);ctx.quadraticCurveTo(x,y,x+r.tl,y);
-  ctx.closePath();
-}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]];}return a;}
 
-// ═══ LOOP ═══
-let lastTs=0;
-function loop(ts=0){
-  if(!gameActive){drawAll();return;}
-  frameId=requestAnimationFrame(loop);
-  const dt=Math.min((ts-lastTs)/16.67,3);lastTs=ts;
-
-  // Swing
-  if(swinging){
-    swingX+=swingDir*swingSpeed*dt;
-    const maxX=W-swinging.w-W*.05;
-    const minX=W*.05;
-    if(swingX>maxX){swingX=maxX;swingDir=-1;}
-    if(swingX<minX){swingX=minX;swingDir=1;}
-  }
-
-  // Particles
-  for(let i=particles.length-1;i>=0;i--){
-    const p=particles[i];
-    p.x+=p.vx;p.y+=p.vy;p.vy+=.12;p.life-=.035;
-    if(p.life<=0)particles.splice(i,1);
-  }
-
-  drawAll();
-}
-
-drawAll(); // draw menu background
-loop();
+draw();
 </script>
 </body>
 </html>

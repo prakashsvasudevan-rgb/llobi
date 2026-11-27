@@ -55,6 +55,10 @@ const TUT=[
   {at:480, msg:'You hold the camera.\nWhat will you broadcast?',col:'#ffffff'},
 ];
 let tutStep=0;
+// storyPhase: 0=squares scared, 1=circles scared, 2=all scared, 3=wait for glasses photo, 4=fight
+let storyPhase=0;
+let storyMsg='';     // overlay message shown after a story beat
+let storyMsgTimer=0;
 
 // broadcast
 let broadcast={type:'static',intensity:0,imgData:null};
@@ -99,11 +103,18 @@ for(let i=0;i<10;i++) npcs.push(mkNPC('square',340+Math.random()*200,PLAY_TOP+30
 function drawNPC(n,scale=1){
   ctx.save();ctx.translate(n.x,n.y);ctx.scale(scale,scale);
   const s=n.size;
+  const scared=n.mood==='scared';
   const col = n.mood==='angry'
     ? '#dd1111'
-    : n.extreme
-      ? (n.type==='circle'?'#ffaa00':'#aa22ff')
-      : (n.type==='circle'?'#ff9933':'#6677ff');
+    : scared
+      ? (n.type==='circle'?'#ffcc88':'#aabbff')
+      : n.extreme
+        ? (n.type==='circle'?'#ffaa00':'#aa22ff')
+        : (n.type==='circle'?'#ff9933':'#6677ff');
+
+  // scared shake offset
+  const shk=scared?(Math.random()-0.5)*3:0;
+  ctx.translate(shk,0);
 
   // angry pulsing ring
   if(n.mood==='angry'){
@@ -117,10 +128,22 @@ function drawNPC(n,scale=1){
     // body
     ctx.fillStyle=col;
     ctx.beginPath();ctx.arc(0,0,s,0,Math.PI*2);ctx.fill();
-    // face
-    ctx.fillStyle='#111';
-    ctx.beginPath();ctx.arc(-s*0.3,-s*0.15,s*0.18,0,Math.PI*2);ctx.fill();
-    ctx.beginPath();ctx.arc(s*0.3,-s*0.15,s*0.18,0,Math.PI*2);ctx.fill();
+    // face — scared = huge eyes + wavy mouth
+    if(scared){
+      ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(-s*0.3,-s*0.1,s*0.3,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.arc(s*0.3,-s*0.1,s*0.3,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#111';ctx.beginPath();ctx.arc(-s*0.3,-s*0.1,s*0.17,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.arc(s*0.3,-s*0.1,s*0.17,0,Math.PI*2);ctx.fill();
+      // wavy scared mouth
+      ctx.strokeStyle='#111';ctx.lineWidth=1.5;ctx.beginPath();
+      ctx.moveTo(-s*0.35,s*0.3);ctx.bezierCurveTo(-s*0.15,s*0.5,s*0.15,s*0.1,s*0.35,s*0.3);ctx.stroke();
+      // sweat
+      ctx.fillStyle='#88ccff';ctx.beginPath();ctx.arc(s*0.75,-s*0.3,s*0.1,0,Math.PI*2);ctx.fill();
+    } else {
+      ctx.fillStyle='#111';
+      ctx.beginPath();ctx.arc(-s*0.3,-s*0.15,s*0.18,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.arc(s*0.3,-s*0.15,s*0.18,0,Math.PI*2);ctx.fill();
+    }
     if(n.mood==='angry'){
       ctx.strokeStyle='#111';ctx.lineWidth=1.5;
       ctx.beginPath();ctx.arc(0,s*0.2,s*0.3,Math.PI*0.1,Math.PI*0.9,true);ctx.stroke();
@@ -152,18 +175,26 @@ function drawNPC(n,scale=1){
     ctx.fillStyle=col;
     ctx.beginPath();ctx.roundRect(-s,-s,s*2,s*2,3);ctx.fill();
     // face
-    ctx.fillStyle='#111';
-    ctx.fillRect(-s*0.5,-s*0.35,s*0.3,s*0.3);
-    ctx.fillRect(s*0.2,-s*0.35,s*0.3,s*0.3);
-    if(n.mood==='angry'){
-      ctx.strokeStyle='#111';ctx.lineWidth=1.5;
-      ctx.beginPath();ctx.moveTo(-s*0.4,s*0.3);ctx.lineTo(s*0.4,s*0.3);ctx.stroke();
-      ctx.strokeStyle='#111';ctx.lineWidth=2;
-      ctx.beginPath();ctx.moveTo(-s*0.6,-s*0.5);ctx.lineTo(-s*0.1,-s*0.65);ctx.stroke();
-      ctx.beginPath();ctx.moveTo(s*0.6,-s*0.5);ctx.lineTo(s*0.1,-s*0.65);ctx.stroke();
+    if(scared){
+      ctx.fillStyle='#fff';ctx.fillRect(-s*0.5,-s*0.35,s*0.32,s*0.32);ctx.fillRect(s*0.18,-s*0.35,s*0.32,s*0.32);
+      ctx.fillStyle='#111';ctx.fillRect(-s*0.4,-s*0.3,s*0.18,s*0.18);ctx.fillRect(s*0.22,-s*0.3,s*0.18,s*0.18);
+      ctx.strokeStyle='#111';ctx.lineWidth=1.5;ctx.beginPath();
+      ctx.moveTo(-s*0.35,s*0.3);ctx.bezierCurveTo(-s*0.15,s*0.5,s*0.15,s*0.1,s*0.35,s*0.3);ctx.stroke();
+      ctx.fillStyle='#88ccff';ctx.beginPath();ctx.arc(s*0.9,-s*0.2,s*0.1,0,Math.PI*2);ctx.fill();
     } else {
-      ctx.strokeStyle='#111';ctx.lineWidth=1.5;
-      ctx.beginPath();ctx.arc(0,s*0.2,s*0.35,0.05*Math.PI,0.95*Math.PI);ctx.stroke();
+      ctx.fillStyle='#111';
+      ctx.fillRect(-s*0.5,-s*0.35,s*0.3,s*0.3);
+      ctx.fillRect(s*0.2,-s*0.35,s*0.3,s*0.3);
+      if(n.mood==='angry'){
+        ctx.strokeStyle='#111';ctx.lineWidth=1.5;
+        ctx.beginPath();ctx.moveTo(-s*0.4,s*0.3);ctx.lineTo(s*0.4,s*0.3);ctx.stroke();
+        ctx.strokeStyle='#111';ctx.lineWidth=2;
+        ctx.beginPath();ctx.moveTo(-s*0.6,-s*0.5);ctx.lineTo(-s*0.1,-s*0.65);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(s*0.6,-s*0.5);ctx.lineTo(s*0.1,-s*0.65);ctx.stroke();
+      } else {
+        ctx.strokeStyle='#111';ctx.lineWidth=1.5;
+        ctx.beginPath();ctx.arc(0,s*0.2,s*0.35,0.05*Math.PI,0.95*Math.PI);ctx.stroke();
+      }
     }
     // spikes (extreme)
     if(n.extreme){
@@ -403,59 +434,80 @@ function takePhoto(){
   broadcast.imgData=P.toDataURL();
 }
 
+function showStoryMsg(msg,col='#ffdd44'){storyMsg=msg;storyMsgTimer=180;}
+
 function analyzeBroadcast(inFrame){
   if(inFrame.length===0){broadcast.type='empty';broadcast.msg='';broadcast.intensity=0;return;}
   const circles=inFrame.filter(n=>n.type==='circle');
   const squares=inFrame.filter(n=>n.type==='square');
-  const angryC=circles.filter(n=>n.mood==='angry').length;
-  const angryS=squares.filter(n=>n.mood==='angry').length;
-  const extremeC=circles.filter(n=>n.extreme).length;
-  const extremeS=squares.filter(n=>n.extreme).length;
+  const trendyIn=inFrame.filter(n=>n.trendy).length;
+  const angryIn=inFrame.filter(n=>n.mood==='angry').length;
+  const scaredIn=inFrame.filter(n=>n.mood==='scared').length;
 
-  const totalAngry=angryC+angryS;
-  const totalExtreme=extremeC+extremeS;
-  const mixed=circles.length>0&&squares.length>0;
-
-  if(totalAngry>=2){
-    broadcast.type='chaos';broadcast.intensity=0.8+totalAngry*0.05;
-    broadcast.msg='⚡ BREAKING: Conflict erupts in town square!';
-    tension=Math.min(100,tension+8);
-    addFloat('📺 Anger broadcast — tension rises!',W/2,PLAY_TOP+20,'#ff6644');
-  } else if(totalExtreme>=1&&totalAngry>=1){
-    broadcast.type='extreme';broadcast.intensity=0.6;
-    broadcast.msg='⚠ Provocateurs spotted — tensions high';
+  // ── SCRIPTED STORY BEATS ──────────────────────
+  // Phase 0: first photo → squares terrified of circles
+  if(storyPhase===0){
+    broadcast.type='scared_s';broadcast.intensity=0.6;
+    broadcast.msg='😱 BREAKING: Squares TERRIFIED of circles!';
+    npcs.filter(n=>n.type==='square').forEach(n=>n.mood='scared');
+    showStoryMsg('😱 Squares are terrified of circles!','#aa88ff');
     tension=Math.min(100,tension+5);
-    addFloat('📺 Extremism broadcast — tension rises!',W/2,PLAY_TOP+20,'#ffaa22');
-  } else if(totalExtreme>=2){
-    broadcast.type='extreme';broadcast.intensity=0.5;
-    broadcast.msg='👁 Unusual citizens cause concern';
-    tension=Math.min(100,tension+3);
-    addFloat('📺 Strange broadcast — tension rises',W/2,PLAY_TOP+20,'#ffcc44');
-  } else if(mixed&&totalAngry===0){
-    const trendyShown=inFrame.filter(n=>n.trendy).length;
-    broadcast.type='together';broadcast.intensity=0.3;
-    broadcast.msg=trendyShown>0
-      ?'😎 Very nice! Trendy folk all getting along!'
-      :'🤝 Very nice! Two groups living side by side.';
-    tension=Math.max(0,tension-4);
-    addFloat('📺 Very nice! Tension eases.',W/2,PLAY_TOP+20,'#88ff88');
-  } else if(circles.length>0&&squares.length===0&&angryC===0){
-    const trendyShown=circles.filter(n=>n.trendy).length;
-    broadcast.type='calm_c';broadcast.intensity=0.2;
-    broadcast.msg=trendyShown>0
-      ?'😎 Very nice! The circles are looking stylish today!'
-      :'😊 Very nice! Circle folk going about their day.';
-    tension=Math.max(0,tension-2);
-    addFloat('📺 Very nice!',W/2,PLAY_TOP+20,'#aaffaa');
-  } else if(squares.length>0&&circles.length===0&&angryS===0){
-    broadcast.type='calm_s';broadcast.intensity=0.2;
-    broadcast.msg='😊 Very nice! Square folk enjoying a quiet day.';
-    tension=Math.max(0,tension-2);
-    addFloat('📺 Very nice!',W/2,PLAY_TOP+20,'#aaaaff');
-  } else {
-    broadcast.type='mixed';broadcast.intensity=0.3;
-    broadcast.msg='📡 Daily life in town square.';
-    tension=Math.max(0,tension-1);
+    storyPhase=1;
+    return;
+  }
+  // Phase 1: next photo → circles now scared of squares
+  if(storyPhase===1){
+    broadcast.type='scared_c';broadcast.intensity=0.6;
+    broadcast.msg='😱 NOW: Circles TERRIFIED of squares too!';
+    npcs.filter(n=>n.type==='circle'&&!n.trendy).forEach(n=>n.mood='scared');
+    showStoryMsg('😱 Now the circles are terrified of the squares!','#ffaa44');
+    tension=Math.min(100,tension+8);
+    storyPhase=2;
+    return;
+  }
+  // Phase 2: next photo → everyone scared
+  if(storyPhase===2){
+    broadcast.type='scared_all';broadcast.intensity=0.8;
+    broadcast.msg='😱 EVERYONE IS TERRIFIED OF EACH OTHER!';
+    npcs.forEach(n=>{if(n.mood!=='angry') n.mood='scared';});
+    showStoryMsg('😱 Everyone is terrified of each other!','#ff8844');
+    tension=Math.min(100,tension+10);
+    storyPhase=3;
+    return;
+  }
+  // Phase 3: must photograph glasses to trigger next beat
+  if(storyPhase===3){
+    if(trendyIn>0){
+      broadcast.type='glasses_dumb';broadcast.intensity=0.9;
+      broadcast.msg='👓 OPINION: GLASSES ARE DUMB! 94% of viewers agree.';
+      showStoryMsg('👓 "GLASSES ARE DUMB!" — the TV has spoken.','#ffcc00');
+      // Un-glassed squares rage against glassed circles
+      npcs.filter(n=>n.type==='square').forEach(n=>n.mood='angry');
+      npcs.filter(n=>n.trendy).forEach(n=>n.mood='angry');
+      tension=Math.min(100,tension+20);
+      storyPhase=4;
+    } else {
+      broadcast.type='empty';broadcast.intensity=0;
+      broadcast.msg='📺 Photograph someone wearing glasses...';
+    }
+    return;
+  }
+  // Phase 4+: free but scripted chaos, tension rises fast
+  if(storyPhase>=4){
+    if(angryIn>=2){
+      broadcast.type='chaos';broadcast.intensity=0.9;
+      broadcast.msg='⚡ GLASSES-WEARERS VS NON-WEARERS! All-out brawl!';
+      tension=Math.min(100,tension+10);
+      addFloat('⚡ Tension rises!',W/2,PLAY_TOP+20,'#ff4422');
+    } else if(angryIn===1){
+      broadcast.type='extreme';broadcast.intensity=0.6;
+      broadcast.msg='😡 Anger is spreading through the square!';
+      tension=Math.min(100,tension+5);
+    } else {
+      broadcast.type='mixed';broadcast.intensity=0.4;
+      broadcast.msg='📺 Chaos in the town square.';
+      tension=Math.min(100,tension+2);
+    }
   }
 }
 
@@ -575,16 +627,24 @@ function update(){
     n.x+=n.vx+(Math.sin(n.wobble)*0.2);
     n.y+=n.vy+(Math.cos(n.wobble*0.7)*0.15);
 
-    // Angry move faster toward center
+    // Angry: rush toward center / opposite group
     if(n.mood==='angry'){
-      const push=n.type==='circle'?0.04:-0.04;
+      const push=n.type==='circle'?0.06:-0.06;
       n.vx+=push;
       const spd=Math.hypot(n.vx,n.vy);
-      if(spd>2.5){n.vx*=0.95;n.vy*=0.95;}
+      if(spd>3){n.vx*=0.93;n.vy*=0.93;}
+    }
+    // Scared: run away from opposite group (away from center)
+    if(n.mood==='scared'){
+      const flee=n.type==='circle'?-0.08:0.08;
+      n.vx+=flee;
+      const spd=Math.hypot(n.vx,n.vy);
+      if(spd>2.5){n.vx*=0.93;n.vy*=0.93;}
     }
 
-    // Boundaries (soft)
-    const lx=n.type==='circle'?55:PLAY_MID+5,rx=n.type==='circle'?PLAY_MID-5:W-55;
+    // Boundaries (soft) — scared can go anywhere, others stay in territory
+    const lx=n.mood==='scared'||n.mood==='angry'?30:n.type==='circle'?55:PLAY_MID+5;
+    const rx=n.mood==='scared'||n.mood==='angry'?W-30:n.type==='circle'?PLAY_MID-5:W-55;
     if(n.x<lx+5) n.vx+=0.1;
     if(n.x>rx-5) n.vx-=0.1;
     if(n.y<PLAY_TOP+15) n.vy+=0.1;
@@ -679,6 +739,17 @@ function drawIntro(){
 // ══════════════════════════════════════════════
 // DRAW ESCALATE / ENDING
 // ══════════════════════════════════════════════
+function drawStoryMsg(){
+  if(storyMsgTimer<=0) return;
+  storyMsgTimer--;
+  const a=Math.min(1,storyMsgTimer/20);
+  ctx.globalAlpha=a;
+  ctx.fillStyle='rgba(0,0,0,0.75)';ctx.beginPath();ctx.roundRect(W/2-170,PLAY_TOP+8,340,32,8);ctx.fill();
+  ctx.fillStyle='#ffdd44';ctx.font='bold 15px Georgia,serif';ctx.textAlign='center';
+  ctx.fillText(storyMsg,W/2,PLAY_TOP+28);
+  ctx.globalAlpha=1;
+}
+
 function drawTutorial(){
   // Show current tutorial message with fade
   if(tutStep===0) return;
@@ -782,7 +853,7 @@ function drawEnding(){
 }
 
 function resetGame(){
-  tension=0;frame=0;flashTimer=0;introFrame=0;tutFrame=0;tutStep=0;endFrame=0;endType='';
+  tension=0;frame=0;flashTimer=0;introFrame=0;tutFrame=0;tutStep=0;endFrame=0;endType='';storyPhase=0;storyMsg='';storyMsgTimer=0;
   broadcast={type:'static',intensity:0,imgData:null};floats=[];
   npcs=[];
   for(let i=0;i<10;i++) npcs.push(mkNPC('circle',80+Math.random()*200,PLAY_TOP+30+Math.random()*200));
@@ -837,6 +908,7 @@ function loop(){
   // Normal play
   npcs.forEach(n=>drawNPC(n));
   drawScreams();
+  drawStoryMsg();
   drawTV();
   drawTension();
 

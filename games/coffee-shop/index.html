@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Coffee Shop</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#1a0f00;--panel:#2a1800;--panel2:#3a2200;--gold:#f5c842;--cream:#fff5e0;
+  --brown:#8b4513;--darkbrown:#3d1c00;--green:#4caf50;--red:#e53935;
+  --blue:#42a5f5;--orange:#ff7043;
+}
+body{background:var(--bg);font-family:'Nunito',sans-serif;color:var(--cream);min-height:100vh;overflow-x:hidden;}
+
+/* ── Title ── */
+#title-screen{position:fixed;inset:0;background:linear-gradient(160deg,#0d0700,#2a1200,#0d0700);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;}
+.title-logo{font-size:72px;margin-bottom:4px;animation:float 3s ease-in-out infinite;}
+@keyframes float{0%,100%{transform:translateY(0);}50%{transform:translateY(-12px);}}
+.title-h{font-size:52px;font-weight:800;background:linear-gradient(135deg,#f5c842,#ff9800,#f5c842);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:2px;text-shadow:none;}
+.title-sub{color:#cc9966;font-size:17px;margin:8px 0 32px;letter-spacing:1px;}
+.title-cards{display:flex;gap:16px;margin-bottom:36px;}
+.tc{background:rgba(255,255,255,0.07);border:2px solid rgba(245,200,66,0.3);border-radius:16px;padding:16px 20px;text-align:center;font-size:13px;color:#ddbb88;width:130px;}
+.tc .tci{font-size:36px;margin-bottom:6px;}
+#start-btn{padding:16px 72px;font-size:24px;font-weight:800;background:linear-gradient(135deg,#8b4513,#c06020,#8b4513);color:#fff5e0;border:3px solid var(--gold);border-radius:14px;cursor:pointer;letter-spacing:2px;box-shadow:0 0 30px rgba(245,200,66,0.4);transition:all .2s;}
+#start-btn:hover{transform:scale(1.05);box-shadow:0 0 50px rgba(245,200,66,0.6);}
+
+/* ── Main layout ── */
+#game{display:none;min-height:100vh;padding:12px;}
+.top-bar{display:flex;align-items:center;gap:12px;background:var(--panel);border-radius:14px;padding:10px 18px;margin-bottom:12px;border:1px solid rgba(245,200,66,0.2);}
+.money{font-size:26px;font-weight:800;color:var(--gold);text-shadow:0 0 10px rgba(245,200,66,0.4);}
+.day-label{font-size:16px;color:#cc9966;font-weight:700;margin-left:auto;}
+.weather-box{display:flex;align-items:center;gap:6px;font-size:14px;color:#bbccdd;background:rgba(0,0,0,0.3);padding:5px 12px;border-radius:8px;}
+
+.main-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:900px;margin:0 auto;}
+.card{background:var(--panel);border-radius:16px;padding:16px;border:1px solid rgba(255,255,255,0.08);}
+.card-title{font-size:13px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;display:flex;align-items:center;gap:6px;}
+
+/* shop */
+.ing-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;background:rgba(0,0,0,0.25);border-radius:10px;padding:8px 10px;}
+.ing-icon{font-size:26px;width:36px;text-align:center;}
+.ing-info{flex:1;}
+.ing-name{font-size:13px;font-weight:700;color:var(--cream);}
+.ing-stock{font-size:11px;color:#aa8866;margin-top:1px;}
+.ing-price{font-size:12px;color:var(--gold);margin-top:1px;}
+.buy-btns{display:flex;gap:4px;}
+.buy-btn{padding:4px 8px;font-size:11px;font-weight:700;background:var(--panel2);border:1px solid #664400;border-radius:6px;cursor:pointer;color:var(--cream);transition:all .15s;}
+.buy-btn:hover{background:#554400;border-color:var(--gold);}
+
+/* recipe */
+.recipe-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.recipe-label{font-size:13px;color:#cc9966;width:90px;font-weight:600;}
+.slider{flex:1;accent-color:var(--gold);}
+.recipe-val{font-size:13px;font-weight:700;color:var(--cream);width:28px;text-align:right;}
+.quality-bar{height:12px;background:#1a0d00;border-radius:6px;overflow:hidden;margin-top:4px;border:1px solid rgba(255,255,255,0.1);}
+.quality-fill{height:100%;border-radius:6px;transition:width .3s;}
+.quality-label{font-size:11px;color:#aa8866;margin-top:3px;text-align:center;}
+
+/* price */
+.price-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.price-display{font-size:28px;font-weight:800;color:var(--gold);}
+.price-btn{width:38px;height:38px;font-size:22px;font-weight:800;border:2px solid #664400;border-radius:8px;cursor:pointer;background:var(--panel2);color:var(--cream);transition:all .15s;}
+.price-btn:hover{background:#554400;border-color:var(--gold);}
+.demand-hint{font-size:12px;padding:4px 10px;border-radius:6px;font-weight:600;text-align:center;}
+
+/* forecast */
+.forecast-row{display:flex;gap:6px;margin-bottom:6px;}
+.fc-day{flex:1;background:rgba(0,0,0,0.3);border-radius:8px;padding:6px 4px;text-align:center;font-size:11px;}
+.fc-icon{font-size:22px;}
+.fc-temp{color:#aabb99;font-size:10px;margin-top:2px;}
+
+/* log */
+#day-log{max-height:200px;overflow-y:auto;font-size:12px;line-height:1.9;color:#bbaa88;background:rgba(0,0,0,0.25);border-radius:10px;padding:10px;margin-top:4px;}
+#day-log::-webkit-scrollbar{width:4px;}
+#day-log::-webkit-scrollbar-thumb{background:#664400;border-radius:2px;}
+.log-profit{color:#66dd66;}
+.log-loss{color:#dd6655;}
+.log-info{color:#88aacc;}
+
+/* open button */
+#open-btn{width:100%;padding:14px;font-size:20px;font-weight:800;background:linear-gradient(135deg,#226600,#44aa00);color:#fff;border:3px solid #88ff44;border-radius:12px;cursor:pointer;letter-spacing:2px;margin-top:12px;box-shadow:0 4px 20px rgba(0,200,0,0.3);transition:all .2s;}
+#open-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 6px 28px rgba(0,200,0,0.5);}
+#open-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
+
+/* day result modal */
+#result-modal{position:fixed;inset:0;background:rgba(0,0,0,0.85);display:none;align-items:center;justify-content:center;z-index:50;}
+.result-box{background:linear-gradient(160deg,#2a1800,#1a0f00);border:2px solid var(--gold);border-radius:20px;padding:28px 36px;max-width:460px;width:90%;text-align:center;box-shadow:0 0 60px rgba(245,200,66,0.2);}
+.result-title{font-size:28px;font-weight:800;margin-bottom:4px;}
+.result-cups{font-size:48px;font-weight:800;color:var(--gold);}
+.result-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:16px 0;}
+.rs{background:rgba(0,0,0,0.3);border-radius:10px;padding:8px 12px;}
+.rs-label{font-size:11px;color:#aa8866;font-weight:600;text-transform:uppercase;}
+.rs-val{font-size:18px;font-weight:800;color:var(--cream);}
+.result-net{font-size:28px;font-weight:800;margin:12px 0;}
+.result-btn{padding:12px 48px;font-size:18px;font-weight:800;background:linear-gradient(135deg,#8b4513,#c06020);color:#fff5e0;border:2px solid var(--gold);border-radius:10px;cursor:pointer;margin-top:8px;transition:all .2s;}
+.result-btn:hover{transform:scale(1.05);}
+
+/* end screen */
+#end-screen{position:fixed;inset:0;background:linear-gradient(160deg,#0d0700,#2a1200);display:none;align-items:center;justify-content:center;z-index:100;flex-direction:column;text-align:center;}
+#end-screen h2{font-size:52px;font-weight:800;background:linear-gradient(135deg,#f5c842,#ff9800);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:8px;}
+#end-screen p{font-size:18px;color:#cc9966;margin-bottom:24px;}
+</style>
+</head>
+<body>
+
+<!-- ── Title ── -->
+<div id="title-screen">
+  <div class="title-logo">☕</div>
+  <div class="title-h">COFFEE SHOP</div>
+  <div class="title-sub">Run your own café — 15 days to fame!</div>
+  <div class="title-cards">
+    <div class="tc"><div class="tci">🛒</div>Buy ingredients<br>each morning</div>
+    <div class="tc"><div class="tci">⚗️</div>Set your recipe<br>& quality</div>
+    <div class="tc"><div class="tci">💰</div>Price it right<br>& earn profit</div>
+    <div class="tc"><div class="tci">☁️</div>Weather changes<br>demand daily</div>
+  </div>
+  <button id="start-btn" onclick="startGame()">☕ OPEN SHOP ☕</button>
+</div>
+
+<!-- ── Game ── -->
+<div id="game">
+  <div class="top-bar">
+    <div>
+      <div class="money" id="money-display">$0.00</div>
+      <div style="font-size:11px;color:#886644;margin-top:2px">Total earnings</div>
+    </div>
+    <div style="margin-left:16px">
+      <div style="font-size:13px;color:#cc9966;font-weight:700" id="day-display">Day 1 / 15</div>
+      <div style="font-size:11px;color:#886644;margin-top:2px" id="score-display">Score: 0 ⭐</div>
+    </div>
+    <div class="weather-box" id="weather-box">🌤️ Mild</div>
+    <div style="margin-left:auto;font-size:13px;color:#886644" id="phase-label">Morning — buy supplies</div>
+  </div>
+
+  <div class="main-grid">
+
+    <!-- ── Buy supplies ── -->
+    <div class="card">
+      <div class="card-title">🛒 Buy Supplies</div>
+
+      <div class="ing-row">
+        <div class="ing-icon">☕</div>
+        <div class="ing-info">
+          <div class="ing-name">Coffee Beans</div>
+          <div class="ing-stock" id="beans-stock">In stock: 0</div>
+          <div class="ing-price">$0.30 / cup</div>
+        </div>
+        <div class="buy-btns">
+          <button class="buy-btn" onclick="buy('beans',10)">+10</button>
+          <button class="buy-btn" onclick="buy('beans',25)">+25</button>
+          <button class="buy-btn" onclick="buy('beans',50)">+50</button>
+        </div>
+      </div>
+
+      <div class="ing-row">
+        <div class="ing-icon">🥛</div>
+        <div class="ing-info">
+          <div class="ing-name">Milk</div>
+          <div class="ing-stock" id="milk-stock">In stock: 0</div>
+          <div class="ing-price">$0.20 / cup</div>
+        </div>
+        <div class="buy-btns">
+          <button class="buy-btn" onclick="buy('milk',10)">+10</button>
+          <button class="buy-btn" onclick="buy('milk',25)">+25</button>
+          <button class="buy-btn" onclick="buy('milk',50)">+50</button>
+        </div>
+      </div>
+
+      <div class="ing-row">
+        <div class="ing-icon">🍬</div>
+        <div class="ing-info">
+          <div class="ing-name">Sugar</div>
+          <div class="ing-stock" id="sugar-stock">In stock: 0</div>
+          <div class="ing-price">$0.10 / cup</div>
+        </div>
+        <div class="buy-btns">
+          <button class="buy-btn" onclick="buy('sugar',10)">+10</button>
+          <button class="buy-btn" onclick="buy('sugar',25)">+25</button>
+          <button class="buy-btn" onclick="buy('sugar',50)">+50</button>
+        </div>
+      </div>
+
+      <div class="ing-row">
+        <div class="ing-icon">🧊</div>
+        <div class="ing-info">
+          <div class="ing-name">Ice (iced coffee)</div>
+          <div class="ing-stock" id="ice-stock">In stock: 0</div>
+          <div class="ing-price">$0.05 / cup</div>
+        </div>
+        <div class="buy-btns">
+          <button class="buy-btn" onclick="buy('ice',10)">+10</button>
+          <button class="buy-btn" onclick="buy('ice',25)">+25</button>
+          <button class="buy-btn" onclick="buy('ice',50)">+50</button>
+        </div>
+      </div>
+
+      <div style="margin-top:10px;font-size:12px;color:#886644;text-align:right">
+        Cash: <span id="cash-left" style="color:var(--gold);font-weight:700">$5.00</span>
+      </div>
+    </div>
+
+    <!-- ── Recipe & Price ── -->
+    <div class="card">
+      <div class="card-title">⚗️ Recipe & Price</div>
+
+      <div class="recipe-row">
+        <div class="recipe-label">☕ Beans</div>
+        <input type="range" class="slider" id="r-beans" min="1" max="5" value="3" oninput="updateRecipe()">
+        <div class="recipe-val" id="rv-beans">3</div>
+      </div>
+      <div class="recipe-row">
+        <div class="recipe-label">🥛 Milk</div>
+        <input type="range" class="slider" id="r-milk" min="0" max="5" value="2" oninput="updateRecipe()">
+        <div class="recipe-val" id="rv-milk">2</div>
+      </div>
+      <div class="recipe-row">
+        <div class="recipe-label">🍬 Sugar</div>
+        <input type="range" class="slider" id="r-sugar" min="0" max="5" value="1" oninput="updateRecipe()">
+        <div class="recipe-val" id="rv-sugar">1</div>
+      </div>
+      <div class="recipe-row">
+        <div class="recipe-label">🧊 Ice</div>
+        <input type="range" class="slider" id="r-ice" min="0" max="3" value="0" oninput="updateRecipe()">
+        <div class="recipe-val" id="rv-ice">0</div>
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <div class="quality-bar"><div class="quality-fill" id="quality-fill" style="width:60%;background:linear-gradient(90deg,#ff9800,#f5c842)"></div></div>
+        <div class="quality-label" id="quality-label">Quality: Good ☕☕☕</div>
+      </div>
+
+      <div style="border-top:1px solid rgba(255,255,255,0.08);padding-top:12px;">
+        <div class="card-title" style="margin-bottom:8px;">💰 Cup Price</div>
+        <div class="price-row">
+          <button class="price-btn" onclick="adjustPrice(-0.25)">−</button>
+          <div class="price-display" id="price-display">$1.50</div>
+          <button class="price-btn" onclick="adjustPrice(0.25)">+</button>
+          <button class="price-btn" onclick="adjustPrice(-0.05)" style="font-size:14px">−¢</button>
+          <button class="price-btn" onclick="adjustPrice(0.05)" style="font-size:14px">+¢</button>
+        </div>
+        <div class="demand-hint" id="demand-hint" style="background:rgba(0,180,0,0.15);color:#66dd66;">
+          🟢 Looks like a fair price!
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Forecast ── -->
+    <div class="card">
+      <div class="card-title">🌤️ 3-Day Forecast</div>
+      <div class="forecast-row" id="forecast-row"></div>
+      <div style="margin-top:8px;font-size:12px;color:#886644;line-height:1.7" id="weather-tip">
+        Hot days → more iced coffee demand!<br>Rainy days → fewer customers but loyal ones pay more.
+      </div>
+      <div style="margin-top:12px;border-top:1px solid rgba(255,255,255,0.08);padding-top:10px;">
+        <div class="card-title" style="margin-bottom:8px;">📊 Ingredients needed / cup</div>
+        <div id="cost-per-cup" style="font-size:13px;color:#bbaa88;line-height:2;"></div>
+      </div>
+    </div>
+
+    <!-- ── Log ── -->
+    <div class="card">
+      <div class="card-title">📋 Daily Log</div>
+      <div id="day-log">Start your first day — buy supplies and open the shop!</div>
+    </div>
+
+  </div>
+
+  <div style="max-width:900px;margin:12px auto 0;">
+    <button id="open-btn" onclick="openShop()">☀️ OPEN FOR BUSINESS</button>
+  </div>
+</div>
+
+<!-- ── Day result modal ── -->
+<div id="result-modal">
+  <div class="result-box">
+    <div class="result-title" id="result-title">Day Complete!</div>
+    <div style="font-size:14px;color:#aa8866;margin-bottom:8px;" id="result-weather"></div>
+    <div class="result-cups" id="result-cups">0 ☕</div>
+    <div style="font-size:13px;color:#aa8866">cups sold</div>
+    <div class="result-stats">
+      <div class="rs"><div class="rs-label">Revenue</div><div class="rs-val" id="rs-rev">$0</div></div>
+      <div class="rs"><div class="rs-label">Ingredient cost</div><div class="rs-val" id="rs-cost">$0</div></div>
+      <div class="rs"><div class="rs-label">Left over</div><div class="rs-val" id="rs-left">0 cups</div></div>
+      <div class="rs"><div class="rs-label">Rating</div><div class="rs-val" id="rs-rating">★★★</div></div>
+    </div>
+    <div class="result-net" id="result-net">+$0.00</div>
+    <div style="font-size:13px;color:#aa8866;margin-bottom:12px;" id="result-comment"></div>
+    <button class="result-btn" onclick="nextDay()">Next Day →</button>
+  </div>
+</div>
+
+<!-- ── End screen ── -->
+<div id="end-screen">
+  <div style="font-size:72px;margin-bottom:8px;">☕</div>
+  <h2 id="end-title">Game Over!</h2>
+  <p id="end-msg"></p>
+  <div style="font-size:36px;color:var(--gold);font-weight:800;margin-bottom:8px;" id="end-money"></div>
+  <div style="font-size:18px;color:#cc9966;margin-bottom:28px;" id="end-rating"></div>
+  <button class="result-btn" onclick="location.reload()">Play Again</button>
+</div>
+
+<script>
+// ═══ GAME CONFIG ═══
+const DAYS = 15;
+const PRICES = {beans:0.30, milk:0.20, sugar:0.10, ice:0.05};
+const WEATHERS = [
+  {name:'Sunny',   icon:'☀️',  temp:'Hot',   mult:1.2, iceMult:1.6, tipMult:1.0},
+  {name:'Mild',    icon:'🌤️', temp:'Warm',  mult:1.0, iceMult:1.0, tipMult:1.0},
+  {name:'Cloudy',  icon:'☁️', temp:'Cool',  mult:0.9, iceMult:0.5, tipMult:1.1},
+  {name:'Rainy',   icon:'🌧️', temp:'Cold',  mult:0.6, iceMult:0.2, tipMult:1.3},
+  {name:'Windy',   icon:'💨', temp:'Breezy',mult:0.8, iceMult:0.6, tipMult:1.0},
+  {name:'Scorching',icon:'🔥',temp:'Very Hot',mult:1.5,iceMult:2.2,tipMult:0.9},
+  {name:'Snowy',   icon:'❄️', temp:'Freezing',mult:0.5,iceMult:0.1,tipMult:1.5},
+];
+
+// ═══ STATE ═══
+let cash=5.00, totalEarned=0, totalScore=0;
+let day=1;
+let stock={beans:0,milk:0,sugar:0,ice:0};
+let recipe={beans:3,milk:2,sugar:1,ice:0};
+let price=1.50;
+let weatherSchedule=[];
+let openBtnEnabled=true;
+
+function startGame(){
+  document.getElementById('title-screen').style.display='none';
+  document.getElementById('game').style.display='block';
+  generateWeather();
+  updateAll();
+  renderForecast();
+  log('Welcome! Buy supplies and open your coffee shop. Good luck! ☕','log-info');
+}
+
+function generateWeather(){
+  weatherSchedule=[];
+  for(let i=0;i<DAYS+3;i++){
+    const w=WEATHERS[Math.floor(Math.random()*WEATHERS.length)];
+    weatherSchedule.push(w);
+  }
+  // guarantee sunny day 1 for good start
+  weatherSchedule[0]=WEATHERS[1];
+}
+
+// ═══ BUYING ═══
+function buy(item,qty){
+  const cost=PRICES[item]*qty;
+  if(cash<cost){log(`Not enough cash to buy ${qty} ${item}!`,'log-loss');return;}
+  cash-=cost;stock[item]+=qty;
+  updateAll();
+  log(`Bought ${qty} ${item} for $${cost.toFixed(2)}`,'log-info');
+}
+
+// ═══ RECIPE ═══
+function updateRecipe(){
+  recipe.beans=+document.getElementById('r-beans').value;
+  recipe.milk =+document.getElementById('r-milk').value;
+  recipe.sugar=+document.getElementById('r-sugar').value;
+  recipe.ice  =+document.getElementById('r-ice').value;
+  document.getElementById('rv-beans').textContent=recipe.beans;
+  document.getElementById('rv-milk').textContent=recipe.milk;
+  document.getElementById('rv-sugar').textContent=recipe.sugar;
+  document.getElementById('rv-ice').textContent=recipe.ice;
+  updateQuality();updateCostPerCup();updateDemandHint();
+}
+
+function getQuality(){
+  // quality score 0-100 based on recipe balance
+  const b=recipe.beans,m=recipe.milk,s=recipe.sugar,ic=recipe.ice;
+  const total=b+m+s+ic;if(total===0)return 0;
+  // beans are most important
+  let q=b*18+m*8+s*4-Math.abs(s-2)*6-Math.abs(m-2)*4+(ic>0&&b>=2?8:0);
+  if(b===0)q-=40;
+  return Math.max(0,Math.min(100,q));
+}
+
+function updateQuality(){
+  const q=getQuality();
+  const fill=document.getElementById('quality-fill');
+  const label=document.getElementById('quality-label');
+  fill.style.width=q+'%';
+  fill.style.background=q>75?'linear-gradient(90deg,#44aa00,#88ff44)':
+                         q>50?'linear-gradient(90deg,#ff9800,#f5c842)':
+                         q>25?'linear-gradient(90deg,#ff5500,#ff9800)':
+                              'linear-gradient(90deg,#cc0000,#ff4400)';
+  const stars=q>80?'☕☕☕☕☕':q>60?'☕☕☕☕':q>40?'☕☕☕':q>20?'☕☕':'☕';
+  const word=q>80?'Excellent':q>60?'Good':q>40?'Okay':q>20?'Poor':'Bad';
+  label.textContent=`Quality: ${word} ${stars} (${q}%)`;
+}
+
+function getCostPerCup(){
+  return recipe.beans*PRICES.beans+recipe.milk*PRICES.milk+recipe.sugar*PRICES.sugar+recipe.ice*PRICES.ice;
+}
+
+function updateCostPerCup(){
+  const c=getCostPerCup();
+  const profit=(price-c).toFixed(2);
+  const profitCol=profit>0?'#66dd66':'#dd5544';
+  document.getElementById('cost-per-cup').innerHTML=
+    `Ingredients: <b>$${c.toFixed(2)}</b> / cup<br>` +
+    `Selling price: <b>$${price.toFixed(2)}</b> / cup<br>` +
+    `Profit margin: <b style="color:${profitCol}">$${profit}</b> / cup`;
+}
+
+// ═══ PRICE ═══
+function adjustPrice(delta){
+  price=Math.max(0.25,Math.min(10,+(price+delta).toFixed(2)));
+  document.getElementById('price-display').textContent='$'+price.toFixed(2);
+  updateDemandHint();updateCostPerCup();
+}
+
+function updateDemandHint(){
+  const cost=getCostPerCup();const margin=price-cost;
+  const w=weatherSchedule[day-1]||WEATHERS[1];
+  const baseDemand=estimateDemand(w);
+  const hint=document.getElementById('demand-hint');
+  if(price<0.75){hint.style.background='rgba(0,0,255,0.15)';hint.style.color='#aaaaff';hint.textContent='🔵 Very cheap — lots of customers but tiny margin!';}
+  else if(margin<0){hint.style.background='rgba(200,0,0,0.15)';hint.style.color='#ff6655';hint.textContent='🔴 Selling BELOW cost — you lose money each cup!';}
+  else if(price>4){hint.style.background='rgba(200,0,0,0.15)';hint.style.color='#ff6655';hint.textContent='🔴 Very expensive — few customers!';}
+  else if(price>2.5){hint.style.background='rgba(255,150,0,0.15)';hint.style.color='#ffaa44';hint.textContent='🟡 Pricey — some customers will walk away.';}
+  else{hint.style.background='rgba(0,180,0,0.15)';hint.style.color='#66dd66';hint.textContent='🟢 Looks like a fair price — good demand expected!';}
+}
+
+function estimateDemand(w){
+  // base 25 customers, modified by weather
+  return Math.round(25*w.mult);
+}
+
+// ═══ FORECAST ═══
+function renderForecast(){
+  const row=document.getElementById('forecast-row');row.innerHTML='';
+  for(let i=0;i<3;i++){
+    const w=weatherSchedule[day-1+i]||WEATHERS[1];
+    const d=document.createElement('div');d.className='fc-day';
+    d.innerHTML=`<div class="fc-icon">${w.icon}</div><div style="font-size:11px;color:#bbaa88;">${i===0?'Today':i===1?'Tomorrow':'Day '+(day+i)}</div><div class="fc-temp">${w.name}<br>${w.temp}</div>`;
+    row.appendChild(d);
+  }
+}
+
+// ═══ OPEN SHOP ═══
+function openShop(){
+  if(!openBtnEnabled)return;
+  const cost=getCostPerCup();
+  const q=getQuality();
+  const w=weatherSchedule[day-1]||WEATHERS[1];
+  const totalIngredients=Math.min(
+    recipe.beans>0?Math.floor(stock.beans/recipe.beans):Infinity,
+    recipe.milk>0 ?Math.floor(stock.milk/recipe.milk):Infinity,
+    recipe.sugar>0?Math.floor(stock.sugar/recipe.sugar):Infinity,
+    recipe.ice>0  ?Math.floor(stock.ice/recipe.ice):Infinity,
+  );
+  if(totalIngredients===Infinity||totalIngredients===0){
+    log('⚠️ You have no ingredients! Buy some beans at least.','log-loss');return;
+  }
+
+  // simulate the day
+  let baseCust=22+Math.floor(Math.random()*8); // 22-29
+  baseCust=Math.round(baseCust*w.mult);
+  // price elasticity
+  if(price>3)baseCust=Math.round(baseCust*0.4);
+  else if(price>2)baseCust=Math.round(baseCust*0.75);
+  else if(price<0.75)baseCust=Math.round(baseCust*1.5);
+  // quality modifier
+  baseCust=Math.round(baseCust*(0.6+q/100*0.7));
+  // ice demand: on hot days ice coffee is popular
+  let icedDemand=0;
+  if(recipe.ice>0){icedDemand=Math.round(baseCust*0.4*w.iceMult);}
+
+  const sold=Math.min(baseCust,totalIngredients);
+  // cost of ingredients used
+  const ingCost=(recipe.beans*PRICES.beans+recipe.milk*PRICES.milk+recipe.sugar*PRICES.sugar+recipe.ice*PRICES.ice)*sold;
+  const revenue=price*sold;
+  const tips=revenue*0.05*w.tipMult*(q/100);
+  const net=revenue+tips-ingCost;
+
+  // deduct stock
+  stock.beans-=recipe.beans*sold;
+  stock.milk -=recipe.milk*sold;
+  stock.sugar-=recipe.sugar*sold;
+  stock.ice  -=recipe.ice*sold;
+
+  cash+=net;
+  totalEarned=Math.max(totalEarned,0)+net;
+
+  // scoring
+  const dayScore=Math.round(sold*q/100*(price>cost?1.5:0.5)*10);
+  totalScore+=dayScore;
+
+  // show result modal
+  showResult(w,sold,revenue+tips,ingCost,net,q,totalIngredients-sold);
+  openBtnEnabled=false;
+  document.getElementById('open-btn').disabled=true;
+}
+
+function showResult(w,sold,revenue,ingCost,net,q,leftover){
+  const modal=document.getElementById('result-modal');
+  const dayNames=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  document.getElementById('result-title').textContent=`Day ${day} of ${DAYS} — ${w.name}`;
+  document.getElementById('result-weather').textContent=`${w.icon} ${w.name} weather — ${w.temp}`;
+  document.getElementById('result-cups').textContent=sold+' ☕';
+  document.getElementById('rs-rev').textContent='$'+revenue.toFixed(2);
+  document.getElementById('rs-cost').textContent='$'+ingCost.toFixed(2);
+  document.getElementById('rs-left').textContent=leftover+' cups';
+  const stars=q>80?'★★★★★':q>60?'★★★★':q>40?'★★★':q>20?'★★':'★';
+  document.getElementById('rs-rating').textContent=stars;
+  const netEl=document.getElementById('result-net');
+  netEl.textContent=(net>=0?'+':'')+'$'+net.toFixed(2)+' net';
+  netEl.style.color=net>=0?'#66dd66':'#dd5544';
+  const comments=[
+    sold>20&&q>70?'Customers loved it! Word is spreading. ☕':'',
+    net<0?'Ouch — you lost money today. Adjust your price or recipe!':'',
+    sold<5?'Very slow day. Check your price or quality.':'',
+    q<30?'The coffee quality needs improvement — add more beans!':'',
+    net>5?'Great profit! Keep it up. 💰':'',
+    w.name==='Scorching'&&recipe.ice===0?'Tip: Iced coffee sells great on hot days!':''
+  ].filter(Boolean);
+  document.getElementById('result-comment').textContent=comments[0]||'';
+  modal.style.display='flex';
+}
+
+function nextDay(){
+  document.getElementById('result-modal').style.display='none';
+  day++;
+  if(day>DAYS){showEnd();return;}
+  openBtnEnabled=true;
+  document.getElementById('open-btn').disabled=false;
+  updateAll();renderForecast();
+  log(`☀️ Day ${day} — ${(weatherSchedule[day-1]||WEATHERS[1]).name}. Stock up and get ready!`,'log-info');
+}
+
+function showEnd(){
+  document.getElementById('game').style.display='none';
+  const end=document.getElementById('end-screen');end.style.display='flex';
+  document.getElementById('end-title').textContent=totalEarned>0?'Shop Closed — Great Run!':'Closed for Business';
+  document.getElementById('end-money').textContent='$'+Math.max(0,cash-5).toFixed(2)+' profit';
+  const rating=totalScore>2000?'☕☕☕☕☕ Master Barista!':totalScore>1200?'☕☕☕☕ Expert Barista':totalScore>700?'☕☕☕ Skilled Barista':totalScore>300?'☕☕ Apprentice Barista':'☕ Keep practicing!';
+  document.getElementById('end-rating').textContent=rating;
+  document.getElementById('end-msg').textContent=`${DAYS} days complete — Score: ${totalScore} ⭐`;
+}
+
+// ═══ UPDATE ALL ═══
+function updateAll(){
+  document.getElementById('money-display').textContent='$'+Math.max(0,cash).toFixed(2);
+  document.getElementById('cash-left').textContent='$'+Math.max(0,cash).toFixed(2);
+  document.getElementById('day-display').textContent='Day '+day+' / '+DAYS;
+  document.getElementById('score-display').textContent='Score: '+totalScore+' ⭐';
+  document.getElementById('beans-stock').textContent='In stock: '+stock.beans;
+  document.getElementById('milk-stock').textContent='In stock: '+stock.milk;
+  document.getElementById('sugar-stock').textContent='In stock: '+stock.sugar;
+  document.getElementById('ice-stock').textContent='In stock: '+stock.ice;
+  document.getElementById('price-display').textContent='$'+price.toFixed(2);
+  const w=weatherSchedule[day-1]||WEATHERS[1];
+  document.getElementById('weather-box').textContent=w.icon+' '+w.name;
+  updateQuality();updateCostPerCup();updateDemandHint();
+}
+
+function log(msg,cls){
+  const el=document.getElementById('day-log');
+  const line=document.createElement('div');line.className=cls||'';line.textContent=msg;
+  el.appendChild(line);el.scrollTop=el.scrollHeight;
+}
+
+// init sliders
+updateRecipe();
+</script>
+</body>
+</html>

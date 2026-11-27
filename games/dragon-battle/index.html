@@ -125,7 +125,7 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
       <button class="d-btn" id="btn-pc" onclick="pickDevice('pc')">🖥 COMPUTER</button>
       <button class="d-btn" id="btn-ipad" onclick="pickDevice('ipad')">📱 iPAD / TOUCH</button>
     </div>
-    <p id="sel-hint" style="font-size:.28rem;color:#555;text-align:center;padding:0 8px">◀ ▶ · SPACE=FIRE · T=HUMAN · C=SIT · M=MAP · SHIFT=SWORD · J=JUMP</p>
+    <p id="sel-hint" style="font-size:.28rem;color:#555;text-align:center;padding:0 8px">◀ ▶ · SPACE=FIRE · Z=BITE · C=TAIL · R=ROAR · T=HUMAN · C=SIT · M=MAP · SHIFT=SWORD · J=JUMP</p>
     <p id="sel-best"></p>
   </div>
 
@@ -4030,7 +4030,7 @@ document.addEventListener('keydown',e=>{
         if(dragonMesh.userData.jawGroup){dragonMesh.userData.jawT=1.0;dragonMesh.userData.jawDur=1.0;}
         dragonMesh.userData.bodyPitchT=0.5;dragonMesh.userData.bodyPitchDir=-1;
         const ref=dragonMesh.position;let be=null,bd=60;for(const ae of activeEnemies){if(!ae.userData.alive)continue;const d=ref.distanceTo(ae.position);if(d<bd){bd=d;be=ae;}}
-        if(be){spawnBeamFX(ref.clone().add(new THREE.Vector3(0,2,0)),be.position.clone(),0xff2200);hitEnemy(be,upgradedDmg()*5);spawnAbilityCloud(be.position.clone(),0xff2200,22,0.5);floatWorld(ref.clone().add(new THREE.Vector3(0,8,0)),'🦷 BITE!','#ff4400');}
+        if(be){spawnBeamFX(ref.clone().add(new THREE.Vector3(0,2,0)),be.position.clone(),0xff2200);hitEnemy(be,upgradedDmg()*5);floatWorld(ref.clone().add(new THREE.Vector3(0,8,0)),'🦷 BITE!','#ff4400');}
         else floatWorld(ref.clone().add(new THREE.Vector3(0,8,0)),'No target!','#ff4444');
       }else floatWorld(dragonMesh.position.clone().add(new THREE.Vector3(0,8,0)),'⏳ '+~~abilityCooldown.pBite+'s','#ff4444');
     }
@@ -4039,8 +4039,6 @@ document.addEventListener('keydown',e=>{
         if(dragonMesh.userData.tailGroup)dragonMesh.userData.tailSwingT=0.9;
         dragonMesh.userData.bodyRollT=0.6;
         const ref=dragonMesh.position;
-        spawnAbilityCloud(ref.clone(),0xff8800,70,1.5);
-        for(let ti=0;ti<16;ti++){const ta=ti/16*Math.PI*2;spawnAbilityCloud(ref.clone().add(new THREE.Vector3(Math.cos(ta)*40,0,Math.sin(ta)*40)),0xff8800,16,0.5);}
         for(const ae of activeEnemies){if(!ae.userData.alive)continue;if(ref.distanceTo(ae.position)<60){hitEnemy(ae,upgradedDmg()*4);}}
         floatWorld(ref.clone().add(new THREE.Vector3(0,8,0)),'💥 TAIL SWEEP!','#ff8800');
       }else floatWorld(dragonMesh.position.clone().add(new THREE.Vector3(0,8,0)),'⏳ '+~~abilityCooldown.pTail+'s','#ff4444');
@@ -4050,7 +4048,6 @@ document.addEventListener('keydown',e=>{
         if(dragonMesh.userData.jawGroup){dragonMesh.userData.jawT=1.4;dragonMesh.userData.jawDur=1.4;}
         dragonMesh.userData.bodyPitchT=0.7;dragonMesh.userData.bodyPitchDir=1;
         const ref=dragonMesh.position;
-        spawnAbilityCloud(ref.clone(),dtype.color||0xff4400,100,2.0);spawnAbilityCloud(ref.clone(),0xffffff,60,1.2);
         for(const ae of activeEnemies){if(!ae.userData.alive)continue;const d=ref.distanceTo(ae.position);if(d<120){hitEnemy(ae,upgradedDmg()*2);ae.position.addScaledVector(new THREE.Vector3().subVectors(ae.position,ref).normalize(),30);}}
         floatWorld(ref.clone().add(new THREE.Vector3(0,10,0)),'🔊 ROAR!','#ffee44');
       }else floatWorld(dragonMesh.position.clone().add(new THREE.Vector3(0,8,0)),'⏳ '+~~abilityCooldown.pRoar+'s','#ff4444');

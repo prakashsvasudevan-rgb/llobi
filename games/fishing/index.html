@@ -15,8 +15,10 @@ canvas{display:block;width:100%;cursor:crosshair}
 #coins-box{color:#ffdd44;font-weight:bold}
 #catches-box{color:#aaccff}
 #best-box{color:#ff88ff}
-#shop-btn{background:#2a4a2a;border:1px solid #4a8a4a;color:#8afa8a;font-size:11px;font-family:Georgia,serif;padding:4px 10px;border-radius:6px;cursor:pointer;white-space:nowrap}
-#shop-btn:hover{background:#3a6a3a}
+#shop-btn,#bag-btn{background:#2a4a2a;border:1px solid #4a8a4a;color:#8afa8a;font-size:11px;font-family:Georgia,serif;padding:4px 10px;border-radius:6px;cursor:pointer;white-space:nowrap}
+#shop-btn:hover,#bag-btn:hover{background:#3a6a3a}
+#bag-btn{background:#1a3a4a;border-color:#3a7a9a;color:#88ddff}
+#bag-btn:hover{background:#2a5a6a}
 /* SHOP OVERLAY */
 #shop-overlay{display:none;position:absolute;top:0;left:0;width:100%;background:rgba(4,8,16,0.97);z-index:30;padding:14px 14px 20px}
 #shop-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:1px solid #2a4a2a;padding-bottom:10px}
@@ -44,6 +46,26 @@ canvas{display:block;width:100%;cursor:crosshair}
 .rod-btn.active{background:#1a2a0a;color:#668844;border:1px solid #446622;cursor:default}
 .rod-btn.cant{background:#1a1a1a;color:#555;border:1px solid #333;cursor:default}
 @media(max-width:500px){#rod-grid{grid-template-columns:repeat(3,1fr)}}
+/* BAG OVERLAY */
+#bag-overlay{display:none;position:absolute;top:0;left:0;width:100%;background:rgba(4,8,20,0.97);z-index:30;padding:14px 14px 20px}
+#bag-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;border-bottom:1px solid #2a4a5a;padding-bottom:10px;gap:8px;flex-wrap:wrap}
+#bag-title{color:#88ddff;font-size:1.05rem;font-weight:bold}
+#bag-meta{color:#aaa;font-size:11px}
+#bag-actions{display:flex;gap:6px}
+#sell-all-btn{background:#2a4a2a;border:1px solid #4a8a4a;color:#8afa8a;font-size:11px;font-family:Georgia,serif;padding:4px 10px;border-radius:6px;cursor:pointer}
+#sell-all-btn:hover{background:#3a7a3a}
+#bag-close{background:#2a1a1a;border:1px solid #6a3a3a;color:#ff9999;font-size:11px;font-family:Georgia,serif;padding:4px 10px;border-radius:6px;cursor:pointer}
+#bag-close:hover{background:#4a2a2a}
+#fish-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;max-height:280px;overflow-y:auto}
+.fish-card{background:#0a1420;border:1px solid #2a4a5a;border-left:3px solid #aaa;border-radius:8px;padding:8px 7px;text-align:center}
+.fish-card-name{color:#ddd;font-size:11px;font-weight:bold;margin-bottom:3px;line-height:1.2}
+.fish-card-rar{font-size:9px;font-weight:bold;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+.fish-card-wt{color:#778;font-size:10px;margin-bottom:5px}
+.fish-card-val{color:#ffdd44;font-size:11px;font-weight:bold;margin-bottom:5px}
+.fish-sell-btn{width:100%;padding:4px 0;border-radius:5px;border:1px solid #4a8a4a;background:#1a3a1a;color:#8afa8a;font-size:10px;font-family:Georgia,serif;cursor:pointer}
+.fish-sell-btn:hover{background:#2a5a2a}
+#bag-empty{color:#556;font-size:13px;text-align:center;padding:40px 0;display:none}
+@media(max-width:500px){#fish-grid{grid-template-columns:repeat(3,1fr)}}
 </style>
 </head>
 <body>
@@ -55,6 +77,7 @@ canvas{display:block;width:100%;cursor:crosshair}
     <span id="coins-box">🪙 0</span>
     <span id="catches-box">Catches: 0</span>
     <span id="best-box">Best: —</span>
+    <button id="bag-btn" onclick="openBag()">🎒 Bag (0)</button>
     <button id="shop-btn" onclick="openShop()">🛒 Shop</button>
   </div>
 </div>
@@ -67,6 +90,19 @@ canvas{display:block;width:100%;cursor:crosshair}
   </div>
   <div id="rod-grid"></div>
 </div>
+<!-- BAG OVERLAY -->
+<div id="bag-overlay">
+  <div id="bag-head">
+    <span id="bag-title">🎒 Fish Bag</span>
+    <span id="bag-meta"></span>
+    <div id="bag-actions">
+      <button id="sell-all-btn" onclick="sellAll()">Sell All 🪙</button>
+      <button id="bag-close" onclick="closeBag()">✕ Close</button>
+    </div>
+  </div>
+  <div id="fish-grid"></div>
+  <div id="bag-empty">Your bag is empty. Go catch some fish!</div>
+</div>
 </div>
 <script>
 const C=document.getElementById('c'),ctx=C.getContext('2d');
@@ -75,7 +111,9 @@ const W=620,H=380,WY=150;
 // --- STATE ---
 let frame=0,coins=0,score=0,catches=0,bestFish=null;
 let equippedRod=0,ownedRods=new Set([0]);
-let state='idle',shopOpen=false;
+let state='idle',shopOpen=false,bagOpen=false;
+let inventory=[]; // {fish, weight, pts}
+const MAX_INV=20;
 let bobX=0,bobY=0,bobVX=0,bobVY=0,bobBob=0;
 let nibbleTimer=0,nibbleWindow=0;
 let reelProgress=0;
@@ -128,6 +166,7 @@ function updateUI(){
   document.getElementById('coins-box').textContent='🪙 '+coins;
   document.getElementById('catches-box').textContent='Catches: '+catches;
   document.getElementById('best-box').textContent='Best: '+(bestFish?bestFish.name:'—');
+  document.getElementById('bag-btn').textContent='🎒 Bag ('+inventory.length+')';
 }
 
 // --- SHOP ---
@@ -176,6 +215,42 @@ function buyRod(i){
 function equipRod(i){
   equippedRod=i;updateUI();renderShop();
   setText('Equipped: '+RODS[i].name);
+}
+
+// --- BAG ---
+function openBag(){bagOpen=true;document.getElementById('bag-overlay').style.display='block';renderBag();}
+function closeBag(){bagOpen=false;document.getElementById('bag-overlay').style.display='none';}
+function renderBag(){
+  const grid=document.getElementById('fish-grid');
+  const empty=document.getElementById('bag-empty');
+  const meta=document.getElementById('bag-meta');
+  meta.textContent=inventory.length+'/'+MAX_INV+' fish  ·  Total value: 🪙 '+inventory.reduce((s,e)=>s+e.pts,0);
+  if(inventory.length===0){grid.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  grid.innerHTML=inventory.map((e,i)=>{
+    const f=e.fish;
+    const col=RARITY_COL[f.rarity]||'#aaa';
+    const wt=e.weight===0?'??? kg':e.weight.toFixed(1)+' kg';
+    return`<div class="fish-card" style="border-left-color:${col}">
+      <div class="fish-card-name">${f.name}</div>
+      <div class="fish-card-rar" style="color:${col}">${f.rarity}</div>
+      <div class="fish-card-wt">${wt}</div>
+      <div class="fish-card-val">🪙 ${e.pts}</div>
+      <button class="fish-sell-btn" onclick="sellFish(${i})">Sell</button>
+    </div>`;
+  }).join('');
+}
+function sellFish(i){
+  if(i<0||i>=inventory.length)return;
+  coins+=inventory[i].pts;
+  inventory.splice(i,1);
+  updateUI();renderBag();if(shopOpen)renderShop();
+}
+function sellAll(){
+  const total=inventory.reduce((s,e)=>s+e.pts,0);
+  coins+=total;inventory=[];
+  updateUI();renderBag();if(shopOpen)renderShop();
+  setText('Sold everything for 🪙 '+total+'!');
 }
 
 // --- BACKGROUND FISH ---
@@ -623,10 +698,12 @@ function update(){
     reelProgress=Math.max(0,reelProgress-pull);
     if(reelProgress>=100){
       caughtWeight=caughtFish.wlo===0?0:caughtFish.wlo+Math.random()*(caughtFish.whi-caughtFish.wlo);
-      coins+=caughtFish.pts;score+=caughtFish.pts;catches++;
+      score+=caughtFish.pts;catches++;
       if(!bestFish||caughtFish.pts>bestFish.pts)bestFish=caughtFish;
+      inventory.push({fish:caughtFish,weight:caughtWeight,pts:caughtFish.pts});
       updateUI();revealTimer=0;state='reveal';
-      setText('You caught a '+caughtFish.name+'! +'+caughtFish.pts+' 🪙');
+      const full=inventory.length>=MAX_INV?' (Bag full! Sell some fish.)':'';
+      setText('You caught a '+caughtFish.name+'! Check your 🎒 bag to sell.'+full);
     }
   }
   if(state==='reveal'){
@@ -650,14 +727,17 @@ function getPos(e){
   return{x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height};
 }
 function handleClick(e){
-  if(shopOpen)return;
+  if(shopOpen||bagOpen)return;
   if(e._space){
     if(state==='nibble'){caughtFish=pickFish();reelProgress=0;state='hooked';setText('Hooked! Tap to reel in!');return;}
     if(state==='hooked'){reelProgress=100;return;}
     return;
   }
   const p=getPos(e);
-  if(state==='idle'&&p.y>WY-15){startCast(p.x);return;}
+  if(state==='idle'&&p.y>WY-15){
+    if(inventory.length>=MAX_INV){setText('Bag is full! Open 🎒 Bag and sell some fish first.');return;}
+    startCast(p.x);return;
+  }
   if(state==='nibble'){caughtFish=pickFish();reelProgress=0;state='hooked';setText('Hooked! Tap to reel in!');return;}
   if(state==='hooked'){reelProgress=100;return;}
 }

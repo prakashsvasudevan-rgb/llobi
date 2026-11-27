@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Ragdoll Hit</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#1a1a2e}
+canvas{display:block;touch-action:none}
+#ui{position:absolute;top:0;left:0;width:100%;pointer-events:none;font-family:'Segoe UI',sans-serif}
+#hud{display:flex;justify-content:space-between;align-items:flex-start;padding:12px 16px;color:#fff}
+.stat{background:rgba(0,0,0,.45);border-radius:10px;padding:6px 14px;text-align:center}
+.stat span{display:block;font-size:.7rem;opacity:.7;text-transform:uppercase;letter-spacing:.05em}
+.stat strong{font-size:1.3rem;font-weight:800}
+#msg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;color:#fff;pointer-events:all}
+#msg h2{font-size:2rem;text-shadow:0 2px 8px rgba(0,0,0,.7)}
+#msg p{margin:.4rem 0 1rem;opacity:.8}
+#msg button{font-family:'Segoe UI';font-weight:800;font-size:1rem;padding:12px 32px;border:none;border-radius:14px;cursor:pointer;background:#e94560;color:#fff;box-shadow:0 5px 0 #9b1d31;transition:transform .1s,box-shadow .1s}
+#msg button:active{transform:translateY(3px);box-shadow:0 2px 0 #9b1d31}
+#aim-hint{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,.55);font-size:.85rem;pointer-events:none;transition:opacity .5s}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui">
+  <div id="hud">
+    <div class="stat"><span>Distance</span><strong id="dist">0</strong></div>
+    <div class="stat"><span>Best</span><strong id="best">0</strong></div>
+    <div class="stat"><span>Hits</span><strong id="hits">0</strong></div>
+    <div class="stat"><span>Throws</span><strong id="throws">3</strong></div>
+  </div>
+  <div id="msg">
+    <h2>Ragdoll Hit</h2>
+    <p>Drag to aim · Release to throw</p>
+    <button id="startBtn">Play!</button>
+  </div>
+  <div id="aim-hint">Drag the ragdoll to aim</div>
+</div>
+<script>
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d');
+let W,H;
+
+function resize(){
+  W=canvas.width=window.innerWidth;
+  H=canvas.height=window.innerHeight;
+}
+resize();
+window.addEventListener('resize',()=>{resize();buildLevel();});
+
+// ── Verlet particle ──────────────────────────────────────
+class Particle{
+  constructor(x,y,pinned=false){
+    this.x=x; this.y=y;
+    this.ox=x; this.oy=y;
+    this.pinned=pinned;
+    this.r=6;
+  }
+  update(dt){
+    if(this.pinned)return;
+    const vx=this.x-this.ox, vy=this.y-this.oy;
+    this.ox=this.x; this.oy=this.y;
+    this.x+=vx*0.985 + 0;      // damping
+    this.y+=vy*0.985 + 980*dt*dt; // gravity
+  }
+  constrain(){
+    // floor/ceiling/walls
+    const bounce=0.45, fric=0.82;
+    if(this.y>H-FLOOR_H-this.r){
+      this.y=H-FLOOR_H-this.r;
+      const vy=this.y-this.oy;
+      this.oy=this.y+vy*bounce;
+      const vx=this.x-this.ox;
+      this.ox=this.x-vx*fric;
+    }
+    if(this.x<this.r){this.x=this.r;const vx=this.x-this.ox;this.ox=this.x+vx*bounce;}
+    if(this.x>W-this.r){this.x=W-this.r;const vx=this.x-this.ox;this.ox=this.x+vx*bounce;}
+    if(this.y<this.r){this.y=this.r;const vy=this.y-this.oy;this.oy=this.y+vy*bounce;}
+  }
+}
+
+class Stick{
+  constructor(a,b,len){this.a=a;this.b=b;this.len=len||dist(a,b);}
+  solve(){
+    const dx=this.b.x-this.a.x, dy=this.b.y-this.a.y;
+    const d=Math.sqrt(dx*dx+dy*dy)||.001;
+    const diff=(d-this.len)/d*.5;
+    if(!this.a.pinned){this.a.x+=dx*diff;this.a.y+=dy*diff;}
+    if(!this.b.pinned){this.b.x-=dx*diff;this.b.y-=dy*diff;}
+  }
+}
+
+function dist(a,b){return Math.hypot(b.x-a.x,b.y-a.y);}
+
+// ── Ragdoll ──────────────────────────────────────────────
+const FLOOR_H=80;
+let ragdoll=null, sticks=[], launched=false;
+let dragStart=null, throwVel={x:0,y:0};
+let hitCount=0, throwsLeft=3, maxDist=0, bestDist=0;
+let gameActive=false, gameOver=false;
+let floatTexts=[];
+let particles_extra=[]; // sparks
+
+function buildRagdoll(cx,cy){
+  // nodes: 0=head, 1=neck, 2=torso, 3=pelvis, 4=lshoulder, 5=rshoulder,
+  //        6=lelbow, 7=relbow, 8=lhand, 9=rhand,
+  //        10=lhip, 11=rhip, 12=lknee, 13=rknee, 14=lfoot, 15=rfoot
+  const p=(x,y)=>new Particle(cx+x,cy+y);
+  const nodes=[
+    p(0,-55),   // 0 head
+    p(0,-40),   // 1 neck
+    p(0,-18),   // 2 torso mid
+    p(0,  5),   // 3 pelvis
+    p(-14,-32), // 4 L shoulder
+    p( 14,-32), // 5 R shoulder
+    p(-22,-16), // 6 L elbow
+    p( 22,-16), // 7 R elbow
+    p(-28,  2), // 8 L hand
+    p( 28,  2), // 9 R hand
+    p(-8,  5),  // 10 L hip
+    p( 8,  5),  // 11 R hip
+    p(-10, 28), // 12 L knee
+    p( 10, 28), // 13 R knee
+    p(-10, 52), // 14 L foot
+    p( 10, 52), // 15 R foot
+  ];
+  const s=(a,b,extra)=>new Stick(nodes[a],nodes[b],dist(nodes[a],nodes[b])*(extra||1));
+  const ss=[
+    s(0,1),s(1,2),s(2,3), // spine
+    s(1,4),s(1,5),         // shoulders
+    s(4,6),s(6,8),         // L arm
+    s(5,7),s(7,9),         // R arm
+    s(3,10),s(3,11),       // hips
+    s(10,12),s(12,14),     // L leg
+    s(11,13),s(13,15),     // R leg
+    // cross-braces to keep shape
+    s(4,5,1),s(10,11,1),
+    s(0,2,1),s(2,4,1),s(2,5,1),
+    s(4,10,1),s(5,11,1),
+  ];
+  ragdoll=nodes;
+  sticks=ss;
+}
+
+function launchRagdoll(vx,vy){
+  for(const p of ragdoll){
+    p.ox=p.x-vx*(1/60);
+    p.oy=p.y-vy*(1/60);
+  }
+}
+
+// ── Obstacles ────────────────────────────────────────────
+let obstacles=[];
+function buildLevel(){
+  obstacles=[];
+  // Ground platforms at different heights
+  const configs=[
+    {x:W*.18,y:H-FLOOR_H-120,w:160,h:22},
+    {x:W*.35,y:H-FLOOR_H-220,w:140,h:22},
+    {x:W*.54,y:H-FLOOR_H-150,w:180,h:22},
+    {x:W*.72,y:H-FLOOR_H-280,w:120,h:22},
+    {x:W*.88,y:H-FLOOR_H-180,w:140,h:22},
+    // Walls
+    {x:W*.28,y:H-FLOOR_H-340,w:22,h:200},
+    {x:W*.62,y:H-FLOOR_H-400,w:22,h:220},
+  ];
+  for(const c of configs) obstacles.push(c);
+}
+buildLevel();
+
+function collideObstacles(){
+  for(const p of ragdoll){
+    for(const o of obstacles){
+      if(p.x>o.x&&p.x<o.x+o.w&&p.y>o.y&&p.y<o.y+o.h){
+        // find shallowest penetration axis
+        const dl=p.x-o.x, dr=o.x+o.w-p.x;
+        const dt=p.y-o.y, db=o.y+o.h-p.y;
+        const min=Math.min(dl,dr,dt,db);
+        const bounce=0.4, fric=0.78;
+        if(min===dt){
+          p.y=o.y;
+          const vy=p.y-p.oy; p.oy=p.y+vy*bounce;
+          const vx=p.x-p.ox; p.ox=p.x-vx*fric;
+          registerHit(p);
+        } else if(min===db){
+          p.y=o.y+o.h;
+          const vy=p.y-p.oy; p.oy=p.y+vy*bounce;
+        } else if(min===dl){
+          p.x=o.x;
+          const vx=p.x-p.ox; p.ox=p.x+vx*bounce;
+        } else {
+          p.x=o.x+o.w;
+          const vx=p.x-p.ox; p.ox=p.x+vx*bounce;
+        }
+      }
+    }
+  }
+}
+
+let lastHitTime=0;
+function registerHit(p){
+  const now=performance.now();
+  if(now-lastHitTime<120)return;
+  lastHitTime=now;
+  hitCount++;
+  document.getElementById('hits').textContent=hitCount;
+  // spark burst
+  for(let i=0;i<8;i++){
+    const a=Math.random()*Math.PI*2;
+    const spd=120+Math.random()*180;
+    particles_extra.push({x:p.x,y:p.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,life:1,col:`hsl(${20+Math.random()*40},100%,60%)`});
+  }
+  floatTexts.push({x:p.x,y:p.y,txt:'HIT!',life:1,col:'#ff6b35'});
+}
+
+// ── Camera (horizontal scroll) ────────────────────────────
+let camX=0, targetCamX=0;
+
+// ── Game loop ─────────────────────────────────────────────
+let last=0;
+function loop(ts){
+  requestAnimationFrame(loop);
+  const dt=Math.min((ts-last)/1000,.033);
+  last=ts;
+
+  if(!gameActive){draw(dt);return;}
+
+  // physics
+  if(launched){
+    const STEPS=8;
+    const sdt=dt/STEPS;
+    for(let s=0;s<STEPS;s++){
+      for(const p of ragdoll) p.update(sdt);
+      for(let i=0;i<4;i++) for(const st of sticks) st.solve();
+      for(const p of ragdoll) p.constrain();
+      collideObstacles();
+    }
+
+    // camera follows head
+    const head=ragdoll[0];
+    targetCamX=Math.max(0, head.x - W*0.3);
+    camX+=(targetCamX-camX)*0.08;
+
+    // distance tracking
+    const d=Math.round((head.x-LAUNCH_X)/4);
+    if(d>maxDist){maxDist=d;document.getElementById('dist').textContent=maxDist;}
+
+    // settle check → allow next throw
+    if(isSettled()){
+      if(maxDist>bestDist){bestDist=maxDist;document.getElementById('best').textContent=bestDist;}
+      if(throwsLeft>0){
+        setTimeout(resetThrow,900);
+      } else {
+        setTimeout(endGame,1000);
+      }
+      launched=false;
+    }
+  }
+
+  // sparks
+  for(const sp of particles_extra){
+    sp.x+=sp.vx*dt; sp.y+=sp.vy*dt; sp.vy+=400*dt;
+    sp.life-=dt*2.2;
+  }
+  particles_extra=particles_extra.filter(s=>s.life>0);
+  for(const ft of floatTexts){ft.y-=55*dt;ft.life-=dt*1.5;}
+  floatTexts=floatTexts.filter(f=>f.life>0);
+
+  draw(dt);
+}
+
+let LAUNCH_X=120, LAUNCH_Y=0;
+function isSettled(){
+  let moving=0;
+  for(const p of ragdoll){
+    const vx=Math.abs(p.x-p.ox), vy=Math.abs(p.y-p.oy);
+    if(vx>0.5||vy>0.5) moving++;
+  }
+  return moving<3;
+}
+
+function resetThrow(){
+  camX=0; targetCamX=0;
+  buildRagdoll(LAUNCH_X, LAUNCH_Y);
+  dragStart=null;
+  document.getElementById('aim-hint').style.opacity='1';
+}
+
+function endGame(){
+  gameOver=true; gameActive=false;
+  const msg=document.getElementById('msg');
+  msg.querySelector('h2').textContent='Game Over!';
+  msg.querySelector('p').textContent=`Best distance: ${bestDist}m · Hits: ${hitCount}`;
+  msg.querySelector('button').textContent='Play Again';
+  msg.style.display='';
+}
+
+// ── Draw ──────────────────────────────────────────────────
+const SKY_TOP='#0f0c29', SKY_BOT='#302b63';
+const GROUND_COL='#2d4a22', PLATFORM_COL='#8B6914';
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+
+  // sky gradient
+  const gr=ctx.createLinearGradient(0,0,0,H);
+  gr.addColorStop(0,SKY_TOP); gr.addColorStop(1,SKY_BOT);
+  ctx.fillStyle=gr; ctx.fillRect(0,0,W,H);
+
+  // stars
+  ctx.save();
+  ctx.fillStyle='rgba(255,255,255,0.6)';
+  // deterministic stars
+  for(let i=0;i<80;i++){
+    const sx=(i*137.5%W);
+    const sy=(i*53.1%(H-FLOOR_H-100));
+    ctx.fillRect(sx,sy,1.5,1.5);
+  }
+  ctx.restore();
+
+  ctx.save();
+  ctx.translate(-camX,0);
+
+  // ground
+  ctx.fillStyle=GROUND_COL;
+  ctx.fillRect(-camX,H-FLOOR_H,W+camX+200,FLOOR_H);
+  // grass line
+  ctx.fillStyle='#4a7c3f';
+  ctx.fillRect(-camX,H-FLOOR_H,W+camX+200,10);
+
+  // obstacles
+  for(const o of obstacles){
+    ctx.fillStyle='#5c4a1e';
+    ctx.beginPath();
+    roundRect(ctx,o.x,o.y,o.w,o.h,6);
+    ctx.fill();
+    ctx.fillStyle='#8B6914';
+    ctx.fillRect(o.x,o.y,o.w,10);
+  }
+
+  // launch pad indicator
+  if(!launched&&gameActive){
+    ctx.fillStyle='rgba(255,200,0,.2)';
+    ctx.beginPath();
+    ctx.arc(LAUNCH_X, LAUNCH_Y, 28, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // aim arrow
+  if(dragStart&&!launched){
+    const dx=dragStart.ex-dragStart.sx, dy=dragStart.ey-dragStart.sy;
+    const len=Math.min(Math.hypot(dx,dy),180);
+    const angle=Math.atan2(-dy,-dx);
+    ctx.save();
+    ctx.translate(LAUNCH_X, LAUNCH_Y);
+    ctx.rotate(angle);
+    ctx.strokeStyle='rgba(255,100,100,.8)';
+    ctx.lineWidth=4;
+    ctx.setLineDash([10,6]);
+    ctx.beginPath();
+    ctx.moveTo(20,0);
+    ctx.lineTo(len,0);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // arrowhead
+    ctx.fillStyle='rgba(255,100,100,.9)';
+    ctx.beginPath();
+    ctx.moveTo(len+16,0);
+    ctx.lineTo(len,6);
+    ctx.lineTo(len,-6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+    // power arc
+    const pwr=len/180;
+    ctx.strokeStyle=`hsl(${120-pwr*120},100%,55%)`;
+    ctx.lineWidth=3;
+    ctx.beginPath();
+    ctx.arc(LAUNCH_X,LAUNCH_Y,34,Math.PI,Math.PI+Math.PI*pwr);
+    ctx.stroke();
+  }
+
+  // sparks
+  for(const sp of particles_extra){
+    ctx.globalAlpha=sp.life;
+    ctx.fillStyle=sp.col;
+    ctx.beginPath();
+    ctx.arc(sp.x,sp.y,3,0,Math.PI*2);
+    ctx.fill();
+  }
+  ctx.globalAlpha=1;
+
+  // ragdoll
+  if(ragdoll) drawRagdoll();
+
+  // float texts
+  for(const ft of floatTexts){
+    ctx.globalAlpha=ft.life;
+    ctx.fillStyle=ft.col;
+    ctx.font='bold 22px Segoe UI';
+    ctx.textAlign='center';
+    ctx.fillText(ft.txt,ft.x,ft.y);
+  }
+  ctx.globalAlpha=1;
+
+  ctx.restore();
+
+  // distance ruler on ground
+  if(launched||gameOver){
+    ctx.fillStyle='rgba(255,255,255,.18)';
+    ctx.font='11px Segoe UI';
+    ctx.textAlign='center';
+    for(let m=100;m<10000;m+=100){
+      const sx=LAUNCH_X+m*4-camX;
+      if(sx<0||sx>W) continue;
+      ctx.fillRect(sx,H-FLOOR_H-16,1,10);
+      ctx.fillText(m/100+'m',sx,H-FLOOR_H-20);
+    }
+  }
+}
+
+function drawRagdoll(){
+  const n=ragdoll;
+  // limb colors
+  const bodyCol='#e8c99a', outlineCol='#5a3a1a', headCol='#f5d6b0';
+
+  function limb(a,b,w,col){
+    ctx.strokeStyle=outlineCol; ctx.lineWidth=w+2;
+    ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(n[a].x,n[a].y); ctx.lineTo(n[b].x,n[b].y); ctx.stroke();
+    ctx.strokeStyle=col||bodyCol; ctx.lineWidth=w;
+    ctx.beginPath(); ctx.moveTo(n[a].x,n[a].y); ctx.lineTo(n[b].x,n[b].y); ctx.stroke();
+  }
+
+  // legs
+  limb(10,12,9); limb(12,14,8);
+  limb(11,13,9); limb(13,15,8);
+  // clothes (trousers) tint
+  ctx.strokeStyle='#3a5fcd'; ctx.lineWidth=7;
+  ctx.beginPath(); ctx.moveTo(n[3].x,n[3].y); ctx.lineTo(n[10].x,n[10].y); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(n[3].x,n[3].y); ctx.lineTo(n[11].x,n[11].y); ctx.stroke();
+
+  // torso
+  limb(1,3,14,'#cc2222');
+  // shirt stripes
+  ctx.strokeStyle='#ff4444'; ctx.lineWidth=5;
+  ctx.beginPath(); ctx.moveTo(n[4].x,n[4].y); ctx.lineTo(n[5].x,n[5].y); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(n[2].x-8,n[2].y); ctx.lineTo(n[2].x+8,n[2].y); ctx.stroke();
+
+  // arms
+  limb(4,6,8); limb(6,8,7);
+  limb(5,7,8); limb(7,9,7);
+
+  // head
+  const hx=n[0].x, hy=n[0].y;
+  const nkx=n[1].x, nky=n[1].y;
+  const angle=Math.atan2(hy-nky,hx-nkx)+Math.PI/2;
+  ctx.save();
+  ctx.translate(hx,hy);
+  ctx.rotate(angle);
+  // skull
+  ctx.fillStyle=outlineCol;
+  ctx.beginPath(); ctx.ellipse(0,0,13,16,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle=headCol;
+  ctx.beginPath(); ctx.ellipse(0,0,11,14,0,0,Math.PI*2); ctx.fill();
+  // eyes
+  ctx.fillStyle='#333';
+  ctx.beginPath(); ctx.ellipse(-4,2,2.5,2.5,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(4,2,2.5,2.5,0,0,Math.PI*2); ctx.fill();
+  // mouth
+  ctx.strokeStyle='#555'; ctx.lineWidth=1.5;
+  const spd=Math.hypot(n[0].x-n[0].ox,n[0].y-n[0].oy)*60;
+  if(spd>4){
+    // screaming O
+    ctx.fillStyle='#333';
+    ctx.beginPath(); ctx.ellipse(0,8,3,4,0,0,Math.PI*2); ctx.fill();
+  } else {
+    ctx.beginPath(); ctx.arc(0,8,3,0,Math.PI); ctx.stroke();
+  }
+  // hair
+  ctx.fillStyle='#2b1b0e';
+  ctx.beginPath(); ctx.ellipse(0,-9,11,6,0,Math.PI,Math.PI*2); ctx.fill();
+  ctx.restore();
+
+  // shoes
+  for(const fi of [14,15]){
+    ctx.fillStyle='#111';
+    ctx.beginPath(); ctx.ellipse(n[fi].x,n[fi].y,7,4,0,0,Math.PI*2); ctx.fill();
+  }
+}
+
+function roundRect(ctx,x,y,w,h,r){
+  ctx.moveTo(x+r,y);
+  ctx.lineTo(x+w-r,y); ctx.arcTo(x+w,y,x+w,y+r,r);
+  ctx.lineTo(x+w,y+h-r); ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
+  ctx.lineTo(x+r,y+h); ctx.arcTo(x,y+h,x,y+h-r,r);
+  ctx.lineTo(x,y+r); ctx.arcTo(x,y,x+r,y,r);
+  ctx.closePath();
+}
+
+// ── Input ─────────────────────────────────────────────────
+function getPos(e){
+  const r=canvas.getBoundingClientRect();
+  const src=e.touches?e.touches[0]:e;
+  return {x:src.clientX-r.left, y:src.clientY-r.top};
+}
+
+function onDown(e){
+  if(!gameActive||launched) return;
+  const pos=getPos(e);
+  // hit test near ragdoll head (in world coords)
+  const wx=pos.x+camX, wy=pos.y;
+  if(Math.hypot(wx-ragdoll[0].x, wy-ragdoll[0].y)<60){
+    dragStart={sx:pos.x,sy:pos.y,ex:pos.x,ey:pos.y};
+    document.getElementById('aim-hint').style.opacity='0';
+  }
+}
+function onMove(e){
+  e.preventDefault();
+  if(!dragStart) return;
+  const pos=getPos(e);
+  dragStart.ex=pos.x; dragStart.ey=pos.y;
+}
+function onUp(){
+  if(!dragStart||!gameActive) return;
+  const dx=dragStart.ex-dragStart.sx, dy=dragStart.ey-dragStart.sy;
+  const len=Math.min(Math.hypot(dx,dy),180);
+  if(len<15){dragStart=null;return;}
+  const spd=(len/180)*1800;
+  const angle=Math.atan2(-dy,-dx);
+  throwVel={x:Math.cos(angle)*spd, y:Math.sin(angle)*spd};
+  launchRagdoll(throwVel.x, throwVel.y);
+  launched=true;
+  throwsLeft--;
+  maxDist=0;
+  document.getElementById('throws').textContent=throwsLeft;
+  dragStart=null;
+  floatTexts.push({x:LAUNCH_X,y:LAUNCH_Y-60,txt:'🚀 LAUNCH!',life:1,col:'#ffe066'});
+}
+
+canvas.addEventListener('mousedown',onDown);
+canvas.addEventListener('mousemove',onMove);
+canvas.addEventListener('mouseup',onUp);
+canvas.addEventListener('touchstart',onDown,{passive:false});
+canvas.addEventListener('touchmove',onMove,{passive:false});
+canvas.addEventListener('touchend',onUp,{passive:false});
+
+function startGame(){
+  hitCount=0; throwsLeft=3; bestDist=0; maxDist=0;
+  camX=0; targetCamX=0;
+  particles_extra=[]; floatTexts=[];
+  gameOver=false; launched=false;
+  LAUNCH_X=120;
+  LAUNCH_Y=H-FLOOR_H-80;
+  buildLevel();
+  buildRagdoll(LAUNCH_X, LAUNCH_Y);
+  document.getElementById('hits').textContent=0;
+  document.getElementById('dist').textContent=0;
+  document.getElementById('best').textContent=0;
+  document.getElementById('throws').textContent=3;
+  document.getElementById('msg').style.display='none';
+  document.getElementById('aim-hint').style.opacity='1';
+  gameActive=true;
+}
+
+document.getElementById('startBtn').addEventListener('click',startGame);
+
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

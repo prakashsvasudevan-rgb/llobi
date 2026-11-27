@@ -37,13 +37,24 @@ C.addEventListener('touchstart',e=>{const c=evtCoords(e,true);mx=c.x;my=c.y;clic
 const VF=70; // viewfinder half-size
 const TV={x:W/2-80,y:8,w:160,h:90}; // TV screen rect
 
-let phase='intro'; // intro|play|escalate|ending
+let phase='intro'; // intro|tutorial|play|escalate|ending
 let tension=0;      // 0–100
 let frame=0;
 let flashTimer=0;
 let introFrame=0;
+let tutFrame=0;    // tutorial timer
 let endFrame=0;
 let endType=''; // 'peace'|'chaos'
+
+// tutorial steps (scripted story beat timings in frames)
+const TUT=[
+  {at:60,  msg:'A new trend is spreading among the circles...',col:'#ffcc44'},
+  {at:150, msg:'More circles are picking it up.',col:'#ffcc44'},
+  {at:230, msg:'The squares have noticed.',col:'#aa88ff'},
+  {at:310, msg:'One square grows angry.',col:'#ff4444'},
+  {at:400, msg:'You hold the camera.\nWhat will you broadcast?',col:'#ffffff'},
+];
+let tutStep=0;
 
 // broadcast
 let broadcast={type:'static',intensity:0,imgData:null};
@@ -65,7 +76,8 @@ function mkNPC(type,x,y){
     type, x, y,
     vx:(Math.random()-0.5)*1.1,
     vy:(Math.random()-0.5)*0.9,
-    mood:'calm',    // calm|curious|angry
+    mood:'calm',    // calm|angry
+    trendy:false,   // wearing glasses (circle trend)
     extreme:false,  // hat or spike
     extremeT:0,
     moodT:Math.random()*120,
@@ -111,6 +123,15 @@ function drawNPC(n,scale=1){
     } else {
       ctx.strokeStyle='#111';ctx.lineWidth=1.5;
       ctx.beginPath();ctx.arc(0,s*0.1,s*0.3,0.1*Math.PI,0.9*Math.PI);ctx.stroke();
+    }
+    // trendy glasses
+    if(n.trendy){
+      ctx.strokeStyle='#111';ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.arc(-s*0.3,-s*0.15,s*0.26,0,Math.PI*2);ctx.stroke();
+      ctx.beginPath();ctx.arc(s*0.3,-s*0.15,s*0.26,0,Math.PI*2);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(-s*0.04,-s*0.15);ctx.lineTo(s*0.04,-s*0.15);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(-s*0.56,-s*0.15);ctx.lineTo(-s*0.68,-s*0.1);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(s*0.56,-s*0.15);ctx.lineTo(s*0.68,-s*0.1);ctx.stroke();
     }
     // hat (extreme)
     if(n.extreme){
@@ -244,18 +265,30 @@ function drawTV(){
 // DRAWING — TENSION METER
 // ══════════════════════════════════════════════
 function drawTension(){
-  const mx2=W-28,my2=PLAY_TOP+10,mh=200,mw=16;
-  ctx.fillStyle='rgba(0,0,0,0.5)';ctx.beginPath();ctx.roundRect(mx2-mw/2,my2,mw,mh,4);ctx.fill();
-
-  const fillH=mh*(tension/100);
-  const tcol=tension<40?'#44cc44':tension<70?'#ffaa00':'#ff2200';
-  ctx.fillStyle=tcol;ctx.beginPath();ctx.roundRect(mx2-mw/2,my2+mh-fillH,mw,fillH,4);ctx.fill();
-
-  ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=1;ctx.beginPath();ctx.roundRect(mx2-mw/2,my2,mw,mh,4);ctx.stroke();
-
-  ctx.fillStyle='rgba(255,255,255,0.7)';ctx.font='9px sans-serif';ctx.textAlign='center';
-  ctx.fillText('TENSION',mx2,my2-4);
-  ctx.fillText(Math.round(tension)+'%',mx2,my2+mh+12);
+  const bx=20,by=H-18,bw=W-40,bh=10;
+  // background
+  ctx.fillStyle='rgba(0,0,0,0.55)';ctx.beginPath();ctx.roundRect(bx-2,by-14,bw+4,bh+16,4);ctx.fill();
+  // label
+  ctx.fillStyle='rgba(255,255,255,0.8)';ctx.font='bold 9px sans-serif';ctx.textAlign='left';
+  ctx.fillText('TENSION',bx,by-3);
+  ctx.textAlign='right';ctx.fillText(Math.round(tension)+'%',bx+bw,by-3);
+  // track
+  ctx.fillStyle='rgba(60,40,80,0.9)';ctx.beginPath();ctx.roundRect(bx,by,bw,bh,5);ctx.fill();
+  // fill
+  const fillW=bw*(tension/100);
+  if(fillW>0){
+    const tcol=tension<40?'#44dd44':tension<70?'#ffaa00':'#ff2200';
+    const grad=ctx.createLinearGradient(bx,0,bx+fillW,0);
+    grad.addColorStop(0,tcol);grad.addColorStop(1,tension>70?'#ff5500':tcol);
+    ctx.fillStyle=grad;ctx.beginPath();ctx.roundRect(bx,by,fillW,bh,5);ctx.fill();
+  }
+  // border
+  ctx.strokeStyle='rgba(255,255,255,0.25)';ctx.lineWidth=1;ctx.beginPath();ctx.roundRect(bx,by,bw,bh,5);ctx.stroke();
+  // pulsing glow at high tension
+  if(tension>70){
+    ctx.strokeStyle=`rgba(255,50,0,${0.3+Math.sin(frame*0.15)*0.3})`;ctx.lineWidth=2;
+    ctx.beginPath();ctx.roundRect(bx-1,by-1,bw+2,bh+2,6);ctx.stroke();
+  }
 }
 
 // ══════════════════════════════════════════════
@@ -405,8 +438,43 @@ function update(){
 
   if(phase==='intro'){
     introFrame++;
-    if(clicked&&introFrame>60){phase='play';clicked=false;}
+    if(clicked&&introFrame>60){phase='tutorial';tutFrame=0;tutStep=0;clicked=false;}
     return;
+  }
+  if(phase==='tutorial'){
+    tutFrame++;
+    // scripted story beats
+    if(tutStep<TUT.length&&tutFrame>=TUT[tutStep].at){
+      // fire the event
+      if(tutStep===0){
+        // first trendy circle
+        const c=npcs.find(n=>n.type==='circle'&&!n.trendy);
+        if(c) c.trendy=true;
+      } else if(tutStep===1){
+        // 3 more trendy circles
+        npcs.filter(n=>n.type==='circle'&&!n.trendy).slice(0,3).forEach(n=>n.trendy=true);
+      } else if(tutStep===2){
+        // squares notice — a couple look toward center
+        npcs.filter(n=>n.type==='square').slice(0,3).forEach(n=>n.vx=-Math.abs(n.vx||0.5));
+      } else if(tutStep===3){
+        // first angry square
+        const sq=npcs.find(n=>n.type==='square'&&n.mood==='calm');
+        if(sq){sq.mood='angry';tension=15;}
+      } else if(tutStep===4){
+        // transition to play — camera appears, let player take over
+        setTimeout(()=>{phase='play';},1500);
+      }
+      tutStep++;
+    }
+    // move NPCs during tutorial
+    npcs.forEach(n=>{
+      n.wobble+=0.04;n.x+=n.vx+(Math.sin(n.wobble)*0.15);n.y+=n.vy+(Math.cos(n.wobble*0.7)*0.1);
+      const lx=n.type==='circle'?55:PLAY_MID+5,rx=n.type==='circle'?PLAY_MID-5:W-55;
+      if(n.x<lx+5)n.vx+=0.1;if(n.x>rx-5)n.vx-=0.1;
+      if(n.y<PLAY_TOP+15)n.vy+=0.1;if(n.y>H-25)n.vy-=0.1;
+      const spd=Math.hypot(n.vx,n.vy);if(spd>1.6){n.vx*=0.98;n.vy*=0.98;}
+    });
+    clicked=false;return;
   }
   if(phase==='ending'){endFrame++;clicked=false;return;}
   if(phase==='escalate'){
@@ -530,6 +598,52 @@ function drawIntro(){
 // ══════════════════════════════════════════════
 // DRAW ESCALATE / ENDING
 // ══════════════════════════════════════════════
+function drawTutorial(){
+  // Show current tutorial message with fade
+  if(tutStep===0) return;
+  const step=TUT[Math.min(tutStep-1,TUT.length-1)];
+  const sinceStep=tutFrame-step.at;
+  const fadeIn=Math.min(1,sinceStep/20);
+  const nextAt=tutStep<TUT.length?TUT[tutStep].at:tutFrame+999;
+  const fadeOut=sinceStep>nextAt-step.at-30?Math.max(0,1-(sinceStep-(nextAt-step.at-30))/20):1;
+  const alpha=fadeIn*fadeOut;
+  if(alpha<=0) return;
+  const lines=step.msg.split('\n');
+  const lh=22,pad=14;
+  const tw=220,th=lines.length*lh+pad*2;
+  const bx=W/2-tw/2,by=PLAY_TOP+16;
+  ctx.globalAlpha=alpha*0.92;
+  ctx.fillStyle='rgba(0,0,0,0.75)';ctx.beginPath();ctx.roundRect(bx,by,tw,th,8);ctx.fill();
+  ctx.strokeStyle=step.col;ctx.lineWidth=1.5;ctx.stroke();
+  ctx.fillStyle=step.col;ctx.font='bold 13px Georgia,serif';ctx.textAlign='center';
+  lines.forEach((l,i)=>ctx.fillText(l,W/2,by+pad+13+i*lh));
+  ctx.globalAlpha=1;
+  // Arrow pointing at first trendy NPC during step 1
+  if(tutStep===1||tutStep===2){
+    const tNPC=npcs.find(n=>n.trendy);
+    if(tNPC){
+      ctx.globalAlpha=alpha*0.8;
+      ctx.strokeStyle='#ffcc44';ctx.lineWidth=2;ctx.setLineDash([4,3]);
+      ctx.beginPath();ctx.moveTo(W/2,by+th+4);ctx.lineTo(tNPC.x,tNPC.y-20);ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle='#ffcc44';ctx.beginPath();ctx.moveTo(tNPC.x,tNPC.y-14);ctx.lineTo(tNPC.x-5,tNPC.y-24);ctx.lineTo(tNPC.x+5,tNPC.y-24);ctx.closePath();ctx.fill();
+      ctx.globalAlpha=1;
+    }
+  }
+  // Arrow pointing at angry square during step 4
+  if(tutStep===4){
+    const aSq=npcs.find(n=>n.type==='square'&&n.mood==='angry');
+    if(aSq){
+      ctx.globalAlpha=alpha*0.8;
+      ctx.strokeStyle='#ff4444';ctx.lineWidth=2;ctx.setLineDash([4,3]);
+      ctx.beginPath();ctx.moveTo(W/2,by+th+4);ctx.lineTo(aSq.x,aSq.y-20);ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle='#ff4444';ctx.beginPath();ctx.moveTo(aSq.x,aSq.y-14);ctx.lineTo(aSq.x-5,aSq.y-24);ctx.lineTo(aSq.x+5,aSq.y-24);ctx.closePath();ctx.fill();
+      ctx.globalAlpha=1;
+    }
+  }
+}
+
 function drawEscalate(){
   // Screen shake
   const shake=Math.sin(endFrame*0.8)*3;
@@ -587,7 +701,7 @@ function drawEnding(){
 }
 
 function resetGame(){
-  tension=0;frame=0;flashTimer=0;introFrame=0;endFrame=0;endType='';
+  tension=0;frame=0;flashTimer=0;introFrame=0;tutFrame=0;tutStep=0;endFrame=0;endType='';
   broadcast={type:'static',intensity:0,imgData:null};floats=[];
   npcs=[];
   for(let i=0;i<10;i++) npcs.push(mkNPC('circle',80+Math.random()*200,PLAY_TOP+30+Math.random()*200));
@@ -610,10 +724,16 @@ function loop(){
   }
 
   if(phase==='intro'){
-    // Draw NPCs (animated) behind overlay
     npcs.forEach(n=>drawNPC(n));
     drawTV();
     drawIntro();
+    requestAnimationFrame(loop);return;
+  }
+
+  if(phase==='tutorial'){
+    npcs.forEach(n=>drawNPC(n));
+    drawTV();
+    drawTutorial();
     requestAnimationFrame(loop);return;
   }
 

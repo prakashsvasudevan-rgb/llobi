@@ -125,7 +125,7 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
       <button class="d-btn" id="btn-pc" onclick="pickDevice('pc')">🖥 COMPUTER</button>
       <button class="d-btn" id="btn-ipad" onclick="pickDevice('ipad')">📱 iPAD / TOUCH</button>
     </div>
-    <p id="sel-hint" style="font-size:.28rem;color:#555;text-align:center;padding:0 8px">◀ ▶ · SPACE=FIRE · Z=BITE · C=TAIL · R=ROAR · T=HUMAN · C=SIT · M=MAP · SHIFT=SWORD · J=JUMP</p>
+    <p id="sel-hint" style="font-size:.28rem;color:#555;text-align:center;padding:0 8px">◀ ▶ · SPACE=FIRE · Z=🦷BITE · C=💥TAIL · R=🔊ROAR · F=⚡ELEMENT · X=🐉ELEM.BITE · /=💥POWER · H=💚HEAL(Nature) · V=❄FREEZE(Ice) · U=🔥BURN(Fire) · G=⚡BOLT(Lightning) · ;=🔮SHIELD(Soul) · ==🌍INVINCIBLE(Earth) · Q=👑KING WEAPON · T=🧍HUMAN · M=🗺MAP · J=JUMP · SHIFT=⚔SWORD</p>
     <p id="sel-best"></p>
   </div>
 
@@ -3678,7 +3678,7 @@ document.addEventListener('keydown',e=>{
                 en.userData.spd=Math.max(2,(en.userData.spd||8)*0.5);
                 en.userData.si=(en.userData.si||3)*3;
                 en.userData.dmg=Math.max(1,(en.userData.dmg||10)*0.4);
-                hitEnemy(en,60); // immediate strike
+                hitEnemy(en,120); // immediate strike
               }
             }
           } else if(dtype.id==='nature'){
@@ -3706,13 +3706,13 @@ document.addEventListener('keydown',e=>{
             abilityCooldown.attack=8;
             let be=null,bd=250;
             for(const en of activeEnemies){if(!en.userData.alive)continue;const d=dragonMesh.position.distanceTo(en.position);if(d<bd){bd=d;be=en;}}
-            if(be){spawnBeamFX(dragonMesh.position.clone(),be.position.clone(),0xaaaaff);spawnAbilityCloud(be.position.clone(),0x8888ff,22,0.8);hitEnemy(be,120);}
+            if(be){spawnBeamFX(dragonMesh.position.clone(),be.position.clone(),0xaaaaff);spawnAbilityCloud(be.position.clone(),0x8888ff,22,0.8);hitEnemy(be,240);}
           } else if(dtype.id==='earth'){
             // Boulder — visible rock projectile + impact cloud
             abilityCooldown.attack=9;
             let be=null,bd=200;
             for(const en of activeEnemies){if(!en.userData.alive)continue;const d=dragonMesh.position.distanceTo(en.position);if(d<bd){bd=d;be=en;}}
-            if(be){spawnProjectile('rock',dragonMesh.position.clone(),be.position.clone());spawnAbilityCloud(be.position.clone(),0x996633,18,0.9);hitEnemy(be,50);}
+            if(be){spawnProjectile('rock',dragonMesh.position.clone(),be.position.clone());spawnAbilityCloud(be.position.clone(),0x996633,18,0.9);hitEnemy(be,100);}
           } else {
             // Air — gust burst
             abilityCooldown.attack=8;
@@ -3797,44 +3797,44 @@ document.addEventListener('keydown',e=>{
             abilityCooldown.bite=8;
             let chain=closeEnemies.slice(0,5);
             if(chain.length===0){for(const en of activeEnemies){if(!en.userData.alive)continue;if(dragonMesh.position.distanceTo(en.position)<60){chain.push(en);if(chain.length>=3)break;}}}
-            for(const en of chain){spawnBeamFX(ref3,en.position.clone(),0xeeeeff);hitEnemy(en,dtype.dmg*2);}
+            for(const en of chain){spawnBeamFX(ref3,en.position.clone(),0xeeeeff);hitEnemy(en,dtype.dmg*4);}
             spawnAbilityCloud(ref3,0xddaaff,20,0.8);
           } else if(dtype.id==='fire'){
             // Fire bite — burns target
-            for(const en of closeEnemies){hitEnemy(en,dtype.dmg*2.5);burnMap.set(en,(burnMap.get(en)||0)+5);if(++hit>=2)break;}
+            for(const en of closeEnemies){hitEnemy(en,dtype.dmg*5);burnMap.set(en,(burnMap.get(en)||0)+5);if(++hit>=2)break;}
             spawnAbilityCloud(ref3,0xff5500,18,0.7);
           } else if(dtype.id==='ice'){
             // Frost bite — freezes target
-            for(const en of closeEnemies){hitEnemy(en,dtype.dmg*1.8);freezeMap.set(en,(freezeMap.get(en)||0)+6);if(++hit>=2)break;}
+            for(const en of closeEnemies){hitEnemy(en,dtype.dmg*3.6);freezeMap.set(en,(freezeMap.get(en)||0)+6);if(++hit>=2)break;}
             spawnAbilityCloud(ref3,0x88ddff,18,0.7);
           } else if(dtype.id==='earth'){
             // Earth slam — shockwave hits all nearby
             abilityCooldown.bite=10;
-            for(const en of activeEnemies){if(!en.userData.alive)continue;const d=dragonMesh.position.distanceTo(en.position);if(d<50){hitEnemy(en,dtype.dmg*(1-d/60)*3);}}
+            for(const en of activeEnemies){if(!en.userData.alive)continue;const d=dragonMesh.position.distanceTo(en.position);if(d<50){hitEnemy(en,dtype.dmg*(1-d/60)*6);}}
             spawnAbilityCloud(ref3,0x88cc44,36,1.4);
           } else if(dtype.id==='air'){
             // Tornado spin — flings nearby enemies
-            for(const en of activeEnemies){if(!en.userData.alive)continue;const d=dragonMesh.position.distanceTo(en.position);if(d<40){hitEnemy(en,dtype.dmg*2);en.userData.si=(en.userData.si||3)*2;}}
+            for(const en of activeEnemies){if(!en.userData.alive)continue;const d=dragonMesh.position.distanceTo(en.position);if(d<40){hitEnemy(en,dtype.dmg*4);en.userData.si=(en.userData.si||3)*2;}}
             spawnAbilityCloud(ref3,0xaaffee,28,1.0);
           } else if(dtype.id==='nature'){
             // Vine grab — slows all nearby
-            for(const en of activeEnemies){if(!en.userData.alive)continue;const d=dragonMesh.position.distanceTo(en.position);if(d<45){hitEnemy(en,dtype.dmg*1.5);en.userData.si=(en.userData.si||3)*3;if(++hit>=4)break;}}
+            for(const en of activeEnemies){if(!en.userData.alive)continue;const d=dragonMesh.position.distanceTo(en.position);if(d<45){hitEnemy(en,dtype.dmg*3);en.userData.si=(en.userData.si||3)*3;if(++hit>=4)break;}}
             spawnAbilityCloud(ref3,0x44ff44,24,0.9);
           } else if(dtype.id==='soul'){
             // Soul drain — steal HP from nearest enemy
             abilityCooldown.bite=10;
             let nearest=null,nd=200;
             for(const en of activeEnemies){if(!en.userData.alive)continue;const d=dragonMesh.position.distanceTo(en.position);if(d<nd){nd=d;nearest=en;}}
-            if(nearest){const steal=dtype.dmg*4;hitEnemy(nearest,steal);dhp=Math.min(dmaxHp,dhp+steal*0.5);spawnBeamFX(nearest.position.clone(),ref3,0x8888ff);}
+            if(nearest){const steal=dtype.dmg*8;hitEnemy(nearest,steal);dhp=Math.min(dmaxHp,dhp+steal*0.5);spawnBeamFX(nearest.position.clone(),ref3,0x8888ff);}
             spawnAbilityCloud(ref3,0x8888ff,20,0.8);
           } else if(dtype.id==='lava'){
             // Lava spit — AoE burn splash
-            for(const en of activeEnemies){if(!en.userData.alive)continue;const d=dragonMesh.position.distanceTo(en.position);if(d<55){hitEnemy(en,dtype.dmg*2);burnMap.set(en,(burnMap.get(en)||0)+6);if(++hit>=4)break;}}
+            for(const en of activeEnemies){if(!en.userData.alive)continue;const d=dragonMesh.position.distanceTo(en.position);if(d<55){hitEnemy(en,dtype.dmg*4);burnMap.set(en,(burnMap.get(en)||0)+6);if(++hit>=4)break;}}
             spawnAbilityCloud(ref3,0xff4400,30,1.1);
           } else if(dtype.id==='water'){
             // Water whip — hits all in a line
             const fwd3=new THREE.Vector3(0,0,1).applyEuler(dragonMesh.rotation);
-            for(const en of activeEnemies){if(!en.userData.alive)continue;const d=dragonMesh.position.distanceTo(en.position);if(d<70){const dot=fwd3.dot(en.position.clone().sub(dragonMesh.position).normalize());if(dot>0.5){hitEnemy(en,dtype.dmg*2.5);if(++hit>=4)break;}}}
+            for(const en of activeEnemies){if(!en.userData.alive)continue;const d=dragonMesh.position.distanceTo(en.position);if(d<70){const dot=fwd3.dot(en.position.clone().sub(dragonMesh.position).normalize());if(dot>0.5){hitEnemy(en,dtype.dmg*5);if(++hit>=4)break;}}}
             spawnAbilityCloud(ref3,0x4499ff,22,0.9);
           } else if(dtype.id==='smoke'){
             // Smoke cloud — blinds/slows all nearby
@@ -3842,18 +3842,18 @@ document.addEventListener('keydown',e=>{
             spawnAbilityCloud(ref3,0x888888,40,1.5);
           } else if(dtype.id==='acid'){
             // Acid spit — melts armor (heavy DoT)
-            for(const en of closeEnemies){hitEnemy(en,dtype.dmg*2);burnMap.set(en,(burnMap.get(en)||0)+8);if(++hit>=2)break;}
+            for(const en of closeEnemies){hitEnemy(en,dtype.dmg*4);burnMap.set(en,(burnMap.get(en)||0)+8);if(++hit>=2)break;}
             spawnAbilityCloud(ref3,0xaaff44,20,0.7);
           } else if(dtype.id==='bone'){
             // Bone crush — massive single-target damage
             abilityCooldown.bite=10;
             const target=closeEnemies[0]||(activeEnemies.find(en=>en.userData.alive&&dragonMesh.position.distanceTo(en.position)<60));
-            if(target){hitEnemy(target,dtype.dmg*8);spawnBeamFX(ref3,target.position.clone(),0xddddcc);}
+            if(target){hitEnemy(target,dtype.dmg*16);spawnBeamFX(ref3,target.position.clone(),0xddddcc);}
             spawnAbilityCloud(ref3,0xddddcc,16,0.6);
           } else if(dtype.id==='metal'){
             // Metal shred — hits all nearby, heavy armor damage
             abilityCooldown.bite=10;
-            for(const en of activeEnemies){if(!en.userData.alive)continue;const d=dragonMesh.position.distanceTo(en.position);if(d<45){hitEnemy(en,dtype.dmg*3);if(++hit>=5)break;}}
+            for(const en of activeEnemies){if(!en.userData.alive)continue;const d=dragonMesh.position.distanceTo(en.position);if(d<45){hitEnemy(en,dtype.dmg*6);if(++hit>=5)break;}}
             spawnAbilityCloud(ref3,0xaabbcc,26,1.0);
           } else if(dtype.id==='glass'){
             // Glass shatter — 111 dmg to nearest, shards to others
@@ -3865,17 +3865,17 @@ document.addEventListener('keydown',e=>{
           } else if(dtype.id==='thunder'){
             // Thunder stomp — stuns all nearby
             abilityCooldown.bite=12;
-            for(const en of activeEnemies){if(!en.userData.alive)continue;const d=dragonMesh.position.distanceTo(en.position);if(d<70){hitEnemy(en,dtype.dmg*2);en.userData.stunT=(en.userData.stunT||0)+3;}}
+            for(const en of activeEnemies){if(!en.userData.alive)continue;const d=dragonMesh.position.distanceTo(en.position);if(d<70){hitEnemy(en,dtype.dmg*4);en.userData.stunT=(en.userData.stunT||0)+3;}}
             spawnAbilityCloud(ref3,0xffff88,34,1.3);
           } else if(dtype.id==='sun'){
             // Solar flare — blinds and burns all in wide cone
             abilityCooldown.bite=12;
             const fwd3=new THREE.Vector3(0,0,1).applyEuler(dragonMesh.rotation);
-            for(const en of activeEnemies){if(!en.userData.alive)continue;const d=dragonMesh.position.distanceTo(en.position);if(d<90){const dot=fwd3.dot(en.position.clone().sub(dragonMesh.position).normalize());if(dot>0.3){hitEnemy(en,dtype.dmg*2);burnMap.set(en,(burnMap.get(en)||0)+5);en.userData.si=(en.userData.si||3)*1.8;if(++hit>=6)break;}}}
+            for(const en of activeEnemies){if(!en.userData.alive)continue;const d=dragonMesh.position.distanceTo(en.position);if(d<90){const dot=fwd3.dot(en.position.clone().sub(dragonMesh.position).normalize());if(dot>0.3){hitEnemy(en,dtype.dmg*4);burnMap.set(en,(burnMap.get(en)||0)+5);en.userData.si=(en.userData.si||3)*1.8;if(++hit>=6)break;}}}
             spawnAbilityCloud(ref3,0xffffff,44,1.6);spawnAbilityCloud(ref3,0xffdd44,28,1.0);
           } else {
             // Generic bite
-            for(const en of closeEnemies){hitEnemy(en,dtype.dmg*2);if(++hit>=2)break;}
+            for(const en of closeEnemies){hitEnemy(en,dtype.dmg*4);if(++hit>=2)break;}
             spawnAbilityCloud(ref3,0xffffff,16,0.6);
           }
         }
@@ -3980,7 +3980,7 @@ document.addEventListener('keydown',e=>{
         // Find nearest enemy for target
         let ftgt=null,fd=800;for(const ae of activeEnemies){if(!ae.userData.alive)continue;const d=ref.distanceTo(ae.position);if(d<fd){fd=d;ftgt=ae;}}
         const fDir=ftgt?new THREE.Vector3().subVectors(ftgt.position,fMesh.position).normalize():new THREE.Vector3(-Math.sin(dragonMesh.rotation.y),0,Math.cos(dragonMesh.rotation.y));
-        fMesh.userData={vel:fDir.multiplyScalar(50),dmg:upgradedDmg()*20,life:4,projType:'fire',friendly:true,spin:false};
+        fMesh.userData={vel:fDir.multiplyScalar(50),dmg:upgradedDmg()*40,life:4,projType:'fire',friendly:true,spin:false};
         scene.add(fMesh);projectiles.push(fMesh);
         spawnAbilityCloud(refP,0xff4400,40,0.8);
       } else if(id==='ice'){
@@ -3988,7 +3988,7 @@ document.addEventListener('keydown',e=>{
         floatWorld(refP,'❄ ICE BEAM!','#88ffff');
         // Beam that hits all enemies in front cone, weakens (slow + reduced dmg)
         const fwd=new THREE.Vector3(-Math.sin(dragonMesh.rotation.y),0,Math.cos(dragonMesh.rotation.y));
-        for(const ae of activeEnemies){if(!ae.userData.alive)continue;const toE=new THREE.Vector3().subVectors(ae.position,ref).normalize();if(fwd.dot(toE)>0.5&&ref.distanceTo(ae.position)<300){hitEnemy(ae,upgradedDmg()*5);freezeMap.set(ae,(freezeMap.get(ae)||0)+6);spawnBeamFX(refP.clone(),ae.position.clone(),0x88ffff);spawnAbilityCloud(ae.position.clone(),0x88ffff,22,0.6);}}
+        for(const ae of activeEnemies){if(!ae.userData.alive)continue;const toE=new THREE.Vector3().subVectors(ae.position,ref).normalize();if(fwd.dot(toE)>0.5&&ref.distanceTo(ae.position)<300){hitEnemy(ae,upgradedDmg()*10);freezeMap.set(ae,(freezeMap.get(ae)||0)+6);spawnBeamFX(refP.clone(),ae.position.clone(),0x88ffff);spawnAbilityCloud(ae.position.clone(),0x88ffff,22,0.6);}}
         spawnAbilityCloud(refP,0x88ffff,55,1.0);
       } else if(id==='soul'){
         abilityCooldown.power=8;
@@ -3998,7 +3998,7 @@ document.addEventListener('keydown',e=>{
           const ghostMesh=buildDragonMesh(dtype);ghostMesh.scale.set(2,2,2);
           ghostMesh.traverse(c=>{if(c.isMesh&&c.material)c.material=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.5,blending:THREE.AdditiveBlending});});
           const ang=gi/3*Math.PI*2;ghostMesh.position.copy(ref).add(new THREE.Vector3(Math.cos(ang)*20,8,Math.sin(ang)*20));
-          ghostMesh.userData={hp:9999,maxHp:9999,dmg:upgradedDmg()*8,alive:true,attackT:0.5,pts:0,stunT:0,shootT:1,si:1,type:'golem',isGhost:true,ghostLife:10};
+          ghostMesh.userData={hp:9999,maxHp:9999,dmg:upgradedDmg()*16,alive:true,attackT:0.5,pts:0,stunT:0,shootT:1,si:1,type:'golem',isGhost:true,ghostLife:10};
           scene.add(ghostMesh);dragonArmy.push({mesh:ghostMesh,dtDef:dtype,isGolem:false,isGhost:true});
           spawnAbilityCloud(ghostMesh.position.clone(),0xffffff,25,0.8);
         }
@@ -4006,22 +4006,22 @@ document.addEventListener('keydown',e=>{
         abilityCooldown.power=5;
         floatWorld(refP,'🌿 LIFE BEAM!','#44ff44');
         // Heal player + damage all enemies in cone for 400
-        dhp=Math.min(dmaxHp,dhp+400);spawnAbilityCloud(refP,0x44ff44,55,1.2);
+        dhp=Math.min(dmaxHp,dhp+800);spawnAbilityCloud(refP,0x44ff44,55,1.2);
         const fwd2=new THREE.Vector3(-Math.sin(dragonMesh.rotation.y),0,Math.cos(dragonMesh.rotation.y));
-        for(const ae of activeEnemies){if(!ae.userData.alive)continue;const toE=new THREE.Vector3().subVectors(ae.position,ref).normalize();if(fwd2.dot(toE)>0.4&&ref.distanceTo(ae.position)<250){hitEnemy(ae,400);spawnBeamFX(refP.clone(),ae.position.clone(),0x44ff44);spawnAbilityCloud(ae.position.clone(),0x44ff44,20,0.5);}}
+        for(const ae of activeEnemies){if(!ae.userData.alive)continue;const toE=new THREE.Vector3().subVectors(ae.position,ref).normalize();if(fwd2.dot(toE)>0.4&&ref.distanceTo(ae.position)<250){hitEnemy(ae,800);spawnBeamFX(refP.clone(),ae.position.clone(),0x44ff44);spawnAbilityCloud(ae.position.clone(),0x44ff44,20,0.5);}}
       } else if(id==='earth'){
         abilityCooldown.power=7;
         floatWorld(refP,'🌍 GROUND SMASH!','#aa8844');
         // Roll and slam — damage all in 200u
         spawnAbilityCloud(ref.clone(),0xaa8844,100,2.5);spawnAbilityCloud(ref.clone(),0x886622,70,1.8);
         for(let ei=0;ei<32;ei++){const ea=ei/32*Math.PI*2;const ep=ref.clone().add(new THREE.Vector3(Math.cos(ea)*180,0,Math.sin(ea)*180));spawnAbilityCloud(ep,0xaa8844,22,0.8);}
-        for(const ae of activeEnemies){if(!ae.userData.alive)continue;if(ref.distanceTo(ae.position)<200){hitEnemy(ae,upgradedDmg()*10);floatWorld(ae.position,'🌍','#aa8844');}}
+        for(const ae of activeEnemies){if(!ae.userData.alive)continue;if(ref.distanceTo(ae.position)<200){hitEnemy(ae,upgradedDmg()*20);floatWorld(ae.position,'🌍','#aa8844');}}
         for(const a of dragonArmy){if(!a.mesh.userData.alive)return;}// army is safe
       } else {
         // Default for other types — element blast
         abilityCooldown.power=5;
         spawnAbilityCloud(refP,0xffffff,60,1.5);
-        for(const ae of activeEnemies){if(!ae.userData.alive)continue;if(ref.distanceTo(ae.position)<150)hitEnemy(ae,upgradedDmg()*8);}
+        for(const ae of activeEnemies){if(!ae.userData.alive)continue;if(ref.distanceTo(ae.position)<150)hitEnemy(ae,upgradedDmg()*16);}
       }
     }
     // Player bite (Z), tail (C), roar (V override for non-ice)

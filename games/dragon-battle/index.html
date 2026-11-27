@@ -2831,23 +2831,33 @@ const WIZARD_SPELLS=[
   {id:'fire_god',     name:'🔥 Fire God',       cost:400, desc:'Endless fire walls engulf all foes for 8s',color:'#ff2200'},
 ];
 let wizardSpellIdx=0; // which spell player currently has selected
+// King Dragon islands orbit Dragon Mountain at r=1200, evenly spaced (min dist ~918u)
+const _KR=1200;
 const KING_RUINS_CFG=[
   {id:'fire_water',  elem1:'fire',  elem2:'water',   name:'INFERNO TIDE',
-   pos:{x:DM_X+800,z:DM_Z+600},   bossColor:0xff6633, weaponName:'METEOR STRIKE',  weaponColor:0xff4400,weaponEmoji:'☄'},
+   pos:{x:Math.round(DM_X+_KR*Math.sin(0*Math.PI/4)),z:Math.round(DM_Z+_KR*Math.cos(0*Math.PI/4))},
+   bossColor:0xff6633, weaponName:'METEOR STRIKE',  weaponColor:0xff4400,weaponEmoji:'☄'},
   {id:'earth_nature',elem1:'earth', elem2:'nature',  name:'ANCIENT GROVE',
-   pos:{x:DM_X-900,z:DM_Z+700},   bossColor:0x44ff66, weaponName:'GOLEM SUMMON',   weaponColor:0x44ff44,weaponEmoji:'🗿'},
+   pos:{x:Math.round(DM_X+_KR*Math.sin(1*Math.PI/4)),z:Math.round(DM_Z+_KR*Math.cos(1*Math.PI/4))},
+   bossColor:0x44ff66, weaponName:'GOLEM SUMMON',   weaponColor:0x44ff44,weaponEmoji:'🗿'},
   {id:'air_smoke',   elem1:'air',   elem2:'smoke',   name:'ASHEN SKY',
-   pos:{x:DM_X+1800,z:DM_Z+300},  bossColor:0xaaccff, weaponName:'TORNADO',        weaponColor:0xaaccff,weaponEmoji:'🌪'},
+   pos:{x:Math.round(DM_X+_KR*Math.sin(2*Math.PI/4)),z:Math.round(DM_Z+_KR*Math.cos(2*Math.PI/4))},
+   bossColor:0xaaccff, weaponName:'TORNADO',        weaponColor:0xaaccff,weaponEmoji:'🌪'},
   {id:'lava_ice',    elem1:'lava',  elem2:'ice',     name:'GLACIAL CALDERA',
-   pos:{x:DM_X-1200,z:DM_Z+1600}, bossColor:0x44ddff, weaponName:'FROZEN VOLCANO', weaponColor:0x88ffff,weaponEmoji:'❄'},
+   pos:{x:Math.round(DM_X+_KR*Math.sin(3*Math.PI/4)),z:Math.round(DM_Z+_KR*Math.cos(3*Math.PI/4))},
+   bossColor:0x44ddff, weaponName:'FROZEN VOLCANO', weaponColor:0x88ffff,weaponEmoji:'❄'},
   {id:'thunder_lightning',elem1:'thunder',elem2:'lightning',name:'STORM THRONE',
-   pos:{x:DM_X+600,z:DM_Z-500},   bossColor:0xffff44, weaponName:'MEGASTORM',      weaponColor:0xffff44,weaponEmoji:'⛈'},
+   pos:{x:Math.round(DM_X+_KR*Math.sin(4*Math.PI/4)),z:Math.round(DM_Z+_KR*Math.cos(4*Math.PI/4))},
+   bossColor:0xffff44, weaponName:'MEGASTORM',      weaponColor:0xffff44,weaponEmoji:'⛈'},
   {id:'sun_soul',    elem1:'sun',   elem2:'soul',    name:'CELESTIAL ALTAR',
-   pos:{x:DM_X-500,z:DM_Z-600},   bossColor:0xffffff, weaponName:'SOUL BEAM',      weaponColor:0xffffff,weaponEmoji:'✨'},
+   pos:{x:Math.round(DM_X+_KR*Math.sin(5*Math.PI/4)),z:Math.round(DM_Z+_KR*Math.cos(5*Math.PI/4))},
+   bossColor:0xffffff, weaponName:'SOUL BEAM',      weaponColor:0xffffff,weaponEmoji:'✨'},
   {id:'bone_acid',   elem1:'bone',  elem2:'acid',    name:'DEATH MARSHES',
-   pos:{x:DM_X+200,z:DM_Z+2200},  bossColor:0xccffaa, weaponName:'PLAGUE CLOUD',   weaponColor:0x88ff44,weaponEmoji:'☠'},
+   pos:{x:Math.round(DM_X+_KR*Math.sin(6*Math.PI/4)),z:Math.round(DM_Z+_KR*Math.cos(6*Math.PI/4))},
+   bossColor:0xccffaa, weaponName:'PLAGUE CLOUD',   weaponColor:0x88ff44,weaponEmoji:'☠'},
   {id:'metal_glass', elem1:'metal', elem2:'glass',   name:'SHATTERED FORGE',
-   pos:{x:DM_X-800,z:DM_Z-1600},  bossColor:0xddeeff, weaponName:'SHURIKEN STORM', weaponColor:0xddeeff,weaponEmoji:'⭐'},
+   pos:{x:Math.round(DM_X+_KR*Math.sin(7*Math.PI/4)),z:Math.round(DM_Z+_KR*Math.cos(7*Math.PI/4))},
+   bossColor:0xddeeff, weaponName:'SHURIKEN STORM', weaponColor:0xddeeff,weaponEmoji:'⭐'},
 ];
 const kingRuinsSpawned=new Set();
 const kingWeaponOrbs=[];

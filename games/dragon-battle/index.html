@@ -5147,7 +5147,7 @@ function update(ts){
       dYaw+=dYawVel;
       dPitch=Math.max(-.55,Math.min(.4,dPitch+dPitchVel));
       dRoll+=(dYawVel*-2.5-dRoll)*.15;
-      dragonMesh.rotation.set(dPitch,dYaw,dRoll,'YXZ');
+      dragonMesh.rotation.set(dPitch+(dragonMesh.userData.atkPitch||0),dYaw,dRoll+(dragonMesh.userData.atkRoll||0),'YXZ');
       const fwd=new THREE.Vector3(0,0,1);
       fwd.applyEuler(dragonMesh.rotation);
       if(playerSlowT>0){playerSlowT-=dt;if(Math.random()<0.15)spawnAbilityCloud(dragonMesh.position.clone(),0x00ccaa,12,0.3);}
@@ -5363,16 +5363,15 @@ function update(ts){
       ud.tailSwingT=Math.max(0,ud.tailSwingT-dt);
       if(ud.tailGroup)ud.tailGroup.rotation.y=Math.sin((1-ud.tailSwingT/0.9)*Math.PI*3)*0.8;
     } else if(ud.tailGroup){ud.tailGroup.rotation.y*=0.8;}
-    // Body pitch (bite=lunge forward, roar=head up) — visible from rear camera
+    // Body pitch/roll offsets added into rotation.set() each frame
     if(ud.bodyPitchT>0){
       ud.bodyPitchT=Math.max(0,ud.bodyPitchT-dt);
-      dragonMesh.rotation.x=(ud.bodyPitchDir||1)*Math.sin((1-ud.bodyPitchT/0.5)*Math.PI)*0.45;
-    } else {dragonMesh.rotation.x*=0.75;}
-    // Body roll (tail sweep) — visible from rear camera
+      ud.atkPitch=(ud.bodyPitchDir||1)*Math.sin((1-ud.bodyPitchT/0.5)*Math.PI)*0.45;
+    } else {ud.atkPitch=(ud.atkPitch||0)*0.75;}
     if(ud.bodyRollT>0){
       ud.bodyRollT=Math.max(0,ud.bodyRollT-dt);
-      dragonMesh.rotation.z=Math.sin((1-ud.bodyRollT/0.6)*Math.PI*2)*0.5;
-    } else {dragonMesh.rotation.z*=0.75;}
+      ud.atkRoll=Math.sin((1-ud.bodyRollT/0.6)*Math.PI*2)*0.5;
+    } else {ud.atkRoll=(ud.atkRoll||0)*0.75;}
 
     // Camera: smooth third-person follow
     const camOff=new THREE.Vector3(0,8,-18);

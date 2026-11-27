@@ -12,7 +12,7 @@ canvas{display:block;width:100%}
 #ui{background:#0d0d1a;border:2px solid #4a3a60;border-top:none;padding:9px 14px 7px;display:flex;gap:10px;align-items:center;min-height:58px}
 #text-box{flex:1;color:#ddd;font-size:13px;line-height:1.45;min-height:38px}
 #inv-bar{display:flex;gap:4px;flex-shrink:0}
-.inv-slot{width:38px;height:38px;border:2px solid #553355;border-radius:5px;background:#1a0a2a;display:flex;align-items:center;justify-content:center;font-size:17px;cursor:pointer;flex-shrink:0;transition:border-color .15s}
+.inv-slot{width:32px;height:32px;border:2px solid #553355;border-radius:5px;background:#1a0a2a;display:flex;align-items:center;justify-content:center;font-size:15px;cursor:pointer;flex-shrink:0;transition:border-color .15s}
 .inv-slot:hover:not(.empty){border-color:#aa77cc}
 .inv-slot.selected{border-color:#ffdd44;background:#2a1a0a}
 .inv-slot.empty{opacity:.3;cursor:default}
@@ -30,6 +30,10 @@ canvas{display:block;width:100%}
     <div class="inv-slot empty" id="s3"></div>
     <div class="inv-slot empty" id="s4"></div>
     <div class="inv-slot empty" id="s5"></div>
+    <div class="inv-slot empty" id="s6"></div>
+    <div class="inv-slot empty" id="s7"></div>
+    <div class="inv-slot empty" id="s8"></div>
+    <div class="inv-slot empty" id="s9"></div>
   </div>
 </div>
 </div>
@@ -39,7 +43,7 @@ const W=620,H=380,tb=document.getElementById('text-box');
 let mx=0,my=0,frame=0;
 
 // ── INVENTORY ───────────────────────────────────────────────
-const MAX_INV=6;
+const MAX_INV=10;
 let inv=[],selItem=null;
 const ICONS={coin:'🪙',file:'📄',spoon:'🥄',driver:'🔩',keycard:'💳',uniform:'👕',pepper:'🌶️',boltcut:'✂️',rope:'🪢',wrench:'🔧'};
 const INAME={coin:'Gold Coin',file:'Metal File',spoon:'Spoon',driver:'Screwdriver',keycard:'Guard Keycard',uniform:'Guard Uniform',pepper:'Hot Pepper',boltcut:'Bolt Cutters',rope:'Knotted Rope',wrench:'Wrench'};

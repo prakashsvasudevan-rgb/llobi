@@ -2928,51 +2928,75 @@ function spawnKingRuin(cfg){
   altMesh.position.set(x,plateauY+1.5,z);scene.add(altMesh);
   const runeGlow=new THREE.Mesh(new THREE.BoxGeometry(14,0.1,14),new THREE.MeshBasicMaterial({color:cfg.weaponColor,transparent:true,opacity:0.5,blending:THREE.AdditiveBlending}));
   runeGlow.position.set(x,plateauY+3.1,z);scene.add(runeGlow);
-  // King Dragon boss — bone-white body + element-colored glow
+  // King Dragon boss — bone-white body + element-colored glow + imposing decorations
   const dtDef1=DT.find(d=>d.id===cfg.elem1)||DT[0];
   const bossMesh=buildDragonMesh(dtDef1);
   bossMesh.scale.set(4,4,4);
+  const boneWhite=new THREE.MeshPhongMaterial({color:0xddeedd,flatShading:true});
+  const elemGlowMat=new THREE.MeshBasicMaterial({color:cfg.weaponColor,transparent:true,opacity:0.65,blending:THREE.AdditiveBlending});
+  const elemSolidMat=new THREE.MeshBasicMaterial({color:cfg.weaponColor,transparent:true,opacity:0.95,blending:THREE.AdditiveBlending});
   // Bone white body
-  bossMesh.traverse(c=>{
-    if(c.isMesh&&c.material){
-      c.material=new THREE.MeshBasicMaterial({color:0xddeedd});
-    }
-  });
-  // Element-colored glow (inner smaller mesh)
+  bossMesh.traverse(c=>{if(c.isMesh&&c.material)c.material=boneWhite.clone();});
+  // Element-colored inner glow mesh
   const glowMesh=buildDragonMesh(dtDef1);
-  glowMesh.traverse(c=>{
-    if(c.isMesh&&c.material){
-      c.material=new THREE.MeshBasicMaterial({color:cfg.weaponColor,transparent:true,opacity:0.55,blending:THREE.AdditiveBlending});
-    }
-  });
+  glowMesh.traverse(c=>{if(c.isMesh&&c.material)c.material=elemGlowMat.clone();});
   glowMesh.scale.set(0.88,0.88,0.88);
   bossMesh.add(glowMesh);
-  // Crown of 7 spikes (in world-space group added after scaling)
-  const crownG=new THREE.Group();
-  for(let si2=0;si2<7;si2++){
-    const a=si2/7*Math.PI*2;
-    const spike=new THREE.Mesh(new THREE.ConeGeometry(1.2,9,5),new THREE.MeshBasicMaterial({color:cfg.weaponColor,transparent:true,opacity:0.9,blending:THREE.AdditiveBlending}));
-    spike.position.set(Math.cos(a)*7,38+Math.abs(Math.sin(si2))*3,Math.sin(a)*7+8);
-    crownG.add(spike);
+  // All decorations go in a world-space group so bossMesh scale doesn't distort them
+  const bossDecoG=new THREE.Group();
+  // ── Back spine ridge — 10 large bone spikes ──
+  for(let i=0;i<10;i++){
+    const h=3.5+i*0.3;
+    const sp=new THREE.Mesh(new THREE.ConeGeometry(1.0,h,5),boneWhite.clone());
+    sp.position.set(0,32+h*0.5,16-i*4.5);sp.rotation.x=-0.3;
+    bossDecoG.add(sp);
+    // element glow core inside each spine
+    const spg=new THREE.Mesh(new THREE.ConeGeometry(0.5,h*0.8,5),elemGlowMat.clone());
+    spg.position.copy(sp.position);spg.rotation.x=-0.3;bossDecoG.add(spg);
   }
-  // Shoulder armor plates (two big flat diamonds)
-  const plateMat=new THREE.MeshBasicMaterial({color:0x888899,transparent:true,opacity:0.85});
-  const lPlate=new THREE.Mesh(new THREE.BoxGeometry(6,2,8),plateMat);lPlate.position.set(-18,22,8);crownG.add(lPlate);
-  const rPlate=new THREE.Mesh(new THREE.BoxGeometry(6,2,8),plateMat);rPlate.position.set(18,22,8);crownG.add(rPlate);
-  // Glowing rune disk under body
-  const runeDisk=new THREE.Mesh(new THREE.CylinderGeometry(14,14,0.5,12),new THREE.MeshBasicMaterial({color:cfg.weaponColor,transparent:true,opacity:0.4,blending:THREE.AdditiveBlending}));
-  runeDisk.position.set(0,-4,8);crownG.add(runeDisk);
-  // Giant eye glow spheres
-  const eyeGeo=new THREE.SphereGeometry(2.5,8,6);
-  const eyeMat=new THREE.MeshBasicMaterial({color:cfg.weaponColor,transparent:true,opacity:1.0,blending:THREE.AdditiveBlending});
-  const le=new THREE.Mesh(eyeGeo,eyeMat);le.position.set(-4.5,28,20);crownG.add(le);
-  const re=new THREE.Mesh(eyeGeo,eyeMat);re.position.set(4.5,28,20);crownG.add(re);
-  bossMesh.add(crownG);
-  // Orbiting halo rings
+  // ── Shoulder spikes — 3 each side ──
+  [[-20,28,12],[-22,25,4],[-20,22,-4],[20,28,12],[22,25,4],[20,22,-4]].forEach(([sx,sy,sz],i)=>{
+    const sp=new THREE.Mesh(new THREE.ConeGeometry(1.3,10,5),boneWhite.clone());
+    sp.position.set(sx,sy,sz);sp.rotation.z=(sx<0?-1:1)*0.6;sp.rotation.x=-0.2;
+    bossDecoG.add(sp);
+  });
+  // ── Crown of 9 element-colored spikes around head ──
+  for(let i=0;i<9;i++){
+    const a=i/9*Math.PI*2;
+    const sp=new THREE.Mesh(new THREE.ConeGeometry(1.4,12,5),elemSolidMat.clone());
+    sp.position.set(Math.cos(a)*9,38+Math.abs(Math.sin(i))*4,Math.sin(a)*9+22);
+    sp.rotation.x=-0.4;bossDecoG.add(sp);
+  }
+  // ── Giant glowing eyes ──
+  const eyeM=new THREE.MeshBasicMaterial({color:cfg.weaponColor,transparent:true,opacity:1.0,blending:THREE.AdditiveBlending});
+  [-5,5].forEach(ex=>{
+    const eye=new THREE.Mesh(new THREE.SphereGeometry(3,8,6),eyeM.clone());
+    eye.position.set(ex,30,36);bossDecoG.add(eye);
+    const aura=new THREE.Mesh(new THREE.SphereGeometry(5,8,6),elemGlowMat.clone());
+    aura.position.copy(eye.position);bossDecoG.add(aura);
+  });
+  // ── Shoulder armor plates (bone with element trim) ──
+  const plateBone=new THREE.MeshPhongMaterial({color:0xccbbaa,flatShading:true});
+  [-22,22].forEach(sx=>{
+    const plate=new THREE.Mesh(new THREE.BoxGeometry(8,3,12),plateBone.clone());
+    plate.position.set(sx,24,8);bossDecoG.add(plate);
+    const trim=new THREE.Mesh(new THREE.BoxGeometry(8,1,12),elemGlowMat.clone());
+    trim.position.set(sx,26,8);bossDecoG.add(trim);
+  });
+  // ── Rune disk halo behind head ──
+  const rDisk=new THREE.Mesh(new THREE.CylinderGeometry(18,18,0.6,16),elemGlowMat.clone());
+  rDisk.position.set(0,28,10);rDisk.rotation.x=Math.PI/2;bossDecoG.add(rDisk);
+  const rDiskInner=new THREE.Mesh(new THREE.CylinderGeometry(10,10,0.6,12),elemSolidMat.clone());
+  rDiskInner.position.set(0,28,10);rDiskInner.rotation.x=Math.PI/2;bossDecoG.add(rDiskInner);
+  // ── 3 orbiting halo rings ──
   for(let ri=0;ri<3;ri++){
-    const rg=new THREE.Mesh(new THREE.TorusGeometry(8+ri*4,0.7,6,16),new THREE.MeshBasicMaterial({color:cfg.weaponColor,transparent:true,opacity:0.5,blending:THREE.AdditiveBlending}));
-    rg.rotation.x=ri*Math.PI/3;bossMesh.add(rg);
+    const rg=new THREE.Mesh(new THREE.TorusGeometry(20+ri*6,1.0,6,20),elemGlowMat.clone());
+    rg.rotation.x=ri*Math.PI/3;rg.rotation.z=ri*Math.PI/4;bossDecoG.add(rg);
   }
+  // ── Rune disk under body ──
+  const floorRune=new THREE.Mesh(new THREE.CylinderGeometry(16,16,0.4,16),elemGlowMat.clone());
+  floorRune.position.set(0,0,8);bossDecoG.add(floorRune);
+  bossMesh.add(bossDecoG);
   // Spawn boss 400-440u away from island center, airborne
   const bossSpawnAng=Math.random()*Math.PI*2;
   const bossSpawnR=400+Math.random()*40;

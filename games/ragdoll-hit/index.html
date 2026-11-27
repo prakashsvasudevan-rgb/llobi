@@ -3,568 +3,621 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Ragdoll Hit</title>
+<title>Ragdoll Hit 3D</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100%;height:100%;overflow:hidden;background:#1a1a2e}
-canvas{display:block;touch-action:none}
+html,body{width:100%;height:100%;overflow:hidden;background:#000}
+canvas{display:block}
 #ui{position:absolute;top:0;left:0;width:100%;pointer-events:none;font-family:'Segoe UI',sans-serif}
-#hud{display:flex;justify-content:space-between;align-items:flex-start;padding:12px 16px;color:#fff}
-.stat{background:rgba(0,0,0,.45);border-radius:10px;padding:6px 14px;text-align:center}
-.stat span{display:block;font-size:.7rem;opacity:.7;text-transform:uppercase;letter-spacing:.05em}
-.stat strong{font-size:1.3rem;font-weight:800}
-#msg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;color:#fff;pointer-events:all}
-#msg h2{font-size:2rem;text-shadow:0 2px 8px rgba(0,0,0,.7)}
-#msg p{margin:.4rem 0 1rem;opacity:.8}
-#msg button{font-family:'Segoe UI';font-weight:800;font-size:1rem;padding:12px 32px;border:none;border-radius:14px;cursor:pointer;background:#e94560;color:#fff;box-shadow:0 5px 0 #9b1d31;transition:transform .1s,box-shadow .1s}
+#hud{display:flex;gap:10px;padding:12px 16px;flex-wrap:wrap}
+.stat{background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:5px 14px;text-align:center;color:#fff;backdrop-filter:blur(4px)}
+.stat span{display:block;font-size:.65rem;opacity:.65;text-transform:uppercase;letter-spacing:.06em}
+.stat strong{font-size:1.25rem;font-weight:800}
+#msg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;color:#fff;pointer-events:all;display:none;background:rgba(10,8,30,.85);padding:32px 44px;border-radius:20px;border:1px solid rgba(255,255,255,.15);backdrop-filter:blur(10px)}
+#msg h2{font-size:2.2rem;font-weight:900;letter-spacing:.03em}
+#msg p{margin:.6rem 0 1.4rem;opacity:.8;font-size:1rem}
+#msg button{font-weight:800;font-size:1rem;padding:12px 36px;border:none;border-radius:14px;cursor:pointer;background:#e94560;color:#fff;box-shadow:0 5px 0 #9b1d31;transition:transform .1s,box-shadow .1s}
 #msg button:active{transform:translateY(3px);box-shadow:0 2px 0 #9b1d31}
-#aim-hint{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,.55);font-size:.85rem;pointer-events:none;transition:opacity .5s}
+#aim-hint{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,.55);font-size:.9rem;pointer-events:none;text-align:center}
+#power-wrap{position:absolute;bottom:60px;left:50%;transform:translateX(-50%);width:220px;display:none;text-align:center}
+#power-wrap label{color:rgba(255,255,255,.65);font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:5px}
+#power-bar{height:12px;background:rgba(255,255,255,.12);border-radius:6px;overflow:hidden}
+#power-fill{height:100%;width:0%;background:linear-gradient(90deg,#4ade80,#f97316,#ef4444);border-radius:6px;transition:width .05s}
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
 <div id="ui">
   <div id="hud">
-    <div class="stat"><span>Distance</span><strong id="dist">0</strong></div>
-    <div class="stat"><span>Best</span><strong id="best">0</strong></div>
+    <div class="stat"><span>Distance</span><strong id="dist">0</strong><span>m</span></div>
+    <div class="stat"><span>Best</span><strong id="best">0</strong><span>m</span></div>
     <div class="stat"><span>Hits</span><strong id="hits">0</strong></div>
     <div class="stat"><span>Throws</span><strong id="throws">3</strong></div>
   </div>
   <div id="msg">
-    <h2>Ragdoll Hit</h2>
-    <p>Drag to aim · Release to throw</p>
+    <h2>Ragdoll Hit 3D</h2>
+    <p>Drag anywhere to aim · Release to launch</p>
     <button id="startBtn">Play!</button>
   </div>
-  <div id="aim-hint">Drag the ragdoll to aim</div>
+  <div id="aim-hint">Drag anywhere to aim the ragdoll</div>
+  <div id="power-wrap"><label>Power</label><div id="power-bar"><div id="power-fill"></div></div></div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
 <script>
-const canvas=document.getElementById('c');
-const ctx=canvas.getContext('2d');
-let W,H;
+// ═══════════════ RENDERER ═══════════════
+const canvas = document.getElementById('c');
+let W = window.innerWidth, H = window.innerHeight;
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+renderer.setSize(W,H);
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 
-function resize(){
-  W=canvas.width=window.innerWidth;
-  H=canvas.height=window.innerHeight;
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0a0820);
+scene.fog = new THREE.FogExp2(0x0a0820, 0.012);
+
+const camera = new THREE.PerspectiveCamera(55,W/H,0.1,500);
+camera.position.set(-8,5,-5);
+
+window.addEventListener('resize',()=>{
+  W=window.innerWidth; H=window.innerHeight;
+  renderer.setSize(W,H);
+  camera.aspect=W/H;
+  camera.updateProjectionMatrix();
+});
+
+// ═══════════════ LIGHTS ═══════════════
+scene.add(new THREE.AmbientLight(0x334488,0.9));
+const sun=new THREE.DirectionalLight(0xffeedd,1.8);
+sun.position.set(20,40,15);
+sun.castShadow=true;
+sun.shadow.mapSize.set(2048,2048);
+sun.shadow.camera.far=250;
+sun.shadow.camera.left=-60; sun.shadow.camera.right=200;
+sun.shadow.camera.top=40;  sun.shadow.camera.bottom=-15;
+scene.add(sun);
+const fill2=new THREE.DirectionalLight(0x4466cc,0.5);fill2.position.set(-15,8,-10);scene.add(fill2);
+// point light that follows ragdoll
+const rdLight=new THREE.PointLight(0xff8844,0.8,12);
+scene.add(rdLight);
+
+// ═══════════════ ENVIRONMENT ═══════════════
+// Ground
+const groundMesh=new THREE.Mesh(
+  new THREE.PlaneGeometry(600,600),
+  new THREE.MeshLambertMaterial({color:0x1f3a16})
+);
+groundMesh.rotation.x=-Math.PI/2;
+groundMesh.receiveShadow=true;
+scene.add(groundMesh);
+
+// Grass strips
+const grassMesh=new THREE.Mesh(
+  new THREE.PlaneGeometry(600,600),
+  new THREE.MeshLambertMaterial({color:0x2d4a22})
+);
+grassMesh.rotation.x=-Math.PI/2;
+grassMesh.position.y=0.01;
+// Add a grid stripe pattern via vertex colors — skip, just use color
+scene.add(grassMesh);
+
+// Moon
+const moonMesh=new THREE.Mesh(
+  new THREE.SphereGeometry(4,16,16),
+  new THREE.MeshBasicMaterial({color:0xfffde7})
+);
+moonMesh.position.set(-60,80,-120);
+scene.add(moonMesh);
+// Moon glow
+const moonGlow=new THREE.PointLight(0xfff4c2,0.3,200);
+moonGlow.position.copy(moonMesh.position);
+scene.add(moonGlow);
+
+// Stars
+const starVerts=[];
+for(let i=0;i<1000;i++){
+  starVerts.push((Math.random()-.5)*500, 20+Math.random()*150, (Math.random()-.5)*500);
 }
-resize();
-window.addEventListener('resize',()=>{resize();buildLevel();});
+const starGeo=new THREE.BufferGeometry();
+starGeo.setAttribute('position',new THREE.Float32BufferAttribute(starVerts,3));
+scene.add(new THREE.Points(starGeo,new THREE.PointsMaterial({color:0xffffff,size:0.3})));
 
-// ── Verlet particle ──────────────────────────────────────
-class Particle{
-  constructor(x,y,pinned=false){
-    this.x=x; this.y=y;
-    this.ox=x; this.oy=y;
-    this.pinned=pinned;
-    this.r=6;
-  }
-  update(dt){
-    if(this.pinned)return;
-    const vx=this.x-this.ox, vy=this.y-this.oy;
-    this.ox=this.x; this.oy=this.y;
-    this.x+=vx*0.985 + 0;      // damping
-    this.y+=vy*0.985 + 980*dt*dt; // gravity
-  }
-  constrain(){
-    // floor/ceiling/walls
-    const bounce=0.45, fric=0.82;
-    if(this.y>H-FLOOR_H-this.r){
-      this.y=H-FLOOR_H-this.r;
-      const vy=this.y-this.oy;
-      this.oy=this.y+vy*bounce;
-      const vx=this.x-this.ox;
-      this.ox=this.x-vx*fric;
-    }
-    if(this.x<this.r){this.x=this.r;const vx=this.x-this.ox;this.ox=this.x+vx*bounce;}
-    if(this.x>W-this.r){this.x=W-this.r;const vx=this.x-this.ox;this.ox=this.x+vx*bounce;}
-    if(this.y<this.r){this.y=this.r;const vy=this.y-this.oy;this.oy=this.y+vy*bounce;}
-  }
-}
+// Launch pad
+const padMesh=new THREE.Mesh(
+  new THREE.CylinderGeometry(1.8,1.8,0.3,24),
+  new THREE.MeshLambertMaterial({color:0x666688})
+);
+padMesh.position.set(0,0.15,0);
+padMesh.castShadow=true;
+padMesh.receiveShadow=true;
+scene.add(padMesh);
 
-class Stick{
-  constructor(a,b,len){this.a=a;this.b=b;this.len=len||dist(a,b);}
-  solve(){
-    const dx=this.b.x-this.a.x, dy=this.b.y-this.a.y;
-    const d=Math.sqrt(dx*dx+dy*dy)||.001;
-    const diff=(d-this.len)/d*.5;
-    if(!this.a.pinned){this.a.x+=dx*diff;this.a.y+=dy*diff;}
-    if(!this.b.pinned){this.b.x-=dx*diff;this.b.y-=dy*diff;}
-  }
-}
-
-function dist(a,b){return Math.hypot(b.x-a.x,b.y-a.y);}
-
-// ── Ragdoll ──────────────────────────────────────────────
-const FLOOR_H=80;
-let ragdoll=null, sticks=[], launched=false;
-let dragStart=null, throwVel={x:0,y:0};
-let hitCount=0, throwsLeft=3, maxDist=0, bestDist=0;
-let gameActive=false, gameOver=false;
-let floatTexts=[];
-let particles_extra=[]; // sparks
-
-function buildRagdoll(cx,cy){
-  // nodes: 0=head, 1=neck, 2=torso, 3=pelvis, 4=lshoulder, 5=rshoulder,
-  //        6=lelbow, 7=relbow, 8=lhand, 9=rhand,
-  //        10=lhip, 11=rhip, 12=lknee, 13=rknee, 14=lfoot, 15=rfoot
-  const p=(x,y)=>new Particle(cx+x,cy+y);
-  const nodes=[
-    p(0,-55),   // 0 head
-    p(0,-40),   // 1 neck
-    p(0,-18),   // 2 torso mid
-    p(0,  5),   // 3 pelvis
-    p(-14,-32), // 4 L shoulder
-    p( 14,-32), // 5 R shoulder
-    p(-22,-16), // 6 L elbow
-    p( 22,-16), // 7 R elbow
-    p(-28,  2), // 8 L hand
-    p( 28,  2), // 9 R hand
-    p(-8,  5),  // 10 L hip
-    p( 8,  5),  // 11 R hip
-    p(-10, 28), // 12 L knee
-    p( 10, 28), // 13 R knee
-    p(-10, 52), // 14 L foot
-    p( 10, 52), // 15 R foot
-  ];
-  const s=(a,b,extra)=>new Stick(nodes[a],nodes[b],dist(nodes[a],nodes[b])*(extra||1));
-  const ss=[
-    s(0,1),s(1,2),s(2,3), // spine
-    s(1,4),s(1,5),         // shoulders
-    s(4,6),s(6,8),         // L arm
-    s(5,7),s(7,9),         // R arm
-    s(3,10),s(3,11),       // hips
-    s(10,12),s(12,14),     // L leg
-    s(11,13),s(13,15),     // R leg
-    // cross-braces to keep shape
-    s(4,5,1),s(10,11,1),
-    s(0,2,1),s(2,4,1),s(2,5,1),
-    s(4,10,1),s(5,11,1),
-  ];
-  ragdoll=nodes;
-  sticks=ss;
-}
-
-function launchRagdoll(vx,vy){
-  for(const p of ragdoll){
-    p.ox=p.x-vx*(1/60);
-    p.oy=p.y-vy*(1/60);
-  }
+// Distance markers (poles every 10m to the side)
+for(let d=10;d<=120;d+=10){
+  const pole=new THREE.Mesh(
+    new THREE.CylinderGeometry(0.07,0.07,3,6),
+    new THREE.MeshLambertMaterial({color:d%50===0?0xffd700:0xaaaaaa})
+  );
+  pole.position.set(-4,1.5,d);
+  scene.add(pole);
+  // disc on top
+  const disc=new THREE.Mesh(
+    new THREE.CylinderGeometry(0.25,0.25,0.1,6),
+    new THREE.MeshLambertMaterial({color:d%50===0?0xffd700:0xcccccc})
+  );
+  disc.position.set(-4,3.1,d);
+  scene.add(disc);
 }
 
-// ── Obstacles ────────────────────────────────────────────
-let obstacles=[];
-function buildLevel(){
-  obstacles=[];
-  // Ground platforms at different heights
+// ═══════════════ OBSTACLES ═══════════════
+const obsMats=[
+  new THREE.MeshLambertMaterial({color:0x5c3d1a}),
+  new THREE.MeshLambertMaterial({color:0x1a3d5c}),
+  new THREE.MeshLambertMaterial({color:0x3d1a5c}),
+];
+const topMat=new THREE.MeshLambertMaterial({color:0x8B6914});
+
+let obstacleBoxes=[];
+
+function buildObstacles(){
   const configs=[
-    {x:W*.18,y:H-FLOOR_H-120,w:160,h:22},
-    {x:W*.35,y:H-FLOOR_H-220,w:140,h:22},
-    {x:W*.54,y:H-FLOOR_H-150,w:180,h:22},
-    {x:W*.72,y:H-FLOOR_H-280,w:120,h:22},
-    {x:W*.88,y:H-FLOOR_H-180,w:140,h:22},
-    // Walls
-    {x:W*.28,y:H-FLOOR_H-340,w:22,h:200},
-    {x:W*.62,y:H-FLOOR_H-400,w:22,h:220},
+    {x:0.5,y:1,z:14,  w:3,h:2,d:3,  c:0},
+    {x:-1, y:2,z:22,  w:2.5,h:4,d:2.5,c:1},
+    {x:1,  y:0.75,z:30,w:4,h:1.5,d:3,c:0},
+    {x:0,  y:3,z:38,  w:2,h:6,d:2,  c:2},
+    {x:-1.5,y:1.25,z:46,w:3,h:2.5,d:2.5,c:1},
+    {x:1,  y:4,z:54,  w:2.5,h:8,d:2.5,c:2},
+    {x:-0.5,y:1,z:62, w:4,h:2,d:3,  c:0},
+    {x:0.5,y:5,z:70,  w:2,h:10,d:2, c:1},
+    {x:-1, y:1.5,z:80,w:5,h:3,d:3,  c:0},
+    {x:1,  y:6,z:92,  w:2,h:12,d:2, c:2},
   ];
-  for(const c of configs) obstacles.push(c);
+  obstacleBoxes=[];
+  for(const c of configs){
+    const mesh=new THREE.Mesh(
+      new THREE.BoxGeometry(c.w,c.h,c.d),
+      obsMats[c.c]
+    );
+    mesh.position.set(c.x,c.y,c.z);
+    mesh.castShadow=true; mesh.receiveShadow=true;
+    scene.add(mesh);
+    // top cap
+    const top=new THREE.Mesh(new THREE.BoxGeometry(c.w,0.12,c.d),topMat);
+    top.position.set(c.x,c.y+c.h/2+0.06,c.z);
+    scene.add(top);
+    obstacleBoxes.push({
+      minX:c.x-c.w/2, maxX:c.x+c.w/2,
+      minY:c.y-c.h/2, maxY:c.y+c.h/2,
+      minZ:c.z-c.d/2, maxZ:c.z+c.d/2,
+    });
+  }
 }
-buildLevel();
+buildObstacles();
+
+// ═══════════════ RAGDOLL PHYSICS ═══════════════
+class P3{
+  constructor(x,y,z){this.x=x;this.y=y;this.z=z;this.ox=x;this.oy=y;this.oz=z;}
+  update(dt){
+    const vx=this.x-this.ox, vy=this.y-this.oy, vz=this.z-this.oz;
+    this.ox=this.x; this.oy=this.y; this.oz=this.z;
+    this.x+=vx*.984; this.y+=vy*.984-20*dt*dt; this.z+=vz*.984;
+  }
+  floor(){
+    const bounce=0.38, fric=0.80;
+    if(this.y<0.1){
+      this.y=0.1;
+      const vy=this.y-this.oy; this.oy=this.y+vy*bounce;
+      const vx=this.x-this.ox; this.ox=this.x-vx*fric;
+      const vz=this.z-this.oz; this.oz=this.z-vz*fric;
+    }
+    // side walls
+    const B=10;
+    if(this.x<-B){this.x=-B;const vx=this.x-this.ox;this.ox=this.x+vx*.3;}
+    if(this.x> B){this.x= B;const vx=this.x-this.ox;this.ox=this.x+vx*.3;}
+  }
+}
+class Stick3{
+  constructor(a,b,len){
+    this.a=a;this.b=b;
+    this.len=len||Math.hypot(b.x-a.x,b.y-a.y,b.z-a.z);
+  }
+  solve(){
+    const dx=this.b.x-this.a.x, dy=this.b.y-this.a.y, dz=this.b.z-this.a.z;
+    const d=Math.sqrt(dx*dx+dy*dy+dz*dz)||.001;
+    const diff=(d-this.len)/d*.5;
+    this.a.x+=dx*diff; this.a.y+=dy*diff; this.a.z+=dz*diff;
+    this.b.x-=dx*diff; this.b.y-=dy*diff; this.b.z-=dz*diff;
+  }
+}
+
+let rd=null, rdSticks=[];
+
+// ═══════════════ RAGDOLL MESHES ═══════════════
+const bodyMat =new THREE.MeshLambertMaterial({color:0xe8c99a});
+const shirtMat=new THREE.MeshLambertMaterial({color:0xcc2222});
+const pantsMat=new THREE.MeshLambertMaterial({color:0x2244aa});
+const headMat =new THREE.MeshLambertMaterial({color:0xf5d6b0});
+const hairMat =new THREE.MeshLambertMaterial({color:0x2b1b0e});
+const shoeMat =new THREE.MeshLambertMaterial({color:0x1a1a1a});
+
+let rdGroup=null;
+let limbs={};
+
+function mkCyl(r,mat){
+  const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,1,8),mat);
+  m.castShadow=true; return m;
+}
+function mkSph(r,mat){
+  const m=new THREE.Mesh(new THREE.SphereGeometry(r,10,8),mat);
+  m.castShadow=true; return m;
+}
+
+function createLimbs(){
+  if(rdGroup) scene.remove(rdGroup);
+  rdGroup=new THREE.Group();
+  limbs={};
+  const add=(k,m)=>{limbs[k]=m;rdGroup.add(m);};
+  add('head',  mkSph(0.22,headMat));
+  add('hair',  mkSph(0.235,hairMat));
+  add('neck',  mkCyl(0.09,bodyMat));
+  add('torso', mkCyl(0.19,shirtMat));
+  add('laU',   mkCyl(0.09,shirtMat));
+  add('laL',   mkCyl(0.075,bodyMat));
+  add('raU',   mkCyl(0.09,shirtMat));
+  add('raL',   mkCyl(0.075,bodyMat));
+  add('llU',   mkCyl(0.11,pantsMat));
+  add('llL',   mkCyl(0.09,bodyMat));
+  add('rlU',   mkCyl(0.11,pantsMat));
+  add('rlL',   mkCyl(0.09,bodyMat));
+  add('lshoe', mkSph(0.13,shoeMat));
+  add('rshoe', mkSph(0.13,shoeMat));
+  scene.add(rdGroup);
+}
+
+const _vD=new THREE.Vector3(), _vM=new THREE.Vector3(), _q=new THREE.Quaternion(), _yUp=new THREE.Vector3(0,1,0);
+function setLimb(mesh,pA,pB){
+  _vM.set((pA.x+pB.x)/2,(pA.y+pB.y)/2,(pA.z+pB.z)/2);
+  mesh.position.copy(_vM);
+  _vD.set(pB.x-pA.x,pB.y-pA.y,pB.z-pA.z);
+  const len=_vD.length();
+  if(len<.001)return;
+  _q.setFromUnitVectors(_yUp,_vD.divideScalar(len));
+  mesh.quaternion.copy(_q);
+  mesh.scale.y=len;
+}
+
+function syncMeshes(){
+  if(!rd||!limbs.head)return;
+  const n=rd;
+  limbs.head.position.set(n[0].x,n[0].y,n[0].z);
+  limbs.hair.position.set(n[0].x,n[0].y+.09,n[0].z);
+  setLimb(limbs.neck, n[0],n[1]);
+  setLimb(limbs.torso,n[1],n[3]);
+  setLimb(limbs.laU,  n[4],n[6]);
+  setLimb(limbs.laL,  n[6],n[8]);
+  setLimb(limbs.raU,  n[5],n[7]);
+  setLimb(limbs.raL,  n[7],n[9]);
+  setLimb(limbs.llU,  n[10],n[12]);
+  setLimb(limbs.llL,  n[12],n[14]);
+  setLimb(limbs.rlU,  n[11],n[13]);
+  setLimb(limbs.rlL,  n[13],n[15]);
+  limbs.lshoe.position.set(n[14].x,n[14].y,n[14].z);
+  limbs.rshoe.position.set(n[15].x,n[15].y,n[15].z);
+}
+
+function buildRagdoll(x,y,z){
+  const p=(dx,dy,dz)=>new P3(x+dx,y+dy,z+dz);
+  rd=[
+    p(0,1.95,0),     // 0 head
+    p(0,1.68,0),     // 1 neck
+    p(0,1.22,0),     // 2 chest
+    p(0,0.78,0),     // 3 pelvis
+    p(-.32,1.52,0),  // 4 L shoulder
+    p( .32,1.52,0),  // 5 R shoulder
+    p(-.58,1.12,0),  // 6 L elbow
+    p( .58,1.12,0),  // 7 R elbow
+    p(-.72,0.68,0),  // 8 L hand
+    p( .72,0.68,0),  // 9 R hand
+    p(-.18,0.78,0),  // 10 L hip
+    p( .18,0.78,0),  // 11 R hip
+    p(-.22,0.40,0),  // 12 L knee
+    p( .22,0.40,0),  // 13 R knee
+    p(-.22,0.06,0),  // 14 L foot
+    p( .22,0.06,0),  // 15 R foot
+  ];
+  const s=(a,b,ex)=>{
+    const l=Math.hypot(rd[b].x-rd[a].x,rd[b].y-rd[a].y,rd[b].z-rd[a].z)*(ex||1);
+    return new Stick3(rd[a],rd[b],l);
+  };
+  rdSticks=[
+    s(0,1),s(1,2),s(2,3),
+    s(1,4),s(1,5),
+    s(4,6),s(6,8),
+    s(5,7),s(7,9),
+    s(3,10),s(3,11),
+    s(10,12),s(12,14),
+    s(11,13),s(13,15),
+    s(4,5),s(10,11),
+    s(0,2),s(2,4),s(2,5),
+    s(4,10),s(5,11),
+  ];
+  createLimbs();
+}
+
+// ═══════════════ OBSTACLE COLLISION ═══════════════
+let lastHitTime=0, hitCount=0;
 
 function collideObstacles(){
-  for(const p of ragdoll){
-    for(const o of obstacles){
-      if(p.x>o.x&&p.x<o.x+o.w&&p.y>o.y&&p.y<o.y+o.h){
-        // find shallowest penetration axis
-        const dl=p.x-o.x, dr=o.x+o.w-p.x;
-        const dt=p.y-o.y, db=o.y+o.h-p.y;
-        const min=Math.min(dl,dr,dt,db);
-        const bounce=0.4, fric=0.78;
-        if(min===dt){
-          p.y=o.y;
-          const vy=p.y-p.oy; p.oy=p.y+vy*bounce;
-          const vx=p.x-p.ox; p.ox=p.x-vx*fric;
-          registerHit(p);
-        } else if(min===db){
-          p.y=o.y+o.h;
-          const vy=p.y-p.oy; p.oy=p.y+vy*bounce;
-        } else if(min===dl){
-          p.x=o.x;
-          const vx=p.x-p.ox; p.ox=p.x+vx*bounce;
-        } else {
-          p.x=o.x+o.w;
-          const vx=p.x-p.ox; p.ox=p.x+vx*bounce;
-        }
+  const R=0.14;
+  for(const p of rd){
+    for(const box of obstacleBoxes){
+      const cx=Math.max(box.minX,Math.min(box.maxX,p.x));
+      const cy=Math.max(box.minY,Math.min(box.maxY,p.y));
+      const cz=Math.max(box.minZ,Math.min(box.maxZ,p.z));
+      const dx=p.x-cx, dy=p.y-cy, dz=p.z-cz;
+      const d2=dx*dx+dy*dy+dz*dz;
+      if(d2>0&&d2<R*R){
+        const d=Math.sqrt(d2), pen=(R-d)/d;
+        p.x+=dx*pen; p.y+=dy*pen; p.z+=dz*pen;
+        const vx=p.x-p.ox, vy=p.y-p.oy, vz=p.z-p.oz;
+        const nx=dx/d, ny=dy/d, nz=dz/d;
+        const vn=vx*nx+vy*ny+vz*nz;
+        const b=0.42;
+        p.ox=p.x-(vx-vn*nx*(1+b));
+        p.oy=p.y-(vy-vn*ny*(1+b));
+        p.oz=p.z-(vz-vn*nz*(1+b));
+        registerHit(p.x,p.y,p.z);
       }
     }
   }
 }
 
-let lastHitTime=0;
-function registerHit(p){
+// ═══════════════ SPARKS ═══════════════
+const sparkGeo=new THREE.SphereGeometry(.06,4,4);
+const sparkMats=[0xff6b35,0xffe066,0xff3344,0xff9900].map(c=>new THREE.MeshBasicMaterial({color:c}));
+const sparkPool=[];
+for(let i=0;i<60;i++){
+  const sp={mesh:new THREE.Mesh(sparkGeo,sparkMats[i%4]),life:0,vx:0,vy:0,vz:0};
+  sp.mesh.visible=false; scene.add(sp.mesh); sparkPool.push(sp);
+}
+
+function spawnSparks(x,y,z){
+  let n=0;
+  for(const sp of sparkPool){
+    if(sp.life>0||n>=10)continue;
+    const a=Math.random()*Math.PI*2, el=(Math.random()-.3)*Math.PI;
+    const spd=3+Math.random()*5;
+    sp.vx=Math.cos(el)*Math.cos(a)*spd;
+    sp.vy=Math.sin(el)*spd+2;
+    sp.vz=Math.cos(el)*Math.sin(a)*spd;
+    sp.life=1; sp.mesh.position.set(x,y,z); sp.mesh.visible=true; n++;
+  }
+}
+
+function registerHit(x,y,z){
   const now=performance.now();
-  if(now-lastHitTime<120)return;
-  lastHitTime=now;
-  hitCount++;
+  if(now-lastHitTime<140)return;
+  lastHitTime=now; hitCount++;
   document.getElementById('hits').textContent=hitCount;
-  // spark burst
-  for(let i=0;i<8;i++){
-    const a=Math.random()*Math.PI*2;
-    const spd=120+Math.random()*180;
-    particles_extra.push({x:p.x,y:p.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,life:1,col:`hsl(${20+Math.random()*40},100%,60%)`});
-  }
-  floatTexts.push({x:p.x,y:p.y,txt:'HIT!',life:1,col:'#ff6b35'});
+  spawnSparks(x,y,z);
+  cameraShake=0.4;
 }
 
-// ── Camera (horizontal scroll) ────────────────────────────
-let camX=0, targetCamX=0;
+// ═══════════════ AIM ARROW ═══════════════
+const arrowGroup=new THREE.Group();
+const arrowShaft=new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,1,6),new THREE.MeshBasicMaterial({color:0xff4444,transparent:true,opacity:.85}));
+arrowShaft.position.y=.5;
+const arrowHead=new THREE.Mesh(new THREE.ConeGeometry(.12,.35,6),new THREE.MeshBasicMaterial({color:0xff4444}));
+arrowHead.position.y=1.18;
+arrowGroup.add(arrowShaft,arrowHead);
+arrowGroup.visible=false;
+scene.add(arrowGroup);
 
-// ── Game loop ─────────────────────────────────────────────
-let last=0;
-function loop(ts){
-  requestAnimationFrame(loop);
-  const dt=Math.min((ts-last)/1000,.033);
-  last=ts;
+// Trajectory dots
+const dotGeo=new THREE.SphereGeometry(.06,6,4);
+const dotMat=new THREE.MeshBasicMaterial({color:0xff8888,transparent:true,opacity:.5});
+const trajDots=[];
+for(let i=0;i<20;i++){const d=new THREE.Mesh(dotGeo,dotMat);d.visible=false;scene.add(d);trajDots.push(d);}
 
-  if(!gameActive){draw(dt);return;}
-
-  // physics
-  if(launched){
-    const STEPS=8;
-    const sdt=dt/STEPS;
-    for(let s=0;s<STEPS;s++){
-      for(const p of ragdoll) p.update(sdt);
-      for(let i=0;i<4;i++) for(const st of sticks) st.solve();
-      for(const p of ragdoll) p.constrain();
-      collideObstacles();
-    }
-
-    // camera follows head
-    const head=ragdoll[0];
-    targetCamX=Math.max(0, head.x - W*0.3);
-    camX+=(targetCamX-camX)*0.08;
-
-    // distance tracking
-    const d=Math.round((head.x-LAUNCH_X)/4);
-    if(d>maxDist){maxDist=d;document.getElementById('dist').textContent=maxDist;}
-
-    // settle check → allow next throw
-    if(isSettled()){
-      if(maxDist>bestDist){bestDist=maxDist;document.getElementById('best').textContent=bestDist;}
-      if(throwsLeft>0){
-        setTimeout(resetThrow,900);
-      } else {
-        setTimeout(endGame,1000);
-      }
-      launched=false;
-    }
+function updateAim(){
+  if(!dragStart||!gameActive||launched){
+    arrowGroup.visible=false;
+    trajDots.forEach(d=>d.visible=false);
+    document.getElementById('power-wrap').style.display='none';
+    return;
   }
+  const dx=dragStart.ex-dragStart.sx, dy=dragStart.ey-dragStart.sy;
+  const len=Math.min(Math.hypot(dx,dy),180);
+  const pwr=len/180;
+  document.getElementById('power-wrap').style.display='block';
+  document.getElementById('power-fill').style.width=(pwr*100)+'%';
 
-  // sparks
-  for(const sp of particles_extra){
-    sp.x+=sp.vx*dt; sp.y+=sp.vy*dt; sp.vy+=400*dt;
-    sp.life-=dt*2.2;
+  const {vx,vy,vz}=computeThrow(dx,dy,len);
+  const chest=rd[2];
+  arrowGroup.visible=true;
+  arrowGroup.position.set(chest.x,chest.y,chest.z);
+  const dir=new THREE.Vector3(vx,vy,vz).normalize();
+  arrowGroup.quaternion.setFromUnitVectors(_yUp,dir);
+  arrowGroup.scale.setScalar(.8+pwr*1.2);
+
+  // trajectory dots
+  let tx=chest.x,ty=chest.y,tz=chest.z;
+  let tvx=vx/60,tvy=vy/60,tvz=vz/60;
+  for(let i=0;i<20;i++){
+    tvy-=20*(.016*.016);
+    tx+=tvx*8; ty+=tvy*8; tz+=tvz*8;
+    if(ty<0){trajDots[i].visible=false;continue;}
+    trajDots[i].position.set(tx,ty,tz);
+    trajDots[i].visible=true;
+    trajDots[i].material.opacity=.5*(1-i/20);
   }
-  particles_extra=particles_extra.filter(s=>s.life>0);
-  for(const ft of floatTexts){ft.y-=55*dt;ft.life-=dt*1.5;}
-  floatTexts=floatTexts.filter(f=>f.life>0);
-
-  draw(dt);
 }
 
-let LAUNCH_X=120, LAUNCH_Y=0;
+function computeThrow(dx,dy,len){
+  const pwr=Math.min(len,180)/180;
+  const spd=18*pwr;
+  // Camera right vector → maps screen X drag to world
+  const camRight=new THREE.Vector3();
+  camRight.crossVectors(camera.getWorldDirection(new THREE.Vector3()), new THREE.Vector3(0,1,0)).normalize();
+  const throwX= camRight.x * (-dx/180)*10;
+  const throwZ= spd;
+  const throwY= Math.max(1, (-dy/180)*14) + 3*pwr;
+  return {vx:throwX, vy:throwY, vz:throwZ};
+}
+
+// ═══════════════ GAME STATE ═══════════════
+let gameActive=false, launched=false;
+let throwsLeft=3, maxDist=0, bestDist=0;
+let dragStart=null, settleFrames=0;
+let cameraShake=0;
+const camPos=new THREE.Vector3(-8,5,-5);
+const camLook=new THREE.Vector3(0,2,8);
+
+function launchRagdoll(vx,vy,vz){
+  for(const p of rd){p.ox=p.x-vx/60;p.oy=p.y-vy/60;p.oz=p.z-vz/60;}
+}
+
 function isSettled(){
-  let moving=0;
-  for(const p of ragdoll){
-    const vx=Math.abs(p.x-p.ox), vy=Math.abs(p.y-p.oy);
-    if(vx>0.5||vy>0.5) moving++;
-  }
-  return moving<3;
+  let m=0;
+  for(const p of rd){if(Math.abs(p.x-p.ox)>.015||Math.abs(p.y-p.oy)>.015||Math.abs(p.z-p.oz)>.015)m++;}
+  return m<4;
 }
 
 function resetThrow(){
-  camX=0; targetCamX=0;
-  buildRagdoll(LAUNCH_X, LAUNCH_Y);
-  dragStart=null;
-  document.getElementById('aim-hint').style.opacity='1';
+  buildRagdoll(0,0,0);
+  launched=false; dragStart=null; maxDist=0; settleFrames=0;
+  camPos.set(-8,5,-5); camLook.set(0,2,8);
+  document.getElementById('dist').textContent='0';
+  document.getElementById('aim-hint').style.display='block';
 }
 
 function endGame(){
-  gameOver=true; gameActive=false;
+  gameActive=false;
   const msg=document.getElementById('msg');
   msg.querySelector('h2').textContent='Game Over!';
-  msg.querySelector('p').textContent=`Best distance: ${bestDist}m · Hits: ${hitCount}`;
+  msg.querySelector('p').textContent=`Best: ${bestDist}m · Total Hits: ${hitCount}`;
   msg.querySelector('button').textContent='Play Again';
-  msg.style.display='';
+  msg.style.display='block';
 }
-
-// ── Draw ──────────────────────────────────────────────────
-const SKY_TOP='#0f0c29', SKY_BOT='#302b63';
-const GROUND_COL='#2d4a22', PLATFORM_COL='#8B6914';
-
-function draw(){
-  ctx.clearRect(0,0,W,H);
-
-  // sky gradient
-  const gr=ctx.createLinearGradient(0,0,0,H);
-  gr.addColorStop(0,SKY_TOP); gr.addColorStop(1,SKY_BOT);
-  ctx.fillStyle=gr; ctx.fillRect(0,0,W,H);
-
-  // stars
-  ctx.save();
-  ctx.fillStyle='rgba(255,255,255,0.6)';
-  // deterministic stars
-  for(let i=0;i<80;i++){
-    const sx=(i*137.5%W);
-    const sy=(i*53.1%(H-FLOOR_H-100));
-    ctx.fillRect(sx,sy,1.5,1.5);
-  }
-  ctx.restore();
-
-  ctx.save();
-  ctx.translate(-camX,0);
-
-  // ground
-  ctx.fillStyle=GROUND_COL;
-  ctx.fillRect(-camX,H-FLOOR_H,W+camX+200,FLOOR_H);
-  // grass line
-  ctx.fillStyle='#4a7c3f';
-  ctx.fillRect(-camX,H-FLOOR_H,W+camX+200,10);
-
-  // obstacles
-  for(const o of obstacles){
-    ctx.fillStyle='#5c4a1e';
-    ctx.beginPath();
-    roundRect(ctx,o.x,o.y,o.w,o.h,6);
-    ctx.fill();
-    ctx.fillStyle='#8B6914';
-    ctx.fillRect(o.x,o.y,o.w,10);
-  }
-
-  // launch pad indicator
-  if(!launched&&gameActive){
-    ctx.fillStyle='rgba(255,200,0,.2)';
-    ctx.beginPath();
-    ctx.arc(LAUNCH_X, LAUNCH_Y, 28, 0, Math.PI*2);
-    ctx.fill();
-  }
-
-  // aim arrow
-  if(dragStart&&!launched){
-    const dx=dragStart.ex-dragStart.sx, dy=dragStart.ey-dragStart.sy;
-    const len=Math.min(Math.hypot(dx,dy),180);
-    const angle=Math.atan2(-dy,-dx);
-    ctx.save();
-    ctx.translate(LAUNCH_X, LAUNCH_Y);
-    ctx.rotate(angle);
-    ctx.strokeStyle='rgba(255,100,100,.8)';
-    ctx.lineWidth=4;
-    ctx.setLineDash([10,6]);
-    ctx.beginPath();
-    ctx.moveTo(20,0);
-    ctx.lineTo(len,0);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    // arrowhead
-    ctx.fillStyle='rgba(255,100,100,.9)';
-    ctx.beginPath();
-    ctx.moveTo(len+16,0);
-    ctx.lineTo(len,6);
-    ctx.lineTo(len,-6);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-    // power arc
-    const pwr=len/180;
-    ctx.strokeStyle=`hsl(${120-pwr*120},100%,55%)`;
-    ctx.lineWidth=3;
-    ctx.beginPath();
-    ctx.arc(LAUNCH_X,LAUNCH_Y,34,Math.PI,Math.PI+Math.PI*pwr);
-    ctx.stroke();
-  }
-
-  // sparks
-  for(const sp of particles_extra){
-    ctx.globalAlpha=sp.life;
-    ctx.fillStyle=sp.col;
-    ctx.beginPath();
-    ctx.arc(sp.x,sp.y,3,0,Math.PI*2);
-    ctx.fill();
-  }
-  ctx.globalAlpha=1;
-
-  // ragdoll
-  if(ragdoll) drawRagdoll();
-
-  // float texts
-  for(const ft of floatTexts){
-    ctx.globalAlpha=ft.life;
-    ctx.fillStyle=ft.col;
-    ctx.font='bold 22px Segoe UI';
-    ctx.textAlign='center';
-    ctx.fillText(ft.txt,ft.x,ft.y);
-  }
-  ctx.globalAlpha=1;
-
-  ctx.restore();
-
-  // distance ruler on ground
-  if(launched||gameOver){
-    ctx.fillStyle='rgba(255,255,255,.18)';
-    ctx.font='11px Segoe UI';
-    ctx.textAlign='center';
-    for(let m=100;m<10000;m+=100){
-      const sx=LAUNCH_X+m*4-camX;
-      if(sx<0||sx>W) continue;
-      ctx.fillRect(sx,H-FLOOR_H-16,1,10);
-      ctx.fillText(m/100+'m',sx,H-FLOOR_H-20);
-    }
-  }
-}
-
-function drawRagdoll(){
-  const n=ragdoll;
-  // limb colors
-  const bodyCol='#e8c99a', outlineCol='#5a3a1a', headCol='#f5d6b0';
-
-  function limb(a,b,w,col){
-    ctx.strokeStyle=outlineCol; ctx.lineWidth=w+2;
-    ctx.lineCap='round';
-    ctx.beginPath(); ctx.moveTo(n[a].x,n[a].y); ctx.lineTo(n[b].x,n[b].y); ctx.stroke();
-    ctx.strokeStyle=col||bodyCol; ctx.lineWidth=w;
-    ctx.beginPath(); ctx.moveTo(n[a].x,n[a].y); ctx.lineTo(n[b].x,n[b].y); ctx.stroke();
-  }
-
-  // legs
-  limb(10,12,9); limb(12,14,8);
-  limb(11,13,9); limb(13,15,8);
-  // clothes (trousers) tint
-  ctx.strokeStyle='#3a5fcd'; ctx.lineWidth=7;
-  ctx.beginPath(); ctx.moveTo(n[3].x,n[3].y); ctx.lineTo(n[10].x,n[10].y); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(n[3].x,n[3].y); ctx.lineTo(n[11].x,n[11].y); ctx.stroke();
-
-  // torso
-  limb(1,3,14,'#cc2222');
-  // shirt stripes
-  ctx.strokeStyle='#ff4444'; ctx.lineWidth=5;
-  ctx.beginPath(); ctx.moveTo(n[4].x,n[4].y); ctx.lineTo(n[5].x,n[5].y); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(n[2].x-8,n[2].y); ctx.lineTo(n[2].x+8,n[2].y); ctx.stroke();
-
-  // arms
-  limb(4,6,8); limb(6,8,7);
-  limb(5,7,8); limb(7,9,7);
-
-  // head
-  const hx=n[0].x, hy=n[0].y;
-  const nkx=n[1].x, nky=n[1].y;
-  const angle=Math.atan2(hy-nky,hx-nkx)+Math.PI/2;
-  ctx.save();
-  ctx.translate(hx,hy);
-  ctx.rotate(angle);
-  // skull
-  ctx.fillStyle=outlineCol;
-  ctx.beginPath(); ctx.ellipse(0,0,13,16,0,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle=headCol;
-  ctx.beginPath(); ctx.ellipse(0,0,11,14,0,0,Math.PI*2); ctx.fill();
-  // eyes
-  ctx.fillStyle='#333';
-  ctx.beginPath(); ctx.ellipse(-4,2,2.5,2.5,0,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(4,2,2.5,2.5,0,0,Math.PI*2); ctx.fill();
-  // mouth
-  ctx.strokeStyle='#555'; ctx.lineWidth=1.5;
-  const spd=Math.hypot(n[0].x-n[0].ox,n[0].y-n[0].oy)*60;
-  if(spd>4){
-    // screaming O
-    ctx.fillStyle='#333';
-    ctx.beginPath(); ctx.ellipse(0,8,3,4,0,0,Math.PI*2); ctx.fill();
-  } else {
-    ctx.beginPath(); ctx.arc(0,8,3,0,Math.PI); ctx.stroke();
-  }
-  // hair
-  ctx.fillStyle='#2b1b0e';
-  ctx.beginPath(); ctx.ellipse(0,-9,11,6,0,Math.PI,Math.PI*2); ctx.fill();
-  ctx.restore();
-
-  // shoes
-  for(const fi of [14,15]){
-    ctx.fillStyle='#111';
-    ctx.beginPath(); ctx.ellipse(n[fi].x,n[fi].y,7,4,0,0,Math.PI*2); ctx.fill();
-  }
-}
-
-function roundRect(ctx,x,y,w,h,r){
-  ctx.moveTo(x+r,y);
-  ctx.lineTo(x+w-r,y); ctx.arcTo(x+w,y,x+w,y+r,r);
-  ctx.lineTo(x+w,y+h-r); ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
-  ctx.lineTo(x+r,y+h); ctx.arcTo(x,y+h,x,y+h-r,r);
-  ctx.lineTo(x,y+r); ctx.arcTo(x,y,x+r,y,r);
-  ctx.closePath();
-}
-
-// ── Input ─────────────────────────────────────────────────
-function getPos(e){
-  const r=canvas.getBoundingClientRect();
-  const src=e.touches?e.touches[0]:e;
-  return {x:src.clientX-r.left, y:src.clientY-r.top};
-}
-
-function onDown(e){
-  if(!gameActive||launched) return;
-  const pos=getPos(e);
-  // hit test near ragdoll head (in world coords)
-  const wx=pos.x+camX, wy=pos.y;
-  if(Math.hypot(wx-ragdoll[0].x, wy-ragdoll[0].y)<60){
-    dragStart={sx:pos.x,sy:pos.y,ex:pos.x,ey:pos.y};
-    document.getElementById('aim-hint').style.opacity='0';
-  }
-}
-function onMove(e){
-  e.preventDefault();
-  if(!dragStart) return;
-  const pos=getPos(e);
-  dragStart.ex=pos.x; dragStart.ey=pos.y;
-}
-function onUp(){
-  if(!dragStart||!gameActive) return;
-  const dx=dragStart.ex-dragStart.sx, dy=dragStart.ey-dragStart.sy;
-  const len=Math.min(Math.hypot(dx,dy),180);
-  if(len<15){dragStart=null;return;}
-  const spd=(len/180)*1800;
-  const angle=Math.atan2(-dy,-dx);
-  throwVel={x:Math.cos(angle)*spd, y:Math.sin(angle)*spd};
-  launchRagdoll(throwVel.x, throwVel.y);
-  launched=true;
-  throwsLeft--;
-  maxDist=0;
-  document.getElementById('throws').textContent=throwsLeft;
-  dragStart=null;
-  floatTexts.push({x:LAUNCH_X,y:LAUNCH_Y-60,txt:'🚀 LAUNCH!',life:1,col:'#ffe066'});
-}
-
-canvas.addEventListener('mousedown',onDown);
-canvas.addEventListener('mousemove',onMove);
-canvas.addEventListener('mouseup',onUp);
-canvas.addEventListener('touchstart',onDown,{passive:false});
-canvas.addEventListener('touchmove',onMove,{passive:false});
-canvas.addEventListener('touchend',onUp,{passive:false});
 
 function startGame(){
   hitCount=0; throwsLeft=3; bestDist=0; maxDist=0;
-  camX=0; targetCamX=0;
-  particles_extra=[]; floatTexts=[];
-  gameOver=false; launched=false;
-  LAUNCH_X=120;
-  LAUNCH_Y=H-FLOOR_H-80;
-  buildLevel();
-  buildRagdoll(LAUNCH_X, LAUNCH_Y);
-  document.getElementById('hits').textContent=0;
-  document.getElementById('dist').textContent=0;
-  document.getElementById('best').textContent=0;
-  document.getElementById('throws').textContent=3;
+  launched=false; dragStart=null; settleFrames=0; cameraShake=0;
+  for(const sp of sparkPool){sp.life=0;sp.mesh.visible=false;}
+  buildRagdoll(0,0,0);
+  ['hits','dist','best'].forEach(id=>document.getElementById(id).textContent='0');
+  document.getElementById('throws').textContent='3';
   document.getElementById('msg').style.display='none';
-  document.getElementById('aim-hint').style.opacity='1';
+  document.getElementById('aim-hint').style.display='block';
+  camPos.set(-8,5,-5); camLook.set(0,2,8);
+  camera.position.copy(camPos); camera.lookAt(camLook);
   gameActive=true;
 }
 
+// ═══════════════ MAIN LOOP ═══════════════
+let lastT=0;
+function loop(ts){
+  requestAnimationFrame(loop);
+  const dt=Math.min((ts-lastT)/1000,.033); lastT=ts;
+
+  if(gameActive&&rd&&launched){
+    const STEPS=8, sdt=dt/STEPS;
+    for(let s=0;s<STEPS;s++){
+      for(const p of rd) p.update(sdt);
+      for(let i=0;i<6;i++) for(const st of rdSticks) st.solve();
+      for(const p of rd) p.floor();
+      collideObstacles();
+    }
+
+    const head=rd[0];
+    rdLight.position.set(head.x,head.y+1,head.z);
+
+    const d=Math.round(Math.max(0,head.z)*3.5);
+    if(d>maxDist){maxDist=d;document.getElementById('dist').textContent=maxDist;}
+
+    // Camera follows ragdoll from side-back
+    const tx=head.x-9, ty=Math.max(4,head.y+5), tz=head.z-5;
+    camPos.lerp(new THREE.Vector3(tx,ty,tz),.06);
+    camLook.lerp(new THREE.Vector3(head.x,head.y+.5,head.z+6),.06);
+
+    settleFrames++;
+    if(settleFrames>100&&isSettled()){
+      if(maxDist>bestDist){bestDist=maxDist;document.getElementById('best').textContent=bestDist;}
+      launched=false;
+      if(throwsLeft>0) setTimeout(resetThrow,1100);
+      else setTimeout(endGame,1300);
+    }
+  }
+
+  // Update sparks
+  for(const sp of sparkPool){
+    if(sp.life<=0)continue;
+    sp.life-=dt*2.5;
+    sp.mesh.position.x+=sp.vx*dt;
+    sp.mesh.position.y+=sp.vy*dt;
+    sp.mesh.position.z+=sp.vz*dt;
+    sp.vy-=22*dt;
+    sp.mesh.visible=sp.life>0;
+  }
+
+  // Camera shake
+  cameraShake*=.85;
+  const shakeX=(Math.random()-.5)*cameraShake*.3;
+  const shakeY=(Math.random()-.5)*cameraShake*.3;
+
+  camera.position.lerp(camPos,.08);
+  camera.position.x+=shakeX;
+  camera.position.y+=shakeY;
+  camera.lookAt(camLook);
+
+  syncMeshes();
+  updateAim();
+  renderer.render(scene,camera);
+}
+
+// ═══════════════ INPUT ═══════════════
+function getPos(e){const s=e.touches?e.touches[0]:e;return{x:s.clientX,y:s.clientY};}
+
+canvas.addEventListener('mousedown',e=>{
+  if(!gameActive||launched)return;
+  const p=getPos(e); dragStart={sx:p.x,sy:p.y,ex:p.x,ey:p.y};
+  document.getElementById('aim-hint').style.display='none';
+});
+canvas.addEventListener('mousemove',e=>{
+  if(!dragStart)return; const p=getPos(e); dragStart.ex=p.x; dragStart.ey=p.y;
+});
+canvas.addEventListener('mouseup',()=>{
+  if(!dragStart||!gameActive)return;
+  const dx=dragStart.ex-dragStart.sx, dy=dragStart.ey-dragStart.sy;
+  const len=Math.min(Math.hypot(dx,dy),180);
+  if(len<12){dragStart=null;return;}
+  const {vx,vy,vz}=computeThrow(dx,dy,len);
+  launchRagdoll(vx,vy,vz);
+  launched=true; throwsLeft--; maxDist=0; settleFrames=0;
+  document.getElementById('throws').textContent=throwsLeft;
+  trajDots.forEach(d=>d.visible=false);
+  dragStart=null;
+});
+
+canvas.addEventListener('touchstart',e=>{e.preventDefault();if(!gameActive||launched)return;const p=getPos(e);dragStart={sx:p.x,sy:p.y,ex:p.x,ey:p.y};document.getElementById('aim-hint').style.display='none';},{passive:false});
+canvas.addEventListener('touchmove',e=>{e.preventDefault();if(!dragStart)return;const p=getPos(e);dragStart.ex=p.x;dragStart.ey=p.y;},{passive:false});
+canvas.addEventListener('touchend',()=>{
+  if(!dragStart||!gameActive)return;
+  const dx=dragStart.ex-dragStart.sx, dy=dragStart.ey-dragStart.sy;
+  const len=Math.min(Math.hypot(dx,dy),180);
+  if(len<12){dragStart=null;return;}
+  const {vx,vy,vz}=computeThrow(dx,dy,len);
+  launchRagdoll(vx,vy,vz);
+  launched=true; throwsLeft--; maxDist=0; settleFrames=0;
+  document.getElementById('throws').textContent=throwsLeft;
+  trajDots.forEach(d=>d.visible=false);
+  dragStart=null;
+});
+
 document.getElementById('startBtn').addEventListener('click',startGame);
+document.getElementById('msg').style.display='block';
 
 requestAnimationFrame(loop);
 </script>

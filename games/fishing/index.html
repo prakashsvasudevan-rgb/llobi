@@ -524,7 +524,7 @@ function drawReelBar(){
   for(let i=1;i<10;i++)ctx.fillRect(bx+bw*i/10-1,by,2,bh);
   ctx.strokeStyle='rgba(255,255,255,0.35)';ctx.lineWidth=1.5;ctx.strokeRect(bx,by,bw,bh);
   ctx.fillStyle='#fff';ctx.font='bold 11px sans-serif';ctx.textAlign='center';
-  ctx.fillText('REEL IN — click fast!',W/2,by+14);
+  ctx.fillText('TAP to reel in!',W/2,by+14);
 }
 
 function drawNibbleFlash(){
@@ -653,8 +653,8 @@ function handleClick(e){
   if(shopOpen)return;
   const p=getPos(e);
   if(state==='idle'&&p.y>WY-15){startCast(p.x);return;}
-  if(state==='nibble'){caughtFish=pickFish();reelProgress=0;state='hooked';setText('Hooked! Click fast to reel in!');return;}
-  if(state==='hooked'){reelProgress=Math.min(100,reelProgress+rod().power);return;}
+  if(state==='nibble'){caughtFish=pickFish();reelProgress=0;state='hooked';setText('Hooked! Tap to reel in!');return;}
+  if(state==='hooked'){reelProgress=100;return;}
 }
 C.addEventListener('click',handleClick);
 C.addEventListener('touchstart',e=>{e.preventDefault();handleClick(e);},{passive:false});

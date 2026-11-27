@@ -3725,7 +3725,7 @@ document.addEventListener('keydown',e=>{
       if(e.code==='KeyH'&&dtype.id==='nature'){
         if(abilityCooldown.heal<=0){
           abilityCooldown.heal=20;
-          const healAmt=~~(dmaxHp*0.4);dhp=Math.min(dmaxHp,dhp+healAmt);
+          const healAmt=~~(dmaxHp*0.8);dhp=Math.min(dmaxHp,dhp+healAmt);
           spawnAbilityCloud(dragonMesh.position.clone(),0x44ff88,20,1.0);
         }
       }

@@ -2487,10 +2487,10 @@ function spawnLegendCastle(){
     const sg=new THREE.Group();
     const bm2=new THREE.MeshBasicMaterial({color:0xeeeeff});
     const gm2=new THREE.MeshBasicMaterial({color:0xffee44,transparent:true,opacity:0.8,blending:THREE.AdditiveBlending});
-    sg.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.4,4,0.18),bm2),{position:{y:2}}));
-    sg.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.7,4.4,0.4),gm2),{position:{y:2}}));
-    sg.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(2,0.35,0.35),new THREE.MeshBasicMaterial({color:0xddaa33})),{position:{y:0.2}}));
-    sg.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.25,1.2,0.25),new THREE.MeshBasicMaterial({color:0x885522})),{position:{y:-0.7}}));
+    const _sg0=new THREE.Mesh(new THREE.BoxGeometry(0.4,4,0.18),bm2);_sg0.position.y=2;sg.add(_sg0);
+    const _sg1=new THREE.Mesh(new THREE.BoxGeometry(0.7,4.4,0.4),gm2);_sg1.position.y=2;sg.add(_sg1);
+    const _sg2=new THREE.Mesh(new THREE.BoxGeometry(2,0.35,0.35),new THREE.MeshBasicMaterial({color:0xddaa33}));_sg2.position.y=0.2;sg.add(_sg2);
+    const _sg3=new THREE.Mesh(new THREE.BoxGeometry(0.25,1.2,0.25),new THREE.MeshBasicMaterial({color:0x885522}));_sg3.position.y=-0.7;sg.add(_sg3);
     sg.position.set(LC_X+fx,lcY+92,LC_Z);
     scene.add(sg);
   }
@@ -6572,7 +6572,7 @@ function update(ts){
       if(!npc.userData.npcName)continue;
       // Only combatants: Blane, Elder NPCs, Dragon Keepers — not plain recruitable villagers
       const isCombatant=npc===blaneNPC||
-        (npc.userData.npcName&&(npc.userData.npcName.includes('Elder')||npc.userData.npcName.includes('Keeper')||npc.userData.npcName==='Dragon Keeper'));
+        (typeof npc.userData.npcName==='string'&&(npc.userData.npcName.includes('Elder')||npc.userData.npcName.includes('Keeper')||npc.userData.npcName==='Dragon Keeper'));
       if(!isCombatant)continue;
       if(npc.userData.npcAtkT===undefined)npc.userData.npcAtkT=2+Math.random()*2;
       npc.userData.npcAtkT-=dt;

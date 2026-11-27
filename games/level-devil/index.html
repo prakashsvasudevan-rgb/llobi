@@ -49,7 +49,7 @@ const C=document.getElementById('c');
 const ctx=C.getContext('2d');
 const W=480,H=320,TW=24,TH=24;
 const COLS=Math.floor(W/TW),ROWS=Math.floor(H/TH); // 20×13
-const GRAVITY=0.42,JUMP=-13,SPEED=3.4;
+const GRAVITY=0.42,JUMP=-10,SPEED=3.4;
 
 let deaths=0,levelNum=0,frameN=0,editorMode=false,testingCustom=false;
 
@@ -58,14 +58,14 @@ const keys={};
 document.addEventListener('keydown',e=>{
   if(editorMode)return;
   keys[e.code]=true;
-  if((e.code==='Space'||e.code==='ArrowUp'||e.code==='KeyW')&&P.onGround&&!P.dead){
-    P.vy=JUMP;P.onGround=false;e.preventDefault();
+  if((e.code==='Space'||e.code==='ArrowUp'||e.code==='KeyW')&&P.jumpsLeft>0&&!P.dead){
+    P.vy=JUMP;P.onGround=false;P.jumpsLeft--;e.preventDefault();
   }
 });
 document.addEventListener('keyup',e=>keys[e.code]=false);
 
 // ── PLAYER ────────────────────────────────────────────────
-const P={x:0,y:0,vx:0,vy:0,w:16,h:20,onGround:false,dead:false,deathTimer:0};
+const P={x:0,y:0,vx:0,vy:0,w:16,h:20,onGround:false,dead:false,deathTimer:0,jumpsLeft:2};
 
 // ── WORLD ─────────────────────────────────────────────────
 let tiles=[];
@@ -166,7 +166,7 @@ function updateEntities(){
       if(e.x<=e.minX||e.x+e.w>=e.maxX) e.dir*=-1;
       // platform collision (player on top)
       if(P.x+P.w>e.x&&P.x<e.x+e.w&&P.y+P.h>=e.y&&P.y+P.h<=e.y+e.h+8&&P.vy>=0){
-        P.y=e.y-P.h;P.vy=0;P.onGround=true;P.x+=e.dir*e.vx;
+        P.y=e.y-P.h;P.vy=0;P.onGround=true;P.jumpsLeft=2;P.x+=e.dir*e.vx;
       }
       // kill if player is crushed between block and wall/floor
       if(P.x+P.w>e.x&&P.x<e.x+e.w&&P.y+P.h>e.y&&P.y<e.y+e.h) die();
@@ -415,7 +415,7 @@ function buildProc(lvl){
 const HINTS_PROC=["Nothing suspicious here...","Watch your step!","The devil is in the details.","Almost too easy.","Don't get comfortable.","Something feels off...","Trust nothing.","Looks harmless!","One step at a time... carefully.","😈","Your confidence is your enemy.","Maybe this time?"];
 function loadLevel(n){
   levelNum=n;frameN=0;traps=[];platforms=[];entities=[];trapFlash=[];
-  P.dead=false;P.vx=0;P.vy=0;P.onGround=false;
+  P.dead=false;P.vx=0;P.vy=0;P.onGround=false;P.jumpsLeft=2;
   if(n<CURATED.length){CURATED[n].build();setHint(CURATED[n].hint);}
   else{buildProc(n);setHint(HINTS_PROC[(n-CURATED.length)%HINTS_PROC.length]);}
   document.getElementById('level-label').textContent='Level '+(n+1);
@@ -431,7 +431,7 @@ function updatePlayer(){
   P.x+=P.vx;resolveX();P.y+=P.vy;P.onGround=false;resolveY();
   for(const pl of platforms){
     if(pl.isCrusher){if(P.x+P.w>pl.x&&P.x<pl.x+pl.w&&P.y+P.h>pl.y&&P.y<pl.y+pl.h) die();continue;}
-    if(P.x+P.w>pl.x&&P.x<pl.x+pl.w&&P.y+P.h>=pl.y&&P.y+P.h<=pl.y+pl.h+8&&P.vy>=0){P.y=pl.y-P.h;P.vy=0;P.onGround=true;if(pl.vx) P.x+=pl.dir*pl.vx;}
+    if(P.x+P.w>pl.x&&P.x<pl.x+pl.w&&P.y+P.h>=pl.y&&P.y+P.h<=pl.y+pl.h+8&&P.vy>=0){P.y=pl.y-P.h;P.vy=0;P.onGround=true;P.jumpsLeft=2;if(pl.vx) P.x+=pl.dir*pl.vx;}
   }
   if(P.y>H+40) die();
 }
@@ -449,7 +449,7 @@ function resolveY(){
   for(let c=l;c<=r;c++){
     // skip floor check if a moving hole is here
     if(isSolid(tile(c,t))&&P.vy<0){P.y=t*TH+TH;P.vy=0;}
-    if(isSolid(tile(c,b))&&P.vy>0&&!isHoleAt(P.x,P.y)){P.y=b*TH-P.h;P.vy=0;P.onGround=true;}
+    if(isSolid(tile(c,b))&&P.vy>0&&!isHoleAt(P.x,P.y)){P.y=b*TH-P.h;P.vy=0;P.onGround=true;P.jumpsLeft=2;}
     if(isKill(tile(c,t))||isKill(tile(c,b))){die();return;}
     if(isGoal(tile(c,t))||isGoal(tile(c,b))){winLevel();return;}
   }
@@ -590,7 +590,7 @@ function clearEditor(){initEditorTiles();tiles=[...editorTiles];}
 
 function loadCustomLevel(){
   tiles=[...editorTiles];traps=[];platforms=[];entities=[];trapFlash=[];
-  P.dead=false;P.vx=0;P.vy=0;P.onGround=false;
+  P.dead=false;P.vx=0;P.vy=0;P.onGround=false;P.jumpsLeft=2;
   let sx=1,sy=ROWS-2;
   for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) if(editorTiles[r*COLS+c]===8){sx=c;sy=r;break;}
   P.x=sx*TW+2;P.y=(sy-1)*TH;setTile(sx,sy,0);

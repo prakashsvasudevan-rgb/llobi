@@ -302,6 +302,39 @@ function drawTension(){
 // ══════════════════════════════════════════════
 // DRAWING — CAMERA VIEWFINDER
 // ══════════════════════════════════════════════
+const SCREAMS=['GRRRR!!','GET AWAY!','AAAGH!','😡😡😡','BACK OFF!!','LEAVE ME!','NO PHOTOS!','RAAAAH!'];
+function drawScreams(){
+  npcs.forEach(n=>{
+    if(n.mood!=='angry') return;
+    const dist=Math.hypot(mx-n.x,my-n.y);
+    if(dist>90) return;
+    const intensity=1-dist/90; // 0..1, 1=closest
+    // pick a stable scream per NPC based on id
+    const scream=SCREAMS[Math.floor(n.id*SCREAMS.length)%SCREAMS.length];
+    // shake offset
+    const shakeX=(Math.random()-0.5)*intensity*6;
+    const shakeY=(Math.random()-0.5)*intensity*4;
+    const bx=n.x+shakeX,by=n.y-n.size-8+shakeY;
+    // bubble
+    ctx.save();
+    ctx.globalAlpha=0.5+intensity*0.5;
+    const tw=ctx.measureText(scream).width+14;
+    ctx.font=`bold ${10+Math.round(intensity*5)}px Georgia,serif`;
+    const tw2=ctx.measureText(scream).width+14;
+    const th=18+intensity*4;
+    ctx.fillStyle='rgba(255,30,30,0.92)';
+    ctx.strokeStyle='#ff0000';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.roundRect(bx-tw2/2,by-th,tw2,th,5);ctx.fill();ctx.stroke();
+    // tail
+    ctx.fillStyle='rgba(255,30,30,0.92)';
+    ctx.beginPath();ctx.moveTo(bx-5,by);ctx.lineTo(bx+5,by);ctx.lineTo(bx,by+7);ctx.closePath();ctx.fill();
+    // text
+    ctx.fillStyle='#fff';ctx.textAlign='center';
+    ctx.fillText(scream,bx,by-4);
+    ctx.restore();
+  });
+}
+
 function drawViewfinder(){
   const inTV = mx>TV.x&&mx<TV.x+TV.w&&my>TV.y&&my<TV.y+TV.h;
   const alpha = inTV ? 0.3 : 1;
@@ -780,6 +813,7 @@ function loop(){
 
   if(phase==='tutorial'){
     npcs.forEach(n=>drawNPC(n));
+    drawScreams();
     drawTV();
     drawTutorial();
     requestAnimationFrame(loop);return;
@@ -802,6 +836,7 @@ function loop(){
 
   // Normal play
   npcs.forEach(n=>drawNPC(n));
+  drawScreams();
   drawTV();
   drawTension();
 

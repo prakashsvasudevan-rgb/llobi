@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fruit Merge</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#120812;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:Georgia,serif;user-select:none;-webkit-user-select:none}
+#wrap{width:420px;max-width:100%;position:relative}
+canvas{display:block;width:100%;cursor:crosshair;touch-action:none}
+#ui{background:#140a14;border:2px solid #4a2a4a;border-top:none;padding:7px 14px;display:flex;justify-content:space-between;align-items:center}
+#score-box{color:#ffdd44;font-size:1rem;font-weight:bold}
+#next-label{color:#ccc;font-size:11px;text-align:center}
+#next-em{font-size:1.3rem;line-height:1}
+#high-box{color:#aa88cc;font-size:12px;text-align:right}
+/* MERGE GUIDE */
+#guide{position:absolute;bottom:46px;left:0;right:0;display:flex;justify-content:center;gap:3px;padding:3px 6px;background:rgba(10,0,10,0.7);border-top:1px solid #3a1a3a;overflow-x:auto}
+.g-fruit{display:flex;flex-direction:column;align-items:center;font-size:9px;color:#888;min-width:28px}
+.g-fruit span{font-size:1.1rem;line-height:1.1}
+</style>
+</head>
+<body>
+<div id="wrap">
+<canvas id="c" width="420" height="590"></canvas>
+<div id="guide" id="guide"></div>
+<div id="ui">
+  <div id="score-box">Score: 0</div>
+  <div style="text-align:center">
+    <div id="next-label">Next</div>
+    <div id="next-em">🍒</div>
+  </div>
+  <div id="high-box">Best: 0</div>
+</div>
+</div>
+<script>
+const C=document.getElementById('c'),ctx=C.getContext('2d');
+const W=420,H=590;
+
+// Container inner bounds
+const CL=65,CR=355,CB=550,CT=105;
+const CWALL=9;
+
+const FRUITS=[
+  {name:'Cherry',    r:16, col:'#cc2244',col2:'#ff5577',em:'🍒',pts:1},
+  {name:'Strawberry',r:22, col:'#ee3355',col2:'#ff7788',em:'🍓',pts:3},
+  {name:'Grape',     r:28, col:'#7733bb',col2:'#aa55ee',em:'🍇',pts:6},
+  {name:'Lemon',     r:34, col:'#ccbb00',col2:'#ffee33',em:'🍋',pts:10},
+  {name:'Orange',    r:40, col:'#ee7700',col2:'#ffaa22',em:'🍊',pts:15},
+  {name:'Apple',     r:46, col:'#cc2222',col2:'#ee4444',em:'🍎',pts:21},
+  {name:'Pear',      r:52, col:'#66aa22',col2:'#99dd44',em:'🍐',pts:28},
+  {name:'Peach',     r:58, col:'#ffaa66',col2:'#ffcc99',em:'🍑',pts:36},
+  {name:'Pineapple', r:64, col:'#ddaa00',col2:'#ffcc22',em:'🍍',pts:45},
+  {name:'Melon',     r:72, col:'#55aa22',col2:'#88dd44',em:'🍈',pts:55},
+  {name:'Watermelon',r:82, col:'#22aa11',col2:'#55cc33',em:'🍉',pts:100},
+];
+const MAX_DROP=4; // drop up to orange
+
+// Build merge guide
+const guide=document.getElementById('guide');
+FRUITS.forEach((f,i)=>{
+  const d=document.createElement('div');d.className='g-fruit';
+  d.innerHTML=`<span>${f.em}</span>${f.name.slice(0,4)}`;
+  guide.appendChild(d);
+  if(i<FRUITS.length-1){
+    const a=document.createElement('div');a.className='g-fruit';
+    a.innerHTML='<span style="font-size:0.7rem;color:#555;margin-top:4px">→</span>';
+    guide.appendChild(a);
+  }
+});
+
+let fruits=[],particles=[];
+let score=0,highScore=+(localStorage.getItem('fm2_hi')||0);
+let dropX=W/2,dropType=rnd(),nextType=rnd();
+let canDrop=true,gameOver=false,overTimer=0,frame=0;
+
+function rnd(){return Math.floor(Math.random()*(MAX_DROP+1));}
+function clampDrop(type,x){return Math.max(CL+FRUITS[type].r+1,Math.min(CR-FRUITS[type].r-1,x));}
+
+function setScore(s){
+  score=s;
+  document.getElementById('score-box').textContent='Score: '+s;
+  if(s>highScore){highScore=s;localStorage.setItem('fm2_hi',s);document.getElementById('high-box').textContent='Best: '+s;}
+}
+function updateNext(){document.getElementById('next-em').textContent=FRUITS[nextType].em;}
+
+function mkFruit(type,x,y,vx,vy){
+  return{type,x,y,vx:vx||0,vy:vy||0,r:FRUITS[type].r,merging:false,age:0,sc:1};
+}
+
+function drop(){
+  if(!canDrop||gameOver)return;
+  const x=clampDrop(dropType,dropX);
+  fruits.push(mkFruit(dropType,x,CT-FRUITS[dropType].r-4));
+  dropType=nextType;nextType=rnd();updateNext();
+  canDrop=false;setTimeout(()=>canDrop=true,550);
+}
+
+// PHYSICS
+const SUBSTEPS=12,G=1900;
+
+function physics(){
+  const dt=1/60/SUBSTEPS;
+  for(let s=0;s<SUBSTEPS;s++){
+    for(const f of fruits){f.vy+=G*dt;f.x+=f.vx*dt;f.y+=f.vy*dt;f.age++;}
+    for(const f of fruits){
+      if(f.x-f.r<CL){f.x=CL+f.r;f.vx=Math.abs(f.vx)*0.35;}
+      if(f.x+f.r>CR){f.x=CR-f.r;f.vx=-Math.abs(f.vx)*0.35;}
+      if(f.y+f.r>CB){f.y=CB-f.r;f.vy=-Math.abs(f.vy)*0.3;f.vx*=0.86;}
+    }
+    const merges=[];
+    for(let i=0;i<fruits.length;i++){
+      for(let j=i+1;j<fruits.length;j++){
+        const a=fruits[i],b=fruits[j];
+        const dx=b.x-a.x,dy=b.y-a.y,d2=dx*dx+dy*dy;
+        const mn=a.r+b.r;
+        if(d2<mn*mn&&d2>0.001){
+          const d=Math.sqrt(d2),nx=dx/d,ny=dy/d,ov=(mn-d)*0.5;
+          a.x-=nx*ov;a.y-=ny*ov;b.x+=nx*ov;b.y+=ny*ov;
+          const rv=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;
+          if(rv<0){const im=rv*0.5;a.vx+=im*nx;a.vy+=im*ny;b.vx-=im*nx;b.vy-=im*ny;}
+          if(a.type===b.type&&!a.merging&&!b.merging&&a.age>8&&b.age>8&&a.type<FRUITS.length-1){
+            a.merging=b.merging=true;merges.push([a,b]);
+          }
+        }
+      }
+    }
+    for(const[a,b] of merges){
+      const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;
+      const nt=a.type+1;
+      fruits=fruits.filter(f=>f!==a&&f!==b);
+      const nf=mkFruit(nt,mx,my,0,-100);nf.sc=0.15;fruits.push(nf);
+      setScore(score+FRUITS[nt].pts);
+      // burst particles
+      const fc=FRUITS[nt];
+      for(let p=0;p<10;p++){
+        const ang=Math.random()*Math.PI*2,sp=90+Math.random()*140;
+        particles.push({x:mx,y:my,vx:Math.cos(ang)*sp,vy:Math.sin(ang)*sp-60,life:1,r:3+Math.random()*3,col:fc.col2});
+      }
+    }
+  }
+  for(const f of fruits){if(f.sc<1)f.sc=Math.min(1,f.sc+0.12);}
+}
+
+function checkOver(){
+  if(gameOver)return;
+  const dng=fruits.some(f=>f.age>80&&f.y-f.r<CT&&Math.abs(f.vy)<8&&Math.abs(f.vx)<8);
+  if(dng){if(++overTimer>100)gameOver=true;}else overTimer=0;
+}
+
+// DRAW
+function drawBg(){
+  const g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'#180e18');g.addColorStop(1,'#0d050d');
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+}
+
+function drawBox(){
+  // inner fill
+  const ig=ctx.createLinearGradient(CL,0,CR,0);
+  ig.addColorStop(0,'rgba(255,200,255,0.03)');ig.addColorStop(.5,'rgba(255,200,255,0.055)');ig.addColorStop(1,'rgba(255,200,255,0.03)');
+  ctx.fillStyle=ig;ctx.fillRect(CL,CT,CR-CL,CB-CT);
+  // walls (glass look)
+  const drawWall=(x,y,w,h)=>{
+    const wg=ctx.createLinearGradient(x,0,x+w,0);
+    wg.addColorStop(0,'rgba(255,220,255,0.18)');wg.addColorStop(0.4,'rgba(255,220,255,0.08)');wg.addColorStop(1,'rgba(255,220,255,0.04)');
+    ctx.fillStyle=wg;ctx.fillRect(x,y,w,h);
+    ctx.strokeStyle='rgba(255,180,255,0.25)';ctx.lineWidth=1;ctx.strokeRect(x+.5,y+.5,w-1,h-1);
+  };
+  drawWall(CL-CWALL,CT,CWALL,CB-CT+CWALL);
+  drawWall(CR,CT,CWALL,CB-CT+CWALL);
+  drawWall(CL-CWALL,CB,CR-CL+CWALL*2,CWALL);
+  // danger line
+  ctx.strokeStyle='rgba(255,80,80,0.3)';ctx.lineWidth=1;ctx.setLineDash([5,4]);
+  ctx.beginPath();ctx.moveTo(CL,CT);ctx.lineTo(CR,CT);ctx.stroke();
+  ctx.setLineDash([]);
+  // "DANGER" label
+  ctx.fillStyle='rgba(255,80,80,0.4)';ctx.font='9px sans-serif';ctx.textAlign='right';
+  ctx.fillText('DANGER',CR-2,CT-3);
+}
+
+function drawFruit(type,x,y,sc){
+  const f=FRUITS[type];
+  ctx.save();ctx.translate(x,y);ctx.scale(sc,sc);
+  // drop shadow
+  ctx.fillStyle='rgba(0,0,0,0.3)';ctx.beginPath();ctx.ellipse(2,f.r*0.4,f.r*0.85,f.r*0.3,0,0,Math.PI*2);ctx.fill();
+  // body
+  const g=ctx.createRadialGradient(-f.r*.32,-f.r*.32,f.r*.05,0,0,f.r);
+  g.addColorStop(0,f.col2);g.addColorStop(0.65,f.col);g.addColorStop(1,'rgba(0,0,0,0.3)');
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,0,f.r,0,Math.PI*2);ctx.fill();
+  // shine
+  ctx.fillStyle='rgba(255,255,255,0.2)';
+  ctx.beginPath();ctx.ellipse(-f.r*.28,-f.r*.3,f.r*.32,f.r*.2,-.45,0,Math.PI*2);ctx.fill();
+  // emoji
+  ctx.font=`${Math.round(f.r*1.05)}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(f.em,0,f.r*.08);
+  ctx.restore();
+}
+
+function drawDropper(){
+  if(!canDrop||gameOver)return;
+  const f=FRUITS[dropType];
+  const x=clampDrop(dropType,dropX);
+  // guide line
+  ctx.strokeStyle='rgba(255,255,255,0.08)';ctx.lineWidth=1;ctx.setLineDash([4,5]);
+  ctx.beginPath();ctx.moveTo(x,22);ctx.lineTo(x,CT);ctx.stroke();ctx.setLineDash([]);
+  // dropper fruit
+  drawFruit(dropType,x,24,0.9);
+  // arrow
+  ctx.fillStyle='rgba(255,255,255,0.25)';
+  ctx.beginPath();ctx.moveTo(x-7,CT-9);ctx.lineTo(x+7,CT-9);ctx.lineTo(x,CT-1);ctx.closePath();ctx.fill();
+}
+
+function drawParticles(){
+  for(const p of particles){
+    ctx.globalAlpha=p.life*0.9;
+    ctx.fillStyle=p.col;
+    ctx.beginPath();ctx.arc(p.x,p.y,p.r*p.life,0,Math.PI*2);ctx.fill();
+  }
+  ctx.globalAlpha=1;
+}
+
+function drawOver(){
+  if(!gameOver)return;
+  ctx.fillStyle='rgba(0,0,0,0.78)';ctx.fillRect(0,0,W,H);
+  ctx.textAlign='center';
+  ctx.fillStyle='#ffdd44';ctx.font='bold 2rem Georgia,serif';ctx.fillText('GAME OVER',W/2,H/2-55);
+  // score
+  ctx.fillStyle='#fff';ctx.font='1.2rem Georgia,serif';ctx.fillText('Score: '+score,W/2,H/2-10);
+  ctx.fillStyle='#aa88cc';ctx.font='0.9rem Georgia,serif';ctx.fillText('Best: '+highScore,W/2,H/2+22);
+  // replay btn
+  ctx.fillStyle='rgba(255,220,80,0.15)';ctx.fillRect(W/2-80,H/2+50,160,38);
+  ctx.strokeStyle='rgba(255,220,80,0.5)';ctx.lineWidth=1.5;ctx.strokeRect(W/2-80,H/2+50,160,38);
+  ctx.fillStyle='#ffdd44';ctx.font='bold 1rem Georgia,serif';ctx.fillText('▶ Play Again',W/2,H/2+74);
+}
+
+// LOOP
+function loop(){
+  frame++;
+  drawBg();drawBox();
+  for(const f of fruits)drawFruit(f.type,f.x,f.y,f.sc);
+  drawDropper();drawParticles();drawOver();
+  // update
+  for(const p of particles){p.x+=p.vx/60;p.y+=p.vy/60;p.vy+=500/60;p.life-=0.04;}
+  particles=particles.filter(p=>p.life>0);
+  if(!gameOver){physics();checkOver();}
+  requestAnimationFrame(loop);
+}
+
+// INPUT
+function getX(e){const r=C.getBoundingClientRect();return(e.touches?e.touches[0].clientX:e.clientX-r.left)*W/r.width-(e.touches?(r.left*W/r.width):0);}
+// simpler:
+function px(e){const r=C.getBoundingClientRect();const cx=e.touches?e.touches[0].clientX:e.clientX;return(cx-r.left)*W/r.width;}
+
+C.addEventListener('mousemove',e=>{dropX=px(e);});
+C.addEventListener('touchmove',e=>{e.preventDefault();dropX=px(e);},{passive:false});
+C.addEventListener('click',e=>{if(gameOver)restart();else drop();});
+C.addEventListener('touchstart',e=>{
+  e.preventDefault();dropX=px(e);
+  if(gameOver)restart();else drop();
+},{passive:false});
+document.addEventListener('keydown',e=>{
+  if(e.code==='Space'){e.preventDefault();if(gameOver)restart();else drop();}
+  if(e.code==='ArrowLeft')dropX=Math.max(CL+FRUITS[dropType].r+1,dropX-12);
+  if(e.code==='ArrowRight')dropX=Math.min(CR-FRUITS[dropType].r-1,dropX+12);
+});
+
+function restart(){
+  fruits=[];particles=[];score=0;setScore(0);
+  gameOver=false;overTimer=0;canDrop=true;
+  dropType=rnd();nextType=rnd();updateNext();
+  document.getElementById('high-box').textContent='Best: '+highScore;
+}
+
+document.getElementById('high-box').textContent='Best: '+highScore;
+updateNext();loop();
+</script>
+</body>
+</html>

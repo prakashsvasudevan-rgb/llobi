@@ -5509,11 +5509,21 @@ function update(ts){
         const cfg=e.userData.ruinCfg;
         const col=cfg?cfg.weaponColor:0xff4400;
 
+        // ── BOSS BODY ANIMATIONS ──
+        {const eu=e.userData;
+          if(eu.jawT>0){eu.jawT=Math.max(0,eu.jawT-dt);const ph=Math.sin((eu.jawT/(eu.jawDur||1.0))*Math.PI);if(eu.jawGroup)eu.jawGroup.rotation.x=ph*0.6;}else if(eu.jawGroup){eu.jawGroup.rotation.x*=0.82;}
+          if(eu.tailSwingT>0){eu.tailSwingT=Math.max(0,eu.tailSwingT-dt);if(eu.tailGroup)eu.tailGroup.rotation.y=Math.sin((1-eu.tailSwingT/0.9)*Math.PI*3)*0.8;}else if(eu.tailGroup){eu.tailGroup.rotation.y*=0.8;}
+          if(eu.bodyPitchT>0){eu.bodyPitchT=Math.max(0,eu.bodyPitchT-dt);eu.atkPitch=(eu.bodyPitchDir||1)*Math.sin((1-eu.bodyPitchT/0.5)*Math.PI)*0.45;}else{eu.atkPitch=(eu.atkPitch||0)*0.75;}
+          if(eu.bodyRollT>0){eu.bodyRollT=Math.max(0,eu.bodyRollT-dt);eu.atkRoll=Math.sin((1-eu.bodyRollT/0.6)*Math.PI*2)*0.5;}else{eu.atkRoll=(eu.atkRoll||0)*0.75;}
+        }
+
         // ── ROAR — shockwave that pushes + damages everyone nearby ──
         e.userData.roarT-=dt;
         if(e.userData.roarT<=0&&dist<400){
           e.userData.roarT=6+Math.random()*4;
           e.userData.roarActive=0.6; // seconds of roar ring visible
+          if(e.userData.jawGroup){e.userData.jawT=1.4;e.userData.jawDur=1.4;}
+          e.userData.bodyPitchT=0.7;e.userData.bodyPitchDir=1;
           floatWorld(e.position.clone().add(new THREE.Vector3(0,14,0)),'🔥 ROOOARRR!','#ff8800');
           spawnAbilityCloud(e.position.clone(),col,80,1.4);
           spawnAbilityCloud(e.position.clone(),0xffffff,50,0.8);
@@ -5560,6 +5570,8 @@ function update(ts){
         e.userData.biteT-=dt;
         if(e.userData.biteT<=0&&dist<60){
           e.userData.biteT=2.5+Math.random()*2;
+          if(e.userData.jawGroup){e.userData.jawT=1.0;e.userData.jawDur=1.0;}
+          e.userData.bodyPitchT=0.5;e.userData.bodyPitchDir=-1;
           floatWorld(e.position.clone().add(new THREE.Vector3(0,10,0)),'🦷 BITE!','#ff2200');
           spawnAbilityCloud(ref.clone().add(new THREE.Vector3(0,4,0)),0xff2200,24,0.6);
           spawnBeamFX(e.position.clone().add(new THREE.Vector3(0,2,0)),ref.clone(),col);
@@ -5575,6 +5587,8 @@ function update(ts){
         e.userData.tailT-=dt;
         if(e.userData.tailT<=0){
           e.userData.tailT=3+Math.random()*3;
+          if(e.userData.tailGroup)e.userData.tailSwingT=0.9;
+          e.userData.bodyRollT=0.6;
           floatWorld(e.position.clone().add(new THREE.Vector3(0,10,0)),'💥 TAIL SWEEP!','#ff8800');
           // Tail arc particle spray
           const tailFwd=new THREE.Vector3(-Math.sin(e.rotation.y),0,-Math.cos(e.rotation.y));

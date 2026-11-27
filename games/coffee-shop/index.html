@@ -77,6 +77,9 @@ body{background:var(--bg);font-family:'Nunito',sans-serif;color:var(--cream);min
 .log-loss{color:#dd6655;}
 .log-info{color:#88aacc;}
 
+/* shop scene */
+#shop-scene{display:block;width:100%;max-width:900px;height:140px;margin:0 auto 10px;border-radius:14px;border:1px solid rgba(255,200,80,0.18);background:#1a0d00;}
+
 /* open button */
 #open-btn{width:100%;padding:14px;font-size:20px;font-weight:800;background:linear-gradient(135deg,#226600,#44aa00);color:#fff;border:3px solid #88ff44;border-radius:12px;cursor:pointer;letter-spacing:2px;margin-top:12px;box-shadow:0 4px 20px rgba(0,200,0,0.3);transition:all .2s;}
 #open-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 6px 28px rgba(0,200,0,0.5);}
@@ -131,6 +134,8 @@ body{background:var(--bg);font-family:'Nunito',sans-serif;color:var(--cream);min
     <div class="weather-box" id="weather-box">🌤️ Mild</div>
     <div style="margin-left:auto;font-size:13px;color:#886644" id="phase-label">Morning — buy supplies</div>
   </div>
+
+  <canvas id="shop-scene" width="900" height="140"></canvas>
 
   <div class="main-grid">
 
@@ -561,6 +566,213 @@ function log(msg,cls){
 
 // init sliders
 updateRecipe();
+
+// ═══ SHOP SCENE ANIMATION ═══
+(function(){
+  const sc=document.getElementById('shop-scene');
+  const ctx=sc.getContext('2d');
+  const W=900,H=140;
+  const FLOOR=108, COUNTER_X=180, COUNTER_W=90, COUNTER_H=38;
+
+  // customers: {x, y, state:'walk'|'queue'|'served'|'leave'|'sad', frame, timer, coffeeAlpha}
+  const custs=[];
+  let sceneRunning=false;
+  let targetCount=0;
+  let servedCount=0;
+  let sadCount=0;
+  let frameT=0;
+  const QUEUE_X=[320,370,420,470,520,570]; // queue positions
+
+  function spawnCustomers(n,sad){
+    sadCount=sad;
+    targetCount=n;
+    servedCount=0;
+    // stagger entry
+    for(let i=0;i<Math.min(n,8);i++){
+      custs.push({x:W+30+i*55,y:FLOOR,state:'walk',frame:0,timer:i*18,coffeeAlpha:0,sad:sad&&i>=n-sad});
+    }
+    sceneRunning=true;
+  }
+
+  function drawPerson(x,y,frame,sad,coffeeAlpha){
+    const bounce=Math.sin(frame*0.3)*2.5;
+    // legs
+    ctx.strokeStyle=sad?'#886655':'#5566cc';
+    ctx.lineWidth=3;
+    ctx.lineCap='round';
+    // walking animation: legs alternate
+    const lk=Math.sin(frame*0.35)*14;
+    ctx.beginPath();ctx.moveTo(x,y-4);ctx.lineTo(x-5+lk,y+16);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(x,y-4);ctx.lineTo(x+5-lk,y+16);ctx.stroke();
+    // body
+    ctx.fillStyle=sad?'#aa7755':'#4477dd';
+    ctx.beginPath();ctx.roundRect(x-9,y-28+bounce,18,26,4);ctx.fill();
+    // head
+    ctx.fillStyle='#f4c07a';
+    ctx.beginPath();ctx.arc(x,y-34+bounce,10,0,Math.PI*2);ctx.fill();
+    // face
+    ctx.fillStyle='#333';
+    ctx.beginPath();ctx.arc(x-3.5,y-35+bounce,1.5,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(x+3.5,y-35+bounce,1.5,0,Math.PI*2);ctx.fill();
+    if(sad){
+      ctx.strokeStyle='#333';ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.arc(x,y-30+bounce,3.5,0.3*Math.PI,0.7*Math.PI,false);ctx.stroke();
+    } else {
+      ctx.strokeStyle='#333';ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.arc(x,y-33+bounce,3.5,0.1*Math.PI,0.9*Math.PI);ctx.stroke();
+    }
+    // coffee cup if served
+    if(coffeeAlpha>0){
+      ctx.globalAlpha=coffeeAlpha;
+      ctx.fillStyle='#fff';
+      ctx.beginPath();ctx.roundRect(x+8,y-28+bounce,10,12,2);ctx.fill();
+      ctx.fillStyle='#6b3a2a';
+      ctx.beginPath();ctx.arc(x+13,y-23+bounce,3.5,Math.PI,0,false);ctx.fill();
+      ctx.globalAlpha=1;
+    }
+  }
+
+  function drawScene(w){
+    ctx.clearRect(0,0,W,H);
+    // background sky gradient
+    const bg=ctx.createLinearGradient(0,0,0,H);
+    bg.addColorStop(0,'#1a0d00');bg.addColorStop(1,'#2d1800');
+    ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+
+    // weather effect
+    if(w&&w.name==='Rainy'){
+      ctx.strokeStyle='rgba(100,160,255,0.35)';ctx.lineWidth=1;
+      for(let i=0;i<30;i++){
+        const rx=((frameT*3+i*37)%W);
+        const ry=((frameT*5+i*53)%H);
+        ctx.beginPath();ctx.moveTo(rx,ry);ctx.lineTo(rx-3,ry+10);ctx.stroke();
+      }
+    } else if(w&&(w.name==='Sunny'||w.name==='Hot')){
+      ctx.fillStyle='rgba(255,230,80,0.1)';
+      ctx.beginPath();ctx.arc(W-50,30,22,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='rgba(255,220,60,0.7)';
+      ctx.beginPath();ctx.arc(W-50,30,16,0,Math.PI*2);ctx.fill();
+    }
+
+    // floor
+    ctx.fillStyle='#3a2200';
+    ctx.fillRect(0,FLOOR+18,W,H-FLOOR-18);
+    ctx.fillStyle='#4d2e00';
+    ctx.fillRect(0,FLOOR+16,W,4);
+
+    // counter
+    const cg=ctx.createLinearGradient(COUNTER_X,FLOOR-COUNTER_H,COUNTER_X,FLOOR+18);
+    cg.addColorStop(0,'#8b5e1a');cg.addColorStop(1,'#5a3900');
+    ctx.fillStyle=cg;
+    ctx.beginPath();ctx.roundRect(COUNTER_X,FLOOR-COUNTER_H,COUNTER_W,COUNTER_H+18,6);ctx.fill();
+    ctx.fillStyle='#c8902a';
+    ctx.fillRect(COUNTER_X,FLOOR-COUNTER_H,COUNTER_W,5);
+    // coffee machine on counter
+    ctx.fillStyle='#cc3300';
+    ctx.beginPath();ctx.roundRect(COUNTER_X+15,FLOOR-COUNTER_H-28,30,30,5);ctx.fill();
+    ctx.fillStyle='#ff5522';
+    ctx.fillRect(COUNTER_X+22,FLOOR-COUNTER_H-22,16,8);
+    ctx.fillStyle='#111';
+    ctx.beginPath();ctx.arc(COUNTER_X+30,FLOOR-COUNTER_H-8,5,0,Math.PI*2);ctx.fill();
+    // steam
+    if(frameT%2===0){
+      ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=1.5;
+      for(let s=0;s<2;s++){
+        ctx.beginPath();
+        ctx.moveTo(COUNTER_X+28+s*5,(FLOOR-COUNTER_H-34+((frameT*2)%20)));
+        ctx.bezierCurveTo(COUNTER_X+24+s*5,(FLOOR-COUNTER_H-42+((frameT*2)%20)),
+          COUNTER_X+32+s*5,(FLOOR-COUNTER_H-50+((frameT*2)%20)),
+          COUNTER_X+28+s*5,(FLOOR-COUNTER_H-58+((frameT*2)%20)));
+        ctx.stroke();
+      }
+    }
+    // barista (simple, standing behind counter)
+    const bx=COUNTER_X+COUNTER_W/2;
+    ctx.fillStyle='#f4c07a';
+    ctx.beginPath();ctx.arc(bx,FLOOR-COUNTER_H-42,10,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#cc4400';
+    ctx.beginPath();ctx.roundRect(bx-9,FLOOR-COUNTER_H-30,18,24,4);ctx.fill();
+    ctx.fillStyle='#333';
+    ctx.beginPath();ctx.arc(bx-3.5,FLOOR-COUNTER_H-43,1.5,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(bx+3.5,FLOOR-COUNTER_H-43,1.5,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#333';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.arc(bx,FLOOR-COUNTER_H-40,3.5,0.1*Math.PI,0.9*Math.PI);ctx.stroke();
+    // "OPEN" sign
+    if(sceneRunning){
+      ctx.fillStyle='rgba(0,180,0,0.85)';
+      ctx.beginPath();ctx.roundRect(COUNTER_X-55,FLOOR-COUNTER_H-10,45,20,5);ctx.fill();
+      ctx.fillStyle='#fff';ctx.font='bold 11px sans-serif';ctx.textAlign='center';
+      ctx.fillText('OPEN',COUNTER_X-32,FLOOR-COUNTER_H+4);
+    }
+
+    // draw customers
+    for(const c of custs){
+      if(c.timer>0){c.timer--;continue;}
+      c.frame++;
+      if(c.state==='walk'){
+        c.x-=2.5;
+        const qi=custs.filter(o=>o.state==='queue'||o.state==='served').length;
+        const qx=QUEUE_X[Math.min(qi,QUEUE_X.length-1)]||QUEUE_X[QUEUE_X.length-1];
+        if(c.x<=qx){c.x=qx;c.state='queue';c.timer=25+Math.floor(Math.random()*30);}
+      } else if(c.state==='queue'){
+        // waiting, served after timer
+        c.state='served'; c.coffeeAlpha=0;
+      } else if(c.state==='served'){
+        c.coffeeAlpha=Math.min(1,c.coffeeAlpha+0.07);
+        if(c.coffeeAlpha>=1){c.state='leave';c.timer=10;}
+      } else if(c.state==='leave'){
+        c.x-=2.8;
+        if(c.x<-40){c.state='done';}
+      } else if(c.state==='sad'){
+        c.x+=3;
+        if(c.x>W+40){c.state='done';}
+      }
+      if(c.state!='done'){
+        drawPerson(c.x,c.y,c.frame,c.sad,c.coffeeAlpha);
+      }
+    }
+    // remove done
+    for(let i=custs.length-1;i>=0;i--){if(custs[i].state==='done')custs.splice(i,1);}
+
+    // "Closed" sign when idle
+    if(!sceneRunning&&custs.length===0){
+      ctx.fillStyle='rgba(180,0,0,0.75)';
+      ctx.beginPath();ctx.roundRect(COUNTER_X-55,FLOOR-COUNTER_H-10,55,20,5);ctx.fill();
+      ctx.fillStyle='#fff';ctx.font='bold 11px sans-serif';ctx.textAlign='center';
+      ctx.fillText('CLOSED',COUNTER_X-28,FLOOR-COUNTER_H+4);
+    }
+
+    frameT++;
+  }
+
+  // animation loop
+  let curWeather=null;
+  function loop(){
+    drawScene(curWeather);
+    requestAnimationFrame(loop);
+  }
+  loop();
+
+  // hook into openShop
+  const _orig=window.openShop;
+  window.openShop=function(){
+    _orig();
+    // find out how many were sold (read from modal after openShop sets it)
+    setTimeout(()=>{
+      const soldEl=document.getElementById('result-cups');
+      const sold=soldEl?parseInt(soldEl.textContent)||0:0;
+      const w=typeof weatherSchedule!=='undefined'&&day>1?weatherSchedule[day-2]:null;
+      curWeather=w;
+      sceneRunning=true;
+      custs.length=0;
+      const show=Math.min(sold,8);
+      spawnCustomers(show,0);
+      setTimeout(()=>{sceneRunning=false;},show*1500+3000);
+    },50);
+  };
+  // also expose for direct use
+  window.runShopScene=spawnCustomers;
+})();
 </script>
 </body>
 </html>

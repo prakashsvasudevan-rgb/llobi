@@ -1769,7 +1769,7 @@ function makeKingDeathDragonMesh(){
     g.add(ch);
   }
   g.userData={lwp:lw,rwp:rw,wingAngle:0,type:'kingDeathDragon',alive:true,isKingDeath:true,
-    hp:546767,maxHp:546767,si:1.0,spd:14,dmg:195,pts:50000,
+    hp:546767,maxHp:546767,si:1.0,spd:14,dmg:15, pts:50000,
     shootT:1.5,flyOrbit:0,animT:0,kdSummonT:12};
   return g;
 }
@@ -1971,7 +1971,7 @@ function makeEnemy3d(type){
               hunter:          {hp:35, maxHp:35, si:2+Math.random()*1.5,spd:20,dmg:18, pts:80},
               shadowDragon:    {hp:4001,maxHp:4001,si:2+Math.random()*1.5,spd:14,dmg:35, pts:400},
               kingHunter:      {hp:200,maxHp:200,si:1.5,              spd:16,dmg:30, pts:1000},
-              kingDeathDragon: {hp:546767,maxHp:546767,si:1.0,         spd:14,dmg:195,pts:50000},
+              kingDeathDragon: {hp:546767,maxHp:546767,si:1.0,         spd:14,dmg:15, pts:50000},
               bloodDragon:     {hp:260,maxHp:260,si:1.5,              spd:16,dmg:30, pts:300}};
   Object.assign(m.userData,cfg[type]||{});
   if(!m.userData.shootT)m.userData.shootT=Math.random()*(m.userData.si||2);
@@ -4030,7 +4030,7 @@ document.addEventListener('keydown',e=>{
         if(dragonMesh.userData.jawGroup){dragonMesh.userData.jawT=1.0;dragonMesh.userData.jawDur=1.0;}
         dragonMesh.userData.bodyPitchT=0.5;dragonMesh.userData.bodyPitchDir=-1;
         const ref=dragonMesh.position;let be=null,bd=60;for(const ae of activeEnemies){if(!ae.userData.alive)continue;const d=ref.distanceTo(ae.position);if(d<bd){bd=d;be=ae;}}
-        if(be){spawnBeamFX(ref.clone().add(new THREE.Vector3(0,2,0)),be.position.clone(),0xff2200);hitEnemy(be,upgradedDmg()*5);floatWorld(ref.clone().add(new THREE.Vector3(0,8,0)),'🦷 BITE!','#ff4400');}
+        if(be){spawnBeamFX(ref.clone().add(new THREE.Vector3(0,2,0)),be.position.clone(),0xff2200);hitEnemy(be,upgradedDmg()*6);floatWorld(ref.clone().add(new THREE.Vector3(0,8,0)),'🦷 BITE!','#ff4400');}
         else floatWorld(ref.clone().add(new THREE.Vector3(0,8,0)),'No target!','#ff4444');
       }else floatWorld(dragonMesh.position.clone().add(new THREE.Vector3(0,8,0)),'⏳ '+~~abilityCooldown.pBite+'s','#ff4444');
     }
@@ -4039,7 +4039,7 @@ document.addEventListener('keydown',e=>{
         if(dragonMesh.userData.tailGroup)dragonMesh.userData.tailSwingT=0.9;
         dragonMesh.userData.bodyRollT=0.6;
         const ref=dragonMesh.position;
-        for(const ae of activeEnemies){if(!ae.userData.alive)continue;if(ref.distanceTo(ae.position)<60){hitEnemy(ae,upgradedDmg()*4);}}
+        for(const ae of activeEnemies){if(!ae.userData.alive)continue;if(ref.distanceTo(ae.position)<60){hitEnemy(ae,upgradedDmg()*10);}}
         floatWorld(ref.clone().add(new THREE.Vector3(0,8,0)),'💥 TAIL SWEEP!','#ff8800');
       }else floatWorld(dragonMesh.position.clone().add(new THREE.Vector3(0,8,0)),'⏳ '+~~abilityCooldown.pTail+'s','#ff4444');
     }
@@ -4048,7 +4048,7 @@ document.addEventListener('keydown',e=>{
         if(dragonMesh.userData.jawGroup){dragonMesh.userData.jawT=1.4;dragonMesh.userData.jawDur=1.4;}
         dragonMesh.userData.bodyPitchT=0.7;dragonMesh.userData.bodyPitchDir=1;
         const ref=dragonMesh.position;
-        for(const ae of activeEnemies){if(!ae.userData.alive)continue;const d=ref.distanceTo(ae.position);if(d<120){hitEnemy(ae,upgradedDmg()*2);ae.position.addScaledVector(new THREE.Vector3().subVectors(ae.position,ref).normalize(),30);}}
+        for(const ae of activeEnemies){if(!ae.userData.alive)continue;const d=ref.distanceTo(ae.position);if(d<120){hitEnemy(ae,upgradedDmg()*8);ae.position.addScaledVector(new THREE.Vector3().subVectors(ae.position,ref).normalize(),30);}}
         floatWorld(ref.clone().add(new THREE.Vector3(0,10,0)),'🔊 ROAR!','#ffee44');
       }else floatWorld(dragonMesh.position.clone().add(new THREE.Vector3(0,8,0)),'⏳ '+~~abilityCooldown.pRoar+'s','#ff4444');
     }
@@ -4267,19 +4267,19 @@ function fireAtkPower(a){
       {if(dragonMesh&&dragonMesh.userData.jawGroup){dragonMesh.userData.jawT=1.0;dragonMesh.userData.jawDur=1.0;}
       if(dragonMesh){dragonMesh.userData.bodyPitchT=0.5;dragonMesh.userData.bodyPitchDir=-1;}
       let be=null,bd=80;for(const e of activeEnemies){if(!e.userData.alive)continue;const d=e.position.distanceTo(ref);if(d<bd){bd=d;be=e;}}
-      if(be){hitEnemy(be,DMG*4);floatWorld(be.position,'💢 CRUSH!','#ff8800');}
+      if(be){hitEnemy(be,DMG*6);floatWorld(be.position,'💢 CRUSH!','#ff8800');}
       else floatWorld(ref,'No target in range','#888');break;}
     case 'tail':// Spinning slam — AOE around player
       {if(dragonMesh&&dragonMesh.userData.tailGroup)dragonMesh.userData.tailSwingT=0.9;
       if(dragonMesh){dragonMesh.userData.bodyRollT=0.6;}
       const hits=nearEnemies(55);
-      hits.forEach(e=>{hitEnemy(e,DMG*2.5);const push=e.position.clone().sub(ref).normalize().multiplyScalar(30);e.position.add(push);});
+      hits.forEach(e=>{hitEnemy(e,DMG*10);const push=e.position.clone().sub(ref).normalize().multiplyScalar(30);e.position.add(push);});
       floatWorld(ref,'💥 TAIL SLAM x'+hits.length,'#cc4400');break;}
     case 'roar':// Fear roar — pushes all enemies back, stuns shoot timer
       {if(dragonMesh&&dragonMesh.userData.jawGroup){dragonMesh.userData.jawT=1.4;dragonMesh.userData.jawDur=1.4;}
       if(dragonMesh){dragonMesh.userData.bodyPitchT=0.7;dragonMesh.userData.bodyPitchDir=1;}
       const hits=nearEnemies(180);
-      hits.forEach(e=>{e.userData.shootT=Math.max(e.userData.shootT,3);const push=e.position.clone().sub(ref).normalize().multiplyScalar(50);e.position.add(push);});
+      hits.forEach(e=>{hitEnemy(e,DMG*8);e.userData.shootT=Math.max(e.userData.shootT,3);const push=e.position.clone().sub(ref).normalize().multiplyScalar(50);e.position.add(push);});
       floatWorld(ref,'🔊 FOES SCATTERED!','#aa66ff');break;}
     case 'storm':// Lightning hits every enemy
       {screenFlash('#ffff44',0.4);
@@ -5720,7 +5720,7 @@ function update(ts){
           spawnAbilityCloud(e.position.clone(),0x880000,100,2.0);spawnAbilityCloud(e.position.clone(),0xff0000,70,1.4);
           activeEnemies.forEach(ae=>{if(!ae.userData.alive||ae===e)return;if(e.position.distanceTo(ae.position)<150)hitEnemy(ae,e.userData.dmg);});
           dragonArmy.forEach(a=>{if(!a.mesh.userData.alive)return;if(e.position.distanceTo(a.mesh.position)<150){a.mesh.userData.hp-=e.userData.dmg;floatWorld(a.mesh.position,'💀','#ff0000');}});
-          if(dist<150){const away=new THREE.Vector3().subVectors(ref,e.position).normalize().multiplyScalar(55);ref.add(away);if(isHuman){humanHP-=e.userData.dmg*2;if(humanHP<=0&&!ddead){ddead=true;humanHP=0;endGame();}}else{dhp-=e.userData.dmg*2;}dinvT=0.5;}
+          if(dist<150){const away=new THREE.Vector3().subVectors(ref,e.position).normalize().multiplyScalar(55);ref.add(away);if(isHuman){humanHP-=e.userData.dmg*9;if(humanHP<=0&&!ddead){ddead=true;humanHP=0;endGame();}}else{dhp-=e.userData.dmg*9;}dinvT=0.5;}
         }
         // ── Bite ──
         e.userData.kdBiteT-=dt;
@@ -5729,7 +5729,7 @@ function update(ts){
           floatWorld(e.position.clone().add(new THREE.Vector3(0,14,0)),'🦷 DEATH BITE!','#ff0000');
           spawnBeamFX(e.position.clone().add(new THREE.Vector3(0,4,0)),ref.clone(),0xff0000);
           spawnAbilityCloud(ref.clone(),0xff0000,30,0.8);
-          if(isHuman){humanHP-=e.userData.dmg*3;if(humanHP<=0&&!ddead){ddead=true;humanHP=0;endGame();}}else{const dmg=humanShielding?e.userData.dmg*0.15*3:e.userData.dmg*3;dhp-=dmg;if(dhp<=0&&!ddead){ddead=true;dhp=0;}}
+          if(isHuman){humanHP-=e.userData.dmg*10;if(humanHP<=0&&!ddead){ddead=true;humanHP=0;endGame();}}else{const dmg=humanShielding?e.userData.dmg*0.15*10:e.userData.dmg*10;dhp-=dmg;if(dhp<=0&&!ddead){ddead=true;dhp=0;}}
           dragonArmy.forEach(a=>{if(!a.mesh.userData.alive)return;if(e.position.distanceTo(a.mesh.position)<60)a.mesh.userData.hp-=e.userData.dmg*2;});
           dinvT=0.7;
         }
@@ -5740,7 +5740,7 @@ function update(ts){
           floatWorld(e.position.clone().add(new THREE.Vector3(0,14,0)),'💥 DEATH TAIL!','#aa0000');
           for(let ti=0;ti<20;ti++){const ang=ti/20*Math.PI*2;spawnAbilityCloud(e.position.clone().add(new THREE.Vector3(Math.cos(ang)*20,Math.random()*8,Math.sin(ang)*20)),0xff2200,16,0.5);}
           dragonArmy.forEach(a=>{if(!a.mesh.userData.alive)return;if(e.position.distanceTo(a.mesh.position)<60){a.mesh.userData.hp-=e.userData.dmg*1.5;floatWorld(a.mesh.position,'💥','#ff2200');}});
-          if(dist<60){if(isHuman){humanHP-=e.userData.dmg*2;if(humanHP<=0&&!ddead){ddead=true;humanHP=0;endGame();}}else{dhp-=e.userData.dmg*2;}dinvT=0.5;floatWorld(ref.clone().add(new THREE.Vector3(0,6,0)),'💥','#ff2200');}
+          if(dist<60){if(isHuman){humanHP-=e.userData.dmg*9;if(humanHP<=0&&!ddead){ddead=true;humanHP=0;endGame();}}else{dhp-=e.userData.dmg*9;}dinvT=0.5;floatWorld(ref.clone().add(new THREE.Vector3(0,6,0)),'💥','#ff2200');}
         }
         // ── Special attacks cycle: burning bombs / acid spray / poison gas / shadow wave ──
         e.userData.kdSpecT-=dt;

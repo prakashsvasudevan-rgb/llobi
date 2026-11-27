@@ -100,15 +100,26 @@ const ROOMS=[
   }},
   {id:'tray',x:270,y:304,w:92,h:36,label:'Food tray',act(){
     if(flags.has('tray')){setText('Grey paste. It stares at you.');return;}
-    flags.add('tray');addItem('spoon');
-    setText('Mystery grey paste. Free SPOON included. You take it.');
+    flags.add('tray');addItem('spoon');addItem('rope');
+    setText('Mystery grey paste. Free SPOON included. Also — the delivery guard left a KNOTTED ROPE under the tray. Wild.');
   }},
   {id:'graffiti',x:260,y:155,w:110,h:60,label:'Graffiti',act(){
-    setText(['"Slide a coin under the door. Guards are cheap." — wise words.','"The keycard is in the locker in the corridor. Good luck." — a friend.','"Bang the pipes in the vents. Clears the guards." — 2019'][flags.size%3]);
+    setText(['"Slide a coin under the door." — wise words.','"Keycard is in the locker in the corridor." — a friend.','"File the bars + rope = window escape." — 2019','"Spoon can pick a lock. Slowly." — someone patient'][flags.size%4]);
+  }},
+  {id:'window0',x:455,y:72,w:118,h:130,label:'Window (bars)',act(){
+    if(hasItem('file')&&hasItem('rope')){
+      flags.add('window_escape');
+      setText('You file through every bar — CLANG! — tie the rope to the bed frame and lower yourself down. You land in the yard. SKIPPING AHEAD!');
+      setTimeout(()=>goRoom(5),1400);
+    } else if(hasItem('file')){
+      setText('You could cut these bars with the file — but it\'s a 30-foot drop. You\'d need a rope to lower yourself safely.');
+    } else {
+      setText('Iron bars. You\'d need a file to cut them, and something to lower yourself with after.');
+    }
   }},
  ],
  exit:{x:522,y:152,w:76,h:178,label:'Cell door',
-  locked:'The door is LOCKED. You need to slide something under it to bribe the guard.',
+  locked:'The door is LOCKED. Slide a coin under it to bribe the guard — or escape through the window.',
   check:()=>hasItem('coin'),
   unlock(){removeItem('coin');flags.add('door0');setText('You slide the coin under the door. ...A hand takes it. The lock clicks. You\'re out!');},
  },
@@ -130,9 +141,12 @@ const ROOMS=[
   }},
  ],
  exit:{x:W-70,y:120,w:62,h:200,label:'Security door',
-  locked:'The security door needs a keycard. Find one.',
-  check:()=>hasItem('keycard'),
-  unlock(){flags.add('door1');setText('You swipe the keycard. The door beeps green. You\'re through!');},
+  locked:'The security door needs a keycard — or you could pick the lock with a spoon (slowly).',
+  check:()=>hasItem('keycard')||hasItem('spoon'),
+  unlock(){
+    if(hasItem('keycard')){flags.add('door1');setText('You swipe the keycard. The door beeps green. You\'re through!');}
+    else{removeItem('spoon');flags.add('door1');setText('You jam the spoon in the lock and wiggle it for 90 seconds. CLICK. It actually works. You\'re through!');}
+  },
  },
  sneakMsg:'Guard is facing away — GO NOW!',
  dangerMsg:'Guard is looking! Wait for them to turn.',
@@ -213,11 +227,22 @@ const ROOMS=[
     if(hasItem('boltcut')){
       removeItem('boltcut');flags.add('padlock_cut');
       setText('SNIP. The padlock falls. That was satisfying.');
-    } else setText('A heavy padlock. You\'d need bolt cutters.');
+    } else setText('A heavy padlock. Need bolt cutters — or find another way out of this room.');
+  }},
+  {id:'floor4',x:200,y:320,w:140,h:50,label:'Soft patch of floor',act(){
+    if(hasItem('spoon')&&!flags.has('tunnel_dug')){
+      flags.add('tunnel_dug');
+      setText('You notice the floor is soft here. You dig with the spoon for a VERY LONG TIME. You emerge in the courtyard tunnel. SKIPPING AHEAD!');
+      setTimeout(()=>goRoom(6),1500);
+    } else if(flags.has('tunnel_dug')){
+      setText('The hole you dug. It leads somewhere better.');
+    } else {
+      setText('The floor here seems softer than the rest. If you had a digging tool...');
+    }
   }},
  ],
  exit:{x:W-70,y:120,w:62,h:200,label:'Padlocked door',
-  locked:'The door has a padlock. Need bolt cutters.',
+  locked:'The door has a padlock. Need bolt cutters — or dig through the soft floor with a spoon.',
   check:()=>flags.has('padlock_cut'),
   unlock(){flags.add('door4');setText('The padlocked door swings open. Fresh air! Well — slightly less stale air.');},
  },
@@ -298,7 +323,12 @@ const ROOMS=[
     if(hasItem('rope')){setText('The wall is climbable with the rope. Find an anchor and GO.');}
     else setText('The final wall. 40 feet of stone. Without a rope you\'re not getting over this.');
   }},
-  {id:'guard8a',x:260,y:200,w:70,h:120,label:'Tower guard',act(){setText('A guard in the tower above. They\'re looking the other way... for now.');}},
+  {id:'guard8a',x:260,y:200,w:70,h:120,label:'Tower guard',act(){
+    if(hasItem('coin')){
+      removeItem('coin');flags.add('tower_bribed');
+      setText('You hold up the coin. The tower guard squints. Looks around. Pockets it. Turns his back. Deal made.');
+    } else setText('A guard in the tower above. Looking the other way... for now. If you had money, maybe they\'d keep looking away permanently.');
+  }},
   {id:'anchor',x:120,y:60,w:60,h:50,label:'Wall anchor point',act(){
     if(hasItem('rope')&&!flags.has('rope_thrown')){
       flags.add('rope_thrown');
@@ -307,10 +337,14 @@ const ROOMS=[
     else setText('An iron anchor ring on the wall. You could hook a rope here.');
   }},
  ],
- exit:{x:120,y:40,w:60,h:300,label:'Wall — climb!',
-  locked:'You need a rope to get over this wall.',
-  check:()=>flags.has('rope_thrown'),
-  unlock(){flags.add('door8');setText('You CLIMB. Hand over hand. Your arms are burning. The top — you\'re at the top. And then... the other side.');},
+ exit:{x:120,y:40,w:60,h:300,label:'Wall — climb or walk through gate',
+  locked:'You need a rope to climb this wall — or bribe the tower guard so they open the gate.',
+  check:()=>flags.has('rope_thrown')||flags.has('tower_bribed'),
+  unlock(){
+    flags.add('door8');
+    if(flags.has('tower_bribed'))setText('The tower guard quietly unlocks the side gate. You walk through. No climbing required. Very civilised.');
+    else setText('You CLIMB. Hand over hand. Arms burning. You reach the top. And then... the other side.');
+  },
  },
 },
 // 9 — FREEDOM
@@ -790,13 +824,9 @@ function drawWon(){
   ctx.shadowColor='#ffaa00';ctx.shadowBlur=30;
   ctx.fillStyle='#ffdd44';ctx.fillText('YOU ESCAPED!',W/2,H/2-30);
   ctx.shadowBlur=0;
-  ctx.font='15px Georgia,serif';ctx.fillStyle='#ddd';
-  ctx.fillText('10 rooms. Every guard. Every locked door.',W/2,H/2+14);
-  ctx.fillStyle='#aaffaa';ctx.font='bold 15px Georgia,serif';
-  ctx.fillText('ABSOLUTE LEGEND 🏆',W/2,H/2+42);
-  ctx.fillStyle='rgba(255,255,255,0.1)';ctx.fillRect((W-180)/2,H/2+68,180,30);
-  ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=1;ctx.strokeRect((W-180)/2,H/2+68,180,30);
-  ctx.fillStyle='#88aaff';ctx.font='13px Georgia,serif';ctx.fillText('[ Escape Again ]',W/2,H/2+87);
+  ctx.fillStyle='rgba(255,255,255,0.1)';ctx.fillRect((W-180)/2,H/2+30,180,30);
+  ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=1;ctx.strokeRect((W-180)/2,H/2+30,180,30);
+  ctx.fillStyle='#88aaff';ctx.font='13px Georgia,serif';ctx.fillText('[ Escape Again ]',W/2,H/2+49);
 }
 
 // ── HOVER DETECTION ─────────────────────────────────────────

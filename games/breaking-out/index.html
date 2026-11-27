@@ -325,9 +325,8 @@ const ROOMS=[
   locked:'',
   check:()=>true,
   unlock(){
-    scene='ending';
-    endEmoji='🏃';endTitle='The Great Escape';endRating=100;
-    endDesc='10 levels. Every door. Every guard. Every obstacle. You beat ALL of them. Absolute LEGEND.';
+    scene='won';
+    setText('YOU ESCAPED! 10 rooms. Every guard. Every locked door. LEGENDARY.');
   },
  },
 },
@@ -353,7 +352,7 @@ function tryExit(){
     setText(r.dangerMsg||'Guard is watching! Wait for them to look away.');return;
   }
   ex.unlock();
-  if(scene==='ending')return;
+  if(scene==='won')return;
   setTimeout(()=>goRoom(room+1),1200);
 }
 
@@ -784,23 +783,20 @@ function drawCaught(){
   ctx.font='12px Georgia,serif';ctx.fillStyle='#f88';ctx.fillText('[ click to try room '+room+' again ]',W/2,H/2+40);
   drawStick(W/2,H-70,1,'idle');
 }
-function drawEndingScreen(){
-  const bg=ctx.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#0a1a0a');bg.addColorStop(1,'#152015');ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
-  for(let i=0;i<60;i++){const sx=(i*197)%W,sy=(i*83)%H;ctx.globalAlpha=0.3+0.7*Math.abs(Math.sin(frame*0.015+i));ctx.fillStyle='#fff';ctx.fillRect(sx,sy,1.5,1.5);}ctx.globalAlpha=1;
-  ctx.fillStyle='rgba(0,0,0,0.65)';ctx.fillRect(80,25,W-160,H-50);ctx.strokeStyle='#4a7a4a';ctx.lineWidth=2;ctx.strokeRect(80,25,W-160,H-50);
-  ctx.font='52px sans-serif';ctx.textAlign='center';ctx.fillText(endEmoji,W/2,80);
-  ctx.fillStyle='#ffdd44';ctx.font='bold 20px Georgia,serif';ctx.fillText('"'+endTitle+'"',W/2,112);
-  ctx.fillStyle='#ccc';ctx.font='13px Georgia,serif';ctx.fillText(endDesc,W/2,140,W-200);
-  const r=endRating;
-  ctx.fillStyle='rgba(255,255,255,0.1)';ctx.fillRect(100,192,W-200,22);
-  const rc=r>80?'#4f4':r>50?'#ff8':r>30?'#f80':'#f44';ctx.fillStyle=rc;ctx.fillRect(100,192,(W-200)*(r/100),22);
-  ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=1;ctx.strokeRect(100,192,W-200,22);
-  ctx.fillStyle='#fff';ctx.font='bold 11px sans-serif';ctx.fillText('BADASSOMETER: '+r+'%',W/2,207);
-  const lbl=r>=100?'ABSOLUTE LEGEND':r>80?'EPIC':r>65?'SOLID':'DECENT';
-  ctx.fillStyle=rc;ctx.font='bold 14px Georgia,serif';ctx.fillText(lbl,W/2,230);
-  drawStick(W/2,285,1,'cheer');
-  ctx.fillStyle='rgba(255,255,255,0.1)';ctx.fillRect((W-180)/2,310,180,30);ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=1;ctx.strokeRect((W-180)/2,310,180,30);
-  ctx.fillStyle='#88aaff';ctx.font='13px Georgia,serif';ctx.fillText('[ Escape Again ]',W/2,330);
+function drawWon(){
+  // translucent overlay on top of the freedom scene
+  ctx.fillStyle='rgba(0,0,0,0.55)';ctx.fillRect(0,0,W,H);
+  ctx.font='bold 60px Georgia,serif';ctx.textAlign='center';
+  ctx.shadowColor='#ffaa00';ctx.shadowBlur=30;
+  ctx.fillStyle='#ffdd44';ctx.fillText('YOU ESCAPED!',W/2,H/2-30);
+  ctx.shadowBlur=0;
+  ctx.font='15px Georgia,serif';ctx.fillStyle='#ddd';
+  ctx.fillText('10 rooms. Every guard. Every locked door.',W/2,H/2+14);
+  ctx.fillStyle='#aaffaa';ctx.font='bold 15px Georgia,serif';
+  ctx.fillText('ABSOLUTE LEGEND 🏆',W/2,H/2+42);
+  ctx.fillStyle='rgba(255,255,255,0.1)';ctx.fillRect((W-180)/2,H/2+68,180,30);
+  ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=1;ctx.strokeRect((W-180)/2,H/2+68,180,30);
+  ctx.fillStyle='#88aaff';ctx.font='13px Georgia,serif';ctx.fillText('[ Escape Again ]',W/2,H/2+87);
 }
 
 // ── HOVER DETECTION ─────────────────────────────────────────
@@ -842,7 +838,7 @@ function render(){
     drawHover();drawRoomLabel();
   }
   if(scene==='caught')drawCaught();
-  if(scene==='ending')drawEndingScreen();
+  if(scene==='won'){drawRoom9();drawWon();}
   if(transDir!==0){
     ctx.fillStyle=`rgba(0,0,0,${transDir===-1?1-transAlpha:1-transAlpha})`;
     ctx.fillRect(0,0,W,H);
@@ -855,7 +851,7 @@ C.addEventListener('mousemove',e=>{const c=sc(e);mx=c.x;my=c.y;});
 C.addEventListener('click',e=>{
   const c=sc(e);mx=c.x;my=c.y;
   if(scene==='caught'){scene='game';flags=new Set(getRoomFlags());setText('You\'re back in room '+(room+1)+'. Try again.');return;}
-  if(scene==='ending'){resetAll();return;}
+  if(scene==='won'){resetAll();return;}
   if(scene!=='game')return;
   if(hovered)hovered.act();
 });
@@ -883,7 +879,7 @@ C.addEventListener('touchstart',e=>{
   mx=(t.clientX-r.left)*W/r.width;my=(t.clientY-r.top)*H/r.height;
   hovered=getHover();
   if(scene==='caught'){scene='game';setText('Try again!');return;}
-  if(scene==='ending'){resetAll();return;}
+  if(scene==='won'){resetAll();return;}
   if(hovered)hovered.act();
 },{passive:false});
 

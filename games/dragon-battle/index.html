@@ -595,7 +595,7 @@ function updateStorm(dt,ref){
 
 // ── Dragon model builder ──────────────────────────────────────────────────────
 function hex(c){return parseInt(typeof c==='string'?c.replace('#',''):c.toString(16).padStart(6,'0'),16);}
-function mat(col,opts={}){return new THREE.MeshLambertMaterial({color:hex(col),...opts});}
+function mat(col,opts={}){return new THREE.MeshPhongMaterial({color:hex(col),...opts});}
 function matBasic(col){return new THREE.MeshBasicMaterial({color:hex(col)});}
 
 function addBox(g,w,h,d,m,x=0,y=0,z=0,rx=0,ry=0,rz=0){
@@ -2737,7 +2737,7 @@ function spawnGreatCity(){
     const ny=groundY(wx,wz);
     mesh.position.set(wx,ny+1.1,wz);
     mesh.userData={npcName:name,npcText:text,isCity:true,...(extraData||{})};
-    scene.add(mesh);objects.push(mesh);
+    scene.add(mesh);
     if(role==='hunter'){cityHunters.push(mesh);}
     else{cityFriendlyNPCs.push(mesh);friendlyNPCs.push(mesh);}
     return mesh;

@@ -2837,9 +2837,9 @@ const KING_RUINS_CFG=[
   {id:'earth_nature',elem1:'earth', elem2:'nature',  name:'ANCIENT GROVE',
    pos:{x:DM_X-900,z:DM_Z+700},   bossColor:0x44ff66, weaponName:'GOLEM SUMMON',   weaponColor:0x44ff44,weaponEmoji:'🗿'},
   {id:'air_smoke',   elem1:'air',   elem2:'smoke',   name:'ASHEN SKY',
-   pos:{x:DM_X+1300,z:DM_Z+100},  bossColor:0xaaccff, weaponName:'TORNADO',        weaponColor:0xaaccff,weaponEmoji:'🌪'},
+   pos:{x:DM_X+1800,z:DM_Z+300},  bossColor:0xaaccff, weaponName:'TORNADO',        weaponColor:0xaaccff,weaponEmoji:'🌪'},
   {id:'lava_ice',    elem1:'lava',  elem2:'ice',     name:'GLACIAL CALDERA',
-   pos:{x:DM_X-1200,z:DM_Z+100},  bossColor:0x44ddff, weaponName:'FROZEN VOLCANO', weaponColor:0x88ffff,weaponEmoji:'❄'},
+   pos:{x:DM_X-1200,z:DM_Z+1600}, bossColor:0x44ddff, weaponName:'FROZEN VOLCANO', weaponColor:0x88ffff,weaponEmoji:'❄'},
   {id:'thunder_lightning',elem1:'thunder',elem2:'lightning',name:'STORM THRONE',
    pos:{x:DM_X+600,z:DM_Z-500},   bossColor:0xffff44, weaponName:'MEGASTORM',      weaponColor:0xffff44,weaponEmoji:'⛈'},
   {id:'sun_soul',    elem1:'sun',   elem2:'soul',    name:'CELESTIAL ALTAR',
@@ -2847,7 +2847,7 @@ const KING_RUINS_CFG=[
   {id:'bone_acid',   elem1:'bone',  elem2:'acid',    name:'DEATH MARSHES',
    pos:{x:DM_X+200,z:DM_Z+2200},  bossColor:0xccffaa, weaponName:'PLAGUE CLOUD',   weaponColor:0x88ff44,weaponEmoji:'☠'},
   {id:'metal_glass', elem1:'metal', elem2:'glass',   name:'SHATTERED FORGE',
-   pos:{x:DM_X-800,z:DM_Z-700},   bossColor:0xddeeff, weaponName:'SHURIKEN STORM', weaponColor:0xddeeff,weaponEmoji:'⭐'},
+   pos:{x:DM_X-800,z:DM_Z-1600},  bossColor:0xddeeff, weaponName:'SHURIKEN STORM', weaponColor:0xddeeff,weaponEmoji:'⭐'},
 ];
 const kingRuinsSpawned=new Set();
 const kingWeaponOrbs=[];
@@ -6929,7 +6929,23 @@ function drawWorldMap(){
 
   // Fixed landmarks
   dot(DM_X,DM_Z,'#aaffcc',8,'🏔 DRAGON MTN');
-  dot(VOL_X,VOL_Z,'#ff4400',8,'🌋 VOLCANO');
+  dot(LC_X,LC_Z,'#ffee44',7,'🏯 LEGEND CASTLE');
+  dot(CITY_X,CITY_Z,'#44ddff',8,'🏙 CITY');
+  dot(VOL_X,VOL_Z,'#ff4400',10,'🌋 VOLCANO');
+  dot(VOL_X,VOL_Z,'#aa00ff',6,'💀 KING OF DEATH');
+
+  // King Dragon Ruins
+  for(const cfg of KING_RUINS_CFG){
+    const col=kingRuinsSpawned.has(cfg.id)?'#888888':'#ff2200';
+    const lbl=(kingRuinsSpawned.has(cfg.id)?'☠ ':'💀 ')+cfg.name;
+    dot(cfg.pos.x,cfg.pos.z,col,6,lbl);
+  }
+
+  // Emperor (King of Death) live position
+  for(const e of activeEnemies){
+    if(!e.userData.alive)continue;
+    if(e.userData.isKingDeath)dot(e.position.x,e.position.z,'#cc00ff',8,'👑 EMPEROR');
+  }
 
   // Player dot + direction arrow
   wmCtx.fillStyle='#ffffff';wmCtx.beginPath();wmCtx.arc(W/2,H/2,5,0,Math.PI*2);wmCtx.fill();

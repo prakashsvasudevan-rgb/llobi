@@ -16,7 +16,9 @@ canvas{display:block;width:100%;cursor:crosshair}
 #catches-box{color:#aaccff}
 #best-box{color:#ff88ff}
 #shop-btn,#bag-btn{background:#2a4a2a;border:1px solid #4a8a4a;color:#8afa8a;font-size:11px;font-family:Georgia,serif;padding:4px 10px;border-radius:6px;cursor:pointer;white-space:nowrap}
-#shop-btn:hover,#bag-btn:hover{background:#3a6a3a}
+#shop-btn:hover,#bag-btn:hover,#lb-btn:hover{background:#3a6a3a}
+#lb-btn{background:#1a1500;border-color:#7a6a00;color:#ffdd44}
+#lb-btn:hover{background:#2a2500}
 #bag-btn{background:#1a3a4a;border-color:#3a7a9a;color:#88ddff}
 #bag-btn:hover{background:#2a5a6a}
 /* SHOP OVERLAY */
@@ -66,6 +68,29 @@ canvas{display:block;width:100%;cursor:crosshair}
 .fish-sell-btn:hover{background:#2a5a2a}
 #bag-empty{color:#556;font-size:13px;text-align:center;padding:40px 0;display:none}
 @media(max-width:500px){#fish-grid{grid-template-columns:repeat(3,1fr)}}
+/* LEADERBOARD OVERLAY */
+#lb-overlay{display:none;position:absolute;top:0;left:0;width:100%;background:rgba(4,6,18,0.97);z-index:30;padding:14px 14px 20px}
+#lb-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:1px solid #4a4a1a;padding-bottom:10px}
+#lb-title{color:#ffdd44;font-size:1.05rem;font-weight:bold}
+#lb-close{background:#2a1a1a;border:1px solid #6a3a3a;color:#ff9999;font-size:11px;font-family:Georgia,serif;padding:4px 10px;border-radius:6px;cursor:pointer}
+#lb-close:hover{background:#4a2a2a}
+#lb-submit{display:flex;gap:7px;margin-bottom:14px;align-items:center}
+#lb-name{flex:1;background:#0d1a0d;border:1px solid #4a8a4a;color:#cfc;font-family:Georgia,serif;font-size:12px;padding:5px 10px;border-radius:6px;outline:none}
+#lb-name::placeholder{color:#445}
+#lb-submit-btn{background:#3a5a1a;border:1px solid #7a9a4a;color:#cefa8a;font-size:11px;font-family:Georgia,serif;padding:5px 12px;border-radius:6px;cursor:pointer;white-space:nowrap}
+#lb-submit-btn:hover{background:#4a7a2a}
+#lb-score-preview{color:#ffaa44;font-size:11px;white-space:nowrap}
+#lb-table{width:100%}
+.lb-row{display:grid;grid-template-columns:28px 1fr auto auto;gap:8px;align-items:center;padding:7px 10px;border-radius:7px;margin-bottom:4px;background:#0a100a}
+.lb-row.gold{background:#1a1500;border:1px solid #8a6a00}
+.lb-row.silver{background:#0e0e14;border:1px solid #555577}
+.lb-row.bronze{background:#140c08;border:1px solid #6a3a1a}
+.lb-row.me{outline:1px solid #4a8a4a}
+.lb-rank{font-size:14px;text-align:center}
+.lb-name-cell{color:#ccc;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lb-score-cell{color:#ffdd44;font-size:12px;font-weight:bold;text-align:right}
+.lb-date-cell{color:#556;font-size:10px;text-align:right}
+#lb-empty{color:#445;font-size:13px;text-align:center;padding:30px 0}
 </style>
 </head>
 <body>
@@ -78,6 +103,7 @@ canvas{display:block;width:100%;cursor:crosshair}
     <span id="catches-box">Catches: 0</span>
     <span id="best-box">Best: —</span>
     <button id="bag-btn" onclick="openBag()">🎒 Bag (0)</button>
+    <button id="lb-btn" onclick="openLB()">🏆 Board</button>
     <button id="shop-btn" onclick="openShop()">🛒 Shop</button>
   </div>
 </div>
@@ -103,6 +129,20 @@ canvas{display:block;width:100%;cursor:crosshair}
   <div id="fish-grid"></div>
   <div id="bag-empty">Your bag is empty. Go catch some fish!</div>
 </div>
+<!-- LEADERBOARD OVERLAY -->
+<div id="lb-overlay">
+  <div id="lb-head">
+    <span id="lb-title">🏆 Leaderboard</span>
+    <button id="lb-close" onclick="closeLB()">✕ Close</button>
+  </div>
+  <div id="lb-submit">
+    <input id="lb-name" maxlength="18" placeholder="Your name…" />
+    <span id="lb-score-preview"></span>
+    <button id="lb-submit-btn" onclick="submitScore()">Submit Score</button>
+  </div>
+  <div id="lb-table"></div>
+  <div id="lb-empty">No scores yet — go fish!</div>
+</div>
 </div>
 <script>
 const C=document.getElementById('c'),ctx=C.getContext('2d');
@@ -111,7 +151,7 @@ const W=620,H=380,WY=150;
 // --- STATE ---
 let frame=0,coins=0,score=0,catches=0,bestFish=null;
 let equippedRod=0,ownedRods=new Set([0]);
-let state='idle',shopOpen=false,bagOpen=false;
+let state='idle',shopOpen=false,bagOpen=false,lbOpen=false;
 let inventory=[]; // {fish, weight, pts}
 const MAX_INV=20;
 let bobX=0,bobY=0,bobVX=0,bobVY=0,bobBob=0;
@@ -251,6 +291,50 @@ function sellAll(){
   coins+=total;inventory=[];
   updateUI();renderBag();if(shopOpen)renderShop();
   setText('Sold everything for 🪙 '+total+'!');
+}
+
+// --- LEADERBOARD ---
+const LB_KEY='fishing_lb_v1';
+function getScores(){try{return JSON.parse(localStorage.getItem(LB_KEY)||'[]');}catch{return[];}}
+function saveScores(arr){localStorage.setItem(LB_KEY,JSON.stringify(arr));}
+
+function openLB(){
+  lbOpen=true;
+  document.getElementById('lb-overlay').style.display='block';
+  document.getElementById('lb-score-preview').textContent='Your score: '+score;
+  renderLB();
+}
+function closeLB(){lbOpen=false;document.getElementById('lb-overlay').style.display='none';}
+
+function submitScore(){
+  const nameEl=document.getElementById('lb-name');
+  const name=(nameEl.value||'').trim()||'Anon';
+  if(score===0){renderLB();return;}
+  const scores=getScores();
+  scores.push({name,score,catches,date:new Date().toLocaleDateString()});
+  scores.sort((a,b)=>b.score-a.score);
+  saveScores(scores.slice(0,10));
+  nameEl.value='';
+  renderLB();
+  setText('Score submitted! Nice fishing, '+name+'!');
+}
+
+function renderLB(){
+  const scores=getScores();
+  const table=document.getElementById('lb-table');
+  const empty=document.getElementById('lb-empty');
+  document.getElementById('lb-score-preview').textContent='Your score: '+score+' pts · '+catches+' catches';
+  if(!scores.length){table.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  const medals=['🥇','🥈','🥉'];
+  const cls=['gold','silver','bronze'];
+  table.innerHTML=scores.map((s,i)=>`
+    <div class="lb-row ${cls[i]||''}">
+      <span class="lb-rank">${medals[i]||'#'+(i+1)}</span>
+      <span class="lb-name-cell">${s.name.replace(/</g,'&lt;')}</span>
+      <span class="lb-score-cell">🪙 ${s.score.toLocaleString()}</span>
+      <span class="lb-date-cell">${s.date}</span>
+    </div>`).join('');
 }
 
 // --- BACKGROUND FISH ---
@@ -727,7 +811,7 @@ function getPos(e){
   return{x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height};
 }
 function handleClick(e){
-  if(shopOpen||bagOpen)return;
+  if(shopOpen||bagOpen||lbOpen)return;
   if(e._space){
     if(state==='nibble'){caughtFish=pickFish();reelProgress=0;state='hooked';setText('Hooked! Tap to reel in!');return;}
     if(state==='hooked'){reelProgress=100;return;}

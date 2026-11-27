@@ -3935,7 +3935,7 @@ document.addEventListener('keydown',e=>{
       if(a){
         fireAtkPower(a);
         atkHitBanner(a.label,a.color||'#ffcc00');
-        screenFlash(a.color||'#ffcc00',0.35);
+        if(!['bite','tail','roar'].includes(a.id))screenFlash(a.color||'#ffcc00',0.35);
         floatWorld(dragonMesh.position,a.label,a.color||'#ffcc00');
       }
     }
@@ -4640,7 +4640,7 @@ function closeAtkRing(fire){
       useKingWeapon();
     } else { fireAtkPower(a); }
     atkHitBanner(a.label,a.color||'#ffcc00');
-    screenFlash(a.color||'#ffcc00',0.35);
+    if(!['bite','tail','roar'].includes(a.id))screenFlash(a.color||'#ffcc00',0.35);
     if(dragonMesh)floatWorld(dragonMesh.position,a.label,a.color||'#ffcc00');
   }
 }

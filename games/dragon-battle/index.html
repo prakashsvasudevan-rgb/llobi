@@ -774,7 +774,7 @@ function buildDragonMesh(dt){
   const llg=makeLeg(-1),rlg=makeLeg(1);
   g.add(llg);g.add(rlg);
 
-  g.userData={lwp,rwp,llg,rlg,jawGroup,tailGroup,wingAngle:0,tailF:0,legCycle:0,jawT:0,tailSwingT:0};
+  g.userData={lwp,rwp,llg,rlg,jawGroup,tailGroup,wingAngle:0,tailF:0,legCycle:0,jawT:0,jawDur:1.0,tailSwingT:0,bodyPitchT:0,bodyPitchDir:1,bodyRollT:0};
   return g;
 }
 
@@ -4028,6 +4028,7 @@ document.addEventListener('keydown',e=>{
     if(e.code==='KeyZ'&&!dialogOpen&&!isHuman&&gs==='playing'){
       if(!abilityCooldown.pBite||abilityCooldown.pBite<=0){abilityCooldown.pBite=2;
         if(dragonMesh.userData.jawGroup){dragonMesh.userData.jawT=1.0;dragonMesh.userData.jawDur=1.0;}
+        dragonMesh.userData.bodyPitchT=0.5;dragonMesh.userData.bodyPitchDir=-1;
         const ref=dragonMesh.position;let be=null,bd=60;for(const ae of activeEnemies){if(!ae.userData.alive)continue;const d=ref.distanceTo(ae.position);if(d<bd){bd=d;be=ae;}}
         if(be){spawnBeamFX(ref.clone().add(new THREE.Vector3(0,2,0)),be.position.clone(),0xff2200);hitEnemy(be,upgradedDmg()*5);spawnAbilityCloud(be.position.clone(),0xff2200,22,0.5);floatWorld(ref.clone().add(new THREE.Vector3(0,8,0)),'🦷 BITE!','#ff4400');}
         else floatWorld(ref.clone().add(new THREE.Vector3(0,8,0)),'No target!','#ff4444');
@@ -4036,6 +4037,7 @@ document.addEventListener('keydown',e=>{
     if(e.code==='KeyC'&&!dialogOpen&&!isHuman&&gs==='playing'){
       if(!abilityCooldown.pTail||abilityCooldown.pTail<=0){abilityCooldown.pTail=3;
         if(dragonMesh.userData.tailGroup)dragonMesh.userData.tailSwingT=0.9;
+        dragonMesh.userData.bodyRollT=0.6;
         const ref=dragonMesh.position;
         spawnAbilityCloud(ref.clone(),0xff8800,70,1.5);
         for(let ti=0;ti<16;ti++){const ta=ti/16*Math.PI*2;spawnAbilityCloud(ref.clone().add(new THREE.Vector3(Math.cos(ta)*40,0,Math.sin(ta)*40)),0xff8800,16,0.5);}
@@ -4046,6 +4048,7 @@ document.addEventListener('keydown',e=>{
     if(e.code==='KeyR'&&!dialogOpen&&!isHuman&&gs==='playing'){
       if(!abilityCooldown.pRoar||abilityCooldown.pRoar<=0){abilityCooldown.pRoar=5;
         if(dragonMesh.userData.jawGroup){dragonMesh.userData.jawT=1.4;dragonMesh.userData.jawDur=1.4;}
+        dragonMesh.userData.bodyPitchT=0.7;dragonMesh.userData.bodyPitchDir=1;
         const ref=dragonMesh.position;
         spawnAbilityCloud(ref.clone(),dtype.color||0xff4400,100,2.0);spawnAbilityCloud(ref.clone(),0xffffff,60,1.2);
         for(const ae of activeEnemies){if(!ae.userData.alive)continue;const d=ref.distanceTo(ae.position);if(d<120){hitEnemy(ae,upgradedDmg()*2);ae.position.addScaledVector(new THREE.Vector3().subVectors(ae.position,ref).normalize(),30);}}
@@ -4265,16 +4268,19 @@ function fireAtkPower(a){
       spawnAbilityCloud(ref,0xff4400,30,0.6);break;
     case 'bite':// Lunge: big damage on nearest enemy + stun
       {if(dragonMesh&&dragonMesh.userData.jawGroup){dragonMesh.userData.jawT=1.0;dragonMesh.userData.jawDur=1.0;}
+      if(dragonMesh){dragonMesh.userData.bodyPitchT=0.5;dragonMesh.userData.bodyPitchDir=-1;}
       let be=null,bd=80;for(const e of activeEnemies){if(!e.userData.alive)continue;const d=e.position.distanceTo(ref);if(d<bd){bd=d;be=e;}}
       if(be){hitEnemy(be,DMG*4);floatWorld(be.position,'💢 CRUSH!','#ff8800');}
       else floatWorld(ref,'No target in range','#888');break;}
     case 'tail':// Spinning slam — AOE around player
       {if(dragonMesh&&dragonMesh.userData.tailGroup)dragonMesh.userData.tailSwingT=0.9;
+      if(dragonMesh){dragonMesh.userData.bodyRollT=0.6;}
       const hits=nearEnemies(55);
       hits.forEach(e=>{hitEnemy(e,DMG*2.5);const push=e.position.clone().sub(ref).normalize().multiplyScalar(30);e.position.add(push);});
       floatWorld(ref,'💥 TAIL SLAM x'+hits.length,'#cc4400');break;}
     case 'roar':// Fear roar — pushes all enemies back, stuns shoot timer
       {if(dragonMesh&&dragonMesh.userData.jawGroup){dragonMesh.userData.jawT=1.4;dragonMesh.userData.jawDur=1.4;}
+      if(dragonMesh){dragonMesh.userData.bodyPitchT=0.7;dragonMesh.userData.bodyPitchDir=1;}
       const hits=nearEnemies(180);
       hits.forEach(e=>{e.userData.shootT=Math.max(e.userData.shootT,3);const push=e.position.clone().sub(ref).normalize().multiplyScalar(50);e.position.add(push);});
       floatWorld(ref,'🔊 FOES SCATTERED!','#aa66ff');break;}
@@ -5360,6 +5366,16 @@ function update(ts){
       ud.tailSwingT=Math.max(0,ud.tailSwingT-dt);
       if(ud.tailGroup)ud.tailGroup.rotation.y=Math.sin((1-ud.tailSwingT/0.9)*Math.PI*3)*0.8;
     } else if(ud.tailGroup){ud.tailGroup.rotation.y*=0.8;}
+    // Body pitch (bite=lunge forward, roar=head up) — visible from rear camera
+    if(ud.bodyPitchT>0){
+      ud.bodyPitchT=Math.max(0,ud.bodyPitchT-dt);
+      dragonMesh.rotation.x=(ud.bodyPitchDir||1)*Math.sin((1-ud.bodyPitchT/0.5)*Math.PI)*0.45;
+    } else {dragonMesh.rotation.x*=0.75;}
+    // Body roll (tail sweep) — visible from rear camera
+    if(ud.bodyRollT>0){
+      ud.bodyRollT=Math.max(0,ud.bodyRollT-dt);
+      dragonMesh.rotation.z=Math.sin((1-ud.bodyRollT/0.6)*Math.PI*2)*0.5;
+    } else {dragonMesh.rotation.z*=0.75;}
 
     // Camera: smooth third-person follow
     const camOff=new THREE.Vector3(0,8,-18);

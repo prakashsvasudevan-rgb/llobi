@@ -6569,10 +6569,9 @@ function update(ts){
 
     // ── FRIENDLY NPC COMBAT (Blane + Elders fight nearby enemies) ───────────
     for(const npc of friendlyNPCs){
-      if(!npc.userData.npcName)continue;
+      const _nn=String(npc.userData.npcName||'');if(!_nn)continue;
       // Only combatants: Blane, Elder NPCs, Dragon Keepers — not plain recruitable villagers
-      const isCombatant=npc===blaneNPC||
-        (typeof npc.userData.npcName==='string'&&(npc.userData.npcName.includes('Elder')||npc.userData.npcName.includes('Keeper')||npc.userData.npcName==='Dragon Keeper'));
+      const isCombatant=npc===blaneNPC||_nn.includes('Elder')||_nn.includes('Keeper')||_nn==='Dragon Keeper';
       if(!isCombatant)continue;
       if(npc.userData.npcAtkT===undefined)npc.userData.npcAtkT=2+Math.random()*2;
       npc.userData.npcAtkT-=dt;

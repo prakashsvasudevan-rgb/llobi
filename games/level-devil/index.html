@@ -150,8 +150,8 @@ function updateEntities(){
     }
     else if(e.type==='laser'){
       const t=(frameN+e.phase)%e.period;
-      e.on=t>e.period*0.4; // on for 60% of cycle
-      e.warning=t>e.period*0.3&&!e.on; // brief warning flash
+      e.on=t>e.period*0.2; // on for 80% of cycle
+      e.warning=t>e.period*0.12&&!e.on;
       if(e.on){
         // kill if player overlaps beam
         if(e.horiz){

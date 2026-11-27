@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Level Devil</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:'Segoe UI',sans-serif;overflow:hidden;}
+canvas{display:block;border:3px solid #ff3300;border-radius:4px;image-rendering:pixelated;}
+#ui{color:#fff;font-size:14px;margin-bottom:8px;display:flex;gap:24px;align-items:center;}
+#deaths-label{color:#ff5533;font-weight:800;font-size:18px;}
+#level-label{color:#ffcc00;font-weight:800;font-size:18px;}
+#hint{color:#ff3300;font-size:12px;margin-top:6px;height:16px;text-align:center;font-style:italic;}
+</style>
+</head>
+<body>
+<div id="ui">
+  <span id="level-label">Level 1</span>
+  <span>|</span>
+  <span>💀 Deaths: <span id="deaths-label">0</span></span>
+</div>
+<canvas id="c" width="480" height="320"></canvas>
+<div id="hint"></div>
+
+<script>
+const C=document.getElementById('c');
+const ctx=C.getContext('2d');
+const W=480,H=320;
+const GRAVITY=0.45,JUMP=-9,SPEED=3.2,TW=24,TH=24;
+const COLS=Math.floor(W/TW),ROWS=Math.floor(H/TH); // 20x13
+
+let deaths=0,currentLevel=0,frameN=0;
+
+// ── PLAYER ──────────────────────────────────────────
+const P={x:0,y:0,vx:0,vy:0,w:18,h:22,onGround:false,dead:false,deathTimer:0};
+
+// ── INPUT ───────────────────────────────────────────
+const keys={};
+document.addEventListener('keydown',e=>{
+  keys[e.code]=true;
+  if((e.code==='Space'||e.code==='ArrowUp'||e.code==='KeyW')&&P.onGround&&!P.dead){
+    P.vy=JUMP; P.onGround=false;
+  }
+});
+document.addEventListener('keyup',e=>keys[e.code]=false);
+
+// ── TILES ────────────────────────────────────────────
+// 0=air 1=solid 2=spike_up 3=spike_down 4=spike_left 5=spike_right 6=goal
+let tiles=[];
+let traps=[]; // {type, ...params, triggered, done}
+let platforms=[]; // moving platforms
+
+function tile(c,r){return tiles[r*COLS+c]||0;}
+function setTile(c,r,v){if(c>=0&&c<COLS&&r>=0&&r<ROWS)tiles[r*COLS+c]=v;}
+
+// ── LEVEL DEFINITIONS ────────────────────────────────
+const LEVELS=[
+
+// ═══ LEVEL 1 — "Welcome" ════════════════════════════
+{
+  hint:"Looks safe...",
+  build(){
+    tiles=new Array(COLS*ROWS).fill(0);
+    traps=[];platforms=[];
+    // floor
+    for(let c=0;c<COLS;c++) setTile(c,ROWS-1,1);
+    // walls
+    for(let r=0;r<ROWS;r++){setTile(0,r,1);setTile(COLS-1,r,1);}
+    // platforms
+    for(let c=3;c<=7;c++) setTile(c,8,1);
+    for(let c=11;c<=15;c++) setTile(c,6,1);
+    for(let c=16;c<=18;c++) setTile(c,10,1);
+    // goal
+    setTile(COLS-2,ROWS-2,6);
+    // player start
+    P.x=TW+2; P.y=(ROWS-2)*TH;
+    // TRAPS
+    // floor drops under player when they reach x>200
+    traps.push({type:'dropcols',cols:[8,9,10],row:ROWS-1,triggered:false,done:false,
+      trigger:()=>P.x>200&&P.x<260});
+    // spikes shoot up from floor at col 16-18 after player crosses x>330
+    traps.push({type:'spikes_up',cols:[16,17,18],row:ROWS-2,triggered:false,done:false,
+      trigger:()=>P.x>310});
+  }
+},
+
+// ═══ LEVEL 2 — "Mind the Gap" ═══════════════════════
+{
+  hint:"The path is clear... right?",
+  build(){
+    tiles=new Array(COLS*ROWS).fill(0);
+    traps=[];platforms=[];
+    for(let c=0;c<COLS;c++) setTile(c,ROWS-1,1);
+    for(let r=0;r<ROWS;r++){setTile(0,r,1);setTile(COLS-1,r,1);}
+    // staircase platforms
+    for(let c=2;c<=5;c++) setTile(c,10,1);
+    for(let c=6;c<=9;c++) setTile(c,8,1);
+    for(let c=10;c<=13;c++) setTile(c,6,1);
+    for(let c=14;c<=17;c++) setTile(c,4,1);
+    setTile(COLS-2,3,6);
+    P.x=TW+2; P.y=(ROWS-2)*TH;
+    // platform collapses when stepped on
+    traps.push({type:'collapse',cols:[6,7,8,9],row:8,timer:0,triggered:false,done:false,
+      trigger:()=>P.onGround&&P.y>=(8*TH-P.h-2)&&P.y<=(8*TH+2)&&P.x>6*TW&&P.x<10*TW});
+    // ceiling spikes drop when player reaches platform 3
+    traps.push({type:'spikes_down',cols:[10,11,12,13],row:1,triggered:false,done:false,
+      trigger:()=>P.x>10*TW&&P.y<7*TH});
+    // wall of spikes from right when near top
+    traps.push({type:'spikes_left',rows:[3,4,5],col:COLS-2,triggered:false,done:false,
+      trigger:()=>P.x>14*TW&&P.y<5*TH});
+  }
+},
+
+// ═══ LEVEL 3 — "Safe Road" ══════════════════════════
+{
+  hint:"Trust nothing.",
+  build(){
+    tiles=new Array(COLS*ROWS).fill(0);
+    traps=[];platforms=[];
+    for(let c=0;c<COLS;c++) setTile(c,ROWS-1,1);
+    for(let r=0;r<ROWS;r++){setTile(0,r,1);setTile(COLS-1,r,1);}
+    // long floor, looks totally open
+    for(let c=1;c<COLS-1;c++) setTile(c,ROWS-2,0); // no second floor
+    setTile(COLS-2,ROWS-2,6);
+    P.x=TW+2; P.y=(ROWS-2)*TH;
+    // multiple floor drops
+    traps.push({type:'dropcols',cols:[5,6,7],row:ROWS-1,triggered:false,done:false,trigger:()=>P.x>4*TW});
+    traps.push({type:'dropcols',cols:[12,13],row:ROWS-1,triggered:false,done:false,trigger:()=>P.x>11*TW});
+    // spikes shoot from ceiling when near gap
+    traps.push({type:'spikes_down',cols:[8,9,10,11],row:1,triggered:false,done:false,trigger:()=>P.x>7*TW&&P.x<12*TW});
+    // fake wall dissolves revealing spikes
+    for(let r=ROWS-6;r<=ROWS-2;r++) setTile(16,r,1);
+    traps.push({type:'reveal_spikes',col:16,rows:[ROWS-5,ROWS-4,ROWS-3,ROWS-2],triggered:false,done:false,
+      trigger:()=>P.x>14*TW});
+  }
+},
+
+// ═══ LEVEL 4 — "Moving Day" ═════════════════════════
+{
+  hint:"Platforms help... until they don't.",
+  build(){
+    tiles=new Array(COLS*ROWS).fill(0);
+    traps=[];platforms=[];
+    for(let c=0;c<COLS;c++) setTile(c,ROWS-1,1);
+    for(let r=0;r<ROWS;r++){setTile(0,r,1);setTile(COLS-1,r,1);}
+    setTile(COLS-2,2,6);
+    P.x=TW+2; P.y=(ROWS-2)*TH;
+    // moving platforms
+    platforms.push({x:60,y:220,w:72,h:12,vx:1.5,bounds:[24,220],dir:1});
+    platforms.push({x:160,y:170,w:72,h:12,vx:0,vy:-1.2,bounds_y:[80,220],dir:1});
+    platforms.push({x:280,y:120,w:72,h:12,vx:1.8,bounds:[240,400],dir:1});
+    // spikes on walls
+    traps.push({type:'spikes_right',rows:[ROWS-3,ROWS-4,ROWS-5],col:1,triggered:false,done:false,trigger:()=>P.x<2.5*TW&&P.vy>0});
+    // floor drops on left half when player gets high
+    traps.push({type:'dropcols',cols:[1,2,3,4,5,6,7,8],row:ROWS-1,triggered:false,done:false,trigger:()=>P.y<8*TH});
+    // ceiling falls
+    traps.push({type:'dropcols_ceiling',cols:[10,11,12,13,14,15,16,17],row:0,triggered:false,done:false,trigger:()=>P.x>9*TW&&P.y<10*TH});
+  }
+},
+
+// ═══ LEVEL 5 — "The Final Trick" ════════════════════
+{
+  hint:"You're so close... 😈",
+  build(){
+    tiles=new Array(COLS*ROWS).fill(0);
+    traps=[];platforms=[];
+    for(let c=0;c<COLS;c++) setTile(c,ROWS-1,1);
+    for(let r=0;r<ROWS;r++){setTile(0,r,1);setTile(COLS-1,r,1);}
+    // narrow path
+    for(let c=1;c<COLS-1;c++) setTile(c,6,1);
+    for(let c=1;c<COLS-1;c++) setTile(c,7,0);
+    for(let r=0;r<6;r++) for(let c=1;c<COLS-1;c++) setTile(c,r,0);
+    // solid ceiling
+    for(let c=0;c<COLS;c++) setTile(c,0,1);
+    setTile(COLS-2,5,6);
+    P.x=TW+2; P.y=5*TH;
+    // spikes shoot up from floor AS SOON as player walks
+    traps.push({type:'spikes_up_range',c1:5,c2:14,row:6,triggered:false,done:false,trigger:()=>P.x>4*TW});
+    // ceiling opens to spikes
+    traps.push({type:'spikes_down',cols:[2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18],row:1,triggered:false,done:false,trigger:()=>P.x>8*TW});
+    // fake goal — when player touches it, spikes come out
+    traps.push({type:'fake_goal',col:COLS-2,row:5,triggered:false,done:false,trigger:()=>P.x>=(COLS-2)*TW-4&&P.y>=5*TH-P.h-4});
+    // REAL goal hidden — appears after surviving fake_goal trigger
+  }
+},
+
+];
+
+// ── TRAP LOGIC ───────────────────────────────────────
+function updateTraps(){
+  for(const t of traps){
+    if(t.done) continue;
+    if(!t.triggered&&t.trigger()){
+      t.triggered=true;
+      t.timer=t.timer||0;
+    }
+    if(!t.triggered) continue;
+    t.timer++;
+
+    if(t.type==='dropcols'){
+      if(t.timer===1) for(const c of t.cols) setTile(c,t.row,0);
+      t.done=true;
+    }
+    if(t.type==='dropcols_ceiling'){
+      if(t.timer===1) for(const c of t.cols) setTile(c,t.row,0);
+      t.done=true;
+    }
+    if(t.type==='spikes_up'){
+      if(t.timer===1) for(const c of t.cols) setTile(c,t.row,2);
+      t.done=true;
+    }
+    if(t.type==='spikes_up_range'){
+      if(t.timer===1) for(let c=t.c1;c<=t.c2;c++) setTile(c,t.row,2);
+      t.done=true;
+    }
+    if(t.type==='spikes_down'){
+      if(t.timer===1) for(const c of t.cols) setTile(c,t.row,3);
+      t.done=true;
+    }
+    if(t.type==='spikes_left'){
+      if(t.timer===1) for(const r of t.rows) setTile(t.col,r,4);
+      t.done=true;
+    }
+    if(t.type==='spikes_right'){
+      if(t.timer===1) for(const r of t.rows) setTile(t.col,r,5);
+      t.done=true;
+    }
+    if(t.type==='collapse'){
+      if(t.timer>22) for(const c of t.cols) setTile(c,t.row,0);
+      if(t.timer>22) t.done=true;
+    }
+    if(t.type==='reveal_spikes'){
+      if(t.timer===1){
+        setTile(t.col,0,0); // remove fake wall top
+        for(const r of t.rows) setTile(t.col,r,5);
+      }
+      t.done=true;
+    }
+    if(t.type==='fake_goal'){
+      if(t.timer===1){
+        setTile(t.col,t.row,1); // replace goal with solid
+        // spikes everywhere around goal
+        for(let c=t.col-3;c<=t.col;c++) setTile(c,t.row,2);
+        for(let c=t.col-3;c<=t.col;c++) setTile(c,t.row-1,3);
+        // real goal appears above
+        setTile(2,2,6);
+      }
+      t.done=true;
+    }
+  }
+}
+
+// ── PHYSICS ──────────────────────────────────────────
+function updatePlayer(){
+  if(P.dead){
+    P.deathTimer++;
+    if(P.deathTimer>45) loadLevel(currentLevel);
+    return;
+  }
+  // horizontal
+  let dx=0;
+  if(keys['ArrowLeft']||keys['KeyA']) dx=-SPEED;
+  if(keys['ArrowRight']||keys['KeyD']) dx=SPEED;
+  P.vx=dx;
+  P.vy+=GRAVITY;
+  if(P.vy>14) P.vy=14;
+
+  P.x+=P.vx;
+  resolveX();
+  P.y+=P.vy;
+  P.onGround=false;
+  resolveY();
+
+  // moving platform collision
+  for(const pl of platforms){
+    if(P.x+P.w>pl.x&&P.x<pl.x+pl.w&&P.y+P.h>pl.y&&P.y+P.h<pl.y+pl.h+6&&P.vy>=0){
+      P.y=pl.y-P.h;
+      P.vy=0;
+      P.onGround=true;
+      P.x+=pl.vx||0;
+    }
+  }
+
+  // kill if out of bottom
+  if(P.y>H+30) die();
+}
+
+function tileAt(px,py){
+  const c=Math.floor(px/TW), r=Math.floor(py/TH);
+  return tile(c,r);
+}
+
+function isSolid(t){return t===1;}
+function isKill(t){return t===2||t===3||t===4||t===5;}
+function isGoal(t){return t===6;}
+
+function resolveX(){
+  const left=Math.floor(P.x/TW);
+  const right=Math.floor((P.x+P.w-1)/TW);
+  const top=Math.floor(P.y/TH);
+  const bot=Math.floor((P.y+P.h-1)/TH);
+  for(let r=top;r<=bot;r++){
+    if(isSolid(tile(left,r))&&P.vx<0){P.x=left*TW+TW;break;}
+    if(isSolid(tile(right,r))&&P.vx>0){P.x=right*TW-P.w;break;}
+    if(isKill(tile(left,r))||isKill(tile(right,r))) die();
+    if(isGoal(tile(left,r))||isGoal(tile(right,r))) winLevel();
+  }
+}
+
+function resolveY(){
+  const left=Math.floor(P.x/TW);
+  const right=Math.floor((P.x+P.w-1)/TW);
+  const top=Math.floor(P.y/TH);
+  const bot=Math.floor((P.y+P.h-1)/TH);
+  for(let c=left;c<=right;c++){
+    if(isSolid(tile(c,top))&&P.vy<0){P.y=top*TH+TH;P.vy=0;break;}
+    if(isSolid(tile(c,bot))&&P.vy>0){P.y=bot*TH-P.h;P.vy=0;P.onGround=true;break;}
+    if(isKill(tile(c,top))||isKill(tile(c,bot))) die();
+    if(isGoal(tile(c,top))||isGoal(tile(c,bot))) winLevel();
+  }
+}
+
+// ── PLATFORMS ────────────────────────────────────────
+function updatePlatforms(){
+  for(const pl of platforms){
+    if(pl.vx){
+      pl.x+=pl.dir*pl.vx;
+      if(pl.x<=pl.bounds[0]||pl.x+pl.w>=pl.bounds[1]) pl.dir*=-1;
+    }
+    if(pl.vy){
+      pl.y+=pl.dir*(pl.vy||0);
+      if(pl.bounds_y&&(pl.y<=pl.bounds_y[0]||pl.y>=pl.bounds_y[1])) pl.dir*=-1;
+    }
+  }
+}
+
+// ── DEATH / WIN ──────────────────────────────────────
+function die(){
+  if(P.dead) return;
+  P.dead=true; P.deathTimer=0;
+  deaths++;
+  document.getElementById('deaths-label').textContent=deaths;
+  showHint('💀 Oops!');
+}
+
+function winLevel(){
+  currentLevel++;
+  if(currentLevel>=LEVELS.length){
+    showEndScreen();
+  } else {
+    loadLevel(currentLevel);
+  }
+}
+
+function loadLevel(idx){
+  currentLevel=idx;
+  frameN=0;
+  P.dead=false; P.vx=0; P.vy=0;
+  LEVELS[idx].build();
+  document.getElementById('level-label').textContent='Level '+(idx+1);
+  showHint(LEVELS[idx].hint);
+}
+
+function showHint(msg){
+  document.getElementById('hint').textContent=msg;
+  clearTimeout(showHint._t);
+  showHint._t=setTimeout(()=>document.getElementById('hint').textContent='',2500);
+}
+
+// ── DRAWING ──────────────────────────────────────────
+const COLORS={
+  bg:'#1a0a0a',
+  solid:'#cc3300',
+  solidEdge:'#ff5500',
+  spike:'#ff2200',
+  goal:'#ffdd00',
+  player:'#ffffff',
+  platf:'#884400',
+};
+
+function drawTiles(){
+  for(let r=0;r<ROWS;r++){
+    for(let c=0;c<COLS;c++){
+      const t=tile(c,r);
+      const x=c*TW,y=r*TH;
+      if(t===1){
+        ctx.fillStyle=COLORS.solid;
+        ctx.fillRect(x,y,TW,TH);
+        ctx.fillStyle=COLORS.solidEdge;
+        ctx.fillRect(x,y,TW,3);
+        // brick pattern
+        ctx.fillStyle='rgba(0,0,0,0.25)';
+        const boff=(r%2)*12;
+        for(let bx=x;bx<x+TW;bx+=24){ctx.fillRect(bx+boff,y,1,TH);}
+        ctx.fillRect(x,y+TH/2,TW,1);
+      } else if(t===2){ // spike up
+        ctx.fillStyle=COLORS.spike;
+        const mx=x+TW/2,by=y+TH;
+        ctx.beginPath();ctx.moveTo(mx,y+2);ctx.lineTo(x+2,by);ctx.lineTo(x+TW-2,by);ctx.closePath();ctx.fill();
+      } else if(t===3){ // spike down
+        ctx.fillStyle=COLORS.spike;
+        const mx=x+TW/2,ty=y;
+        ctx.beginPath();ctx.moveTo(mx,ty+TH-2);ctx.lineTo(x+2,ty);ctx.lineTo(x+TW-2,ty);ctx.closePath();ctx.fill();
+      } else if(t===4){ // spike left
+        ctx.fillStyle=COLORS.spike;
+        ctx.beginPath();ctx.moveTo(x+2,y+TH/2);ctx.lineTo(x+TW,y+2);ctx.lineTo(x+TW,y+TH-2);ctx.closePath();ctx.fill();
+      } else if(t===5){ // spike right
+        ctx.fillStyle=COLORS.spike;
+        ctx.beginPath();ctx.moveTo(x+TW-2,y+TH/2);ctx.lineTo(x,y+2);ctx.lineTo(x,y+TH-2);ctx.closePath();ctx.fill();
+      } else if(t===6){ // goal
+        const pulse=0.7+0.3*Math.sin(frameN*0.12);
+        ctx.fillStyle=`rgba(255,220,0,${pulse})`;
+        ctx.beginPath();
+        // star shape
+        const cx2=x+TW/2,cy=y+TH/2,r1=TW*0.42,r2=TW*0.18;
+        for(let i=0;i<10;i++){
+          const ang=i*Math.PI/5-Math.PI/2;
+          const rr=i%2===0?r1:r2;
+          i===0?ctx.moveTo(cx2+Math.cos(ang)*rr,cy+Math.sin(ang)*rr):ctx.lineTo(cx2+Math.cos(ang)*rr,cy+Math.sin(ang)*rr);
+        }
+        ctx.closePath();ctx.fill();
+      }
+    }
+  }
+}
+
+function drawPlatforms(){
+  for(const pl of platforms){
+    ctx.fillStyle=COLORS.platf;
+    ctx.fillRect(pl.x,pl.y,pl.w,pl.h);
+    ctx.fillStyle='#aa6622';
+    ctx.fillRect(pl.x,pl.y,pl.w,3);
+  }
+}
+
+function drawPlayer(){
+  if(P.dead){
+    // spin / fade
+    ctx.save();
+    ctx.globalAlpha=Math.max(0,1-P.deathTimer/30);
+    ctx.translate(P.x+P.w/2,P.y+P.h/2);
+    ctx.rotate(P.deathTimer*0.25);
+    ctx.fillStyle='#ffffff';
+    ctx.fillRect(-P.w/2,-P.h/2,P.w,P.h);
+    // X eyes
+    ctx.fillStyle='#ff2200';
+    ctx.font='bold 10px sans-serif';ctx.textAlign='center';
+    ctx.fillText('X',0,2);
+    ctx.restore();
+    return;
+  }
+  // body
+  ctx.fillStyle='#eeeeee';
+  ctx.fillRect(P.x,P.y,P.w,P.h);
+  // face
+  ctx.fillStyle='#111';
+  ctx.fillRect(P.x+5,P.y+5,3,3);
+  ctx.fillRect(P.x+10,P.y+5,3,3);
+  ctx.fillStyle='#111';
+  ctx.fillRect(P.x+5,P.y+13,8,2);
+  // legs wiggle
+  if(keys['ArrowLeft']||keys['ArrowRight']){
+    const lk=Math.sin(frameN*0.4)*4;
+    ctx.fillStyle='#aaa';
+    ctx.fillRect(P.x+2,P.y+P.h,5,4+lk);
+    ctx.fillRect(P.x+P.w-7,P.y+P.h,5,4-lk);
+  } else {
+    ctx.fillStyle='#aaa';
+    ctx.fillRect(P.x+2,P.y+P.h,5,4);
+    ctx.fillRect(P.x+P.w-7,P.y+P.h,5,4);
+  }
+}
+
+function drawBg(){
+  ctx.fillStyle=COLORS.bg;
+  ctx.fillRect(0,0,W,H);
+  // subtle grid dots
+  ctx.fillStyle='rgba(255,50,0,0.05)';
+  for(let x=0;x<W;x+=TW) for(let y=0;y<H;y+=TH) ctx.fillRect(x,y,2,2);
+}
+
+// ── END SCREEN ───────────────────────────────────────
+let gameWon=false;
+function showEndScreen(){
+  gameWon=true;
+}
+function drawEndScreen(){
+  ctx.fillStyle='rgba(0,0,0,0.85)';
+  ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#ffdd00';
+  ctx.font='bold 36px sans-serif';ctx.textAlign='center';
+  ctx.fillText('YOU WIN!',W/2,H/2-40);
+  ctx.fillStyle='#fff';
+  ctx.font='20px sans-serif';
+  ctx.fillText(`Deaths: ${deaths}`,W/2,H/2);
+  ctx.font='16px sans-serif';
+  ctx.fillStyle='#ff9966';
+  const rank=deaths<5?'👑 Flawless!':deaths<15?'😤 Tough cookie':deaths<30?'😅 Getting there':'😈 The Devil wins... this time';
+  ctx.fillText(rank,W/2,H/2+32);
+  ctx.fillStyle='#aaa';
+  ctx.font='13px sans-serif';
+  ctx.fillText('Press Space to play again',W/2,H/2+65);
+  document.addEventListener('keydown',function rst(e){
+    if(e.code==='Space'){deaths=0;gameWon=false;loadLevel(0);document.removeEventListener('keydown',rst);}
+  });
+}
+
+// ── LOOP ─────────────────────────────────────────────
+function loop(){
+  frameN++;
+  if(gameWon){drawEndScreen();requestAnimationFrame(loop);return;}
+  updatePlayer();
+  updateTraps();
+  updatePlatforms();
+  drawBg();
+  drawTiles();
+  drawPlatforms();
+  drawPlayer();
+  requestAnimationFrame(loop);
+}
+
+loadLevel(0);
+loop();
+</script>
+</body>
+</html>

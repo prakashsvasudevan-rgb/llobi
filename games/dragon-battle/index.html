@@ -4264,18 +4264,15 @@ function fireAtkPower(a){
       for(let i=-2;i<=2;i++){const ang=i*0.18;const d=new THREE.Vector3(Math.sin(ang),0,Math.cos(ang)).applyEuler(dragonMesh.rotation);spawnProjectile('fire',ref.clone().add(d.clone().multiplyScalar(8)),ref.clone().add(d.clone().multiplyScalar(60)));}
       spawnAbilityCloud(ref,0xff4400,30,0.6);break;
     case 'bite':// Lunge: big damage on nearest enemy + stun
-      {if(dragonMesh&&dragonMesh.userData.jawGroup){dragonMesh.userData.jawT=1.0;dragonMesh.userData.jawDur=1.0;}
-      let be=null,bd=80;for(const e of activeEnemies){if(!e.userData.alive)continue;const d=e.position.distanceTo(ref);if(d<bd){bd=d;be=e;}}
-      if(be){hitEnemy(be,DMG*4);spawnAbilityCloud(be.position.clone(),0xff8800,25,0.8);floatWorld(be.position,'💢 CRUSH!','#ff8800');}
+      {let be=null,bd=80;for(const e of activeEnemies){if(!e.userData.alive)continue;const d=e.position.distanceTo(ref);if(d<bd){bd=d;be=e;}}
+      if(be){hitEnemy(be,DMG*4);floatWorld(be.position,'💢 CRUSH!','#ff8800');}
       else floatWorld(ref,'No target in range','#888');break;}
     case 'tail':// Spinning slam — AOE around player
-      {if(dragonMesh&&dragonMesh.userData.tailGroup)dragonMesh.userData.tailSwingT=0.9;
-      const hits=nearEnemies(55);spawnAbilityCloud(ref,0xcc4400,55,1.0);spawnAbilityCloud(ref,0xff8844,35,0.6);
+      {const hits=nearEnemies(55);
       hits.forEach(e=>{hitEnemy(e,DMG*2.5);const push=e.position.clone().sub(ref).normalize().multiplyScalar(30);e.position.add(push);});
       floatWorld(ref,'💥 TAIL SLAM x'+hits.length,'#cc4400');break;}
     case 'roar':// Fear roar — pushes all enemies back, stuns shoot timer
-      {if(dragonMesh&&dragonMesh.userData.jawGroup){dragonMesh.userData.jawT=1.4;dragonMesh.userData.jawDur=1.4;}
-      const hits=nearEnemies(180);spawnAbilityCloud(ref,0xaa66ff,100,2.0);spawnAbilityCloud(ref,0xffffff,60,1.0);
+      {const hits=nearEnemies(180);
       hits.forEach(e=>{e.userData.shootT=Math.max(e.userData.shootT,3);const push=e.position.clone().sub(ref).normalize().multiplyScalar(50);e.position.add(push);});
       floatWorld(ref,'🔊 FOES SCATTERED!','#aa66ff');break;}
     case 'storm':// Lightning hits every enemy

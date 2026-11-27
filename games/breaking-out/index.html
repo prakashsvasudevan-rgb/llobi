@@ -8,11 +8,11 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:Georgia,serif;user-select:none}
 #wrap{width:620px;max-width:100%}
-canvas{display:block;width:100%;background:#2a2a3a}
-#ui{background:#0d0d1a;border:2px solid #4a3a60;border-top:none;padding:9px 14px 7px;display:flex;gap:10px;align-items:center}
+canvas{display:block;width:100%}
+#ui{background:#0d0d1a;border:2px solid #4a3a60;border-top:none;padding:9px 14px 7px;display:flex;gap:10px;align-items:center;min-height:58px}
 #text-box{flex:1;color:#ddd;font-size:13px;line-height:1.45;min-height:38px}
-#inv-bar{display:flex;gap:5px}
-.inv-slot{width:42px;height:42px;border:2px solid #553355;border-radius:5px;background:#1a0a2a;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;flex-shrink:0;transition:border-color .15s,background .15s}
+#inv-bar{display:flex;gap:4px;flex-shrink:0}
+.inv-slot{width:38px;height:38px;border:2px solid #553355;border-radius:5px;background:#1a0a2a;display:flex;align-items:center;justify-content:center;font-size:17px;cursor:pointer;flex-shrink:0;transition:border-color .15s}
 .inv-slot:hover:not(.empty){border-color:#aa77cc}
 .inv-slot.selected{border-color:#ffdd44;background:#2a1a0a}
 .inv-slot.empty{opacity:.3;cursor:default}
@@ -22,13 +22,14 @@ canvas{display:block;width:100%;background:#2a2a3a}
 <div id="wrap">
 <canvas id="c" width="620" height="380"></canvas>
 <div id="ui">
-  <div id="text-box">Click on things in your cell to explore. Find items and escape!</div>
-  <div id="inv-bar">
+  <div id="text-box">You're in Cell B-13. The door is locked. Find a way out.</div>
+  <div id="inv-bar" id="inv-bar">
     <div class="inv-slot empty" id="s0"></div>
     <div class="inv-slot empty" id="s1"></div>
     <div class="inv-slot empty" id="s2"></div>
     <div class="inv-slot empty" id="s3"></div>
     <div class="inv-slot empty" id="s4"></div>
+    <div class="inv-slot empty" id="s5"></div>
   </div>
 </div>
 </div>
@@ -38,252 +39,335 @@ const W=620,H=380,tb=document.getElementById('text-box');
 let mx=0,my=0,frame=0;
 
 // ── INVENTORY ───────────────────────────────────────────────
-const MAX_INV=5;
+const MAX_INV=6;
 let inv=[],selItem=null;
-const ICONS={file:'📄',coin:'🪙',driver:'🔩',spoon:'🥄',poster:'🖼️',uniform:'👕',rope:'🪢',key:'🗝️',phone:'📱',gum:'🍬'};
-const INAME={file:'Metal File',coin:'Gold Coin',driver:'Screwdriver',spoon:'Spoon',poster:'Movie Poster',uniform:'Guard Uniform',rope:'Knotted Sheets',key:'Rusty Key',phone:'Smuggled Phone',gum:'Chewing Gum'};
-
-function addItem(id){if(!inv.includes(id)&&inv.length<MAX_INV){inv.push(id);renderInv();return true;}return false;}
+const ICONS={coin:'🪙',file:'📄',spoon:'🥄',driver:'🔩',keycard:'💳',uniform:'👕',pepper:'🌶️',boltcut:'✂️',rope:'🪢',wrench:'🔧'};
+const INAME={coin:'Gold Coin',file:'Metal File',spoon:'Spoon',driver:'Screwdriver',keycard:'Guard Keycard',uniform:'Guard Uniform',pepper:'Hot Pepper',boltcut:'Bolt Cutters',rope:'Knotted Rope',wrench:'Wrench'};
+function addItem(id){if(!inv.includes(id)&&inv.length<MAX_INV){inv.push(id);renderInv();return true;}setText('Hands too full! Drop something? (you can\'t, so find another way)');return false;}
 function hasItem(id){return inv.includes(id);}
+function removeItem(id){const i=inv.indexOf(id);if(i>=0){inv.splice(i,1);if(selItem===id)selItem=null;renderInv();}}
 function renderInv(){
   for(let i=0;i<MAX_INV;i++){
     const sl=document.getElementById('s'+i);const id=inv[i];
-    if(id){sl.textContent=ICONS[id];sl.title=INAME[id];sl.classList.remove('empty');sl.classList.toggle('selected',selItem===id);sl.onclick=()=>{selItem=selItem===id?null:id;renderInv();};}
+    if(id){sl.textContent=ICONS[id];sl.title=INAME[id];sl.classList.remove('empty');sl.classList.toggle('selected',selItem===id);sl.onclick=()=>{selItem=selItem===id?null:id;renderInv()};}
     else{sl.textContent='';sl.title='';sl.classList.add('empty');sl.classList.remove('selected');sl.onclick=null;}
   }
 }
 
-// ── STATE ───────────────────────────────────────────────────
-let scene='cell';
+// ── GLOBAL STATE ────────────────────────────────────────────
+let room=0;         // 0-9
 let flags=new Set();
 let hovered=null;
-let escType='',escPhase=0,escTick=0;
-let choices=[],choiceTitle='';
-let choiceHover=-1;
+let scene='game';   // game | caught | ending
+let caughtMsg='';
+let endRating=0,endTitle='',endEmoji='',endDesc='';
+// patrol guard
+let guardX=W*0.4,guardDir=1,guardSpeed=1.2;
+// transition
+let transAlpha=0,transDir=0; // dir: 1=fade in, -1=fade out, 0=none
+let transTarget=-1;
+// timing sneak: some rooms show a "GO" button
+let sneakReady=false;
 
 function setText(t){tb.textContent=t;}
+function goRoom(n){transDir=-1;transTarget=n;}
+function caught(msg){caughtMsg=msg;scene='caught';}
 
-// ── STORY OBJECTS (10 things to find) ───────────────────────
-// Each spot: some give items, some give lore/story text
-// Window REQUIRES rope now — without it you fall and get arrested
+// ── ROOMS DATA ──────────────────────────────────────────────
+// Each room: label, spots[], exit condition, exit action, patrol?
+// spots: {id,x,y,w,h,label,act}
+// exit: {x,y,w,h,label,locked,unlocked,check,onUnlock}
 
-function tryWindow(){
-  if(!hasItem('file')){setText('Iron bars block the window. You need something to cut them.');return;}
-  if(!hasItem('rope')){
-    // Fall and get arrested!
-    doEscape('window_fall');
-    return;
-  }
-  showChoice('You have the file AND knotted sheets!',[
-    {emoji:'🔇',label:'File slowly and silently (careful)',cb:()=>doEscape('window_stealth')},
-    {emoji:'⚡',label:'File FAST — speed over stealth',    cb:()=>doEscape('window_fast')},
-    {emoji:'🪢',label:'Lower yourself on the rope first',  cb:()=>doEscape('window_rope')},
-  ]);
-}
-
-function tryDoor(){
-  if(hasItem('key')){doEscape('door_key');return;}
-  if(hasItem('uniform')){showChoice('You\'re wearing a guard uniform!',[
-    {emoji:'😎',label:'Stroll out calmly',       cb:()=>doEscape('door_uniform')},
-    {emoji:'🎺',label:'Yell "FIRE!" and run',    cb:()=>doEscape('door_uniform_fire')},
-  ]);return;}
-  if(hasItem('coin')){showChoice('The guard is on the other side.',[
-    {emoji:'🪙',label:'Slide the coin under the door',   cb:()=>doEscape('door_bribe')},
-    {emoji:'📱',label:'Use the smuggled phone to call him away',cb:()=>{if(hasItem('phone'))doEscape('door_phone');else{setText('You could call the guard away if you had a phone...');scene='cell';}}},
-  ]);return;}
-  if(hasItem('phone')){doEscape('door_phone');return;}
-  setText('The door is locked. Guard\'s on the other side. You\'ll need to find something that can help.');
-}
-
-function tryVent(){
-  if(!hasItem('driver')){setText('A vent grate. The screws look removable — with a screwdriver.');return;}
-  showChoice('The grate is open! (Warning: guards sometimes hide in vents.)',[
-    {emoji:'🤫',label:'Crawl through quietly',           cb:()=>{if(Math.random()<0.4)doEscape('vent_guard');else doEscape('vent_quiet');}},
-    {emoji:'🏃',label:'Take a running dive in',           cb:()=>{if(Math.random()<0.55)doEscape('vent_guard');else doEscape('vent_dive');}},
-    {emoji:'🥄',label:'Bang the pipes — guards evacuate the vents',cb:()=>{if(hasItem('spoon'))doEscape('vent_spoon');else{setText('That would work if you had something to bang... find a spoon first.');scene='cell';}}},
-  ]);
-}
-
-function showChoice(title,opts){choiceTitle=title;choices=opts;scene='choice';}
-
-// ── SEQUENCES ────────────────────────────────────────────────
-// gameover:true = player gets caught, can retry
-// arrested:true = special fall animation
-const SEQ={
-  // WINDOW FALLS
-  window_fall:{
-    rating:0,emoji:'💀',title:'The Flopper',gameover:true,
-    desc:'No rope. It\'s a 30-foot drop. You went for it anyway. The guards were very confused.',
-    texts:['You squeeze through the bars. The drop is... further than expected.','You fall.','You fall more.','You LAND. HARD.','You are discovered immediately by a very surprised guard.','Back to cell B-13. BUSTED.'],
-    bg:'outside',fall:true,charPath:[[510,80],[510,120],[510,180],[510,240],[510,300],[510,310]],
+const ROOMS=[
+// 0 — CELL
+{name:'Cell B-13  (Level 1/10)',
+ patrol:false,
+ spots:[
+  {id:'bed',x:24,y:218,w:138,h:56,label:'Bed',act(){
+    if(flags.has('bed')){setText('Nothing more under the mattress.');return;}
+    flags.add('bed');addItem('file');
+    setText('You lift the mattress — there\'s a METAL FILE taped underneath. Nice.');
+  }},
+  {id:'toilet',x:24,y:284,w:80,h:76,label:'Toilet',act(){
+    if(flags.has('toilet')){setText('You\'ve seen enough of that toilet.');return;}
+    flags.add('toilet');addItem('coin');
+    setText('A GOLD COIN sits at the bottom. You reach in. You will never speak of this.');
+  }},
+  {id:'brick',x:166,y:258,w:58,h:40,label:'Loose brick',act(){
+    if(flags.has('brick')){setText('The hole is empty now.');return;}
+    flags.add('brick');addItem('driver');
+    setText('One brick wobbles. Behind it: a SCREWDRIVER. Classic.');
+  }},
+  {id:'tray',x:270,y:304,w:92,h:36,label:'Food tray',act(){
+    if(flags.has('tray')){setText('Grey paste. It stares at you.');return;}
+    flags.add('tray');addItem('spoon');
+    setText('Mystery grey paste. Free SPOON included. You take it.');
+  }},
+  {id:'graffiti',x:260,y:155,w:110,h:60,label:'Graffiti',act(){
+    setText(['"Slide a coin under the door. Guards are cheap." — wise words.','"The keycard is in the locker in the corridor. Good luck." — a friend.','"Bang the pipes in the vents. Clears the guards." — 2019'][flags.size%3]);
+  }},
+ ],
+ exit:{x:522,y:152,w:76,h:178,label:'Cell door',
+  locked:'The door is LOCKED. You need to slide something under it to bribe the guard.',
+  check:()=>hasItem('coin'),
+  unlock(){removeItem('coin');flags.add('door0');setText('You slide the coin under the door. ...A hand takes it. The lock clicks. You\'re out!');},
+ },
+},
+// 1 — CELL BLOCK CORRIDOR
+{name:'Cell Block  (Level 2/10)',
+ patrol:true,
+ spots:[
+  {id:'locker',x:30,y:180,w:60,h:140,label:'Guard\'s locker',act(){
+    if(flags.has('locker')){setText('The locker is empty now.');return;}
+    flags.add('locker');addItem('keycard');
+    setText('The locker is dented but open. Inside: a GUARD KEYCARD! Lucky.');
+  }},
+  {id:'bench',x:30,y:320,w:120,h:30,label:'Bench',act(){
+    setText('A wooden bench. Cold and uncomfortable. Very prison-y.');
+  }},
+  {id:'notice',x:W-120,y:60,w:100,h:80,label:'Notice board',act(){
+    setText('"Guard shift ends at 3am. DO NOT let inmates see this notice." — Noted.');
+  }},
+ ],
+ exit:{x:W-70,y:120,w:62,h:200,label:'Security door',
+  locked:'The security door needs a keycard. Find one.',
+  check:()=>hasItem('keycard'),
+  unlock(){flags.add('door1');setText('You swipe the keycard. The door beeps green. You\'re through!');},
+ },
+ sneakMsg:'Guard is facing away — GO NOW!',
+ dangerMsg:'Guard is looking! Wait for them to turn.',
+},
+// 2 — GUARD BREAK ROOM
+{name:'Guard Break Room  (Level 3/10)',
+ patrol:false,
+ spots:[
+  {id:'locker2',x:30,y:140,w:55,h:160,label:'Staff locker',act(){
+    if(flags.has('locker2')){setText('Nothing left in the locker.');return;}
+    flags.add('locker2');addItem('uniform');
+    setText('A GUARD UNIFORM hangs inside the locker. It smells like coffee and regret. You take it.');
+  }},
+  {id:'coffee',x:220,y:180,w:80,h:60,label:'Coffee machine',act(){
+    setText('The machine gurgles. The guard shifts in their sleep. You back away slowly.');
+  }},
+  {id:'guard2',x:340,y:200,w:80,h:100,label:'Sleeping guard',act(){
+    if(hasItem('uniform')){setText('The guard snores. You\'re already in uniform. Just... walk past.');return;}
+    setText('The guard is sleeping. You could sneak past if you were wearing a uniform...');
+  }},
+  {id:'table',x:180,y:270,w:140,h:50,label:'Break room table',act(){
+    setText('Half-eaten donuts, a crossword puzzle (unsolved), and cold coffee. Prison life.');
+  }},
+ ],
+ exit:{x:W-70,y:120,w:62,h:200,label:'Break room door',
+  locked:'The guard is in the way. You need a disguise to walk past.',
+  check:()=>hasItem('uniform'),
+  unlock(){flags.add('door2');setText('You put on the uniform and stride past the sleeping guard. You nod at the door. It opens. Pro move.');},
+ },
+},
+// 3 — KITCHEN
+{name:'Kitchen  (Level 4/10)',
+ patrol:false,
+ spots:[
+  {id:'cabinet',x:30,y:140,w:70,h:120,label:'Cabinet',act(){
+    if(flags.has('cabinet')){setText('Cabinet is empty now.');return;}
+    flags.add('cabinet');addItem('pepper');
+    setText('Spice cabinet. Mostly dust. But there\'s one enormous HOT PEPPER at the back. You take it.');
+  }},
+  {id:'stove',x:200,y:180,w:120,h:80,label:'Stove / pot',act(){
+    if(hasItem('pepper')&&!flags.has('pepper_used')){
+      flags.add('pepper_used');removeItem('pepper');
+      flags.add('chef_gone');
+      setText('You dump the pepper into the giant soup pot. The chef takes one whiff... and BOLTS for the bathroom. The door is clear!');
+    } else if(flags.has('pepper_used')){
+      setText('The soup is now legally a biohazard. The pot bubbles ominously.');
+    } else {
+      setText('A massive pot of something grey. The chef stirs it lovingly. You need a distraction.');
+    }
+  }},
+  {id:'chef',x:360,y:170,w:70,h:120,label:'Chef guard',act(){
+    if(flags.has('chef_gone')){setText('The chef has vanished into the bathroom. Godspeed.');return;}
+    setText('The chef guard stirs the soup and hums. They are blocking the exit completely. Need a distraction.');
+  }},
+  {id:'fridge',x:510,y:140,w:80,h:160,label:'Walk-in fridge',act(){
+    setText('Cold. Dark. Full of unlabelled containers. One of them moves. You close the fridge quickly.');
+  }},
+ ],
+ exit:{x:W-72,y:140,w:64,h:180,label:'Kitchen exit',
+  locked:'The chef is blocking the exit door. You need to get them out of the way.',
+  check:()=>flags.has('chef_gone'),
+  unlock(){flags.add('door3');setText('The exit is clear. You slip through the kitchen door — still warm from the soup fumes.');},
+ },
+},
+// 4 — STORAGE ROOM
+{name:'Storage Room  (Level 5/10)',
+ patrol:false,
+ spots:[
+  {id:'shelf',x:30,y:120,w:120,h:200,label:'Storage shelves',act(){
+    if(flags.has('shelf')){setText('The shelves are picked clean. By you.');return;}
+    flags.add('shelf');addItem('boltcut');addItem('rope');
+    setText('Metal shelves packed with stuff. You find BOLT CUTTERS and a KNOTTED ROPE. Jackpot.');
+  }},
+  {id:'boxes',x:200,y:220,w:140,h:100,label:'Stack of boxes',act(){
+    setText('Marked "LAUNDRY" and "EVIDENCE". You peek inside one: more grey paste. It follows you everywhere.');
+  }},
+  {id:'padlock',x:W-80,y:200,w:40,h:60,label:'Padlock on door',act(){
+    if(hasItem('boltcut')){
+      removeItem('boltcut');flags.add('padlock_cut');
+      setText('SNIP. The padlock falls. That was satisfying.');
+    } else setText('A heavy padlock. You\'d need bolt cutters.');
+  }},
+ ],
+ exit:{x:W-70,y:120,w:62,h:200,label:'Padlocked door',
+  locked:'The door has a padlock. Need bolt cutters.',
+  check:()=>flags.has('padlock_cut'),
+  unlock(){flags.add('door4');setText('The padlocked door swings open. Fresh air! Well — slightly less stale air.');},
+ },
+},
+// 5 — COURTYARD
+{name:'Courtyard  (Level 6/10)',
+ patrol:true,
+ spots:[
+  {id:'bench5',x:200,y:270,w:100,h:40,label:'Bench',act(){setText('A bench in the middle of the courtyard. You\'d rather not sit here.');}},
+  {id:'wall5',x:W-80,y:60,w:72,h:290,label:'Far wall',act(){
+    if(hasItem('rope')){setText('The far wall has an anchor point up top. Wait for the guards to turn, then throw the rope and GO.');}
+    else setText('A tall stone wall. You\'d need a rope to get over it.');
+  }},
+  {id:'searchlight',x:60,y:40,w:100,h:60,label:'Searchlight',act(){
+    setText('The searchlight sweeps back and forth. It\'ll hit you if you\'re in the open. Time your crossing carefully.');
+  }},
+ ],
+ exit:{x:W-72,y:60,w:64,h:290,label:'Outer wall',
+  locked:'Guards are patrolling. You need to sneak past — and you need a rope for the wall.',
+  check:()=>hasItem('rope'),
+  unlock(){flags.add('door5');setText('You sprint to the wall, hurl the rope over the top, and CLIMB. The guard turns around just as you clear the top. Close!');},
+ },
+ sneakMsg:'Guards are facing away — GO NOW!',
+ dangerMsg:'Guards are watching! Wait for them to look away.',
+},
+// 6 — MAINTENANCE TUNNEL
+{name:'Maintenance Tunnel  (Level 7/10)',
+ patrol:false,
+ spots:[
+  {id:'pipe',x:30,y:120,w:100,h:60,label:'Steam pipe valve',act(){
+    if(hasItem('wrench')){
+      removeItem('wrench');flags.add('steam_on');
+      setText('You crank the valve with the wrench. PSSSSSSH — steam floods the tunnel! The guard stumbles backward.');
+    } else setText('A rusted steam valve. It\'s stuck tight. You\'d need a wrench to force it.');
+  }},
+  {id:'toolbox',x:260,y:260,w:80,h:60,label:'Toolbox',act(){
+    if(flags.has('toolbox')){setText('Empty toolbox. You took what you needed.');return;}
+    flags.add('toolbox');addItem('wrench');
+    setText('A battered toolbox. Inside: a WRENCH. Perfect timing.');
+  }},
+  {id:'guard6',x:400,y:180,w:60,h:120,label:'Maintenance guard',act(){
+    if(flags.has('steam_on')){setText('The guard is completely lost in the steam cloud, coughing dramatically.');}
+    else setText('A guard blocks the far door. They\'re watching the whole tunnel. You need a distraction.');
+  }},
+ ],
+ exit:{x:W-70,y:140,w:62,h:200,label:'Tunnel exit',
+  locked:'The guard is blocking the tunnel exit. Create a distraction first.',
+  check:()=>flags.has('steam_on'),
+  unlock(){flags.add('door6');setText('You slip through the tunnel in the steam cloud. Visibility: zero. Perfect for escape purposes.');},
+ },
+},
+// 7 — OUTER HALLWAY
+{name:'Outer Hallway  (Level 8/10)',
+ patrol:true,
+ spots:[
+  {id:'sign',x:30,y:80,w:120,h:80,label:'"EXIT" sign',act(){setText('"EXIT →". Pointing at the door. At least the prison is well-signed.');}},
+  {id:'window7',x:250,y:80,w:120,h:100,label:'Window to outside',act(){
+    setText('You can see the outside through the window! Trees. Stars. Freedom. Literally right there. The window is barred. Very frustrating.');
+  }},
+  {id:'guard7',x:430,y:200,w:70,h:120,label:'Guard at checkpoint',act(){
+    if(hasItem('uniform')){setText('You\'re in uniform. Just walk past. Act normal. You\'re a guard. Definitely a guard.');}
+    else setText('A guard stands at the checkpoint. Very alert. Very awake. You need a uniform or a good plan.');
+  }},
+ ],
+ exit:{x:W-70,y:120,w:62,h:200,label:'Checkpoint door',
+  locked:'Guard is checking everyone at the checkpoint. Need a uniform to bluff through.',
+  check:()=>hasItem('uniform'),
+  unlock(){flags.add('door7');setText('You stride up in the uniform. Guard nods. You nod back. The door opens. ACTING.');},
+ },
+ sneakMsg:'Guard is facing forward — sneak past now!',
+ dangerMsg:'Guard is looking your direction. Wait.',
+},
+// 8 — OUTER WALL BASE
+{name:'Outer Wall  (Level 9/10)',
+ patrol:false,
+ spots:[
+  {id:'wall8',x:30,y:40,w:100,h:300,label:'Prison wall',act(){
+    if(hasItem('rope')){setText('The wall is climbable with the rope. Find an anchor and GO.');}
+    else setText('The final wall. 40 feet of stone. Without a rope you\'re not getting over this.');
+  }},
+  {id:'guard8a',x:260,y:200,w:70,h:120,label:'Tower guard',act(){setText('A guard in the tower above. They\'re looking the other way... for now.');}},
+  {id:'anchor',x:120,y:60,w:60,h:50,label:'Wall anchor point',act(){
+    if(hasItem('rope')&&!flags.has('rope_thrown')){
+      flags.add('rope_thrown');
+      setText('You throw the rope. It hooks perfectly on the first try. (This almost never happens.) Start climbing!');
+    } else if(flags.has('rope_thrown')){setText('The rope is hooked. Time to climb!');}
+    else setText('An iron anchor ring on the wall. You could hook a rope here.');
+  }},
+ ],
+ exit:{x:120,y:40,w:60,h:300,label:'Wall — climb!',
+  locked:'You need a rope to get over this wall.',
+  check:()=>flags.has('rope_thrown'),
+  unlock(){flags.add('door8');setText('You CLIMB. Hand over hand. Your arms are burning. The top — you\'re at the top. And then... the other side.');},
+ },
+},
+// 9 — FREEDOM
+{name:'OUTSIDE!  (Level 10/10)',
+ patrol:false,
+ spots:[
+  {id:'tree',x:100,y:80,w:120,h:200,label:'Forest',act(){setText('Trees. Stars. Cold air. The smell of grass and freedom. You\'ve never loved a forest more in your life.');}},
+  {id:'road',x:400,y:280,w:160,h:60,label:'Road',act(){setText('A road disappearing into the distance. That\'s your road. Time to disappear down it.');}},
+  {id:'sign9',x:380,y:120,w:120,h:80,label:'Road sign',act(){setText('"Welcome to the FREE WORLD". That sign isn\'t real but you\'re hallucinating from relief.');}},
+ ],
+ exit:{x:450,y:200,w:120,h:120,label:'RUN INTO THE NIGHT',
+  locked:'',
+  check:()=>true,
+  unlock(){
+    scene='ending';
+    endEmoji='🏃';endTitle='The Great Escape';endRating=100;
+    endDesc='10 levels. Every door. Every guard. Every obstacle. You beat ALL of them. Absolute LEGEND.';
   },
-  window_stealth:{
-    rating:68,emoji:'😴',title:'The Patient One',
-    desc:'4 hours of filing. Guards changed shift twice. Nobody noticed.',
-    texts:['squeeek... squeeek... squeeek...','3 hours pass. Your arm is very tired.','Finally — the bars fall OUT.','You tie the sheets, lower yourself down.','You run across the yard in silence.','FREEDOM! (The quiet kind.)'],
-    bg:'outside',charPath:[[510,80],[510,80],[510,80],[510,150],[400,220],[120,220]],
-  },
-  window_fast:{
-    rating:82,emoji:'🏃',title:'The Daredevil',
-    desc:'LOUD. Very loud. Guards woke up. You still made it. Barely.',
-    texts:['SKREEEEEE SKREEEEEE SKREEEEEE!','GUARD: "WHAT IS THAT NOISE?!"','Bars fall out! Guards are running!','You slide down the rope and SPRINT!','Guard trips on his shoelace. Classic.','FREEDOM! That was way too close.'],
-    bg:'outside',charPath:[[510,80],[510,80],[510,110],[510,180],[350,220],[100,220]],
-  },
-  window_rope:{
-    rating:91,emoji:'🧗',title:'The Planner',
-    desc:'Filed the bars calmly, lowered on the rope, walked away. No drama.',
-    texts:['You file through the bars. Nice and easy.','You tie the knotted sheets to the bed frame.','You lower yourself slowly down the outer wall.','You land quietly on the grass.','You walk to the fence. No one runs.','You slip through a gap. FREEDOM! 🏆'],
-    bg:'outside',charPath:[[510,80],[510,80],[510,110],[510,180],[360,220],[100,220]],
-  },
-  // DOOR
-  door_bribe:{
-    rating:65,emoji:'💰',title:'The Businessman',
-    desc:'Money talks. Dignity walks. You walked right out.',
-    texts:['You slide the coin under the door.','... A hand scoops it up.','The lock clicks. The door swings open.','Guard: "I saw nothing."','You walk calmly down the corridor.','You stroll out the front. FREEDOM! 💸'],
-    bg:'corridor',charPath:[[310,300],[310,300],[310,300],[360,300],[460,300],[580,300]],
-  },
-  door_key:{
-    rating:98,emoji:'🗝️',title:'The Locksmith',
-    desc:'You just had the key the whole time. Nobody noticed. This is embarrassing for the prison.',
-    texts:['You try the rusty key in the lock.','... it fits.','The door opens.','You walk past the stunned guard.','Guard: "Wh— HOW did you—"','You shrug and walk to freedom. FREEDOM! 🏆🗝️'],
-    bg:'corridor',charPath:[[310,300],[310,300],[330,300],[390,300],[480,300],[580,300]],
-  },
-  door_phone:{
-    rating:77,emoji:'📱',title:'The Mastermind',
-    desc:'You called the guard away with a fake pizza delivery. It worked.',
-    texts:['You dial: "Hello, this is PIZZA PALACE."','Guard outside: "...Pizza?"','Guard: "Be right back" *footsteps recede*','You push open the unlocked door.','You walk calmly down the now-empty corridor.','FREEDOM! That guard is still waiting for his pizza.'],
-    bg:'corridor',charPath:[[310,300],[310,300],[310,300],[360,300],[460,300],[580,300]],
-  },
-  door_uniform:{
-    rating:95,emoji:'🕵️',title:'The Infiltrator',
-    desc:'Nobody questions a guard walking around. LEGEND.',
-    texts:['You put on the guard uniform. It fits surprisingly well.','You knock on the door. "Shift change."','Guard opens it. Looks at you. Nods.','You walk past every single guard on the way out.','One guard waves. You wave back.','FREEDOM! 🏆 You are basically a spy now.'],
-    bg:'corridor',charPath:[[310,300],[310,300],[330,300],[400,300],[500,300],[580,300]],
-  },
-  door_uniform_fire:{
-    rating:60,emoji:'🔥',title:'The Chaos Agent',
-    desc:'You yelled FIRE. Everyone panicked. You got out in the stampede.',
-    texts:['You stride out in the uniform. "FIRE!! FIRE!!"','Guards scatter in all directions.','Alarms go off. Sprinklers activate.','You are soaked but running.','Confusion covers your escape.','FREEDOM! (Also the cafeteria flooded.)'],
-    bg:'corridor',charPath:[[310,300],[310,300],[350,300],[430,300],[510,300],[580,300]],
-  },
-  // VENT
-  vent_quiet:{
-    rating:88,emoji:'🕵️',title:'The Action Hero',
-    desc:'Full stealth. 20 minutes of crawling. Worth every inch.',
-    texts:['You squeeze into the dark vent.','You crawl... slowly... methodically...','A guard passes beneath. You hold your breath.','You emerge in the guard\'s office. He\'s asleep.','You tiptoe out the back door.','FREEDOM! 🕶️ You are essentially a spy.'],
-    bg:'vent',charPath:[[80,190],[200,190],[310,190],[400,190],[450,290],[580,290]],
-  },
-  vent_dive:{
-    rating:70,emoji:'💨',title:'The Enthusiast',
-    desc:'You dove in headfirst. Got stuck. Made it anyway.',
-    texts:['You sprint and DIVE headfirst into the vent!','You are stuck immediately.','*wiggle wiggle wiggle*','You free yourself and crawl fast.','You tumble into the guard\'s office.','Guard wakes but you\'re already gone. FREEDOM!'],
-    bg:'vent',charPath:[[80,190],[80,190],[120,190],[280,190],[430,290],[580,290]],
-  },
-  vent_guard:{
-    rating:0,emoji:'👮',title:'The Unlucky One',gameover:true,
-    desc:'A guard was hiding in the vent. Right there. Waiting. This is their whole job.',
-    texts:['You crawl into the vent.','It smells weird. Weirder than usual.','You hear breathing. That\'s not you.','A GUARD is in the vent. Staring at you.','Guard: "...I\'ve been waiting 6 hours for this."','Back to cell B-13. Tip: bang the pipes first next time.'],
-    bg:'vent',charPath:[[80,190],[150,190],[220,190],[220,190],[220,190],[310,310]],
-  },
-  vent_spoon:{
-    rating:85,emoji:'🎵',title:'The Musician',
-    desc:'You banged the pipes and all the guards went to investigate. Smooth.',
-    texts:['You crawl in and start banging the pipes with the spoon.','*CLANK CLANK CLANK CLANK*','Guards: "What\'s that in the boiler room?!"','All guards leave their posts. Classic.','You crawl straight to the exit vent undisturbed.','FREEDOM! 🥄 You are literally a genius.'],
-    bg:'vent',charPath:[[80,190],[80,190],[200,190],[350,190],[450,290],[580,290]],
-  },
-};
-
-function doEscape(type){
-  escType=type;escPhase=0;escTick=0;
-  scene='escape';
-  setText(SEQ[type].texts[0]);
-}
-
-// ── HOTSPOTS (10 story objects) ──────────────────────────────
-const SPOTS=[
-  // 1. BED — has file
-  {id:'bed',   x:26, y:215, w:136, h:60, label:'Bed',
-   act(){
-     if(flags.has('bed')){setText('Just the lumpy mattress. Already checked.');return;}
-     flags.add('bed');addItem('file');
-     setText('You lift the mattress... there\'s a METAL FILE taped underneath! Somebody definitely planned ahead.');
-   }},
-  // 2. TOILET — has coin (gross)
-  {id:'toilet',x:26, y:285, w:80, h:72, label:'Toilet',
-   act(){
-     if(flags.has('toilet')){setText('You\'ve seen enough of that toilet.');return;}
-     flags.add('toilet');addItem('coin');
-     setText('You look in the toilet. At the bottom: a GOLD COIN. You really don\'t want to touch it. You do anyway.');
-   }},
-  // 3. LOOSE BRICK — screwdriver
-  {id:'brick', x:168,y:255, w:58, h:44, label:'Loose brick',
-   act(){
-     if(flags.has('brick')){setText('The hole is empty now.');return;}
-     flags.add('brick');addItem('driver');
-     setText('One brick wobbles more than the others. You yank it out — a SCREWDRIVER is hidden in the gap!');
-   }},
-  // 4. FOOD TRAY — spoon, plus lore
-  {id:'tray',  x:270,y:302, w:92, h:38, label:'Food tray',
-   act(){
-     if(flags.has('tray')){setText('More grey paste. You don\'t need it.');return;}
-     flags.add('tray');addItem('spoon');
-     setText('Today\'s menu: mystery grey paste. Free SPOON included. You take the spoon — might be useful.');
-   }},
-  // 5. WINDOW (action)
-  {id:'window',x:455,y:72, w:118,h:130,label:'Window',act:tryWindow},
-  // 6. DOOR (action)
-  {id:'door',  x:522,y:152,w:76, h:178, label:'Cell door',act:tryDoor},
-  // 7. VENT (action)
-  {id:'vent',  x:195,y:138,w:88, h:62, label:'Ventilation grate',act:tryVent},
-  // 8. MOVIE POSTER — behind it is a KEY
-  {id:'poster',x:385,y:118,w:70, h:85, label:'Movie poster on wall',
-   act(){
-     if(flags.has('poster')){setText('Just wall behind the poster now.');return;}
-     flags.add('poster');addItem('key');
-     setText('"Tunnel Quest 4" poster. You pull it aside and find a RUSTY KEY taped to the back. Someone hid this here!');
-   }},
-  // 9. GRAFFITI — lore / story
-  {id:'graffiti',x:260,y:155,w:110,h:60,label:'Graffiti on the wall',
-   act(){
-     const lines=[
-       '"Jake was here. 1987. He made it." — That\'s... encouraging.',
-       '"STEP 1: Get file. STEP 2: Use rope. STEP 3: Don\'t jump." — Wait, rope?',
-       '"The vent leads to the warden\'s office. The warden sleeps from 2-6am." — Noted.',
-       '"If you\'re reading this you\'re in B-13. Check the bed, the brick, and the poster." — Oh wow.',
-       '"This jail is haunted. I am a ghost." — Okay buddy.',
-     ];
-     setText(lines[Math.floor(Math.random()*lines.length)]);
-   }},
-  // 10. LAUNDRY BAG — has uniform AND rope (knotted sheets)
-  {id:'laundry',x:350,y:280,w:68,h:62,label:'Laundry bag',
-   act(){
-     if(flags.has('laundry')){setText('The laundry bag is empty now. You took everything useful.');return;}
-     flags.add('laundry');
-     const got=[];
-     if(addItem('uniform'))got.push('GUARD UNIFORM');
-     if(addItem('rope'))got.push('KNOTTED SHEETS (makeshift rope)');
-     if(got.length)setText('You dig into the laundry bag and find: '+got.join(' and ')+'! Somebody left these here on purpose.');
-     else setText('The bag has things but your hands are full!');
-   }},
-  // 11. SMUGGLED PHONE — hidden in wall crack
-  {id:'phone',x:135,y:170,w:40,h:55,label:'Wall crack',
-   act(){
-     if(flags.has('phone')){setText('The crack is just a crack now.');return;}
-     flags.add('phone');addItem('phone');
-     setText('You notice a crack in the wall. Something\'s inside. A SMUGGLED PHONE, fully charged! Who left this here?!');
-   }},
-  // 12. BARRED WINDOW BARS — story item, tells you if you need rope
-  {id:'bars',  x:456,y:73, w:116,h:128, label:'Window bars (inspect)',
-   act(){
-     if(flags.has('bars')){setText('Still cut if you have the file. Still a long drop without a rope.');return;}
-     flags.add('bars');
-     setText('You inspect the bars. They look cuttable with a file. But the drop below looks like... 30 feet? You\'ll need something to lower yourself down safely.');
-   }},
+ },
+},
 ];
 
-// ── DRAW STICK ───────────────────────────────────────────────
-function drawStick(x,y,facing,state){
-  ctx.save();ctx.translate(x,y);if(facing<0)ctx.scale(-1,1);
+// ── PATROL GUARD ────────────────────────────────────────────
+// guardX moves across corridor; sneak window = when guard faces AWAY from exit
+let sneakWindowOpen=false;
+
+function updatePatrol(){
+  const r=ROOMS[room];if(!r.patrol)return;
+  guardX+=guardDir*guardSpeed;
+  if(guardX>W-80){guardX=W-80;guardDir=-1;}
+  if(guardX<80){guardX=80;guardDir=1;}
+  // safe window: guard facing left (dir=-1) means they face away from right-side exit
+  sneakWindowOpen=(guardDir===-1&&guardX>W*0.4)||(guardDir===1&&guardX<W*0.3);
+}
+
+function tryExit(){
+  const r=ROOMS[room];const ex=r.exit;
+  if(!ex.check()){setText(ex.locked);return;}
+  if(r.patrol&&!sneakWindowOpen){
+    setText(r.dangerMsg||'Guard is watching! Wait for them to look away.');return;
+  }
+  ex.unlock();
+  if(scene==='ending')return;
+  setTimeout(()=>goRoom(room+1),1200);
+}
+
+// ── HOTSPOT HELPERS ─────────────────────────────────────────
+function getSpots(){
+  const r=ROOMS[room];const spots=[...r.spots];
+  const ex=r.exit;spots.push({id:'exit_door',x:ex.x,y:ex.y,w:ex.w,h:ex.h,label:ex.label,act:tryExit});
+  return spots;
+}
+
+// ── STICK FIGURE ────────────────────────────────────────────
+function drawStick(x,y,facing,state,scale){
+  scale=scale||1;
+  ctx.save();ctx.translate(x,y);if(facing<0)ctx.scale(-1,1);ctx.scale(scale,scale);
   const t=frame;
   const bob=state==='walk'?Math.sin(t*0.22)*4:0;
   const ls=state==='walk'?Math.sin(t*0.22)*14:0,rs=-ls;
@@ -291,346 +375,478 @@ function drawStick(x,y,facing,state){
   if(state==='crawl'){
     ctx.strokeStyle='#eee';ctx.lineWidth=2.5;
     ctx.beginPath();ctx.moveTo(-18,-6);ctx.lineTo(18,-6);ctx.stroke();
-    ctx.beginPath();ctx.moveTo(-10,-6);ctx.lineTo(-16,6);ctx.stroke();
-    ctx.beginPath();ctx.moveTo(8,-6);ctx.lineTo(14,6);ctx.stroke();
-    ctx.beginPath();ctx.moveTo(-6,-6);ctx.lineTo(-14,4);ctx.stroke();
-    ctx.beginPath();ctx.moveTo(14,-6);ctx.lineTo(20,4);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(-10,-6);ctx.lineTo(-16,6);ctx.stroke();ctx.beginPath();ctx.moveTo(8,-6);ctx.lineTo(14,6);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(-6,-6);ctx.lineTo(-14,4);ctx.stroke();ctx.beginPath();ctx.moveTo(14,-6);ctx.lineTo(20,4);ctx.stroke();
     ctx.fillStyle='#eee';ctx.beginPath();ctx.arc(22,-12,8,0,Math.PI*2);ctx.fill();
     ctx.fillStyle='#111';ctx.beginPath();ctx.arc(25,-12,2,0,Math.PI*2);ctx.fill();
   } else {
     ctx.strokeStyle='#eee';ctx.lineWidth=2.5;
     ctx.fillStyle='#eee';ctx.beginPath();ctx.arc(0,-36+bob,10,0,Math.PI*2);ctx.fill();
     ctx.fillStyle='#222';ctx.beginPath();ctx.arc(3,-37+bob,2,0,Math.PI*2);ctx.fill();
-    if(state==='dizzy'||state==='fall'){ctx.font='12px sans-serif';ctx.textAlign='center';ctx.fillText('💫',0,-52+bob);}
-    ctx.strokeStyle='#eee';ctx.lineWidth=2.5;
     ctx.beginPath();ctx.moveTo(0,-26+bob);ctx.lineTo(0,0);ctx.stroke();
     if(state==='celebrate'||state==='cheer'){
       ctx.beginPath();ctx.moveTo(0,-20+bob);ctx.lineTo(-16,-34+bob+Math.sin(t*0.3)*4);ctx.stroke();
       ctx.beginPath();ctx.moveTo(0,-20+bob);ctx.lineTo(16,-34+bob-Math.sin(t*0.3)*4);ctx.stroke();
-    } else if(state==='arms_up'||state==='fall'){
-      ctx.beginPath();ctx.moveTo(0,-20+bob);ctx.lineTo(-18,-34+bob);ctx.stroke();
-      ctx.beginPath();ctx.moveTo(0,-20+bob);ctx.lineTo(18,-34+bob);ctx.stroke();
     } else {
       ctx.beginPath();ctx.moveTo(0,-20+bob);ctx.lineTo(-12,-10+bob+ls*0.4);ctx.stroke();
       ctx.beginPath();ctx.moveTo(0,-20+bob);ctx.lineTo(12,-10+bob+rs*0.4);ctx.stroke();
     }
     ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-8+ls*0.5,16);ctx.stroke();
     ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(8+rs*0.5,16);ctx.stroke();
-    // prison stripes
     if(state!=='celebrate'&&state!=='cheer'&&state!=='guard'){
       ctx.strokeStyle='rgba(0,0,0,0.4)';ctx.lineWidth=1;
       for(let yy=-24;yy<0;yy+=6){ctx.beginPath();ctx.moveTo(-6,yy+bob);ctx.lineTo(6,yy+bob);ctx.stroke();}
     }
-    // guard hat
-    if(state==='guard'){
-      ctx.fillStyle='#334455';ctx.fillRect(-10,-50+bob,20,8);
-      ctx.fillRect(-14,-44+bob,28,5);
+    if(state==='guard'||state==='guard_hat'){
+      ctx.fillStyle='#334455';ctx.fillRect(-10,-50+bob,20,8);ctx.fillRect(-14,-44+bob,28,5);
       ctx.fillStyle='#aaa';ctx.fillRect(-6,-52+bob,12,3);
     }
   }
   ctx.restore();
 }
 
-// ── DRAW CELL ────────────────────────────────────────────────
-function drawCell(){
-  const wg=ctx.createLinearGradient(0,0,0,H);wg.addColorStop(0,'#38384a');wg.addColorStop(1,'#252535');
+// ── ROOM DRAWING ─────────────────────────────────────────────
+function brickWall(dark){
+  const wg=ctx.createLinearGradient(0,0,0,H);
+  wg.addColorStop(0,dark?'#222230':'#38384a');wg.addColorStop(1,dark?'#141420':'#252535');
   ctx.fillStyle=wg;ctx.fillRect(0,0,W,H);
-  ctx.strokeStyle='rgba(0,0,0,0.22)';ctx.lineWidth=1;
-  for(let r=0;r*28<H-70;r++){const o=(r%2)*44;for(let c=-1;c*88<W+88;c++)ctx.strokeRect(c*88+o,r*28,88,28);}
-  const fg=ctx.createLinearGradient(0,H-70,0,H);fg.addColorStop(0,'#5a4a2e');fg.addColorStop(1,'#3a2e1a');
+  ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=1;
+  for(let r=0;r*28<H;r++){const o=(r%2)*44;for(let c=-1;c*88<W+88;c++)ctx.strokeRect(c*88+o,r*28,88,28);}
+}
+function floorStrip(col1,col2){
+  const fg=ctx.createLinearGradient(0,H-70,0,H);fg.addColorStop(0,col1||'#5a4a2e');fg.addColorStop(1,col2||'#3a2e1a');
   ctx.fillStyle=fg;ctx.fillRect(0,H-70,W,70);
   ctx.strokeStyle='rgba(0,0,0,0.25)';ctx.lineWidth=1;for(let x=0;x<W;x+=55)ctx.strokeRect(x,H-70,55,70);
-
-  // BED
-  ctx.fillStyle='#6a3e1a';ctx.fillRect(24,218,138,55);
-  ctx.fillStyle='#4a2800';ctx.fillRect(24,218,138,8);
-  ctx.fillStyle=flags.has('bed')?'#5a4030':'#8a7060';ctx.fillRect(28,228,130,36);
-  ctx.fillStyle='#6a5040';ctx.fillRect(28,228,130,8);
-
-  // TOILET
-  ctx.fillStyle='#ccc';ctx.beginPath();ctx.ellipse(66,320,32,22,0,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#bbb';ctx.fillRect(46,284,40,24);ctx.fillStyle='#ddd';ctx.fillRect(44,278,46,10);
-  ctx.strokeStyle='#999';ctx.lineWidth=1;ctx.beginPath();ctx.ellipse(66,320,32,22,0,0,Math.PI*2);ctx.stroke();
-
-  // LOOSE BRICK
-  if(!flags.has('brick')){
-    ctx.fillStyle='#5a4535';ctx.fillRect(166,257,58,38);ctx.strokeStyle='#8a7055';ctx.lineWidth=1.5;ctx.strokeRect(166,257,58,38);
-    ctx.strokeStyle='rgba(0,0,0,0.5)';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(173,267);ctx.lineTo(194,275);ctx.lineTo(187,290);ctx.stroke();
-  } else {ctx.fillStyle='#111';ctx.fillRect(166,257,58,38);ctx.strokeStyle='#333';ctx.lineWidth=1;ctx.strokeRect(166,257,58,38);}
-
-  // WALL CRACK (phone)
-  if(!flags.has('phone')){
-    ctx.strokeStyle='#5a5a6a';ctx.lineWidth=1.5;
-    ctx.beginPath();ctx.moveTo(136,172);ctx.lineTo(148,185);ctx.lineTo(140,200);ctx.lineTo(152,215);ctx.stroke();
-    // subtle glow
-    ctx.strokeStyle='rgba(100,200,255,0.2)';ctx.lineWidth=3;
-    ctx.beginPath();ctx.moveTo(136,172);ctx.lineTo(148,185);ctx.lineTo(140,200);ctx.lineTo(152,215);ctx.stroke();
+}
+function door(x,y,w,h,locked){
+  ctx.fillStyle='#5a3808';ctx.fillRect(x,y,w,h);
+  ctx.fillStyle='#3a2000';ctx.fillRect(x+4,y+6,w-8,h-6);
+  if(locked){
+    ctx.strokeStyle='#888';ctx.lineWidth=3;
+    for(let dx=x+8;dx<x+w-4;dx+=10){ctx.beginPath();ctx.moveTo(dx,y+6);ctx.lineTo(dx,y+h-2);ctx.stroke();}
+    ctx.fillStyle='#aaa';ctx.beginPath();ctx.arc(x+4,y+h*0.45,5,0,Math.PI*2);ctx.fill();
   } else {
-    ctx.strokeStyle='#3a3a4a';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(136,172);ctx.lineTo(148,185);ctx.lineTo(140,200);ctx.lineTo(152,215);ctx.stroke();
+    ctx.fillStyle='#aaa';ctx.beginPath();ctx.arc(x+4,y+h*0.45,5,0,Math.PI*2);ctx.fill();
+    // green "open" glow
+    ctx.fillStyle='rgba(0,255,100,0.2)';ctx.fillRect(x,y,w,h);
   }
-
-  // GRAFFITI
-  ctx.fillStyle='rgba(255,255,255,0.12)';ctx.font='9px monospace';ctx.textAlign='left';
-  ctx.fillText('"Jake was here — he made it"',262,165);
-  ctx.fillText('"Use rope for window"',268,178);
-  ctx.fillStyle='rgba(255,255,200,0.08)';ctx.fillRect(260,155,110,60);
-  ctx.strokeStyle='rgba(255,255,200,0.15)';ctx.lineWidth=0.5;ctx.strokeRect(260,155,110,60);
-
-  // MOVIE POSTER
-  if(!flags.has('poster')){
-    ctx.fillStyle='#8a2222';ctx.fillRect(385,118,72,88);
-    ctx.fillStyle='#aa3333';ctx.fillRect(388,121,66,60);
-    ctx.fillStyle='#ffdd44';ctx.font='bold 8px sans-serif';ctx.textAlign='center';
-    ctx.fillText('TUNNEL QUEST',421,135);ctx.fillText('4',421,148);
-    ctx.fillStyle='#fff';ctx.fillText('★★★★★',421,185);
-  } else {
-    ctx.fillStyle='#2a2a3a';ctx.fillRect(385,118,72,88);ctx.strokeStyle='#444';ctx.lineWidth=1;ctx.strokeRect(385,118,72,88);
+  ctx.strokeStyle='#3a2800';ctx.lineWidth=6;ctx.strokeRect(x,y,w,h);
+}
+function window_(x,y,w,h,bars){
+  ctx.fillStyle='#2244aa';ctx.fillRect(x,y,w,h);
+  ctx.fillStyle='rgba(150,210,255,0.4)';ctx.fillRect(x+4,y+4,w-8,h-8);
+  if(bars){
+    ctx.strokeStyle='#888';ctx.lineWidth=4;ctx.lineCap='butt';
+    for(let bx=x+8;bx<x+w-4;bx+=14){ctx.beginPath();ctx.moveTo(bx,y);ctx.lineTo(bx,y+h);ctx.stroke();}
   }
+  ctx.strokeStyle='#5a3300';ctx.lineWidth=5;ctx.strokeRect(x,y,w,h);
+}
 
-  // FOOD TRAY
-  ctx.fillStyle='#999';ctx.fillRect(268,305,94,34);ctx.strokeStyle='#777';ctx.lineWidth=1;ctx.strokeRect(268,305,94,34);
-  ctx.fillStyle='#6a8040';ctx.beginPath();ctx.ellipse(315,322,24,10,0,0,Math.PI*2);ctx.fill();
+function drawPatrolGuard(){
+  const st=guardDir===1?'walk':'walk';
+  drawStick(guardX,H-70,guardDir,'guard');
+  // safe/danger indicator
+  const safe=sneakWindowOpen;
+  ctx.fillStyle=safe?'rgba(0,255,0,0.15)':'rgba(255,0,0,0.1)';ctx.fillRect(0,0,W,H);
+  ctx.fillStyle=safe?'#4f4':'#f44';ctx.font='bold 13px sans-serif';ctx.textAlign='center';
+  ctx.fillText(safe?'✓ SAFE — click the door to GO!':`⚠ GUARD WATCHING — wait...`,W/2,24);
+}
 
-  // LAUNDRY BAG
-  if(!flags.has('laundry')){
-    ctx.fillStyle='#6a5a3a';ctx.beginPath();ctx.ellipse(384,318,34,22,0,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#5a4a2a';ctx.fillRect(355,296,58,22);ctx.fillStyle='#8a7a5a';
-    ctx.beginPath();ctx.arc(384,296,8,0,-Math.PI,false);ctx.fill();
-    ctx.strokeStyle='#4a3a1a';ctx.lineWidth=1.5;ctx.strokeRect(355,296,58,22);
-    ctx.strokeStyle='#4a3a1a';ctx.lineWidth=1.5;ctx.beginPath();ctx.ellipse(384,318,34,22,0,0,Math.PI*2);ctx.stroke();
-  } else {
-    ctx.strokeStyle='#4a4a3a';ctx.lineWidth=1;ctx.strokeRect(355,296,58,22);
-  }
-
-  // GUARD UNIFORM on hook (shows before taken)
-  if(!flags.has('laundry')){
-    // just part of laundry bag, described there
-  }
-
-  // VENT
-  ctx.fillStyle='#444';ctx.fillRect(193,140,88,60);
-  ctx.fillStyle='#2a2a2a';for(let vy=146;vy<196;vy+=10)ctx.fillRect(197,vy,80,6);
-  if(!flags.has('brick')){
-    ctx.fillStyle='#888';
-    [[198,146],[273,146],[198,192],[273,192]].forEach(([sx,sy])=>{
-      ctx.beginPath();ctx.arc(sx,sy,3.5,0,Math.PI*2);ctx.fill();
-      ctx.strokeStyle='#555';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(sx-2,sy);ctx.lineTo(sx+2,sy);ctx.stroke();ctx.beginPath();ctx.moveTo(sx,sy-2);ctx.lineTo(sx,sy+2);ctx.stroke();
-    });
-  }
-
-  // WINDOW
-  ctx.fillStyle='#2244aa';ctx.fillRect(455,72,118,130);
-  ctx.fillStyle='rgba(150,210,255,0.4)';ctx.fillRect(460,77,108,120);
-  ctx.fillStyle='rgba(255,255,255,0.05)';ctx.fillRect(468,77,15,120);ctx.fillRect(502,77,10,120);
-  ctx.strokeStyle='#888';ctx.lineWidth=5;ctx.lineCap='butt';
-  for(let bx=467;bx<570;bx+=18){ctx.beginPath();ctx.moveTo(bx,72);ctx.lineTo(bx,202);ctx.stroke();}
-  ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(455,112);ctx.lineTo(573,112);ctx.stroke();ctx.beginPath();ctx.moveTo(455,158);ctx.lineTo(573,158);ctx.stroke();
-  ctx.strokeStyle='#5a3300';ctx.lineWidth=7;ctx.strokeRect(455,72,118,130);
-
-  // DOOR
-  ctx.fillStyle='#5a3808';ctx.fillRect(522,152,76,180);
-  ctx.fillStyle='#3a2000';ctx.fillRect(528,162,62,160);
-  ctx.strokeStyle='#666';ctx.lineWidth=4.5;for(let dx=532;dx<585;dx+=11){ctx.beginPath();ctx.moveTo(dx,162);ctx.lineTo(dx,322);ctx.stroke();}
-  ctx.fillStyle='#aaa';ctx.beginPath();ctx.arc(532,242,6,0,Math.PI*2);ctx.fill();
-  ctx.strokeStyle='#3a2800';ctx.lineWidth=8;ctx.strokeRect(522,152,76,180);
-
+function drawRoom0(){
+  brickWall();floorStrip();
+  // bed
+  ctx.fillStyle='#6a3e1a';ctx.fillRect(22,220,140,55);ctx.fillStyle='#4a2800';ctx.fillRect(22,220,140,8);
+  ctx.fillStyle=flags.has('bed')?'#5a4030':'#8a7060';ctx.fillRect(26,230,132,36);ctx.fillStyle='#6a5040';ctx.fillRect(26,230,132,8);
+  // toilet
+  ctx.fillStyle='#ccc';ctx.beginPath();ctx.ellipse(64,320,32,22,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#bbb';ctx.fillRect(44,284,40,24);ctx.fillStyle='#ddd';ctx.fillRect(42,278,46,10);
+  ctx.strokeStyle='#999';ctx.lineWidth=1;ctx.beginPath();ctx.ellipse(64,320,32,22,0,0,Math.PI*2);ctx.stroke();
+  // loose brick
+  if(!flags.has('brick')){ctx.fillStyle='#5a4535';ctx.fillRect(164,258,58,38);ctx.strokeStyle='#8a7055';ctx.lineWidth=1.5;ctx.strokeRect(164,258,58,38);}
+  else{ctx.fillStyle='#111';ctx.fillRect(164,258,58,38);}
+  // graffiti area
+  ctx.fillStyle='rgba(255,255,255,0.08)';ctx.fillRect(258,153,114,62);
+  ctx.strokeStyle='rgba(255,255,255,0.15)';ctx.lineWidth=0.5;ctx.strokeRect(258,153,114,62);
+  ctx.fillStyle='rgba(255,255,200,0.1)';ctx.font='8px monospace';ctx.textAlign='left';
+  ctx.fillText('"slide coin under door"',262,168);ctx.fillText('"rope for the wall"',262,180);ctx.fillText('"spoon > pipes"',262,192);
+  // food tray
+  ctx.fillStyle='#999';ctx.fillRect(268,306,94,34);ctx.fillStyle='#6a8040';ctx.beginPath();ctx.ellipse(315,323,24,10,0,0,Math.PI*2);ctx.fill();
+  // window
+  window_(455,72,118,130,true);
+  // door (locked)
+  door(W-98,152,76,178,!flags.has('door0'));
   // character
   drawStick(315,H-70,1,'idle');
-
-  // items count
-  const found=flags.size;
-  ctx.fillStyle='rgba(255,255,255,0.18)';ctx.font='bold 13px sans-serif';ctx.textAlign='left';ctx.fillText('CELL B-13',10,18);
-  ctx.fillStyle='rgba(255,255,255,0.3)';ctx.font='11px sans-serif';ctx.fillText('Found: '+inv.length+' items',10,34);
-
-  // hover
-  if(hovered){
-    ctx.strokeStyle='rgba(255,220,80,0.75)';ctx.lineWidth=2;ctx.setLineDash([4,3]);ctx.strokeRect(hovered.x,hovered.y,hovered.w,hovered.h);ctx.setLineDash([]);
-    ctx.font='12px Georgia,serif';const tw=ctx.measureText(hovered.label).width+14;
-    const tx=Math.min(mx+12,W-tw-4),ty=my>30?my-26:my+18;
-    ctx.fillStyle='rgba(0,0,0,0.78)';ctx.fillRect(tx,ty,tw,20);ctx.fillStyle='#ffdd66';ctx.textAlign='left';ctx.fillText(hovered.label,tx+7,ty+14);
-  }
 }
 
-// ── DRAW CHOICE ──────────────────────────────────────────────
-const BTN_Y=130,BTN_H=52,BTN_GAP=10;
-function drawChoice(){
-  ctx.fillStyle='rgba(0,0,0,0.75)';ctx.fillRect(0,0,W,H);
-  const pw=460,px=(W-pw)/2;
-  ctx.fillStyle='#1a1228';ctx.fillRect(px,55,pw,H-80);
-  ctx.strokeStyle='#6a4a90';ctx.lineWidth=2;ctx.strokeRect(px,55,pw,H-80);
-  ctx.fillStyle='#ffdd88';ctx.font='bold 15px Georgia,serif';ctx.textAlign='center';ctx.fillText(choiceTitle,W/2,83);
-  choices.forEach((ch,i)=>{
-    const by=BTN_Y+i*(BTN_H+BTN_GAP);const hover=choiceHover===i;
-    ctx.fillStyle=hover?'#2a1a4a':'#1a0a2a';ctx.fillRect(px+20,by,pw-40,BTN_H);
-    ctx.strokeStyle=hover?'#aa77ee':'#553366';ctx.lineWidth=1.5;ctx.strokeRect(px+20,by,pw-40,BTN_H);
-    ctx.font='22px sans-serif';ctx.textAlign='left';ctx.fillStyle='#fff';ctx.fillText(ch.emoji,px+32,by+32);
-    ctx.font='13px Georgia,serif';ctx.fillStyle=hover?'#fff':'#ccc';ctx.fillText(ch.label,px+62,by+30);
-  });
-  ctx.font='11px Georgia,serif';ctx.fillStyle='rgba(255,255,255,0.4)';ctx.textAlign='center';ctx.fillText('[click outside or press ESC to cancel]',W/2,H-30);
+function drawRoom1(){
+  brickWall();
+  ctx.fillStyle='#4a4a3a';ctx.fillRect(0,H-70,W,70);
+  ctx.strokeStyle='rgba(0,0,0,0.3)';ctx.lineWidth=1;for(let x=0;x<W;x+=60)ctx.strokeRect(x,H-70,60,70);
+  // locker
+  ctx.fillStyle='#555';ctx.fillRect(28,178,62,142);ctx.strokeStyle='#333';ctx.lineWidth=1.5;ctx.strokeRect(28,178,62,142);
+  ctx.fillStyle='#666';ctx.fillRect(31,181,56,66);ctx.fillRect(31,250,56,66);
+  if(flags.has('locker')){ctx.fillStyle='rgba(0,0,0,0.3)';ctx.fillRect(31,181,56,66);}
+  ctx.fillStyle='#888';ctx.beginPath();ctx.arc(84,214,4,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(84,283,4,0,Math.PI*2);ctx.fill();
+  // bench
+  ctx.fillStyle='#6a4a2a';ctx.fillRect(28,322,120,28);ctx.fillStyle='#5a3a1a';ctx.fillRect(28,322,120,6);
+  ctx.fillRect(32,348,8,20);ctx.fillRect(130,348,8,20);
+  // notice board
+  ctx.fillStyle='#8a6a3a';ctx.fillRect(W-120,58,100,82);ctx.fillStyle='#fff9e0';ctx.fillRect(W-115,63,90,72);
+  ctx.fillStyle='#333';ctx.font='8px sans-serif';ctx.textAlign='left';
+  ctx.fillText('SHIFT ENDS',W-108,76);ctx.fillText('3:00 AM',W-108,88);ctx.fillText('DO NOT show',W-108,100);ctx.fillText('inmates.',W-108,112);
+  // cells doors (background detail)
+  for(let cy=100;cy<H-80;cy+=90){ctx.fillStyle='#4a3808';ctx.fillRect(W-120,cy,16,80);ctx.strokeStyle='#333';ctx.lineWidth=1;ctx.strokeRect(W-120,cy,16,80);}
+  // exit door
+  door(W-70,120,62,200,!flags.has('door1'));
+  // patrol guard
+  drawPatrolGuard();
+  // player
+  drawStick(180,H-70,1,'idle');
 }
 
-// ── DRAW ESCAPE ──────────────────────────────────────────────
-function drawEscape(){
-  const seq=SEQ[escType];const phase=Math.min(escPhase,seq.texts.length-1);
-  const [cx,cy]=seq.charPath[Math.min(phase,seq.charPath.length-1)];
-
-  if(seq.bg==='outside'){
-    const sky=ctx.createLinearGradient(0,0,0,H);sky.addColorStop(0,'#0a0a22');sky.addColorStop(1,'#1a3a66');
-    ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
-    for(let i=0;i<40;i++){const sx=(i*137)%W,sy=(i*73)%180,tw=0.4+0.6*Math.abs(Math.sin(frame*0.02+i));ctx.globalAlpha=tw;ctx.fillStyle='#fff';ctx.fillRect(sx,sy,2,2);}ctx.globalAlpha=1;
-    ctx.fillStyle='#2a5a1a';ctx.fillRect(0,H*0.6,W,H*0.4);ctx.fillStyle='#1a4a0a';ctx.fillRect(0,H*0.6,W,8);
-    // wall left side
-    if(phase<4){
-      ctx.fillStyle='#38384a';ctx.fillRect(W-120,0,120,H);
-      ctx.fillStyle='#2244aa';ctx.fillRect(W-115,72,110,130);
-      ctx.fillStyle='rgba(150,210,255,0.3)';ctx.fillRect(W-110,77,100,120);
-      if(phase>=1){
-        ctx.strokeStyle='rgba(255,100,0,0.6)';ctx.lineWidth=2;ctx.setLineDash([3,3]);
-        ctx.beginPath();ctx.moveTo(W-108,112);ctx.lineTo(W-12,112);ctx.stroke();ctx.setLineDash([]);
-      }
-      // rope hanging
-      if(hasItem('rope')&&escType!=='window_fall'&&phase>=2){
-        ctx.strokeStyle='#c8a060';ctx.lineWidth=3;
-        ctx.beginPath();ctx.moveTo(W-60,110);ctx.lineTo(W-60,220);ctx.stroke();
-        for(let ry=115;ry<220;ry+=18){ctx.beginPath();ctx.moveTo(W-65,ry);ctx.lineTo(W-55,ry+8);ctx.stroke();}
-      }
-    }
-    // fall animation
-    if(seq.fall){
-      const st=phase>=4?'dizzy':'arms_up';
-      drawStick(cx,cy,1,st);
-      if(phase===1||phase===2){
-        ctx.font='bold 20px sans-serif';ctx.textAlign='center';
-        ctx.fillStyle='#f88';ctx.fillText('AAAAAAA',cx-20,cy-30);
-      }
-      if(phase>=3){
-        // crack on ground
-        ctx.strokeStyle='#f80';ctx.lineWidth=2;
-        ctx.beginPath();ctx.moveTo(cx,cy+16);ctx.lineTo(cx-20,cy+30);ctx.moveTo(cx,cy+16);ctx.lineTo(cx+20,cy+28);ctx.moveTo(cx,cy+16);ctx.lineTo(cx+5,cy+35);ctx.stroke();
-        // guard
-        drawStick(cx-80,cy,1,'idle');
-        ctx.fillStyle='#f88';ctx.font='13px Georgia,serif';ctx.textAlign='center';ctx.fillText('Guard: "...Really?"',cx-80,cy-50);
-      }
-    } else {
-      const st=phase>=seq.texts.length-1?'cheer':phase===0?'idle':'walk';
-      drawStick(cx,cy,escType.includes('fast')?1:1,st);
-      if(escType==='window_fast'&&phase===3){
-        drawStick(cx+120,cy,-1,'walk');
-        ctx.fillStyle='#f44';ctx.font='bold 13px sans-serif';ctx.textAlign='center';ctx.fillText('HEY!!',cx+120,cy-50);
-      }
-    }
-
-  } else if(seq.bg==='corridor'){
-    const col=escType==='door_uniform_fire'?'#2a1a0a':escType.startsWith('door_ram')?'#300':'#1a1a2a';
-    ctx.fillStyle=col;ctx.fillRect(0,0,W,H);
-    ctx.strokeStyle='rgba(255,255,255,0.05)';ctx.lineWidth=1;
-    [[0,0,W/2,H/2],[W,0,W/2,H/2],[0,H,W/2,H/2],[W,H,W/2,H/2]].forEach(([x1,y1,x2,y2])=>{ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();});
-    ctx.fillStyle='rgba(255,255,255,0.03)';ctx.fillRect(0,H-70,W,70);
-    if(phase<2){ctx.fillStyle='#5a3808';ctx.fillRect(10,100,70,210);ctx.strokeStyle='#666';ctx.lineWidth=4;for(let dx=15;dx<76;dx+=11){ctx.beginPath();ctx.moveTo(dx,100);ctx.lineTo(dx,310);ctx.stroke();}}
-    // fire effect
-    if(escType==='door_uniform_fire'&&phase>=1){
-      for(let fx=0;fx<W;fx+=60){
-        ctx.fillStyle=`rgba(255,${80+Math.random()*80},0,${0.1+Math.random()*0.15})`;ctx.fillRect(fx,0,55,H);
-      }
-      ctx.fillStyle='#f80';ctx.font='bold 20px sans-serif';ctx.textAlign='center';
-      if(phase===1)ctx.fillText('🔥 FIRE!! FIRE!! 🔥',W/2,80);
-    }
-    // guard
-    if(phase>=1&&escType!=='door_uniform_fire'){
-      drawStick(90,H-70,-1,escType==='door_bribe'?'idle':'guard');
-      if(phase===1&&escType==='door_bribe'){ctx.font='20px sans-serif';ctx.textAlign='center';ctx.fillText('💰',90,H-115);}
-      if(escType==='door_phone'&&phase<=2){ctx.font='20px sans-serif';ctx.textAlign='center';ctx.fillText('📱🍕',90,H-115);}
-    }
-    if(phase>=3&&!escType.includes('ram')){
-      ctx.fillStyle='#4a6a30';ctx.fillRect(W-90,80,80,210);ctx.fillStyle='rgba(200,255,150,0.3)';ctx.fillRect(W-85,85,70,200);ctx.fillStyle='#ddd';ctx.beginPath();ctx.arc(W-93,185,6,0,Math.PI*2);ctx.fill();
-    }
-    const st=phase>=seq.texts.length-1?'cheer':phase<=1?'idle':'walk';
-    const stateActual=(escType==='door_uniform'||escType==='door_uniform_fire')?'guard':st;
-    drawStick(cx,H-70,1,stateActual);
-
-  } else if(seq.bg==='vent'){
-    if(phase<3){
-      ctx.fillStyle='#0d0808';ctx.fillRect(0,0,W,H);
-      const vy=H/2-30,vh=60;
-      ctx.fillStyle='#1a1010';ctx.fillRect(0,vy,W,vh);
-      ctx.strokeStyle='#2a2020';ctx.lineWidth=1;for(let vx=0;vx<W;vx+=30){ctx.beginPath();ctx.moveTo(vx,vy);ctx.lineTo(vx,vy+vh);ctx.stroke();}
-      const gr=ctx.createRadialGradient(W/2,H/2,10,W/2,H/2,120);gr.addColorStop(0,'rgba(255,240,180,0.1)');gr.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=gr;ctx.fillRect(0,0,W,H);
-      drawStick(cx,H/2+10,1,'crawl');
-      // guard in vent
-      if(escType==='vent_guard'&&phase>=2){
-        drawStick(cx+100,H/2+10,-1,'crawl');
-        ctx.fillStyle='#f44';ctx.font='bold 13px sans-serif';ctx.textAlign='center';ctx.fillText('👮',cx+100,H/2-20);
-      }
-      if(escType==='vent_spoon'&&phase===1){ctx.fillStyle='rgba(255,255,255,0.5)';ctx.font='14px sans-serif';ctx.textAlign='center';ctx.fillText('*CLANK CLANK CLANK*',W/2,H/2+60);}
-    } else {
-      const bg2=ctx.createLinearGradient(0,0,0,H);bg2.addColorStop(0,'#2a2535');bg2.addColorStop(1,'#1a151f');ctx.fillStyle=bg2;ctx.fillRect(0,0,W,H);
-      ctx.fillStyle='#5a4a30';ctx.fillRect(100,220,180,60);ctx.fillStyle='#4a3a20';ctx.fillRect(95,278,190,10);
-      ctx.strokeStyle='#aaa';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(220,220);ctx.lineTo(220,165);ctx.lineTo(242,140);ctx.stroke();
-      ctx.fillStyle='rgba(255,240,150,0.5)';ctx.beginPath();ctx.arc(242,135,20,0,Math.PI*2);ctx.fill();
-      drawStick(190,220,1,'idle');ctx.fillStyle='rgba(255,255,255,0.7)';ctx.font='16px sans-serif';ctx.textAlign='center';ctx.fillText('💤',190,165);
-      ctx.fillStyle='#3a5a2a';ctx.fillRect(W-90,100,76,195);ctx.fillStyle='#5a8a4a';ctx.fillRect(W-85,105,66,185);ctx.fillStyle='rgba(200,255,150,0.3)';ctx.fillRect(W-85,105,66,185);ctx.fillStyle='#ddd';ctx.beginPath();ctx.arc(W-93,196,6,0,Math.PI*2);ctx.fill();
-      const st=phase>=seq.texts.length-1?'cheer':'walk';drawStick(cx,cy,1,st);
-    }
+function drawRoom2(){
+  brickWall(true);
+  ctx.fillStyle='#4a4a3a';ctx.fillRect(0,H-70,W,70);
+  ctx.strokeStyle='rgba(0,0,0,0.3)';ctx.lineWidth=1;for(let x=0;x<W;x+=60)ctx.strokeRect(x,H-70,60,70);
+  // staff locker
+  ctx.fillStyle='#667';ctx.fillRect(28,138,57,162);ctx.strokeStyle='#444';ctx.lineWidth=1.5;ctx.strokeRect(28,138,57,162);
+  if(!flags.has('locker2')){ctx.fillStyle='#778';ctx.fillRect(31,141,51,76);ctx.fillRect(31,220,51,76);}
+  else{ctx.fillStyle='rgba(0,0,0,0.4)';ctx.fillRect(31,141,51,76);}
+  ctx.fillStyle='#888';ctx.beginPath();ctx.arc(81,180,3.5,0,Math.PI*2);ctx.fill();
+  // coffee machine
+  ctx.fillStyle='#333';ctx.fillRect(218,178,82,62);ctx.fillStyle='#555';ctx.fillRect(222,182,74,54);
+  ctx.fillStyle='#aa2200';ctx.fillRect(226,186,10,8);ctx.fillStyle='#111';ctx.fillRect(240,218,30,18);
+  // puff of steam
+  if(!flags.has('chef_gone')){
+    ctx.fillStyle='rgba(255,255,255,0.1)';
+    for(let i=0;i<3;i++){ctx.beginPath();ctx.arc(260+i*8,172+Math.sin(frame*0.05+i)*4,8,0,Math.PI*2);ctx.fill();}
   }
-
-  // overlays
-  if(phase>=seq.texts.length-1&&!seq.gameover){
-    ctx.fillStyle='rgba(0,0,0,0.45)';ctx.fillRect(0,0,W,H);
-    const gr=ctx.createRadialGradient(W/2,H/2,20,W/2,H/2,260);gr.addColorStop(0,'rgba(255,220,50,0.22)');gr.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=gr;ctx.fillRect(0,0,W,H);
-    ctx.font='bold 56px Georgia,serif';ctx.textAlign='center';ctx.shadowColor='#ffaa00';ctx.shadowBlur=28;ctx.fillStyle='#ffdd44';ctx.fillText('FREEDOM!',W/2,H/2-30);ctx.shadowBlur=0;
-    ctx.font='14px Georgia,serif';ctx.fillStyle='#ddd';ctx.fillText(seq.texts[phase],W/2,H/2+10);
-    ctx.font='12px Georgia,serif';ctx.fillStyle='#aaa';ctx.fillText('[ click to see your rating ]',W/2,H/2+36);
-  }
-  if(seq.gameover&&phase>=seq.texts.length-1){
-    ctx.fillStyle='rgba(180,0,0,0.5)';ctx.fillRect(0,0,W,H);
-    ctx.font='bold 42px Georgia,serif';ctx.textAlign='center';ctx.shadowColor='#f00';ctx.shadowBlur=20;ctx.fillStyle='#ff4444';ctx.fillText('BUSTED.',W/2,H/2-20);ctx.shadowBlur=0;
-    ctx.font='14px Georgia,serif';ctx.fillStyle='#faa';ctx.fillText(seq.texts[phase],W/2,H/2+14);
-    ctx.font='12px Georgia,serif';ctx.fillStyle='#f88';ctx.fillText('[ click to try again ]',W/2,H/2+40);
-  }
+  // table
+  ctx.fillStyle='#8a6a3a';ctx.fillRect(178,268,142,52);ctx.fillStyle='#7a5a2a';ctx.fillRect(178,268,142,8);
+  ctx.fillStyle='#555';ctx.fillRect(195,286,20,12);ctx.fillRect(265,286,20,12); // donut shapes
+  ctx.fillStyle='#8a6040';ctx.beginPath();ctx.ellipse(205,292,10,5,0,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(275,292,10,5,0,0,Math.PI*2);ctx.fill();
+  // sleeping guard
+  drawStick(380,H-70,1,'idle');
+  ctx.fillStyle='rgba(255,255,255,0.6)';ctx.font='14px sans-serif';ctx.textAlign='center';ctx.fillText('💤',380,H-110);
+  // exit door
+  door(W-70,120,62,200,!flags.has('door2'));
+  // player
+  drawStick(220,H-70,1,hasItem('uniform')?'guard':'idle');
 }
 
-// ── DRAW ENDING ──────────────────────────────────────────────
-function drawEnding(){
-  const seq=SEQ[escType];
+function drawRoom3(){
+  // kitchen: green-ish tiles
+  ctx.fillStyle='#2a3a2a';ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=1;for(let r=0;r*32<H;r++)for(let c=0;c*32<W;c++)ctx.strokeRect(c*32,r*32,32,32);
+  ctx.fillStyle='#5a5a3a';ctx.fillRect(0,H-70,W,70);
+  // cabinet
+  ctx.fillStyle='#8a7a5a';ctx.fillRect(28,138,72,122);ctx.strokeStyle='#5a4a2a';ctx.lineWidth=2;ctx.strokeRect(28,138,72,122);
+  ctx.fillStyle='#7a6a4a';ctx.fillRect(31,141,66,56);ctx.fillRect(31,200,66,56);
+  ctx.fillStyle='#999';ctx.beginPath();ctx.arc(96,169,3,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(96,228,3,0,Math.PI*2);ctx.fill();
+  if(!flags.has('cabinet')){
+    ctx.fillStyle='#f80';ctx.font='16px sans-serif';ctx.textAlign='center';ctx.fillText('🌶️',64,180);
+  }
+  // stove
+  ctx.fillStyle='#555';ctx.fillRect(198,178,122,82);
+  ctx.fillStyle='#333';ctx.fillRect(202,182,114,74);
+  ctx.fillStyle='#8a7a5a';ctx.beginPath();ctx.ellipse(258,195,40,10,0,0,Math.PI*2);ctx.fill(); // pot
+  ctx.fillStyle='#6a5a3a';ctx.beginPath();ctx.ellipse(258,195,32,8,0,0,Math.PI*2);ctx.fill();
+  // bubbling
+  if(!flags.has('chef_gone')){
+    for(let i=0;i<3;i++){
+      const bx=238+i*12,by=180+Math.sin(frame*0.08+i*2)*6;
+      ctx.fillStyle='rgba(150,100,50,0.5)';ctx.beginPath();ctx.arc(bx,by,4,0,Math.PI*2);ctx.fill();
+    }
+  } else {
+    // steam/pepper smoke
+    ctx.fillStyle='rgba(255,100,0,0.15)';
+    for(let i=0;i<5;i++){ctx.beginPath();ctx.arc(258+i*10,170+Math.sin(frame*0.04+i)*8,10,0,Math.PI*2);ctx.fill();}
+    ctx.fillStyle='rgba(255,100,0,0.08)';ctx.fillRect(0,0,W,H);
+  }
+  // fridge
+  ctx.fillStyle='#aaa';ctx.fillRect(508,138,82,162);ctx.strokeStyle='#888';ctx.lineWidth=2;ctx.strokeRect(508,138,82,162);
+  ctx.fillStyle='#999';ctx.fillRect(510,140,78,78);ctx.fillRect(510,220,78,78);
+  ctx.fillStyle='#777';ctx.beginPath();ctx.arc(590,180,4,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(590,260,4,0,Math.PI*2);ctx.fill();
+  // chef guard
+  if(!flags.has('chef_gone')){
+    drawStick(380,H-70,-1,'idle');
+    // chef hat
+    ctx.fillStyle='#fff';ctx.fillRect(368,H-70-50,24,20);ctx.fillRect(362,H-70-32,36,10);
+    ctx.fillStyle='rgba(255,255,255,0.1)';ctx.fillRect(362,H-70-50,36,30);
+  } else {
+    ctx.fillStyle='#888';ctx.font='12px sans-serif';ctx.textAlign='center';ctx.fillText('(bathroom)',380,H-50);
+  }
+  // exit door
+  door(W-70,138,64,182,!flags.has('door3'));
+  // player
+  drawStick(180,H-70,1,'idle');
+}
+
+function drawRoom4(){
+  brickWall(true);
+  ctx.fillStyle='#3a3a2a';ctx.fillRect(0,H-70,W,70);
+  // shelves
+  ctx.fillStyle='#6a5a3a';ctx.fillRect(28,118,122,202);
+  for(let sy=118;sy<320;sy+=50){ctx.fillStyle='#5a4a2a';ctx.fillRect(28,sy,122,8);}
+  // items on shelves
+  if(!flags.has('shelf')){
+    ctx.font='22px sans-serif';ctx.textAlign='center';
+    ctx.fillText('✂️',64,165);ctx.fillText('🪢',64,215);
+    ctx.fillText('📦',100,165);ctx.fillText('📦',100,215);
+  } else {
+    ctx.fillStyle='rgba(0,0,0,0.3)';ctx.fillRect(28,118,122,202);
+    ctx.fillStyle='#555';ctx.font='11px sans-serif';ctx.textAlign='center';ctx.fillText('(empty)',88,220);
+  }
+  // boxes
+  ctx.fillStyle='#7a6a4a';ctx.fillRect(198,218,142,102);
+  ctx.fillStyle='#6a5a3a';ctx.fillRect(198,218,142,10);ctx.fillRect(230,228,8,30);ctx.fillRect(300,228,8,30);
+  ctx.fillStyle='#555';ctx.font='10px sans-serif';ctx.textAlign='center';
+  ctx.fillText('LAUNDRY',269,255);ctx.fillText('EVIDENCE',269,270);
+  // padlock (on exit door)
+  if(!flags.has('padlock_cut')){
+    ctx.fillStyle='#aaa';ctx.fillRect(W-82,230,16,20);ctx.beginPath();ctx.arc(W-74,230,8,Math.PI,0);ctx.stroke();
+    ctx.strokeStyle='#888';ctx.lineWidth=3;ctx.beginPath();ctx.arc(W-74,228,8,Math.PI,0);ctx.stroke();
+  }
+  // exit door
+  door(W-70,120,62,200,!flags.has('door4'));
+  drawStick(300,H-70,1,'idle');
+}
+
+function drawRoom5(){
+  // courtyard — outdoor
+  const sky=ctx.createLinearGradient(0,0,0,H*0.65);sky.addColorStop(0,'#0a0a22');sky.addColorStop(1,'#1a2a44');
+  ctx.fillStyle=sky;ctx.fillRect(0,0,W,H*0.65);
+  // stars
+  for(let i=0;i<50;i++){const sx=(i*137)%W,sy=(i*73)%180;ctx.globalAlpha=0.4+0.6*Math.abs(Math.sin(frame*0.015+i));ctx.fillStyle='#fff';ctx.fillRect(sx,sy,1.5,1.5);}ctx.globalAlpha=1;
+  // ground
+  ctx.fillStyle='#2a4a1a';ctx.fillRect(0,H*0.65,W,H*0.35);
+  ctx.fillStyle='#1a3a0a';ctx.fillRect(0,H*0.65,W,6);
+  // walls (left and right, far wall top)
+  ctx.fillStyle='#38384a';ctx.fillRect(0,0,30,H);ctx.fillRect(W-98,0,98,H);
+  ctx.fillStyle='#38384a';ctx.fillRect(0,0,W,40);
+  // searchlight sweep
+  const sweepAngle=(frame*0.015)%(Math.PI*2);
+  const sx=W*0.5+Math.cos(sweepAngle)*W*0.4;
+  ctx.fillStyle='rgba(255,255,200,0.07)';ctx.beginPath();ctx.moveTo(W*0.5,0);ctx.lineTo(sx-30,H*0.5);ctx.lineTo(sx+30,H*0.5);ctx.closePath();ctx.fill();
+  ctx.fillStyle='rgba(255,255,0,0.4)';ctx.beginPath();ctx.arc(W*0.5,0,8,0,Math.PI*2);ctx.fill();
+  // bench
+  ctx.fillStyle='#6a5a3a';ctx.fillRect(198,H*0.65-20,100,20);ctx.fillRect(202,H*0.65,8,25);ctx.fillRect(282,H*0.65,8,25);
+  // wall anchor / exit
+  ctx.fillStyle='#888';ctx.beginPath();ctx.arc(W-55,80,8,0,Math.PI*2);ctx.fill();
+  // rope (if thrown)
+  if(flags.has('rope_thrown')){
+    ctx.strokeStyle='#c8a060';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(W-55,80);ctx.lineTo(W-55,H*0.65);ctx.stroke();
+  }
+  door(W-98,60,80,290,!flags.has('door5'));
+  drawPatrolGuard();
+  drawStick(200,H*0.65-2,1,'idle');
+}
+
+function drawRoom6(){
+  // maintenance tunnel — dark, pipes
+  const bg=ctx.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#111118');bg.addColorStop(1,'#0a0a10');
+  ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+  // pipes
+  ctx.strokeStyle='#555';ctx.lineWidth=14;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(0,80);ctx.lineTo(W,80);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,H-120);ctx.lineTo(W,H-120);ctx.stroke();
+  ctx.strokeStyle='#444';ctx.lineWidth=18;
+  ctx.beginPath();ctx.moveTo(80,0);ctx.lineTo(80,H);ctx.stroke();
+  // valve
+  ctx.fillStyle=flags.has('steam_on')?'#f80':'#888';ctx.beginPath();ctx.arc(80,80,16,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#555';ctx.lineWidth=4;
+  ctx.beginPath();ctx.moveTo(66,80);ctx.lineTo(94,80);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(80,66);ctx.lineTo(80,94);ctx.stroke();
+  // steam
+  if(flags.has('steam_on')){
+    ctx.fillStyle='rgba(220,220,255,0.12)';
+    for(let i=0;i<8;i++){const sx2=80+i*60,sy2=80+Math.sin(frame*0.04+i)*20;ctx.beginPath();ctx.arc(sx2,sy2,30,0,Math.PI*2);ctx.fill();}
+    ctx.fillStyle='rgba(220,220,255,0.06)';ctx.fillRect(0,0,W,H);
+  }
+  // toolbox
+  ctx.fillStyle='#8a3a1a';ctx.fillRect(258,258,82,62);ctx.strokeStyle='#5a2a0a';ctx.lineWidth=2;ctx.strokeRect(258,258,82,62);
+  ctx.fillStyle='#aa5a2a';ctx.fillRect(260,260,78,22);
+  if(!flags.has('toolbox')){ctx.font='22px sans-serif';ctx.textAlign='center';ctx.fillText('🔧',299,315);}
+  // guard
+  if(!flags.has('steam_on')){
+    drawStick(420,H-70,-1,'guard');
+  } else {
+    ctx.fillStyle='rgba(255,255,255,0.3)';ctx.font='16px sans-serif';ctx.textAlign='center';ctx.fillText('💨👮💨',420,H-70);
+  }
+  // floor
+  ctx.fillStyle='#2a2a2a';ctx.fillRect(0,H-70,W,70);
+  door(W-70,120,62,200,!flags.has('door6'));
+  drawStick(200,H-70,1,'idle');
+}
+
+function drawRoom7(){
+  // outer hallway — cleaner, greener walls
+  ctx.fillStyle='#1a2a1a';ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(0,0,0,0.15)';ctx.lineWidth=1;for(let r=0;r*32<H;r++)for(let c=0;c*32<W;c++)ctx.strokeRect(c*32,r*32,32,32);
+  ctx.fillStyle='#3a3a2a';ctx.fillRect(0,H-70,W,70);
+  // EXIT sign
+  ctx.fillStyle='#2a0000';ctx.fillRect(28,78,122,82);ctx.fillStyle='#ff2200';ctx.fillRect(32,82,114,74);
+  ctx.fillStyle='#fff';ctx.font='bold 20px sans-serif';ctx.textAlign='center';ctx.fillText('EXIT',89,128);ctx.font='14px sans-serif';ctx.fillText('→',102,128);
+  // barred window
+  window_(248,78,122,102,true);
+  // greenery through window
+  ctx.fillStyle='rgba(50,180,50,0.2)';ctx.fillRect(252,82,114,94);
+  // checkpoint guard
+  ctx.fillStyle='#555';ctx.fillRect(390,170,80,100); // booth
+  ctx.fillStyle='#444';ctx.fillRect(394,174,72,92);
+  drawStick(430,H-70,1,hasItem('uniform')?'guard':'idle');
+  // patrol
+  drawPatrolGuard();
+  door(W-70,120,62,200,!flags.has('door7'));
+  drawStick(180,H-70,1,hasItem('uniform')?'guard':'idle');
+}
+
+function drawRoom8(){
+  // outer wall — night sky
+  const sky=ctx.createLinearGradient(0,0,0,H);sky.addColorStop(0,'#010115');sky.addColorStop(1,'#0a1a30');
+  ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+  for(let i=0;i<60;i++){const sx=(i*197)%W,sy=(i*83)%260;ctx.globalAlpha=0.3+0.7*Math.abs(Math.sin(frame*0.012+i));ctx.fillStyle='#fff';ctx.fillRect(sx,sy,2,2);}ctx.globalAlpha=1;
+  // the BIG wall
+  ctx.fillStyle='#2a2a3a';ctx.fillRect(28,38,100,H-108);
+  ctx.strokeStyle='rgba(0,0,0,0.3)';ctx.lineWidth=1;
+  for(let r=0;r*22<H;r++){const o=(r%2)*36;for(let c=0;c*72<120;c++)ctx.strokeRect(28+c*72+o,r*22,72,22);}
+  // barbed wire top
+  ctx.strokeStyle='#888';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(28,38);ctx.lineTo(128,38);ctx.stroke();
+  for(let bx=32;bx<128;bx+=8){ctx.beginPath();ctx.moveTo(bx,34);ctx.lineTo(bx+4,42);ctx.moveTo(bx+4,34);ctx.lineTo(bx,42);ctx.stroke();}
+  // anchor ring
+  ctx.fillStyle='#aaa';ctx.beginPath();ctx.arc(80,56,8,0,Math.PI*2);ctx.fill();ctx.fillStyle='#666';ctx.beginPath();ctx.arc(80,56,4,0,Math.PI*2);ctx.fill();
+  // rope
+  if(hasItem('rope')&&!flags.has('rope_thrown')){
+    ctx.fillStyle='#f8c060';ctx.font='14px sans-serif';ctx.textAlign='left';ctx.fillText('↑ Throw rope here',90,52);
+  }
+  if(flags.has('rope_thrown')){
+    ctx.strokeStyle='#c8a060';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(80,56);ctx.lineTo(80,H-70);ctx.stroke();
+    for(let ry=66;ry<H-70;ry+=20){ctx.beginPath();ctx.moveTo(74,ry);ctx.lineTo(84,ry+10);ctx.stroke();}
+  }
+  // tower guard far right
+  ctx.fillStyle='#2a2a3a';ctx.fillRect(W-80,100,70,180);
+  ctx.fillStyle='#1a1a2a';ctx.fillRect(W-75,105,60,170);
+  drawStick(W-45,H-70,-1,'guard');
+  ctx.fillStyle='#888';ctx.font='11px sans-serif';ctx.textAlign='center';ctx.fillText('tower guard',W-45,H-50);
+  // ground
+  ctx.fillStyle='#2a4a1a';ctx.fillRect(0,H-70,W,70);ctx.fillStyle='#1a3a0a';ctx.fillRect(0,H-70,W,6);
+  // exit — just the wall to click
+  if(flags.has('rope_thrown')){
+    ctx.strokeStyle='rgba(255,220,80,0.5)';ctx.lineWidth=2;ctx.setLineDash([4,3]);ctx.strokeRect(28,38,100,H-108);ctx.setLineDash([]);
+    ctx.fillStyle='#ffdd44';ctx.font='bold 13px sans-serif';ctx.textAlign='center';ctx.fillText('↑ CLIMB!',78,100);
+  }
+  drawStick(200,H-70,1,'idle');
+}
+
+function drawRoom9(){
+  // FREEDOM! Forest at night
+  const sky=ctx.createLinearGradient(0,0,0,H);sky.addColorStop(0,'#010118');sky.addColorStop(1,'#1a2a10');
+  ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+  for(let i=0;i<80;i++){const sx=(i*197)%W,sy=(i*83)%260;ctx.globalAlpha=0.5+0.5*Math.abs(Math.sin(frame*0.012+i));ctx.fillStyle='#fff';ctx.fillRect(sx,sy,2,2);}ctx.globalAlpha=1;
+  // moon
+  ctx.fillStyle='rgba(255,255,200,0.9)';ctx.beginPath();ctx.arc(W-80,60,30,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='rgba(0,0,20,0.3)';ctx.beginPath();ctx.arc(W-70,55,28,0,Math.PI*2);ctx.fill();
+  // trees
+  for(let t=0;t<8;t++){
+    const tx=50+t*76,th=100+Math.sin(t*1.4)*40;
+    ctx.fillStyle='#1a4a0a';ctx.beginPath();ctx.moveTo(tx,H-70-th);ctx.lineTo(tx-28,H-70);ctx.lineTo(tx+28,H-70);ctx.closePath();ctx.fill();
+    ctx.fillStyle='#0a3a00';ctx.fillRect(tx-6,H-70,12,30);
+  }
+  // road
+  ctx.fillStyle='#3a3a3a';ctx.beginPath();ctx.moveTo(W*0.3,H-70);ctx.lineTo(W*0.6,H-70);ctx.lineTo(W+20,H-20);ctx.lineTo(W+20,H+20);ctx.lineTo(W*0.3-20,H+20);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#555';ctx.fillRect(0,H-70,W,6);
+  // road sign
+  ctx.fillStyle='#888';ctx.fillRect(W-140,H-70-80,2,80);ctx.fillRect(W-178,H-70-80,76,36);
+  ctx.fillStyle='#2a4a1a';ctx.fillRect(W-178,H-70-80,76,36);ctx.fillStyle='#fff';ctx.font='9px sans-serif';ctx.textAlign='center';ctx.fillText('FREE WORLD',W-140,H-70-57);
+  // celebration!
+  ctx.fillStyle='rgba(255,220,0,0.15)';
+  const gr2=ctx.createRadialGradient(W/2,H/2,20,W/2,H/2,250);gr2.addColorStop(0,'rgba(255,220,50,0.2)');gr2.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=gr2;ctx.fillRect(0,0,W,H);
+  ctx.font='bold 44px Georgia,serif';ctx.textAlign='center';ctx.shadowColor='#ffaa00';ctx.shadowBlur=24;ctx.fillStyle='#ffdd44';ctx.fillText('FREEDOM!!!',W/2,H/2-20);ctx.shadowBlur=0;
+  ctx.font='14px Georgia,serif';ctx.fillStyle='#ddd';ctx.fillText('10 rooms. Every guard. Every door. You beat them ALL.',W/2,H/2+16);
+  // player celebrating
+  drawStick(W/2,H-70,1,'cheer',1.2);
+  // click to continue
+  ctx.fillStyle='rgba(0,255,100,0.08)';ctx.fillRect(W-170,H-70-120,160,110);
+  ctx.strokeStyle='rgba(0,255,100,0.3)';ctx.lineWidth=1.5;ctx.strokeRect(W-170,H-70-120,160,110);
+  ctx.fillStyle='#8f8';ctx.font='13px Georgia,serif';ctx.textAlign='center';ctx.fillText('[ click to run ]',W-90,H-100);
+}
+
+const DRAW_FNS=[drawRoom0,drawRoom1,drawRoom2,drawRoom3,drawRoom4,drawRoom5,drawRoom6,drawRoom7,drawRoom8,drawRoom9];
+
+// ── CAUGHT / ENDING SCREENS ─────────────────────────────────
+function drawCaught(){
+  brickWall();floorStrip();
+  ctx.fillStyle='rgba(180,0,0,0.5)';ctx.fillRect(0,0,W,H);
+  ctx.font='bold 44px Georgia,serif';ctx.textAlign='center';ctx.shadowColor='#f00';ctx.shadowBlur=20;ctx.fillStyle='#ff4444';ctx.fillText('BUSTED!',W/2,H/2-30);ctx.shadowBlur=0;
+  ctx.font='14px Georgia,serif';ctx.fillStyle='#faa';ctx.fillText(caughtMsg,W/2,H/2+10);
+  ctx.font='12px Georgia,serif';ctx.fillStyle='#f88';ctx.fillText('[ click to try room '+room+' again ]',W/2,H/2+40);
+  drawStick(W/2,H-70,1,'idle');
+}
+function drawEndingScreen(){
   const bg=ctx.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#0a1a0a');bg.addColorStop(1,'#152015');ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
-  for(let i=0;i<60;i++){const sx=(i*197)%W,sy=(i*83)%H,tw=0.3+0.7*Math.abs(Math.sin(frame*0.015+i));ctx.globalAlpha=tw*0.6;ctx.fillStyle='#fff';ctx.fillRect(sx,sy,1.5,1.5);}ctx.globalAlpha=1;
-  ctx.fillStyle='rgba(0,0,0,0.65)';ctx.fillRect(80,25,W-160,H-45);ctx.strokeStyle='#4a7a4a';ctx.lineWidth=2;ctx.strokeRect(80,25,W-160,H-45);
-  ctx.font='52px sans-serif';ctx.textAlign='center';ctx.fillText(seq.emoji,W/2,82);
-  ctx.fillStyle='#ffdd44';ctx.font='bold 20px Georgia,serif';ctx.fillText('"'+seq.title+'"',W/2,112);
-  ctx.fillStyle='#ccc';ctx.font='13px Georgia,serif';wrapText(seq.desc,W/2,138,W-200,19);
-  // badassometer
-  const r=seq.rating;ctx.fillStyle='rgba(255,255,255,0.1)';ctx.fillRect(100,192,W-200,22);
+  for(let i=0;i<60;i++){const sx=(i*197)%W,sy=(i*83)%H;ctx.globalAlpha=0.3+0.7*Math.abs(Math.sin(frame*0.015+i));ctx.fillStyle='#fff';ctx.fillRect(sx,sy,1.5,1.5);}ctx.globalAlpha=1;
+  ctx.fillStyle='rgba(0,0,0,0.65)';ctx.fillRect(80,25,W-160,H-50);ctx.strokeStyle='#4a7a4a';ctx.lineWidth=2;ctx.strokeRect(80,25,W-160,H-50);
+  ctx.font='52px sans-serif';ctx.textAlign='center';ctx.fillText(endEmoji,W/2,80);
+  ctx.fillStyle='#ffdd44';ctx.font='bold 20px Georgia,serif';ctx.fillText('"'+endTitle+'"',W/2,112);
+  ctx.fillStyle='#ccc';ctx.font='13px Georgia,serif';ctx.fillText(endDesc,W/2,140,W-200);
+  const r=endRating;
+  ctx.fillStyle='rgba(255,255,255,0.1)';ctx.fillRect(100,192,W-200,22);
   const rc=r>80?'#4f4':r>50?'#ff8':r>30?'#f80':'#f44';ctx.fillStyle=rc;ctx.fillRect(100,192,(W-200)*(r/100),22);
   ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=1;ctx.strokeRect(100,192,W-200,22);
   ctx.fillStyle='#fff';ctx.font='bold 11px sans-serif';ctx.fillText('BADASSOMETER: '+r+'%',W/2,207);
-  const lbl=r>90?'LEGENDARY':r>80?'EPIC':r>65?'SOLID':r>50?'DECENT':r>35?'QUESTIONABLE':'EMBARRASSING';
+  const lbl=r>=100?'ABSOLUTE LEGEND':r>80?'EPIC':r>65?'SOLID':'DECENT';
   ctx.fillStyle=rc;ctx.font='bold 14px Georgia,serif';ctx.fillText(lbl,W/2,230);
   drawStick(W/2,285,1,'cheer');
-  const pw=180,px=(W-pw)/2;ctx.fillStyle='rgba(255,255,255,0.1)';ctx.fillRect(px,310,pw,30);ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=1;ctx.strokeRect(px,310,pw,30);
+  ctx.fillStyle='rgba(255,255,255,0.1)';ctx.fillRect((W-180)/2,310,180,30);ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=1;ctx.strokeRect((W-180)/2,310,180,30);
   ctx.fillStyle='#88aaff';ctx.font='13px Georgia,serif';ctx.fillText('[ Escape Again ]',W/2,330);
 }
 
-function wrapText(text,cx,y,maxW,lineH){
-  const words=text.split(' ');let line='';
-  for(const w of words){const test=line+w+' ';if(ctx.measureText(test).width>maxW&&line){ctx.fillText(line.trim(),cx,y);y+=lineH;line=w+' ';}else line=test;}
-  if(line)ctx.fillText(line.trim(),cx,y);
+// ── HOVER DETECTION ─────────────────────────────────────────
+function getHover(){
+  if(scene!=='game')return null;
+  for(const s of getSpots()){if(mx>s.x&&mx<s.x+s.w&&my>s.y&&my<s.y+s.h)return s;}
+  return null;
+}
+function drawHover(){
+  if(!hovered)return;
+  ctx.strokeStyle='rgba(255,220,80,0.75)';ctx.lineWidth=2;ctx.setLineDash([4,3]);ctx.strokeRect(hovered.x,hovered.y,hovered.w,hovered.h);ctx.setLineDash([]);
+  ctx.font='12px Georgia,serif';const tw=ctx.measureText(hovered.label).width+14;
+  const tx=Math.min(mx+12,W-tw-4),ty=my>30?my-26:my+18;
+  ctx.fillStyle='rgba(0,0,0,0.78)';ctx.fillRect(tx,ty,tw,20);ctx.fillStyle='#ffdd66';ctx.textAlign='left';ctx.fillText(hovered.label,tx+7,ty+14);
+}
+function drawRoomLabel(){
+  ctx.fillStyle='rgba(255,255,255,0.22)';ctx.font='bold 12px sans-serif';ctx.textAlign='left';ctx.fillText(ROOMS[room].name,10,18);
 }
 
 // ── UPDATE ───────────────────────────────────────────────────
 function update(){
   frame++;
-  if(scene==='escape'){
-    const seq=SEQ[escType],done=escPhase>=seq.texts.length-1;
-    if(!done){escTick++;if(escTick>90){escPhase++;escTick=0;setText(seq.texts[escPhase]);}}
+  updatePatrol();
+  if(transDir!==0){
+    transAlpha+=transDir*0.07;
+    if(transDir===-1&&transAlpha<=0){transAlpha=0;room=transTarget;transTarget=-1;transDir=1;guardX=W*0.4;}
+    if(transDir===1&&transAlpha>=1){transAlpha=1;transDir=0;}
   }
-  if(scene==='cell'){
-    hovered=null;for(const s of SPOTS)if(mx>s.x&&mx<s.x+s.w&&my>s.y&&my<s.y+s.h){hovered=s;break;}
-    C.style.cursor=hovered?'pointer':'default';
-  } else if(scene==='choice'){
-    choiceHover=-1;const pw=460,px=(W-pw)/2;
-    choices.forEach((ch,i)=>{const by=BTN_Y+i*(BTN_H+BTN_GAP);if(mx>px+20&&mx<px+20+pw-40&&my>by&&my<by+BTN_H)choiceHover=i;});
-    C.style.cursor=choiceHover>=0?'pointer':'default';
-  } else {C.style.cursor='pointer';}
+  hovered=getHover();
+  if(scene==='game') C.style.cursor=hovered?'pointer':'default';
+  else C.style.cursor='pointer';
+}
+
+// ── RENDER ───────────────────────────────────────────────────
+function render(){
+  ctx.clearRect(0,0,W,H);
+  if(scene==='game'||(transDir!==0)){
+    if(room<DRAW_FNS.length)DRAW_FNS[room]();
+    drawHover();drawRoomLabel();
+  }
+  if(scene==='caught')drawCaught();
+  if(scene==='ending')drawEndingScreen();
+  if(transDir!==0){
+    ctx.fillStyle=`rgba(0,0,0,${transDir===-1?1-transAlpha:1-transAlpha})`;
+    ctx.fillRect(0,0,W,H);
+  }
 }
 
 // ── INPUT ────────────────────────────────────────────────────
@@ -638,43 +854,40 @@ function sc(e){const r=C.getBoundingClientRect();return{x:(e.clientX-r.left)*W/r
 C.addEventListener('mousemove',e=>{const c=sc(e);mx=c.x;my=c.y;});
 C.addEventListener('click',e=>{
   const c=sc(e);mx=c.x;my=c.y;
-  if(scene==='cell'&&hovered){hovered.act();return;}
-  if(scene==='choice'){
-    if(choiceHover>=0){choices[choiceHover].cb();return;}
-    scene='cell';setText('You decide to think about it more.');return;
-  }
-  if(scene==='escape'){
-    const seq=SEQ[escType],done=escPhase>=seq.texts.length-1;
-    if(done){if(seq.gameover)reset();else scene='ending';}
-    return;
-  }
-  if(scene==='ending')reset();
+  if(scene==='caught'){scene='game';flags=new Set(getRoomFlags());setText('You\'re back in room '+(room+1)+'. Try again.');return;}
+  if(scene==='ending'){resetAll();return;}
+  if(scene!=='game')return;
+  if(hovered)hovered.act();
 });
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&scene==='choice'){scene='cell';setText('Never mind.');}});
 
-function reset(){
-  scene='cell';inv=[];flags=new Set();selItem=null;escType='';escPhase=0;escTick=0;
-  renderInv();setText('Click on things in your cell to explore. Find items and escape!');
+// when caught, only reset that room's flags (keep inventory)
+function getRoomFlags(){
+  // keep all flags from previous rooms
+  const keep=new Set();
+  for(const f of flags){
+    if(!['bed','toilet','brick','tray','graffiti','locker','bench','notice','locker2','coffee','guard2','table','cabinet','stove','chef_gone','pepper_used','fridge','shelf','boxes','padlock_cut','toolbox','rope_thrown','sign','window7','guard7'].includes(f)){
+      keep.add(f);
+    }
+  }
+  return keep;
+}
+
+function resetAll(){
+  room=0;flags=new Set();inv=[];selItem=null;scene='game';
+  guardX=W*0.4;guardDir=1;transDir=0;transAlpha=0;transTarget=-1;
+  renderInv();setText('You\'re in Cell B-13. The door is locked. Find a way out.');
 }
 
 C.addEventListener('touchstart',e=>{
   e.preventDefault();const r=C.getBoundingClientRect();const t=e.touches[0];
   mx=(t.clientX-r.left)*W/r.width;my=(t.clientY-r.top)*H/r.height;
-  if(scene==='cell'){hovered=null;for(const s of SPOTS)if(mx>s.x&&mx<s.x+s.w&&my>s.y&&my<s.y+s.h){hovered=s;break;}if(hovered)hovered.act();}
-  else if(scene==='choice'&&choiceHover>=0){choices[choiceHover].cb();}
-  else if(scene==='escape'){const seq=SEQ[escType],done=escPhase>=seq.texts.length-1;if(done){if(seq.gameover)reset();else scene='ending';}}
-  else if(scene==='ending')reset();
+  hovered=getHover();
+  if(scene==='caught'){scene='game';setText('Try again!');return;}
+  if(scene==='ending'){resetAll();return;}
+  if(hovered)hovered.act();
 },{passive:false});
 
-// ── LOOP ─────────────────────────────────────────────────────
-function loop(){
-  ctx.clearRect(0,0,W,H);update();
-  if(scene==='cell')drawCell();
-  else if(scene==='choice'){drawCell();drawChoice();}
-  else if(scene==='escape')drawEscape();
-  else if(scene==='ending')drawEnding();
-  requestAnimationFrame(loop);
-}
+function loop(){render();update();requestAnimationFrame(loop);}
 loop();
 </script>
 </body>

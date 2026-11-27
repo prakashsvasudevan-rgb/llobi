@@ -49,10 +49,10 @@ let endType=''; // 'peace'|'chaos'
 // tutorial steps (scripted story beat timings in frames)
 const TUT=[
   {at:60,  msg:'A new trend is spreading among the circles...',col:'#ffcc44'},
-  {at:150, msg:'More circles are picking it up.',col:'#ffcc44'},
-  {at:230, msg:'The squares have noticed.',col:'#aa88ff'},
-  {at:310, msg:'One square grows angry.',col:'#ff4444'},
-  {at:400, msg:'You hold the camera.\nWhat will you broadcast?',col:'#ffffff'},
+  {at:160, msg:'More circles are picking it up.',col:'#ffcc44'},
+  {at:260, msg:'The squares have noticed.',col:'#aa88ff'},
+  {at:360, msg:'One square grows angry.',col:'#ff4444'},
+  {at:480, msg:'You hold the camera.\nWhat will you broadcast?',col:'#ffffff'},
 ];
 let tutStep=0;
 
@@ -100,10 +100,18 @@ function drawNPC(n,scale=1){
   ctx.save();ctx.translate(n.x,n.y);ctx.scale(scale,scale);
   const s=n.size;
   const col = n.mood==='angry'
-    ? (n.type==='circle'?'#ff2200':'#2244ff')
+    ? '#dd1111'
     : n.extreme
       ? (n.type==='circle'?'#ffaa00':'#aa22ff')
       : (n.type==='circle'?'#ff9933':'#6677ff');
+
+  // angry pulsing ring
+  if(n.mood==='angry'){
+    const pulse=0.5+0.5*Math.sin(frame*0.18+n.wobble);
+    ctx.strokeStyle=`rgba(255,50,0,${0.5+pulse*0.5})`;ctx.lineWidth=3+pulse*2;
+    if(n.type==='circle'){ctx.beginPath();ctx.arc(0,0,s+5+pulse*3,0,Math.PI*2);ctx.stroke();}
+    else{ctx.beginPath();ctx.roundRect(-s-5-pulse*2,-s-5-pulse*2,(s+5+pulse*2)*2,(s+5+pulse*2)*2,4);ctx.stroke();}
+  }
 
   if(n.type==='circle'){
     // body
@@ -429,7 +437,7 @@ function drawBgToCtx(c){
 
 function drawNPCToCtx(c,n){
   const s=n.size;
-  const col=n.mood==='angry'?(n.type==='circle'?'#ff2200':'#2244ff')
+  const col=n.mood==='angry'?'#dd1111'
     :n.trendy?(n.type==='circle'?'#ffaa00':'#6677ff')
     :(n.type==='circle'?'#ff9933':'#6677ff');
   c.fillStyle=col;

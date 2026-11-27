@@ -1933,6 +1933,32 @@ function makePrinceBlackDeathMeshUpgraded(){
   return g;
 }
 
+function makeBloodDragonMesh(){
+  const g=new THREE.Group();
+  const FS={flatShading:true};
+  const mT=mat(0x8b0000,FS);   // deep red body
+  const mTC=mat(0xcc1111,FS);  // bright red accent
+  const mB=mat(0x3d0000,FS);   // dark belly
+  addBox(g,1.8,0.9,3.5,mT);
+  addBox(g,0.7,0.7,1.5,mT,0,0.2,2.6);
+  addBox(g,1.0,0.9,1.5,mTC,0,0.4,3.8);
+  for(let i=0;i<4;i++) addBox(g,0.14,0.45,0.14,mTC,(i-1.5)*0.28,1.1,4.4);
+  const mW=mat(0x5a0000,{side:THREE.DoubleSide,flatShading:true,transparent:true,opacity:0.85});
+  const lw=new THREE.Group();lw.position.set(-0.9,0.1,0.8);
+  const rw=new THREE.Group();rw.position.set(0.9,0.1,0.8);
+  lw.add(new THREE.Mesh(makeWingGeo(false,'fire'),mW.clone()));
+  rw.add(new THREE.Mesh(makeWingGeo(true,'fire'),mW.clone()));
+  g.add(lw);g.add(rw);
+  for(let i=0;i<6;i++){const s=0.65-i*0.07;addBox(g,s,s,0.8,mB,0,-i*0.03,-2.0-i*0.9,i*0.05);}
+  const eG=new THREE.SphereGeometry(0.16,6,5);
+  const eM=new THREE.MeshBasicMaterial({color:0xff0000,blending:THREE.AdditiveBlending,transparent:true,opacity:1});
+  const el=new THREE.Mesh(eG,eM);el.position.set(-0.38,0.65,4.8);g.add(el);
+  const er=new THREE.Mesh(eG,eM.clone());er.position.set(0.38,0.65,4.8);g.add(er);
+  g.userData={lwp:lw,rwp:rw,wingAngle:0,type:'bloodDragon',alive:true,isBloodDragon:true,
+    hp:0,maxHp:0,si:1.0,spd:16,dmg:30,pts:300,shootT:2,animT:0};
+  return g;
+}
+
 function makeEnemy3d(type){
   const m=type==='ogre'?makeOgreMesh():type==='mage'?makeMageMesh():
            type==='dragon'?makeEnemyDragonMesh():type==='hunter'?makeDragonHunterMesh():

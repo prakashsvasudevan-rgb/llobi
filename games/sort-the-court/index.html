@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sort the Court</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#1a1228;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:'Georgia',serif;overflow:hidden;user-select:none;}
+canvas{display:block;border-radius:8px;border:2px solid #4a3060;}
+#stats-bar{display:flex;gap:18px;margin-bottom:8px;font-size:14px;color:#ffe8a0;}
+.stat{display:flex;align-items:center;gap:6px;}
+.stat-icon{font-size:18px;}
+.stat-bar-bg{width:100px;height:12px;background:#2a1a40;border-radius:6px;border:1px solid #5a3a80;overflow:hidden;}
+.stat-fill{height:100%;border-radius:6px;transition:width .4s;}
+#day-label{color:#ffcc66;font-size:16px;font-weight:bold;margin-bottom:4px;text-align:center;}
+#btns{display:flex;gap:20px;margin-top:8px;}
+.choice-btn{padding:10px 36px;font-size:18px;font-weight:bold;border-radius:10px;border:none;cursor:pointer;font-family:Georgia,serif;letter-spacing:1px;transition:all .15s;}
+#yes-btn{background:linear-gradient(135deg,#228833,#44cc55);color:#fff;border:3px solid #66ff88;box-shadow:0 4px 16px rgba(0,200,80,0.4);}
+#yes-btn:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(0,200,80,0.6);}
+#no-btn{background:linear-gradient(135deg,#882222,#cc3333);color:#fff;border:3px solid #ff6666;box-shadow:0 4px 16px rgba(200,0,0,0.4);}
+#no-btn:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(200,0,0,0.6);}
+.choice-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
+#hint-label{color:#aa88cc;font-size:12px;margin-top:4px;}
+</style>
+</head>
+<body>
+
+<div id="day-label">Day 1</div>
+<div id="stats-bar">
+  <div class="stat">💰 <div class="stat-bar-bg"><div class="stat-fill" id="gold-fill" style="background:#ffd700;width:25%"></div></div> <span id="gold-val">50</span>
+  </div>
+  <div class="stat">👥 <div class="stat-bar-bg"><div class="stat-fill" id="people-fill" style="background:#88aaff;width:33%"></div></div> <span id="people-val">10</span>
+  </div>
+  <div class="stat">😊 <div class="stat-bar-bg"><div class="stat-fill" id="happy-fill" style="background:#ff88aa;width:50%"></div></div> <span id="happy-val">50</span>
+  </div>
+</div>
+
+<canvas id="c" width="520" height="280"></canvas>
+<div id="btns">
+  <button class="choice-btn" id="yes-btn" onclick="answer(true)" disabled>✅ YES</button>
+  <button class="choice-btn" id="no-btn" onclick="answer(false)" disabled>❌ NO</button>
+</div>
+<div id="hint-label">Y = Yes &nbsp;|&nbsp; N = No</div>
+
+<script>
+const C=document.getElementById('c');
+const ctx=C.getContext('2d');
+const W=520,H=280;
+
+// ── STATS ──────────────────────────────────────────────────
+let gold=50,people=10,happiness=50,day=1;
+const GOLD_MAX=200,PEOPLE_MAX=40,HAPPY_MAX=100;
+
+function clamp(v,min,max){return Math.max(min,Math.min(max,v));}
+function updateStats(){
+  document.getElementById('gold-val').textContent=gold;
+  document.getElementById('people-val').textContent=people;
+  document.getElementById('happy-val').textContent=happiness;
+  document.getElementById('gold-fill').style.width=(gold/GOLD_MAX*100)+'%';
+  document.getElementById('people-fill').style.width=(people/PEOPLE_MAX*100)+'%';
+  document.getElementById('happy-fill').style.width=(happiness/HAPPY_MAX*100)+'%';
+  document.getElementById('day-label').textContent='Day '+day;
+}
+
+// ── EVENT POOL ─────────────────────────────────────────────
+// each event: {char, name, text, yes:{g,p,h,msg}, no:{g,p,h,msg}}
+// char types: knight, merchant, wizard, peasant, jester, builder, soldier, farmer, priest, bard, spy, dragon
+const EVENTS=[
+  {char:'knight',name:'Sir Gareth',
+   text:"My liege! May I build a training ground\nfor the royal soldiers?",
+   yes:{g:-20,p:0,h:8,msg:"The soldiers train with vigor! ⚔️"},
+   no:{g:0,p:0,h:-6,msg:"The soldiers grow restless..."}},
+
+  {char:'merchant',name:'Lady Coins',
+   text:"Your Majesty, may I open a grand\nmarket in the town square?",
+   yes:{g:15,p:2,h:5,msg:"Trade flourishes in the kingdom! 💰"},
+   no:{g:-5,p:0,h:-3,msg:"The merchants look elsewhere..."}},
+
+  {char:'peasant',name:'Old Tom',
+   text:"Sire, my crops have failed. My\nfamily needs gold to survive.",
+   yes:{g:-10,p:0,h:12,msg:"Tom weeps with gratitude! 🌾"},
+   no:{g:0,p:-1,h:-10,msg:"Tom leaves, heartbroken. 😢"}},
+
+  {char:'wizard',name:'Zendrix',
+   text:"Allow me to cast a spell of\nprosperity on your kingdom!",
+   yes:{g:0,p:0,h:0,msg:'',special:'wizard_yes'},
+   no:{g:0,p:0,h:0,msg:'',special:'wizard_no'}},
+
+  {char:'builder',name:'Bob the Builder',
+   text:"Shall I construct new homes\nfor the growing population?",
+   yes:{g:-25,p:6,h:8,msg:"New homes rise across the land! 🏠"},
+   no:{g:0,p:0,h:-2,msg:"The people stay cramped..."}},
+
+  {char:'taxman',name:'Tax Collector',
+   text:"My lord, shall I collect\nextra taxes from the citizens?",
+   yes:{g:30,p:0,h:-18,msg:"The coffers fill... but anger rises. 😠"},
+   no:{g:0,p:0,h:5,msg:"The people love your mercy! 🎉"}},
+
+  {char:'jester',name:'Jingles',
+   text:"Shall I perform a grand show\nfor the people tonight?",
+   yes:{g:-5,p:0,h:15,msg:"The crowd roars with laughter! 🎭"},
+   no:{g:0,p:0,h:-3,msg:"Jingles sobs in the corner..."}},
+
+  {char:'soldier',name:'General Hank',
+   text:"Your Majesty, shall we march\nto war against the Eastern lands?",
+   yes:{g:0,p:0,h:0,msg:'',special:'war'},
+   no:{g:0,p:0,h:3,msg:"Peace reigns. The people rejoice. ☮️"}},
+
+  {char:'farmer',name:'Farmer Greta',
+   text:"May I plant new crops across\nthe eastern fields this season?",
+   yes:{g:-8,p:0,h:4,msg:'',special:'farm'},
+   no:{g:0,p:0,h:-2,msg:"The fields sit empty this season."}},
+
+  {char:'priest',name:'Father Lumen',
+   text:"Shall I build a grand temple\nto bless the kingdom?",
+   yes:{g:-15,p:0,h:14,msg:"Holy light fills the land! ✨"},
+   no:{g:0,p:0,h:-4,msg:"The priest mutters a curse..."}},
+
+  {char:'bard',name:'Rhyming Rick',
+   text:"Allow me to write an epic song\nabout your glorious rule!",
+   yes:{g:-3,p:3,h:10,msg:"Word spreads of your legend! 🎶"},
+   no:{g:0,p:0,h:-2,msg:"Rick writes a mean ballad instead..."}},
+
+  {char:'spy',name:'Shadow',
+   text:"Shall I spy on our neighbouring\nkingdom for useful secrets?",
+   yes:{g:0,p:0,h:0,msg:'',special:'spy'},
+   no:{g:0,p:0,h:2,msg:"The spy slips back into the shadows."}},
+
+  {char:'merchant',name:'Gem Trader',
+   text:"I found a rare gem! Buy it for\n40 gold — could be valuable!",
+   yes:{g:-40,p:0,h:0,msg:'',special:'gem'},
+   no:{g:0,p:0,h:0,msg:"The trader moves on."}},
+
+  {char:'peasant',name:'Young Anna',
+   text:"Please sire, let me open a\nflorist shop in the market!",
+   yes:{g:8,p:1,h:6,msg:"Flowers bloom across the town! 🌸"},
+   no:{g:0,p:0,h:-3,msg:"Anna looks crushed..."}},
+
+  {char:'knight',name:'Dame Lira',
+   text:"I wish to host a grand tournament!\nIt will cost 30 gold.",
+   yes:{g:-30,p:0,h:20,msg:"The tournament is a sensation! 🏆"},
+   no:{g:0,p:0,h:-4,msg:"The knights grumble..."}},
+
+  {char:'wizard',name:'Old Merla',
+   text:"Let me enchant your throne\nroom — only 10 gold!",
+   yes:{g:-10,p:0,h:8,msg:"Sparkles fill the room! ✨"},
+   no:{g:0,p:0,h:1,msg:"Merla shrugs and leaves."}},
+
+  {char:'dragon',name:'Flint',
+   text:"I want to live in your\nkingdom... peacefully, I swear!",
+   yes:{g:0,p:-3,h:0,msg:'',special:'dragon_yes'},
+   no:{g:0,p:0,h:-5,msg:"Flint stomps off, offended."}},
+
+  {char:'jester',name:'Prankster Pete',
+   text:"Shall I prank the royal\nguard for entertainment?",
+   yes:{g:0,p:0,h:10,msg:"Even the guards end up laughing! 😂"},
+   no:{g:0,p:0,h:2,msg:"Pete shrugs and juggles instead."}},
+
+  {char:'builder',name:'Stone Mason',
+   text:"The kingdom walls are crumbling.\nRepair them for 35 gold?",
+   yes:{g:-35,p:0,h:6,msg:"The walls stand strong again! 🏰"},
+   no:{g:0,p:0,h:-3,msg:"The walls crumble further..."}},
+
+  {char:'taxman',name:'Sheriff Dale',
+   text:"Shall I fine anyone who litters\nfor 5 gold each?",
+   yes:{g:12,p:0,h:-8,msg:"The town is cleaner but resentful."},
+   no:{g:0,p:0,h:4,msg:"The people appreciate the freedom!"}},
+];
+
+// ── SPECIAL OUTCOMES ───────────────────────────────────────
+function applySpecial(key){
+  switch(key){
+    case 'wizard_yes':
+      if(Math.random()<0.6){showEffect('+30 gold! ✨',true);gold+=30;}
+      else{showEffect('Turned 5 people into frogs! 🐸',false);people-=5;}
+      break;
+    case 'wizard_no':
+      showEffect("The wizard leaves peacefully.",true);happiness+=2;break;
+    case 'war':
+      if(Math.random()<0.5){showEffect('Victory! +40 gold, +happiness! ⚔️',true);gold+=40;happiness+=10;}
+      else{showEffect('Defeat! -6 people, -20 gold. 💀',false);people-=6;gold-=20;}
+      break;
+    case 'farm':
+      pendingFarmDay=day+2;
+      showEffect("Seeds planted! Harvest in 2 days. 🌱",true);break;
+    case 'spy':
+      if(Math.random()<0.55){showEffect('Secrets stolen! +25 gold. 🕵️',true);gold+=25;}
+      else{showEffect('Spy caught! -10 happiness. 😬',false);happiness-=10;}
+      break;
+    case 'gem':
+      if(Math.random()<0.4){showEffect('Gem worth 80 gold! +40 net! 💎',true);gold+=80;}
+      else{showEffect('Just a pretty rock. Lost 40 gold.',false);}
+      break;
+    case 'dragon_yes':
+      showEffect('Flint guards the kingdom! +15 happiness! 🐉',true);
+      happiness+=15;gold+=10;break;
+  }
+  gold=clamp(gold,0,GOLD_MAX);people=clamp(people,0,PEOPLE_MAX);happiness=clamp(happiness,0,HAPPY_MAX);
+  updateStats();
+}
+
+let pendingFarmDay=-1;
+
+// ── CHARACTERS ─────────────────────────────────────────────
+const CHAR_COLORS={
+  knight:  {body:'#4466cc',head:'#f4c07a',hat:'#334499',extra:'armor'},
+  merchant:{body:'#885500',head:'#f4b060',hat:'#cc8800',extra:'bag'},
+  peasant: {body:'#886644',head:'#e8a060',hat:'#664422',extra:'none'},
+  wizard:  {body:'#553388',head:'#f4c07a',hat:'#aa44cc',extra:'wand'},
+  builder: {body:'#886633',head:'#f0a050',hat:'#cc9900',extra:'belt'},
+  taxman:  {body:'#333366',head:'#e8b080',hat:'#222244',extra:'scroll'},
+  jester:  {body:'#cc2244',head:'#f4c07a',hat:'#ff4466',extra:'bells'},
+  soldier: {body:'#446644',head:'#f4b070',hat:'#334433',extra:'armor'},
+  farmer:  {body:'#669944',head:'#e8a060',hat:'#885522',extra:'none'},
+  priest:  {body:'#cccccc',head:'#f4c07a',hat:'#ffffff',extra:'cross'},
+  bard:    {body:'#cc6600',head:'#f4b060',hat:'#ff8800',extra:'lute'},
+  spy:     {body:'#222222',head:'#f4c07a',hat:'#111111',extra:'none'},
+  dragon:  {body:'#228833',head:'#44aa44',hat:null,extra:'dragon'},
+};
+
+function drawCharacter(type,x,y,scale=1,flip=false,bob=0){
+  const col=CHAR_COLORS[type]||CHAR_COLORS.peasant;
+  ctx.save();
+  ctx.translate(x,y+bob);
+  if(flip) ctx.scale(-1,1);
+  ctx.scale(scale,scale);
+
+  if(type==='dragon'){
+    // dragon body
+    ctx.fillStyle='#2a9944';
+    ctx.beginPath();ctx.ellipse(0,-20,22,16,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#44cc66';
+    ctx.beginPath();ctx.ellipse(0,-20,16,10,0,0,Math.PI*2);ctx.fill();
+    // head
+    ctx.fillStyle='#2a9944';
+    ctx.beginPath();ctx.ellipse(18,-30,14,10,0.3,0,Math.PI*2);ctx.fill();
+    // eye
+    ctx.fillStyle='#ff4400';ctx.beginPath();ctx.arc(24,-33,3,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#111';ctx.beginPath();ctx.arc(25,-33,1.5,0,Math.PI*2);ctx.fill();
+    // wings
+    ctx.fillStyle='#1a7733';
+    ctx.beginPath();ctx.moveTo(-10,-20);ctx.bezierCurveTo(-30,-50,-50,-40,-45,-20);ctx.lineTo(-10,-15);ctx.closePath();ctx.fill();
+    // tail
+    ctx.strokeStyle='#2a9944';ctx.lineWidth=5;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(-18,-20);ctx.bezierCurveTo(-35,-15,-40,-5,-35,5);ctx.stroke();
+    ctx.restore();return;
+  }
+
+  // legs
+  const legSway=Math.sin(Date.now()*0.008)*6;
+  ctx.fillStyle='#555566';
+  ctx.fillRect(-10,2,8,16+legSway*0.5);
+  ctx.fillRect(2,2,8,16-legSway*0.5);
+  // shoes
+  ctx.fillStyle='#333';
+  ctx.fillRect(-11,17+legSway*0.5,10,5);
+  ctx.fillRect(1,17-legSway*0.5,10,5);
+  // body
+  ctx.fillStyle=col.body;
+  ctx.beginPath();ctx.roundRect(-13,-22,26,26,3);ctx.fill();
+  // belt
+  if(col.extra==='belt'){ctx.fillStyle='#553300';ctx.fillRect(-13,-2,26,5);}
+  if(col.extra==='armor'){ctx.fillStyle='rgba(180,180,200,0.4)';ctx.beginPath();ctx.roundRect(-13,-22,26,26,3);ctx.fill();}
+  // arms
+  ctx.fillStyle=col.body;
+  ctx.fillRect(-20,-20,8,18);
+  ctx.fillRect(12,-20,8,18);
+  // hands
+  ctx.fillStyle=col.head;
+  ctx.beginPath();ctx.arc(-16,0,5,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(16,0,5,0,Math.PI*2);ctx.fill();
+  // extra items
+  if(col.extra==='wand'){ctx.strokeStyle='#cc88ff';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(16,-5);ctx.lineTo(26,-18);ctx.stroke();ctx.fillStyle='#ffaaff';ctx.beginPath();ctx.arc(26,-18,4,0,Math.PI*2);ctx.fill();}
+  if(col.extra==='scroll'){ctx.fillStyle='#eedd99';ctx.fillRect(10,-5,10,14);ctx.strokeStyle='#886600';ctx.lineWidth=1;ctx.strokeRect(10,-5,10,14);}
+  if(col.extra==='bag'){ctx.fillStyle='#aa7733';ctx.beginPath();ctx.arc(-16,0,7,0,Math.PI*2);ctx.fill();}
+  if(col.extra==='lute'){ctx.fillStyle='#cc8833';ctx.beginPath();ctx.ellipse(16,2,6,8,0.3,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#664400';ctx.lineWidth=1;ctx.stroke();}
+  if(col.extra==='cross'){ctx.strokeStyle='#ffdd88';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(-16,-12);ctx.lineTo(-16,2);ctx.stroke();ctx.beginPath();ctx.moveTo(-21,-6);ctx.lineTo(-11,-6);ctx.stroke();}
+  // head
+  ctx.fillStyle=col.head;
+  ctx.beginPath();ctx.arc(0,-30,12,0,Math.PI*2);ctx.fill();
+  // face
+  ctx.fillStyle='#111';
+  ctx.beginPath();ctx.arc(-4,-30,2,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(4,-30,2,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#111';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.arc(0,-27,3.5,0.1*Math.PI,0.9*Math.PI);ctx.stroke();
+  // hat
+  if(col.hat){
+    ctx.fillStyle=col.hat;
+    if(type==='knight'||type==='soldier'){ctx.beginPath();ctx.roundRect(-13,-45,26,16,2);ctx.fill();}
+    else if(type==='wizard'){ctx.beginPath();ctx.moveTo(0,-58);ctx.lineTo(-12,-42);ctx.lineTo(12,-42);ctx.closePath();ctx.fill();}
+    else if(type==='jester'){ctx.beginPath();ctx.moveTo(-6,-42);ctx.bezierCurveTo(-10,-55,2,-55,0,-45);ctx.closePath();ctx.fill();ctx.beginPath();ctx.moveTo(6,-42);ctx.bezierCurveTo(10,-55,18,-50,14,-42);ctx.closePath();ctx.fill();ctx.fillStyle='#ffcc00';ctx.beginPath();ctx.arc(0,-44,3,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(14,-41,3,0,Math.PI*2);ctx.fill();}
+    else if(type==='priest'){ctx.beginPath();ctx.arc(0,-41,10,Math.PI,0);ctx.fill();}
+    else if(type==='spy'){ctx.fillRect(-12,-44,24,6);}
+    else{ctx.beginPath();ctx.roundRect(-11,-44,22,14,2);ctx.fill();}
+  }
+  if(type==='bard'){ctx.fillStyle='#ff8800';ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillText('♪',-16,-12);}
+  ctx.restore();
+}
+
+function drawKing(x,y){
+  ctx.save();ctx.translate(x,y);
+  // throne back
+  ctx.fillStyle='#6633aa';ctx.beginPath();ctx.roundRect(-30,-80,60,90,6);ctx.fill();
+  ctx.fillStyle='#8844cc';ctx.fillRect(-28,-78,56,20);
+  // gems on throne
+  ['#ff4444','#44ff44','#4488ff'].forEach((c,i)=>{ctx.fillStyle=c;ctx.beginPath();ctx.arc(-16+i*16,-72,4,0,Math.PI*2);ctx.fill();});
+  // legs
+  ctx.fillStyle='#2244aa';ctx.fillRect(-16,8,12,18);ctx.fillRect(4,8,12,18);
+  ctx.fillStyle='#113377';ctx.fillRect(-17,24,14,5);ctx.fillRect(3,24,14,5);
+  // body/robe
+  ctx.fillStyle='#2244aa';ctx.beginPath();ctx.roundRect(-18,-20,36,30,4);ctx.fill();
+  ctx.fillStyle='#1a3399';ctx.beginPath();ctx.moveTo(-18,-20);ctx.lineTo(-24,10);ctx.lineTo(24,10);ctx.lineTo(18,-20);ctx.closePath();ctx.fill();
+  // cape
+  ctx.fillStyle='#8822aa';ctx.beginPath();ctx.moveTo(-16,-18);ctx.lineTo(-28,15);ctx.lineTo(-16,10);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.moveTo(16,-18);ctx.lineTo(28,15);ctx.lineTo(16,10);ctx.closePath();ctx.fill();
+  // arms
+  ctx.fillStyle='#2244aa';ctx.fillRect(-28,-18,10,22);ctx.fillRect(18,-18,10,22);
+  ctx.fillStyle='#f4c07a';ctx.beginPath();ctx.arc(-23,6,6,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(23,6,6,0,Math.PI*2);ctx.fill();
+  // scepter
+  ctx.strokeStyle='#ffcc00';ctx.lineWidth=4;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(23,6);ctx.lineTo(38,-28);ctx.stroke();
+  ctx.fillStyle='#ffaa00';ctx.beginPath();ctx.arc(38,-28,7,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#ff4400';ctx.beginPath();ctx.arc(38,-28,4,0,Math.PI*2);ctx.fill();
+  // head
+  ctx.fillStyle='#f4c07a';ctx.beginPath();ctx.arc(0,-34,14,0,Math.PI*2);ctx.fill();
+  // face
+  ctx.fillStyle='#111';ctx.beginPath();ctx.arc(-5,-34,2.5,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(5,-34,2.5,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#111';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(0,-30,4,0.1*Math.PI,0.9*Math.PI);ctx.stroke();
+  // mustache
+  ctx.strokeStyle='#886600';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-6,-28);ctx.bezierCurveTo(-4,-26,4,-26,6,-28);ctx.stroke();
+  // crown
+  ctx.fillStyle='#ffcc00';
+  ctx.beginPath();ctx.moveTo(-14,-47);ctx.lineTo(-14,-57);ctx.lineTo(-7,-52);ctx.lineTo(0,-60);ctx.lineTo(7,-52);ctx.lineTo(14,-57);ctx.lineTo(14,-47);ctx.closePath();ctx.fill();
+  ['#ff2200','#2222ff','#22aa22'].forEach((c,i)=>{ctx.fillStyle=c;ctx.beginPath();ctx.arc(-6+i*6,-56,3,0,Math.PI*2);ctx.fill();});
+  ctx.restore();
+}
+
+// ── BACKGROUND ─────────────────────────────────────────────
+function drawBg(){
+  // sky/room
+  const bg=ctx.createLinearGradient(0,0,0,H);
+  bg.addColorStop(0,'#1a0d2e');bg.addColorStop(1,'#2a1540');
+  ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+  // floor
+  ctx.fillStyle='#3a2060';ctx.fillRect(0,H-55,W,55);
+  ctx.fillStyle='#4a2880';ctx.fillRect(0,H-57,W,4);
+  // floor tiles
+  ctx.strokeStyle='rgba(100,60,160,0.4)';ctx.lineWidth=1;
+  for(let x=0;x<W;x+=40){ctx.beginPath();ctx.moveTo(x,H-55);ctx.lineTo(x,H);ctx.stroke();}
+  // walls
+  ctx.fillStyle='#241540';ctx.fillRect(0,0,30,H-55);ctx.fillRect(W-30,0,30,H-55);
+  // windows
+  drawWindow(60,40);drawWindow(W-90,40);
+  // banners
+  drawBanner(100,0,'#8822cc');drawBanner(W-124,0,'#8822cc');
+  // carpet
+  ctx.fillStyle='#660022';ctx.beginPath();ctx.moveTo(W/2-30,H-55);ctx.lineTo(W/2+30,H-55);ctx.lineTo(W/2+60,H);ctx.lineTo(W/2-60,H);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#880033';ctx.fillRect(W/2-80,H-57,160,4);
+  // red carpet strip down center
+  ctx.fillStyle='#aa0033';ctx.fillRect(W/2-14,H-55,28,55);
+  // torches
+  drawTorch(45,100);drawTorch(W-45,100);
+}
+
+function drawWindow(x,y){
+  ctx.fillStyle='#1a2a44';ctx.beginPath();ctx.roundRect(x,y,40,55,4);ctx.fill();
+  ctx.strokeStyle='#4466aa';ctx.lineWidth=2;ctx.stroke();
+  // moon/star glow
+  ctx.fillStyle='rgba(180,200,255,0.15)';ctx.fillRect(x+2,y+2,36,51);
+  ctx.fillStyle='#eeeeff';ctx.beginPath();ctx.arc(x+20,y+20,6,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='rgba(220,230,255,0.4)';ctx.beginPath();ctx.arc(x+20,y+20,12,0,Math.PI*2);ctx.fill();
+  // cross pane
+  ctx.strokeStyle='#4466aa';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(x+20,y);ctx.lineTo(x+20,y+55);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(x,y+28);ctx.lineTo(x+40,y+28);ctx.stroke();
+}
+function drawBanner(x,y,color){
+  ctx.fillStyle=color;
+  ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+24,y);ctx.lineTo(x+24,y+70);ctx.lineTo(x+12,y+80);ctx.lineTo(x,y+70);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='#cc66ff';ctx.lineWidth=1;ctx.stroke();
+  ctx.fillStyle='#ffcc00';ctx.font='16px sans-serif';ctx.textAlign='center';ctx.fillText('♦',x+12,y+42);
+}
+function drawTorch(x,y){
+  ctx.fillStyle='#664422';ctx.fillRect(x-3,y,6,20);
+  ctx.fillStyle='#ff8800';ctx.beginPath();ctx.arc(x,y,8,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#ffcc00';ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='rgba(255,180,0,0.15)';ctx.beginPath();ctx.arc(x,y,20,0,Math.PI*2);ctx.fill();
+}
+
+// ── SPEECH BUBBLE ──────────────────────────────────────────
+function drawBubble(text,x,y){
+  const lines=text.split('\n');
+  const lh=18,pad=14;
+  const tw=Math.max(...lines.map(l=>ctx.measureText(l).width))+pad*2;
+  const th=lines.length*lh+pad*2;
+  const bx=x-tw/2,by=y-th-18;
+  ctx.fillStyle='rgba(255,250,230,0.95)';
+  ctx.strokeStyle='#886600';ctx.lineWidth=2;
+  ctx.beginPath();ctx.roundRect(bx,by,tw,th,10);ctx.fill();ctx.stroke();
+  // tail
+  ctx.fillStyle='rgba(255,250,230,0.95)';
+  ctx.beginPath();ctx.moveTo(x-8,by+th);ctx.lineTo(x+8,by+th);ctx.lineTo(x,by+th+16);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='#886600';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(x-8,by+th);ctx.lineTo(x,by+th+16);ctx.lineTo(x+8,by+th);ctx.stroke();
+  ctx.fillStyle='#2a1400';ctx.font='13px Georgia,serif';ctx.textAlign='center';
+  lines.forEach((l,i)=>ctx.fillText(l,x,by+pad+12+i*lh));
+}
+
+// ── EFFECT LABEL ───────────────────────────────────────────
+let effect={text:'',timer:0,good:true};
+function showEffect(text,good){effect={text,timer:120,good};}
+function drawEffect(){
+  if(effect.timer<=0)return;
+  ctx.globalAlpha=Math.min(1,effect.timer/30);
+  ctx.fillStyle=effect.good?'#88ff88':'#ff8888';
+  ctx.font='bold 15px Georgia,serif';ctx.textAlign='center';
+  ctx.fillText(effect.text,W/2,80-Math.max(0,(120-effect.timer)/2));
+  ctx.globalAlpha=1;
+  effect.timer--;
+}
+
+// ── STAT CHANGE FLOATERS ───────────────────────────────────
+let floaters=[];
+function addFloat(text,x,y,color){floaters.push({text,x,y,color,life:70});}
+function drawFloaters(){
+  floaters=floaters.filter(f=>{
+    ctx.save();ctx.globalAlpha=f.life/70;
+    ctx.fillStyle=f.color;ctx.font='bold 14px Georgia,serif';ctx.textAlign='center';
+    ctx.fillText(f.text,f.x,f.y);f.y-=0.7;f.life--;ctx.restore();
+    return f.life>0;
+  });
+}
+
+// ── GAME PHASES ────────────────────────────────────────────
+// 'walk_in' → 'talking' → 'react' → 'walk_out' → next
+let phase='walk_in';
+let charX=W+60;
+let charType='peasant',charName='',charText='',charYes=null,charNo=null;
+let reactionTimer=0,reactionMsg='',reactionGood=true;
+let eventIdx=0;
+let shuffledEvents=[];
+let answered=false;
+
+function shuffleEvents(){
+  shuffledEvents=[...EVENTS].sort(()=>Math.random()-0.5);
+  eventIdx=0;
+}
+function nextEvent(){
+  if(eventIdx>=shuffledEvents.length) shuffleEvents();
+  const ev=shuffledEvents[eventIdx++];
+  charType=ev.char;charName=ev.name;charText=ev.text;charYes=ev.yes;charNo=ev.no;
+  charX=W+60;phase='walk_in';answered=false;
+  setBtns(false);
+}
+
+function setBtns(en){
+  document.getElementById('yes-btn').disabled=!en;
+  document.getElementById('no-btn').disabled=!en;
+}
+
+function answer(yes){
+  if(answered||phase!=='talking')return;
+  answered=true;setBtns(false);
+  const ch=yes?charYes:charNo;
+  gold=clamp(gold+ch.g,0,GOLD_MAX);
+  people=clamp(people+ch.p,0,PEOPLE_MAX);
+  happiness=clamp(happiness+ch.h,0,HAPPY_MAX);
+  if(ch.special) applySpecial(ch.special);
+  else if(ch.msg){
+    reactionMsg=ch.msg;reactionGood=(ch.g+ch.p*3+ch.h)>=0;
+    showEffect(ch.msg,reactionGood);
+  }
+  // floaters
+  if(ch.g!==0) addFloat((ch.g>0?'+':'')+ch.g+'💰',W/2-80,H-80,ch.g>0?'#ffdd44':'#ff6666');
+  if(ch.p!==0) addFloat((ch.p>0?'+':'')+ch.p+'👥',W/2,H-80,ch.p>0?'#88aaff':'#ff6666');
+  if(ch.h!==0) addFloat((ch.h>0?'+':'')+ch.h+'😊',W/2+80,H-80,ch.h>0?'#ff88bb':'#ff6666');
+  updateStats();
+  phase='react';reactionTimer=55;
+  // check game over
+  if(gold<=0||people<=0||happiness<=0){setTimeout(()=>gameOver(),600);}
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.code==='KeyY'||e.code==='ArrowLeft') answer(true);
+  if(e.code==='KeyN'||e.code==='ArrowRight') answer(false);
+});
+
+// ── GAME OVER / DAY ADVANCE ────────────────────────────────
+let gameOverState=false;
+function gameOver(){
+  gameOverState=true;setBtns(false);
+}
+
+function advanceDay(){
+  day++;
+  if(pendingFarmDay===day){
+    gold=clamp(gold+22,0,GOLD_MAX);
+    showEffect('Harvest ready! +22 gold! 🌾',true);
+    addFloat('+22💰',W/2,H-80,'#ffdd44');
+    updateStats();pendingFarmDay=-1;
+  }
+  // random small events
+  if(Math.random()<0.2){happiness=clamp(happiness+Math.floor(Math.random()*8)-3,0,HAPPY_MAX);updateStats();}
+}
+
+// ── MAIN LOOP ──────────────────────────────────────────────
+let frameN=0;
+let visitorCount=0;
+const VISITORS_PER_DAY=3;
+
+function loop(){
+  frameN++;
+  drawBg();
+
+  // King
+  drawKing(W/2,H-55);
+
+  // character
+  const floorY=H-55-28;
+  const bob=Math.sin(frameN*0.08)*2;
+
+  if(!gameOverState){
+    if(phase==='walk_in'){
+      charX-=3.5;
+      drawCharacter(charType,charX,floorY,1,true,bob);
+      const targetX=W/2-120;
+      if(charX<=targetX){charX=targetX;phase='talking';setBtns(true);}
+    } else if(phase==='talking'){
+      drawCharacter(charType,charX,floorY,1,true,bob*0.5);
+      drawBubble(charText,charX,floorY-45);
+    } else if(phase==='react'){
+      drawCharacter(charType,charX,floorY,1,true,Math.sin(frameN*0.3)*4);
+      reactionTimer--;
+      if(reactionTimer<=0){phase='walk_out';}
+    } else if(phase==='walk_out'){
+      charX-=3.5;
+      drawCharacter(charType,charX,floorY,1,false,bob);
+      if(charX<-80){
+        visitorCount++;
+        if(visitorCount>=VISITORS_PER_DAY){visitorCount=0;advanceDay();}
+        nextEvent();
+      }
+    }
+  }
+
+  drawEffect();
+  drawFloaters();
+
+  if(gameOverState){
+    ctx.fillStyle='rgba(0,0,0,0.75)';ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#ffcc44';ctx.font='bold 32px Georgia,serif';ctx.textAlign='center';
+    ctx.fillText('The Kingdom Has Fallen!',W/2,H/2-50);
+    const reason=gold<=0?'💰 You ran out of gold!':people<=0?'👥 Your people fled!':'😊 The people revolted!';
+    ctx.fillStyle='#ff8888';ctx.font='18px Georgia,serif';ctx.fillText(reason,W/2,H/2-15);
+    ctx.fillStyle='#fff';ctx.font='16px Georgia,serif';ctx.fillText('You survived '+day+' days.',W/2,H/2+18);
+    ctx.fillStyle='#aaaaff';ctx.font='13px Georgia,serif';ctx.fillText('Press Space to try again',W/2,H/2+50);
+  }
+
+  requestAnimationFrame(loop);
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.code==='Space'&&gameOverState){
+    gold=50;people=10;happiness=50;day=1;pendingFarmDay=-1;
+    gameOverState=false;shuffleEvents();nextEvent();updateStats();
+  }
+});
+
+shuffleEvents();
+nextEvent();
+updateStats();
+loop();
+</script>
+</body>
+</html>

@@ -742,6 +742,11 @@ function drawIdle(){
 }
 
 // --- CAST ---
+function dismissReveal(){
+  state='idle';caughtFish=null;
+  setText('Fish is in the bag! Click the water to cast again.');
+}
+
 function startCast(tx){
   tx=Math.max(40,Math.min(W-140,tx));
   bobX=ROD_TIP_X;bobY=ROD_TIP_Y;
@@ -815,9 +820,11 @@ function handleClick(e){
   if(e._space){
     if(state==='nibble'){caughtFish=pickFish();reelProgress=0;state='hooked';setText('Hooked! Tap to reel in!');return;}
     if(state==='hooked'){reelProgress=100;return;}
+    if(state==='reveal'){dismissReveal();return;}
     return;
   }
   const p=getPos(e);
+  if(state==='reveal'){dismissReveal();return;}
   if(state==='idle'&&p.y>WY-15){
     if(inventory.length>=MAX_INV){setText('Bag is full! Open 🎒 Bag and sell some fish first.');return;}
     startCast(p.x);return;

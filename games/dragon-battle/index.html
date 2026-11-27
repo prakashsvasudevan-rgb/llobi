@@ -2926,23 +2926,23 @@ function spawnKingRuin(cfg){
   // Central altar + rune
   const altMesh=new THREE.Mesh(new THREE.BoxGeometry(16,3,16),new THREE.MeshBasicMaterial({color:0x0a0a0a}));
   altMesh.position.set(x,plateauY+1.5,z);scene.add(altMesh);
-  const runeGlow=new THREE.Mesh(new THREE.BoxGeometry(14,0.1,14),new THREE.MeshBasicMaterial({color:cfg.weaponColor,transparent:true,opacity:0.5,blending:THREE.AdditiveBlending}));
+  const runeGlow=new THREE.Mesh(new THREE.BoxGeometry(14,0.1,14),new THREE.MeshBasicMaterial({color:0xff0000,transparent:true,opacity:0.5,blending:THREE.AdditiveBlending}));
   runeGlow.position.set(x,plateauY+3.1,z);scene.add(runeGlow);
-  // King Dragon boss — bone-white body + element-colored glow
+  // King Dragon boss — black body + red glow
   const dtDef1=DT.find(d=>d.id===cfg.elem1)||DT[0];
   const bossMesh=buildDragonMesh(dtDef1);
   bossMesh.scale.set(4,4,4);
-  // Bone white body
+  // Pure black body
   bossMesh.traverse(c=>{
     if(c.isMesh&&c.material){
-      c.material=new THREE.MeshBasicMaterial({color:0xddeedd});
+      c.material=new THREE.MeshBasicMaterial({color:0x050005});
     }
   });
-  // Element-colored glow (inner smaller mesh)
+  // Red glow (inner smaller mesh)
   const glowMesh=buildDragonMesh(dtDef1);
   glowMesh.traverse(c=>{
     if(c.isMesh&&c.material){
-      c.material=new THREE.MeshBasicMaterial({color:cfg.weaponColor,transparent:true,opacity:0.55,blending:THREE.AdditiveBlending});
+      c.material=new THREE.MeshBasicMaterial({color:0xff0000,transparent:true,opacity:0.55,blending:THREE.AdditiveBlending});
     }
   });
   glowMesh.scale.set(0.88,0.88,0.88);
@@ -2951,26 +2951,26 @@ function spawnKingRuin(cfg){
   const crownG=new THREE.Group();
   for(let si2=0;si2<7;si2++){
     const a=si2/7*Math.PI*2;
-    const spike=new THREE.Mesh(new THREE.ConeGeometry(1.2,9,5),new THREE.MeshBasicMaterial({color:cfg.weaponColor,transparent:true,opacity:0.9,blending:THREE.AdditiveBlending}));
+    const spike=new THREE.Mesh(new THREE.ConeGeometry(1.2,9,5),new THREE.MeshBasicMaterial({color:0xff0000,transparent:true,opacity:0.9,blending:THREE.AdditiveBlending}));
     spike.position.set(Math.cos(a)*7,38+Math.abs(Math.sin(si2))*3,Math.sin(a)*7+8);
     crownG.add(spike);
   }
   // Shoulder armor plates (two big flat diamonds)
-  const plateMat=new THREE.MeshBasicMaterial({color:0x888899,transparent:true,opacity:0.85});
+  const plateMat=new THREE.MeshBasicMaterial({color:0x1a0000,transparent:true,opacity:0.85});
   const lPlate=new THREE.Mesh(new THREE.BoxGeometry(6,2,8),plateMat);lPlate.position.set(-18,22,8);crownG.add(lPlate);
   const rPlate=new THREE.Mesh(new THREE.BoxGeometry(6,2,8),plateMat);rPlate.position.set(18,22,8);crownG.add(rPlate);
   // Glowing rune disk under body
-  const runeDisk=new THREE.Mesh(new THREE.CylinderGeometry(14,14,0.5,12),new THREE.MeshBasicMaterial({color:cfg.weaponColor,transparent:true,opacity:0.4,blending:THREE.AdditiveBlending}));
+  const runeDisk=new THREE.Mesh(new THREE.CylinderGeometry(14,14,0.5,12),new THREE.MeshBasicMaterial({color:0xff0000,transparent:true,opacity:0.4,blending:THREE.AdditiveBlending}));
   runeDisk.position.set(0,-4,8);crownG.add(runeDisk);
   // Giant eye glow spheres
   const eyeGeo=new THREE.SphereGeometry(2.5,8,6);
-  const eyeMat=new THREE.MeshBasicMaterial({color:cfg.weaponColor,transparent:true,opacity:1.0,blending:THREE.AdditiveBlending});
+  const eyeMat=new THREE.MeshBasicMaterial({color:0xff0000,transparent:true,opacity:1.0,blending:THREE.AdditiveBlending});
   const le=new THREE.Mesh(eyeGeo,eyeMat);le.position.set(-4.5,28,20);crownG.add(le);
   const re=new THREE.Mesh(eyeGeo,eyeMat);re.position.set(4.5,28,20);crownG.add(re);
   bossMesh.add(crownG);
   // Orbiting halo rings
   for(let ri=0;ri<3;ri++){
-    const rg=new THREE.Mesh(new THREE.TorusGeometry(8+ri*4,0.7,6,16),new THREE.MeshBasicMaterial({color:cfg.weaponColor,transparent:true,opacity:0.5,blending:THREE.AdditiveBlending}));
+    const rg=new THREE.Mesh(new THREE.TorusGeometry(8+ri*4,0.7,6,16),new THREE.MeshBasicMaterial({color:0xff0000,transparent:true,opacity:0.5,blending:THREE.AdditiveBlending}));
     rg.rotation.x=ri*Math.PI/3;bossMesh.add(rg);
   }
   // Spawn boss 400-440u away from island center, airborne
@@ -2981,7 +2981,7 @@ function spawnKingRuin(cfg){
     isKingDragon:true,ruinCfg:cfg,islandX:x,islandZ:z,islandR:95,shootT:3,si:1,animT:0,stunT:0};
   scene.add(bossMesh);activeEnemies.push(bossMesh);
   // Tall glowing pillar beacon visible from far away
-  const pillarMat=new THREE.MeshBasicMaterial({color:cfg.weaponColor,transparent:true,opacity:0.5,blending:THREE.AdditiveBlending});
+  const pillarMat=new THREE.MeshBasicMaterial({color:0xff0000,transparent:true,opacity:0.5,blending:THREE.AdditiveBlending});
   const pillar=new THREE.Mesh(new THREE.CylinderGeometry(2,2,200,6),pillarMat);
   pillar.position.set(x,plateauY+100,z);scene.add(pillar);
   floatWorld(new THREE.Vector3(x,plateauY+60,z),'💀 KING DRAGON: '+cfg.name,'#ff4444');

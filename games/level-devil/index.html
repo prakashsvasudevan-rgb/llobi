@@ -52,7 +52,7 @@ let traps=[];     // active trap objects
 let platforms=[]; // {x,y,w,h,vx,vy,dir,bounds,bounds_y}
 let trapFlash=[]; // visual flash {x,y,w,h,timer,color}
 
-function tile(c,r){return(c>=0&&c<COLS&&r>=0&&r<ROWS)?tiles[r*COLS+c]:1;}
+function tile(c,r){return(c>=0&&c<COLS&&r>=0&&r<ROWS)?tiles[r*COLS+c]:(r>=ROWS?0:1);}
 function setTile(c,r,v){if(c>=0&&c<COLS&&r>=0&&r<ROWS)tiles[r*COLS+c]=v;}
 
 // tile ids: 0=air 1=solid 2=spike_up 3=spike_down 4=spike_left 5=spike_right 6=goal 7=fake(looks solid, is air)

@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Pizza Stack</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#1a0a00;font-family:'Segoe UI',sans-serif;user-select:none}
+canvas{display:block}
+#ui{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
+#hud{display:flex;gap:8px;padding:10px 14px;flex-wrap:wrap}
+.pill{background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:5px 16px;text-align:center;color:#fff}
+.pill span{display:block;font-size:.58rem;opacity:.55;text-transform:uppercase;letter-spacing:.06em}
+.pill strong{font-size:1.1rem;font-weight:800}
+#msg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;color:#fff;pointer-events:all;background:rgba(10,5,0,.92);padding:28px 44px;border-radius:20px;border:1px solid rgba(255,180,0,.2)}
+#msg h2{font-size:2rem;font-weight:900;color:#ffd700}
+#msg p{margin:.5rem 0 1.4rem;opacity:.8;font-size:.95rem}
+#msg button{font-weight:800;font-size:1rem;padding:12px 36px;border:none;border-radius:50px;cursor:pointer;background:linear-gradient(135deg,#ff6b00,#ff3300);color:#fff;box-shadow:0 5px 0 #991100;transition:transform .1s,box-shadow .1s;margin:4px}
+#msg button:active{transform:translateY(3px);box-shadow:0 2px 0 #991100}
+#msg button.sec{background:linear-gradient(135deg,#cc8800,#aa6600);box-shadow:0 5px 0 #664400}
+#hint{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);color:rgba(255,220,120,.7);font-size:.85rem;text-align:center;background:rgba(0,0,0,.4);padding:5px 18px;border-radius:16px}
+#perfectEl{position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);font-size:2rem;font-weight:900;color:#ffd700;text-shadow:0 0 20px #ff9900;pointer-events:none;opacity:0;transition:none}
+#perfectEl.show{animation:pfloat .9s ease forwards}
+@keyframes pfloat{0%{opacity:1;transform:translate(-50%,-50%) scale(.8)}40%{opacity:1;transform:translate(-50%,-60%) scale(1.15)}100%{opacity:0;transform:translate(-50%,-80%) scale(1)}}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui">
+  <div id="hud">
+    <div class="pill"><span>Score</span><strong id="scoreEl">0</strong></div>
+    <div class="pill"><span>Level</span><strong id="levelEl">1</strong></div>
+    <div class="pill"><span>High</span><strong id="hiEl">0</strong></div>
+  </div>
+  <div id="msg">
+    <div style="font-size:3.5rem">🍕</div>
+    <h2>Pizza Stack</h2>
+    <p>Stack the slices perfectly!<br>Tap or click to drop.</p>
+    <button id="startBtn">Stack It!</button>
+  </div>
+  <div id="hint" style="display:none">Tap / Click to drop the slice</div>
+  <div id="perfectEl"></div>
+</div>
+
+<script>
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d');
+let W,H;
+function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight;}
+resize();window.addEventListener('resize',()=>{resize();if(gameActive)drawAll();});
+
+// ═══ GAME DATA ═══
+const SLICE_H=28;         // height of each layer
+const BASE_W=160;         // width of base plate
+const BASE_H=20;
+const SWING_SPEED_BASE=1.6; // px per frame base swing speed
+const MAX_LAYERS=20;
+
+let gameActive=false,gameOver=false;
+let stack=[],swinging=null,score=0,level=1,hi=0,combo=0;
+let swingX=0,swingDir=1,swingSpeed=0;
+let cameraY=0,targetCameraY=0; // scroll up as stack grows
+let flashMsg='',flashTimer=0;
+let particles=[];
+let frameId=null;
+
+// Topping emojis for decoration
+const TOPPINGS=['🍅','🧀','🫑','🍄','🥓','🌶️','🫒','🧅'];
+// Colour layers
+const CRUST_COL='#c8762a';
+const SAUCE_COL='#cc3300';
+const CHEESE_COL='#f5c518';
+const LAYER_COLS=['#f5c518','#e8b010','#f0bc14','#dca80e','#f2c218'];
+
+// ═══ PARTICLES ═══
+function spawnParticles(x,y,n,col){
+  for(let i=0;i<n;i++){
+    const a=Math.random()*Math.PI*2,s=1+Math.random()*4;
+    particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-2,life:1,col,r:3+Math.random()*4});
+  }
+}
+
+// ═══ INIT ═══
+function startGame(){
+  score=0;level=1;combo=0;
+  stack=[];particles=[];
+  cameraY=0;targetCameraY=0;
+  gameOver=false;gameActive=true;
+  document.getElementById('msg').style.display='none';
+  document.getElementById('hint').style.display='block';
+  document.getElementById('scoreEl').textContent='0';
+  document.getElementById('levelEl').textContent='1';
+  buildBase();
+  spawnSwing();
+  if(frameId)cancelAnimationFrame(frameId);
+  loop();
+}
+document.getElementById('startBtn').onclick=startGame;
+
+function buildBase(){
+  // Base plate at bottom center
+  const bx=(W-BASE_W)/2,by=H-80;
+  stack.push({x:bx,y:by,w:BASE_W,h:BASE_H,type:'base'});
+}
+
+function spawnSwing(){
+  const topLayer=stack[stack.length-1];
+  const prevW=topLayer.w;
+  // New slice same width as top (will be trimmed on drop)
+  const sliceW=Math.min(prevW+10, BASE_W); // allow slight overhang spawn
+  swingX=W*0.05; // start from left edge
+  swingDir=1;
+  swingSpeed=SWING_SPEED_BASE+level*0.18+Math.min(combo*.08,1.5);
+  swinging={w:Math.min(prevW,BASE_W),h:SLICE_H};
+}
+
+// ═══ INPUT ═══
+function dropSlice(){
+  if(!gameActive||gameOver||!swinging)return;
+  const topLayer=stack[stack.length-1];
+  const topX=topLayer.x,topW=topLayer.w;
+  const sliceX=swingX,sliceW=swinging.w;
+
+  // Overlap calculation
+  const left=Math.max(topX,sliceX);
+  const right=Math.min(topX+topW,sliceX+sliceW);
+  const overlap=right-left;
+
+  if(overlap<=2){
+    // Miss — game over
+    endGame();return;
+  }
+
+  const perfect=Math.abs(sliceX-topX)<3&&Math.abs(sliceW-topW)<3;
+  const keptX=left,keptW=overlap;
+  const layerY=topLayer.y-SLICE_H;
+  const layerIdx=stack.length;
+
+  stack.push({x:keptX,y:layerY,w:keptW,h:SLICE_H,type:'slice',col:LAYER_COLS[layerIdx%LAYER_COLS.length]});
+
+  // Scroll camera up
+  targetCameraY=Math.max(0,(stack.length-8)*SLICE_H);
+
+  // Score
+  const pts=perfect?150:Math.round(50+(overlap/topW)*80);
+  if(perfect){combo++;score+=pts+combo*20;showPerfect();}
+  else{combo=0;score+=pts;}
+
+  // Particles
+  spawnParticles(keptX+keptW/2,layerY+W/H+targetCameraY,8,perfect?'#ffd700':'#ff9900');
+
+  level=1+Math.floor(stack.length/4);
+  document.getElementById('scoreEl').textContent=score;
+  document.getElementById('levelEl').textContent=level;
+  if(hi<score){hi=score;document.getElementById('hiEl').textContent=hi;}
+
+  swinging=null;
+  setTimeout(spawnSwing,120);
+}
+
+canvas.addEventListener('mousedown',dropSlice);
+canvas.addEventListener('touchstart',e=>{e.preventDefault();dropSlice();},{passive:false});
+document.addEventListener('keydown',e=>{if(e.code==='Space'||e.code==='ArrowDown')dropSlice();});
+
+function showPerfect(){
+  const el=document.getElementById('perfectEl');
+  el.textContent=combo>1?`🔥 PERFECT x${combo}!`:'✨ PERFECT!';
+  el.classList.remove('show');void el.offsetWidth;el.classList.add('show');
+}
+
+function endGame(){
+  gameActive=false;gameOver=true;
+  if(hi<score)hi=score;
+  document.getElementById('hiEl').textContent=hi;
+  const msg=document.getElementById('msg');
+  msg.querySelector('div').textContent='😬';
+  msg.querySelector('h2').textContent='Pizza Fell!';
+  msg.querySelector('p').textContent=`Score: ${score} · Level: ${level}\nHigh Score: ${hi}`;
+  msg.querySelector('button').textContent='Try Again';
+  msg.style.display='block';
+  document.getElementById('hint').style.display='none';
+}
+
+// ═══ DRAW ═══
+function drawAll(){
+  ctx.clearRect(0,0,W,H);
+
+  // Background gradient
+  const bg=ctx.createLinearGradient(0,0,0,H);
+  bg.addColorStop(0,'#1a0a00');bg.addColorStop(1,'#2d1200');
+  ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+
+  // Subtle checkered floor
+  for(let fy=H-20;fy<H;fy+=10)for(let fx=0;fx<W;fx+=10){
+    ctx.fillStyle=(((fx/10|0)+(fy/10|0))%2===0)?'rgba(255,255,255,.04)':'rgba(0,0,0,0)';
+    ctx.fillRect(fx,fy,10,10);
+  }
+
+  // Camera offset — scroll up smoothly
+  cameraY+=(targetCameraY-cameraY)*.14;
+  const camOff=cameraY;
+
+  ctx.save();
+  ctx.translate(0,camOff);
+
+  // Draw stacked layers bottom-up
+  for(let i=0;i<stack.length;i++){
+    const layer=stack[i];
+    const cx=layer.x+layer.w/2,cy=layer.y;
+    if(layer.type==='base'){
+      // Plate / table
+      ctx.fillStyle='#4a3010';
+      roundRect(ctx,layer.x-6,cy,layer.w+12,layer.h+6,8);ctx.fill();
+      ctx.fillStyle='#6a4518';
+      roundRect(ctx,layer.x,cy,layer.w,layer.h,6);ctx.fill();
+      ctx.strokeStyle='rgba(255,200,100,.3)';ctx.lineWidth=2;
+      roundRect(ctx,layer.x,cy,layer.w,layer.h,6);ctx.stroke();
+      // Plate shine
+      ctx.fillStyle='rgba(255,255,255,.12)';
+      roundRect(ctx,layer.x+8,cy+3,layer.w-16,6,3);ctx.fill();
+    } else {
+      // Shadow under slice
+      ctx.fillStyle='rgba(0,0,0,.28)';
+      ctx.fillRect(layer.x+2,cy+layer.h-2,layer.w,4);
+
+      // Cheese base
+      ctx.fillStyle=CHEESE_COL;
+      roundRect(ctx,layer.x,cy,layer.w,layer.h,6);ctx.fill();
+
+      // Sauce stripe
+      ctx.fillStyle=SAUCE_COL;
+      ctx.fillRect(layer.x+2,cy+8,layer.w-4,10);
+
+      // Crust at top of slice (decorative top line)
+      ctx.fillStyle=CRUST_COL;
+      roundRect(ctx,layer.x,cy,layer.w,8,{tl:6,tr:6,bl:0,br:0});ctx.fill();
+
+      // Topping dots
+      ctx.font='9px serif';
+      ctx.textAlign='center';
+      const topping=TOPPINGS[i%TOPPINGS.length];
+      for(let t=0;t<Math.min(3,Math.floor(layer.w/35));t++){
+        const tx=layer.x+16+t*Math.floor((layer.w-20)/(Math.min(3,Math.floor(layer.w/35))||1));
+        ctx.fillText(topping,tx,cy+21);
+      }
+
+      // Edge highlight
+      ctx.strokeStyle='rgba(255,230,100,.25)';ctx.lineWidth=1.5;
+      roundRect(ctx,layer.x,cy,layer.w,layer.h,6);ctx.stroke();
+    }
+  }
+
+  // Swinging slice
+  if(swinging&&gameActive){
+    const sw=swinging.w,sh=swinging.h;
+    const topLayer=stack[stack.length-1];
+    const sy=topLayer.y-sh;
+
+    // Shadow
+    ctx.fillStyle='rgba(0,0,0,.18)';
+    ctx.fillRect(swingX+2,sy+sh-2,sw,4);
+
+    // Cheese
+    ctx.fillStyle=CHEESE_COL;
+    roundRect(ctx,swingX,sy,sw,sh,6);ctx.fill();
+    ctx.fillStyle=SAUCE_COL;
+    ctx.fillRect(swingX+2,sy+8,sw-4,10);
+    ctx.fillStyle=CRUST_COL;
+    roundRect(ctx,swingX,sy,sw,8,{tl:6,tr:6,bl:0,br:0});ctx.fill();
+    // Topping
+    ctx.font='9px serif';ctx.textAlign='center';
+    const tp=TOPPINGS[stack.length%TOPPINGS.length];
+    for(let t=0;t<Math.min(3,Math.floor(sw/35));t++){
+      const tx=swingX+16+t*Math.floor((sw-20)/(Math.min(3,Math.floor(sw/35))||1));
+      ctx.fillText(tp,tx,sy+21);
+    }
+    ctx.strokeStyle='rgba(255,180,0,.5)';ctx.lineWidth=2;
+    roundRect(ctx,swingX,sy,sw,sh,6);ctx.stroke();
+
+    // Guide line from above
+    ctx.setLineDash([4,6]);ctx.strokeStyle='rgba(255,180,0,.2)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(swingX+sw/2,sy-H);ctx.lineTo(swingX+sw/2,sy);ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Particles
+  for(const p of particles){
+    ctx.globalAlpha=p.life;
+    ctx.fillStyle=p.col;
+    ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();
+  }
+  ctx.globalAlpha=1;
+
+  ctx.restore();
+
+  // Combo indicator (screen-space, not scrolled)
+  if(combo>1){
+    ctx.fillStyle=`rgba(255,200,0,${Math.min(1,combo*.15)})`;
+    ctx.font=`bold ${16+combo}px Segoe UI`;ctx.textAlign='left';
+    ctx.fillText(`🔥 x${combo} Combo`,14,H-50);
+  }
+}
+
+function roundRect(ctx,x,y,w,h,r){
+  if(typeof r==='number')r={tl:r,tr:r,bl:r,br:r};
+  ctx.beginPath();
+  ctx.moveTo(x+r.tl,y);ctx.lineTo(x+w-r.tr,y);
+  ctx.quadraticCurveTo(x+w,y,x+w,y+r.tr);
+  ctx.lineTo(x+w,y+h-r.br);ctx.quadraticCurveTo(x+w,y+h,x+w-r.br,y+h);
+  ctx.lineTo(x+r.bl,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r.bl);
+  ctx.lineTo(x,y+r.tl);ctx.quadraticCurveTo(x,y,x+r.tl,y);
+  ctx.closePath();
+}
+
+// ═══ LOOP ═══
+let lastTs=0;
+function loop(ts=0){
+  if(!gameActive){drawAll();return;}
+  frameId=requestAnimationFrame(loop);
+  const dt=Math.min((ts-lastTs)/16.67,3);lastTs=ts;
+
+  // Swing
+  if(swinging){
+    swingX+=swingDir*swingSpeed*dt;
+    const maxX=W-swinging.w-W*.05;
+    const minX=W*.05;
+    if(swingX>maxX){swingX=maxX;swingDir=-1;}
+    if(swingX<minX){swingX=minX;swingDir=1;}
+  }
+
+  // Particles
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i];
+    p.x+=p.vx;p.y+=p.vy;p.vy+=.12;p.life-=.035;
+    if(p.life<=0)particles.splice(i,1);
+  }
+
+  drawAll();
+}
+
+drawAll(); // draw menu background
+loop();
+</script>
+</body>
+</html>

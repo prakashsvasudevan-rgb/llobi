@@ -651,6 +651,11 @@ function getPos(e){
 }
 function handleClick(e){
   if(shopOpen)return;
+  if(e._space){
+    if(state==='nibble'){caughtFish=pickFish();reelProgress=0;state='hooked';setText('Hooked! Tap to reel in!');return;}
+    if(state==='hooked'){reelProgress=100;return;}
+    return;
+  }
   const p=getPos(e);
   if(state==='idle'&&p.y>WY-15){startCast(p.x);return;}
   if(state==='nibble'){caughtFish=pickFish();reelProgress=0;state='hooked';setText('Hooked! Tap to reel in!');return;}
@@ -658,6 +663,7 @@ function handleClick(e){
 }
 C.addEventListener('click',handleClick);
 C.addEventListener('touchstart',e=>{e.preventDefault();handleClick(e);},{passive:false});
+document.addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();handleClick({touches:null,clientX:0,clientY:0,_space:true});}});
 
 updateUI();
 draw();

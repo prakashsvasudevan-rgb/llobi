@@ -745,6 +745,11 @@ updateRecipe();
     frameT++;
   }
 
+  // spawn one customer every 5 seconds continuously
+  setInterval(()=>{
+    custs.push({x:W+30,y:FLOOR,state:'walk',frame:0,timer:0,coffeeAlpha:0,sad:false});
+  },5000);
+
   // animation loop
   let curWeather=null;
   function loop(){

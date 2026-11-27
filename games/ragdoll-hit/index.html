@@ -7,585 +7,586 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:100%;height:100%;overflow:hidden;background:#fff}
-canvas{display:block}
+canvas{display:block;touch-action:none}
 #ui{position:absolute;top:0;left:0;width:100%;pointer-events:none;font-family:'Segoe UI',sans-serif}
-#hud{display:flex;gap:10px;padding:12px 16px;flex-wrap:wrap}
-.stat{background:rgba(255,255,255,.85);border:1px solid rgba(0,0,0,.12);border-radius:10px;padding:5px 14px;text-align:center;color:#222;backdrop-filter:blur(4px)}
-.stat span{display:block;font-size:.65rem;opacity:.65;text-transform:uppercase;letter-spacing:.06em}
-.stat strong{font-size:1.25rem;font-weight:800}
-#msg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;color:#222;pointer-events:all;display:none;background:rgba(255,255,255,.92);padding:32px 44px;border-radius:20px;border:1px solid rgba(0,0,0,.12);backdrop-filter:blur(10px)}
-#msg h2{font-size:2.2rem;font-weight:900;letter-spacing:.03em}
-#msg p{margin:.6rem 0 1.4rem;opacity:.8;font-size:1rem}
-#msg button{font-weight:800;font-size:1rem;padding:12px 36px;border:none;border-radius:14px;cursor:pointer;background:#e94560;color:#fff;box-shadow:0 5px 0 #9b1d31;transition:transform .1s,box-shadow .1s}
+#hud{display:flex;gap:8px;padding:10px 14px;flex-wrap:wrap}
+.stat{background:rgba(255,255,255,.88);border:1px solid rgba(0,0,0,.13);border-radius:9px;padding:5px 13px;text-align:center;color:#222}
+.stat span{display:block;font-size:.62rem;opacity:.6;text-transform:uppercase;letter-spacing:.05em}
+.stat strong{font-size:1.2rem;font-weight:800}
+#msg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;color:#222;pointer-events:all;display:block;background:rgba(255,255,255,.95);padding:28px 44px;border-radius:20px;border:1px solid rgba(0,0,0,.13)}
+#msg h2{font-size:2rem;font-weight:900}
+#msg p{margin:.5rem 0 1.2rem;opacity:.75;font-size:.95rem}
+#msg button{font-weight:800;font-size:1rem;padding:12px 32px;border:none;border-radius:13px;cursor:pointer;background:#e94560;color:#fff;box-shadow:0 5px 0 #9b1d31;transition:transform .1s,box-shadow .1s;margin:4px}
 #msg button:active{transform:translateY(3px);box-shadow:0 2px 0 #9b1d31}
-#aim-hint{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);color:rgba(0,0,0,.55);font-size:.9rem;pointer-events:none;text-align:center}
-#power-wrap{position:absolute;bottom:60px;left:50%;transform:translateX(-50%);width:220px;display:none;text-align:center}
-#power-wrap label{color:rgba(0,0,0,.65);font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:5px}
-#power-bar{height:12px;background:rgba(255,255,255,.12);border-radius:6px;overflow:hidden}
-#power-fill{height:100%;width:0%;background:linear-gradient(90deg,#4ade80,#f97316,#ef4444);border-radius:6px;transition:width .05s}
+#msg button.sec{background:#4a90e2;box-shadow:0 5px 0 #2a5faa}
+#hint{position:absolute;bottom:22px;left:50%;transform:translateX(-50%);color:rgba(0,0,0,.5);font-size:.85rem;pointer-events:none;text-align:center}
+#pwrap{position:absolute;bottom:56px;left:50%;transform:translateX(-50%);width:200px;display:none;text-align:center}
+#pwrap label{color:rgba(0,0,0,.6);font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;display:block;margin-bottom:4px}
+#pbar{height:11px;background:rgba(0,0,0,.1);border-radius:6px;overflow:hidden}
+#pfill{height:100%;width:0%;background:linear-gradient(90deg,#4ade80,#f97316,#ef4444);border-radius:6px}
+#tools{position:absolute;bottom:14px;right:14px;display:none;flex-direction:column;gap:6px;pointer-events:all}
+.tbtn{background:rgba(255,255,255,.9);border:1px solid rgba(0,0,0,.18);border-radius:10px;padding:7px 14px;cursor:pointer;font-size:.78rem;font-weight:700;color:#222;transition:background .1s}
+.tbtn:hover{background:#ffe066}
+.tbtn.active{background:#ffe066;border-color:#cc9900}
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
 <div id="ui">
   <div id="hud">
-    <div class="stat"><span>Distance</span><strong id="dist">0</strong><span>m</span></div>
-    <div class="stat"><span>Best</span><strong id="best">0</strong><span>m</span></div>
-    <div class="stat"><span>Hits</span><strong id="hits">0</strong></div>
-    <div class="stat"><span>Throws</span><strong id="throws">3</strong></div>
+    <div class="stat"><span>Knocked</span><strong id="knocked">0</strong></div>
+    <div class="stat"><span>Score</span><strong id="scoreEl">0</strong></div>
+    <div class="stat"><span>Throws</span><strong id="throwsEl">3</strong></div>
   </div>
   <div id="msg">
-    <h2>Ragdoll Hit 3D</h2>
-    <p>Drag anywhere to aim · Release to launch</p>
+    <h2>🤸 Ragdoll Hit 3D</h2>
+    <p>Launch at the dummies · Knock them all over!</p>
     <button id="startBtn">Play!</button>
+    <button class="sec" id="resetBtn" style="display:none">Reset Dummies</button>
   </div>
-  <div id="aim-hint">Drag anywhere to aim the ragdoll</div>
-  <div id="power-wrap"><label>Power</label><div id="power-bar"><div id="power-fill"></div></div></div>
+  <div id="hint" style="display:none">Drag anywhere to aim and throw</div>
+  <div id="pwrap"><label>Power</label><div id="pbar"><div id="pfill"></div></div></div>
+  <div id="tools" style="display:flex">
+    <div class="tbtn active" id="toolLaunch">🚀 Launch</div>
+    <div class="tbtn" id="toolPunch">👊 Punch Dummy</div>
+    <div class="tbtn" id="toolExplo">💥 Explosion</div>
+    <div class="tbtn" id="toolReset">🔄 Stand Up</div>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
 <script>
 // ═══════════════ RENDERER ═══════════════
-const canvas = document.getElementById('c');
-let W = window.innerWidth, H = window.innerHeight;
-const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+const canvas=document.getElementById('c');
+let W=window.innerWidth,H=window.innerHeight;
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
 renderer.setSize(W,H);
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xffffff);
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0xfafafa);
 
-const camera = new THREE.PerspectiveCamera(55,W/H,0.1,500);
-camera.position.set(-8,5,-5);
+const camera=new THREE.PerspectiveCamera(55,W/H,0.1,500);
 
 window.addEventListener('resize',()=>{
-  W=window.innerWidth; H=window.innerHeight;
+  W=window.innerWidth;H=window.innerHeight;
   renderer.setSize(W,H);
-  camera.aspect=W/H;
-  camera.updateProjectionMatrix();
+  camera.aspect=W/H;camera.updateProjectionMatrix();
 });
 
 // ═══════════════ LIGHTS ═══════════════
-scene.add(new THREE.AmbientLight(0xffffff,1.2));
-const sun=new THREE.DirectionalLight(0xffffff,1.8);
-sun.position.set(20,40,15);
+scene.add(new THREE.AmbientLight(0xffffff,1.0));
+const sun=new THREE.DirectionalLight(0xfff8ee,2.2);
+sun.position.set(10,30,5);
 sun.castShadow=true;
 sun.shadow.mapSize.set(2048,2048);
-sun.shadow.camera.far=250;
-sun.shadow.camera.left=-60; sun.shadow.camera.right=200;
-sun.shadow.camera.top=40;  sun.shadow.camera.bottom=-15;
+sun.shadow.camera.far=120;
+sun.shadow.camera.left=-30;sun.shadow.camera.right=50;
+sun.shadow.camera.top=20;sun.shadow.camera.bottom=-5;
 scene.add(sun);
-const fill2=new THREE.DirectionalLight(0xddddff,0.5);fill2.position.set(-15,8,-10);scene.add(fill2);
-// point light that follows ragdoll
-const rdLight=new THREE.PointLight(0xff8844,0.8,12);
-scene.add(rdLight);
+const fill=new THREE.DirectionalLight(0xddeeff,0.6);
+fill.position.set(-10,8,-5);scene.add(fill);
 
-// ═══════════════ ENVIRONMENT ═══════════════
-// Ground
-const groundMesh=new THREE.Mesh(
-  new THREE.PlaneGeometry(600,600),
-  new THREE.MeshLambertMaterial({color:0x7ec850})
-);
-groundMesh.rotation.x=-Math.PI/2;
-groundMesh.receiveShadow=true;
+// ═══════════════ GROUND ═══════════════
+const groundGeo=new THREE.PlaneGeometry(200,200,20,20);
+const groundMat=new THREE.MeshLambertMaterial({color:0xdddddd});
+const groundMesh=new THREE.Mesh(groundGeo,groundMat);
+groundMesh.rotation.x=-Math.PI/2;groundMesh.receiveShadow=true;
 scene.add(groundMesh);
+
+// Ground grid lines
+const gridHelper=new THREE.GridHelper(200,40,0xbbbbbb,0xbbbbbb);
+gridHelper.position.y=0.01;scene.add(gridHelper);
 
 // Launch pad
 const padMesh=new THREE.Mesh(
-  new THREE.CylinderGeometry(1.8,1.8,0.3,24),
-  new THREE.MeshLambertMaterial({color:0x666688})
+  new THREE.CylinderGeometry(2,2,0.25,24),
+  new THREE.MeshLambertMaterial({color:0x888888})
 );
-padMesh.position.set(0,0.15,0);
-padMesh.castShadow=true;
-padMesh.receiveShadow=true;
+padMesh.position.set(0,0.12,0);padMesh.receiveShadow=true;padMesh.castShadow=true;
 scene.add(padMesh);
 
-// Distance markers (poles every 10m to the side)
-for(let d=10;d<=120;d+=10){
-  const pole=new THREE.Mesh(
-    new THREE.CylinderGeometry(0.07,0.07,3,6),
-    new THREE.MeshLambertMaterial({color:d%50===0?0xffd700:0xaaaaaa})
+// Target area circles on ground
+for(let i=0;i<6;i++){
+  const r=new THREE.Mesh(
+    new THREE.RingGeometry(1.4+i*.3,1.5+i*.3,32),
+    new THREE.MeshBasicMaterial({color:i%2===0?0xff4444:0xff8888,side:THREE.DoubleSide})
   );
-  pole.position.set(-4,1.5,d);
-  scene.add(pole);
-  // disc on top
-  const disc=new THREE.Mesh(
-    new THREE.CylinderGeometry(0.25,0.25,0.1,6),
-    new THREE.MeshLambertMaterial({color:d%50===0?0xffd700:0xcccccc})
-  );
-  disc.position.set(-4,3.1,d);
-  scene.add(disc);
+  r.rotation.x=-Math.PI/2;r.position.set(14,0.02,0);scene.add(r);
 }
-
-// ═══════════════ OBSTACLES ═══════════════
-const obsMats=[
-  new THREE.MeshLambertMaterial({color:0x5c3d1a}),
-  new THREE.MeshLambertMaterial({color:0x1a3d5c}),
-  new THREE.MeshLambertMaterial({color:0x3d1a5c}),
-];
-const topMat=new THREE.MeshLambertMaterial({color:0x8B6914});
-
-let obstacleBoxes=[];
-
-function buildObstacles(){
-  const configs=[
-    {x:0.5,y:1,z:14,  w:3,h:2,d:3,  c:0},
-    {x:-1, y:2,z:22,  w:2.5,h:4,d:2.5,c:1},
-    {x:1,  y:0.75,z:30,w:4,h:1.5,d:3,c:0},
-    {x:0,  y:3,z:38,  w:2,h:6,d:2,  c:2},
-    {x:-1.5,y:1.25,z:46,w:3,h:2.5,d:2.5,c:1},
-    {x:1,  y:4,z:54,  w:2.5,h:8,d:2.5,c:2},
-    {x:-0.5,y:1,z:62, w:4,h:2,d:3,  c:0},
-    {x:0.5,y:5,z:70,  w:2,h:10,d:2, c:1},
-    {x:-1, y:1.5,z:80,w:5,h:3,d:3,  c:0},
-    {x:1,  y:6,z:92,  w:2,h:12,d:2, c:2},
-  ];
-  obstacleBoxes=[];
-  for(const c of configs){
-    const mesh=new THREE.Mesh(
-      new THREE.BoxGeometry(c.w,c.h,c.d),
-      obsMats[c.c]
-    );
-    mesh.position.set(c.x,c.y,c.z);
-    mesh.castShadow=true; mesh.receiveShadow=true;
-    scene.add(mesh);
-    // top cap
-    const top=new THREE.Mesh(new THREE.BoxGeometry(c.w,0.12,c.d),topMat);
-    top.position.set(c.x,c.y+c.h/2+0.06,c.z);
-    scene.add(top);
-    obstacleBoxes.push({
-      minX:c.x-c.w/2, maxX:c.x+c.w/2,
-      minY:c.y-c.h/2, maxY:c.y+c.h/2,
-      minZ:c.z-c.d/2, maxZ:c.z+c.d/2,
-    });
+// Arrows on ground
+const arrowGeo=new THREE.PlaneGeometry(0.3,2);
+const arrowMat=new THREE.MeshBasicMaterial({color:0x888888,side:THREE.DoubleSide});
+for(let z=-1;z<=1;z+=1){
+  for(let zz=3;zz<13;zz+=3){
+    const a=new THREE.Mesh(arrowGeo,arrowMat);
+    a.rotation.x=-Math.PI/2;a.position.set(zz,0.02,z);scene.add(a);
   }
 }
-buildObstacles();
 
-// ═══════════════ RAGDOLL PHYSICS ═══════════════
+// Distance markers
+for(let d=5;d<=40;d+=5){
+  const pole=new THREE.Mesh(
+    new THREE.CylinderGeometry(.06,.06,2.5,6),
+    new THREE.MeshLambertMaterial({color:d%10===0?0xff4444:0xaaaaaa})
+  );
+  pole.position.set(d,1.25,-5);scene.add(pole);
+  const disc=new THREE.Mesh(new THREE.CylinderGeometry(.2,.2,.08,6),new THREE.MeshLambertMaterial({color:d%10===0?0xff4444:0xcccccc}));
+  disc.position.set(d,2.6,-5);scene.add(disc);
+}
+
+// Walls / platform obstacles
+const wallMat=new THREE.MeshLambertMaterial({color:0xcccccc});
+const walls=[
+  {x:12,y:1,z:2,  w:0.4,h:2,d:4},
+  {x:12,y:1,z:-2, w:0.4,h:2,d:4},
+  {x:22,y:1.5,z:0,w:0.4,h:3,d:6},
+  {x:30,y:1,z:2,  w:0.4,h:2,d:4},
+  {x:30,y:1,z:-2, w:0.4,h:2,d:4},
+];
+for(const w of walls){
+  const m=new THREE.Mesh(new THREE.BoxGeometry(w.w,w.h,w.d),wallMat);
+  m.position.set(w.x,w.y,w.z);m.castShadow=true;m.receiveShadow=true;scene.add(m);
+}
+
+// ═══════════════ RAGDOLL SYSTEM ═══════════════
+const G=32; // gravity (units/s²)
+
 class P3{
   constructor(x,y,z){this.x=x;this.y=y;this.z=z;this.ox=x;this.oy=y;this.oz=z;}
-  update(dt){
-    const vx=this.x-this.ox, vy=this.y-this.oy, vz=this.z-this.oz;
-    this.ox=this.x; this.oy=this.y; this.oz=this.z;
-    this.x+=vx*.984; this.y+=vy*.984-20*dt*dt; this.z+=vz*.984;
+  step(dt){
+    const vx=this.x-this.ox,vy=this.y-this.oy,vz=this.z-this.oz;
+    this.ox=this.x;this.oy=this.y;this.oz=this.z;
+    this.x+=vx*.982;this.y+=vy*.982-G*dt*dt;this.z+=vz*.982;
   }
   floor(){
-    const bounce=0.38, fric=0.80;
-    if(this.y<0.1){
-      this.y=0.1;
-      const vy=this.y-this.oy; this.oy=this.y+vy*bounce;
-      const vx=this.x-this.ox; this.ox=this.x-vx*fric;
-      const vz=this.z-this.oz; this.oz=this.z-vz*fric;
+    if(this.y<0.08){
+      this.y=0.08;
+      const vy=this.y-this.oy;this.oy=this.y+vy*.38;
+      const vx=this.x-this.ox;this.ox=this.x-vx*.75;
+      const vz=this.z-this.oz;this.oz=this.z-vz*.75;
     }
-    // side walls
-    const B=10;
-    if(this.x<-B){this.x=-B;const vx=this.x-this.ox;this.ox=this.x+vx*.3;}
-    if(this.x> B){this.x= B;const vx=this.x-this.ox;this.ox=this.x+vx*.3;}
+    if(this.x<-20){this.x=-20;const vx=this.x-this.ox;this.ox=this.x+vx*.3;}
+    if(this.x> 60){this.x= 60;const vx=this.x-this.ox;this.ox=this.x+vx*.3;}
+    if(this.z<-15){this.z=-15;const vz=this.z-this.oz;this.oz=this.z+vz*.3;}
+    if(this.z> 15){this.z= 15;const vz=this.z-this.oz;this.oz=this.z+vz*.3;}
   }
 }
 class Stick3{
-  constructor(a,b,len){
-    this.a=a;this.b=b;
-    this.len=len||Math.hypot(b.x-a.x,b.y-a.y,b.z-a.z);
-  }
+  constructor(a,b,len){this.a=a;this.b=b;this.len=len||Math.hypot(b.x-a.x,b.y-a.y,b.z-a.z);}
   solve(){
-    const dx=this.b.x-this.a.x, dy=this.b.y-this.a.y, dz=this.b.z-this.a.z;
+    const dx=this.b.x-this.a.x,dy=this.b.y-this.a.y,dz=this.b.z-this.a.z;
     const d=Math.sqrt(dx*dx+dy*dy+dz*dz)||.001;
     const diff=(d-this.len)/d*.5;
-    this.a.x+=dx*diff; this.a.y+=dy*diff; this.a.z+=dz*diff;
-    this.b.x-=dx*diff; this.b.y-=dy*diff; this.b.z-=dz*diff;
+    this.a.x+=dx*diff;this.a.y+=dy*diff;this.a.z+=dz*diff;
+    this.b.x-=dx*diff;this.b.y-=dy*diff;this.b.z-=dz*diff;
   }
 }
 
-let rd=null, rdSticks=[];
+// ── Materials ──
+const MAT={
+  skin: new THREE.MeshLambertMaterial({color:0xf5d6b0}),
+  hair: new THREE.MeshLambertMaterial({color:0x2b1b0e}),
+  shirt:new THREE.MeshLambertMaterial({color:0xe04040}),
+  pants:new THREE.MeshLambertMaterial({color:0x2255bb}),
+  shoe: new THREE.MeshLambertMaterial({color:0x1a1a1a}),
+  // Dummy materials (grey)
+  dskin:new THREE.MeshLambertMaterial({color:0xc8c8c8}),
+  dhair:new THREE.MeshLambertMaterial({color:0x666666}),
+  dshirt:new THREE.MeshLambertMaterial({color:0x888888}),
+  dpants:new THREE.MeshLambertMaterial({color:0x555566}),
+  dshoe:new THREE.MeshLambertMaterial({color:0x333333}),
+};
 
-// ═══════════════ RAGDOLL MESHES ═══════════════
-const bodyMat =new THREE.MeshLambertMaterial({color:0xe8c99a});
-const shirtMat=new THREE.MeshLambertMaterial({color:0xcc2222});
-const pantsMat=new THREE.MeshLambertMaterial({color:0x2244aa});
-const headMat =new THREE.MeshLambertMaterial({color:0xf5d6b0});
-const hairMat =new THREE.MeshLambertMaterial({color:0x2b1b0e});
-const shoeMat =new THREE.MeshLambertMaterial({color:0x1a1a1a});
+function mkCyl(r,mat){const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,1,8),mat);m.castShadow=true;return m;}
+function mkSph(r,mat){const m=new THREE.Mesh(new THREE.SphereGeometry(r,10,8),mat);m.castShadow=true;return m;}
 
-let rdGroup=null;
-let limbs={};
-
-function mkCyl(r,mat){
-  const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,1,8),mat);
-  m.castShadow=true; return m;
-}
-function mkSph(r,mat){
-  const m=new THREE.Mesh(new THREE.SphereGeometry(r,10,8),mat);
-  m.castShadow=true; return m;
-}
-
-function createLimbs(){
-  if(rdGroup) scene.remove(rdGroup);
-  rdGroup=new THREE.Group();
-  limbs={};
-  const add=(k,m)=>{limbs[k]=m;rdGroup.add(m);};
-  add('head',  mkSph(0.22,headMat));
-  add('hair',  mkSph(0.235,hairMat));
-  add('neck',  mkCyl(0.09,bodyMat));
-  add('torso', mkCyl(0.19,shirtMat));
-  add('laU',   mkCyl(0.09,shirtMat));
-  add('laL',   mkCyl(0.075,bodyMat));
-  add('raU',   mkCyl(0.09,shirtMat));
-  add('raL',   mkCyl(0.075,bodyMat));
-  add('llU',   mkCyl(0.11,pantsMat));
-  add('llL',   mkCyl(0.09,bodyMat));
-  add('rlU',   mkCyl(0.11,pantsMat));
-  add('rlL',   mkCyl(0.09,bodyMat));
-  add('lshoe', mkSph(0.13,shoeMat));
-  add('rshoe', mkSph(0.13,shoeMat));
-  scene.add(rdGroup);
-}
-
-const _vD=new THREE.Vector3(), _vM=new THREE.Vector3(), _q=new THREE.Quaternion(), _yUp=new THREE.Vector3(0,1,0);
-function setLimb(mesh,pA,pB){
+const _vD=new THREE.Vector3(),_vM=new THREE.Vector3(),_q=new THREE.Quaternion(),_YUP=new THREE.Vector3(0,1,0);
+function placeLimb(mesh,pA,pB){
   _vM.set((pA.x+pB.x)/2,(pA.y+pB.y)/2,(pA.z+pB.z)/2);
   mesh.position.copy(_vM);
   _vD.set(pB.x-pA.x,pB.y-pA.y,pB.z-pA.z);
-  const len=_vD.length();
-  if(len<.001)return;
-  _q.setFromUnitVectors(_yUp,_vD.divideScalar(len));
-  mesh.quaternion.copy(_q);
-  mesh.scale.y=len;
+  const len=_vD.length();if(len<.001)return;
+  _q.setFromUnitVectors(_YUP,_vD.divideScalar(len));
+  mesh.quaternion.copy(_q);mesh.scale.y=len;
 }
 
-function syncMeshes(){
-  if(!rd||!limbs.head)return;
-  const n=rd;
-  limbs.head.position.set(n[0].x,n[0].y,n[0].z);
-  limbs.hair.position.set(n[0].x,n[0].y+.09,n[0].z);
-  setLimb(limbs.neck, n[0],n[1]);
-  setLimb(limbs.torso,n[1],n[3]);
-  setLimb(limbs.laU,  n[4],n[6]);
-  setLimb(limbs.laL,  n[6],n[8]);
-  setLimb(limbs.raU,  n[5],n[7]);
-  setLimb(limbs.raL,  n[7],n[9]);
-  setLimb(limbs.llU,  n[10],n[12]);
-  setLimb(limbs.llL,  n[12],n[14]);
-  setLimb(limbs.rlU,  n[11],n[13]);
-  setLimb(limbs.rlL,  n[13],n[15]);
-  limbs.lshoe.position.set(n[14].x,n[14].y,n[14].z);
-  limbs.rshoe.position.set(n[15].x,n[15].y,n[15].z);
-}
-
-function buildRagdoll(x,y,z){
-  const p=(dx,dy,dz)=>new P3(x+dx,y+dy,z+dz);
-  rd=[
-    p(0,1.95,0),     // 0 head
-    p(0,1.68,0),     // 1 neck
-    p(0,1.22,0),     // 2 chest
-    p(0,0.78,0),     // 3 pelvis
-    p(-.32,1.52,0),  // 4 L shoulder
-    p( .32,1.52,0),  // 5 R shoulder
-    p(-.58,1.12,0),  // 6 L elbow
-    p( .58,1.12,0),  // 7 R elbow
-    p(-.72,0.68,0),  // 8 L hand
-    p( .72,0.68,0),  // 9 R hand
-    p(-.18,0.78,0),  // 10 L hip
-    p( .18,0.78,0),  // 11 R hip
-    p(-.22,0.40,0),  // 12 L knee
-    p( .22,0.40,0),  // 13 R knee
-    p(-.22,0.06,0),  // 14 L foot
-    p( .22,0.06,0),  // 15 R foot
+// ── Build node positions (standing T-pose) ──
+function tpose(cx,cy,cz){
+  return[
+    new P3(cx,  cy+1.95,cz),   // 0 head
+    new P3(cx,  cy+1.68,cz),   // 1 neck
+    new P3(cx,  cy+1.22,cz),   // 2 chest
+    new P3(cx,  cy+0.78,cz),   // 3 pelvis
+    new P3(cx-.32,cy+1.52,cz), // 4 Lshoulder
+    new P3(cx+.32,cy+1.52,cz), // 5 Rshoulder
+    new P3(cx-.72,cy+1.52,cz), // 6 Lelbow (arms out)
+    new P3(cx+.72,cy+1.52,cz), // 7 Relbow
+    new P3(cx-1.1,cy+1.52,cz), // 8 Lhand
+    new P3(cx+1.1,cy+1.52,cz), // 9 Rhand
+    new P3(cx-.18,cy+0.78,cz), // 10 Lhip
+    new P3(cx+.18,cy+0.78,cz), // 11 Rhip
+    new P3(cx-.22,cy+0.40,cz), // 12 Lknee
+    new P3(cx+.22,cy+0.40,cz), // 13 Rknee
+    new P3(cx-.22,cy+0.08,cz), // 14 Lfoot
+    new P3(cx+.22,cy+0.08,cz), // 15 Rfoot
   ];
-  const s=(a,b,ex)=>{
-    const l=Math.hypot(rd[b].x-rd[a].x,rd[b].y-rd[a].y,rd[b].z-rd[a].z)*(ex||1);
-    return new Stick3(rd[a],rd[b],l);
-  };
-  rdSticks=[
-    s(0,1),s(1,2),s(2,3),
-    s(1,4),s(1,5),
-    s(4,6),s(6,8),
-    s(5,7),s(7,9),
-    s(3,10),s(3,11),
-    s(10,12),s(12,14),
-    s(11,13),s(13,15),
-    s(4,5),s(10,11),
-    s(0,2),s(2,4),s(2,5),
-    s(4,10),s(5,11),
-  ];
-  createLimbs();
+}
+function buildSticks(n){
+  const s=(a,b,ex)=>{const l=Math.hypot(n[b].x-n[a].x,n[b].y-n[a].y,n[b].z-n[a].z)*(ex||1);return new Stick3(n[a],n[b],l);};
+  return[s(0,1),s(1,2),s(2,3),s(1,4),s(1,5),s(4,6),s(6,8),s(5,7),s(7,9),s(3,10),s(3,11),s(10,12),s(12,14),s(11,13),s(13,15),s(4,5),s(10,11),s(0,2),s(2,4),s(2,5),s(4,10),s(5,11)];
+}
+function addMeshes(group,skin,shirt,pants,shoe,hair){
+  const m={};
+  const add=(k,mesh)=>{m[k]=mesh;group.add(mesh);};
+  add('head', mkSph(.22,skin)); add('hair',mkSph(.235,hair));
+  add('neck', mkCyl(.09,skin)); add('torso',mkCyl(.19,shirt));
+  add('laU',mkCyl(.09,shirt));  add('laL',mkCyl(.075,skin));
+  add('raU',mkCyl(.09,shirt));  add('raL',mkCyl(.075,skin));
+  add('llU',mkCyl(.11,pants));  add('llL',mkCyl(.09,skin));
+  add('rlU',mkCyl(.11,pants));  add('rlL',mkCyl(.09,skin));
+  add('ls',mkSph(.12,shoe));    add('rs',mkSph(.12,shoe));
+  return m;
+}
+function syncMeshes(n,m){
+  m.head.position.set(n[0].x,n[0].y,n[0].z);
+  m.hair.position.set(n[0].x,n[0].y+.09,n[0].z);
+  placeLimb(m.neck,n[0],n[1]);placeLimb(m.torso,n[1],n[3]);
+  placeLimb(m.laU,n[4],n[6]);placeLimb(m.laL,n[6],n[8]);
+  placeLimb(m.raU,n[5],n[7]);placeLimb(m.raL,n[7],n[9]);
+  placeLimb(m.llU,n[10],n[12]);placeLimb(m.llL,n[12],n[14]);
+  placeLimb(m.rlU,n[11],n[13]);placeLimb(m.rlL,n[13],n[15]);
+  m.ls.position.set(n[14].x,n[14].y,n[14].z);
+  m.rs.position.set(n[15].x,n[15].y,n[15].z);
 }
 
-// ═══════════════ OBSTACLE COLLISION ═══════════════
-let lastHitTime=0, hitCount=0;
+// ── Ragdoll step ──
+const STEPS=10;
+function stepRD(nodes,sticks,sdt){
+  for(const p of nodes)p.step(sdt);
+  for(let i=0;i<6;i++)for(const s of sticks)s.solve();
+  for(const p of nodes)p.floor();
+}
 
-function collideObstacles(){
-  const R=0.14;
-  for(const p of rd){
-    for(const box of obstacleBoxes){
-      const cx=Math.max(box.minX,Math.min(box.maxX,p.x));
-      const cy=Math.max(box.minY,Math.min(box.maxY,p.y));
-      const cz=Math.max(box.minZ,Math.min(box.maxZ,p.z));
-      const dx=p.x-cx, dy=p.y-cy, dz=p.z-cz;
-      const d2=dx*dx+dy*dy+dz*dz;
-      if(d2>0&&d2<R*R){
-        const d=Math.sqrt(d2), pen=(R-d)/d;
-        p.x+=dx*pen; p.y+=dy*pen; p.z+=dz*pen;
-        const vx=p.x-p.ox, vy=p.y-p.oy, vz=p.z-p.oz;
-        const nx=dx/d, ny=dy/d, nz=dz/d;
-        const vn=vx*nx+vy*ny+vz*nz;
-        const b=0.42;
-        p.ox=p.x-(vx-vn*nx*(1+b));
-        p.oy=p.y-(vy-vn*ny*(1+b));
-        p.oz=p.z-(vz-vn*nz*(1+b));
-        registerHit(p.x,p.y,p.z);
-      }
-    }
+// ── Impulse ──
+function applyImpulse(nodes,vx,vy,vz){
+  for(const p of nodes){p.ox=p.x-vx/60;p.oy=p.y-vy/60;p.oz=p.z-vz/60;}
+}
+function applyImpulseAt(nodes,px,py,pz,ivx,ivy,ivz,radius=1.5){
+  // apply scaled impulse to nodes within radius of hit point
+  for(const p of nodes){
+    const d=Math.hypot(p.x-px,p.y-py,p.z-pz);
+    const f=Math.max(0,1-d/radius);
+    if(f>0){p.ox-=ivx*f/60;p.oy-=ivy*f/60;p.oz-=ivz*f/60;}
   }
+}
+
+// ═══════════════ PLAYER RAGDOLL ═══════════════
+let pRD=null,pSticks=[],pMeshes={},pGroup=null;
+let pLaunched=false,pSettleF=0;
+
+function buildPlayerRD(){
+  if(pGroup)scene.remove(pGroup);
+  pGroup=new THREE.Group();scene.add(pGroup);
+  pRD=tpose(0,0,0);
+  pSticks=buildSticks(pRD);
+  pMeshes=addMeshes(pGroup,MAT.skin,MAT.shirt,MAT.pants,MAT.shoe,MAT.hair);
+  syncMeshes(pRD,pMeshes);
+}
+
+// ═══════════════ DUMMIES ═══════════════
+const DUMMY_POSITIONS=[
+  {x:10,z:0},{x:14,z:2.5},{x:14,z:-2.5},
+  {x:20,z:0},{x:24,z:3}, {x:24,z:-3},
+  {x:32,z:0},{x:28,z:2.5},{x:28,z:-2.5},
+];
+let dummies=[];
+
+function buildDummy(pos){
+  const grp=new THREE.Group();scene.add(grp);
+  const nodes=tpose(pos.x,0,pos.z);
+  const sticks=buildSticks(nodes);
+  const meshes=addMeshes(grp,MAT.dskin,MAT.dshirt,MAT.dpants,MAT.dshoe,MAT.dhair);
+  syncMeshes(nodes,meshes);
+  // Stand indicator (small base)
+  const base=new THREE.Mesh(new THREE.CylinderGeometry(.3,.3,.06,12),new THREE.MeshLambertMaterial({color:0xee4444}));
+  base.position.set(pos.x,.03,pos.z);scene.add(base);
+  return{nodes,sticks,meshes,grp,awake:false,knocked:false,pos,base};
+}
+
+function buildAllDummies(){
+  for(const d of dummies){scene.remove(d.grp);scene.remove(d.base);}
+  dummies=DUMMY_POSITIONS.map(p=>buildDummy(p));
+}
+
+function resetDummies(){
+  for(const d of dummies){
+    scene.remove(d.grp);scene.remove(d.base);
+  }
+  dummies=DUMMY_POSITIONS.map(p=>buildDummy(p));
+  knockedCount=0;
+  document.getElementById('knocked').textContent='0';
+}
+
+function wakeOrHitDummy(d,ivx,ivy,ivz,hx,hy,hz){
+  if(!d.awake){d.awake=true;d.knocked=true;knockedCount++;document.getElementById('knocked').textContent=knockedCount;score+=100;}
+  applyImpulseAt(d.nodes,hx,hy,hz,ivx,ivy,ivz,2);
 }
 
 // ═══════════════ SPARKS ═══════════════
 const sparkGeo=new THREE.SphereGeometry(.06,4,4);
-const sparkMats=[0xff6b35,0xffe066,0xff3344,0xff9900].map(c=>new THREE.MeshBasicMaterial({color:c}));
+const spkMats=[0xff6b35,0xffe066,0xff3344,0xff9900].map(c=>new THREE.MeshBasicMaterial({color:c}));
 const sparkPool=[];
-for(let i=0;i<60;i++){
-  const sp={mesh:new THREE.Mesh(sparkGeo,sparkMats[i%4]),life:0,vx:0,vy:0,vz:0};
-  sp.mesh.visible=false; scene.add(sp.mesh); sparkPool.push(sp);
-}
-
-function spawnSparks(x,y,z){
-  let n=0;
-  for(const sp of sparkPool){
-    if(sp.life>0||n>=10)continue;
-    const a=Math.random()*Math.PI*2, el=(Math.random()-.3)*Math.PI;
-    const spd=3+Math.random()*5;
-    sp.vx=Math.cos(el)*Math.cos(a)*spd;
-    sp.vy=Math.sin(el)*spd+2;
-    sp.vz=Math.cos(el)*Math.sin(a)*spd;
-    sp.life=1; sp.mesh.position.set(x,y,z); sp.mesh.visible=true; n++;
+for(let i=0;i<80;i++){const sp={mesh:new THREE.Mesh(sparkGeo,spkMats[i%4]),life:0,vx:0,vy:0,vz:0};sp.mesh.visible=false;scene.add(sp.mesh);sparkPool.push(sp);}
+function burst(x,y,z,n=12){
+  let c=0;
+  for(const sp of sparkPool){if(sp.life>0||c>=n)continue;
+    const a=Math.random()*Math.PI*2,el=(Math.random()-.3)*Math.PI,s=4+Math.random()*6;
+    sp.vx=Math.cos(el)*Math.cos(a)*s;sp.vy=Math.sin(el)*s+2;sp.vz=Math.cos(el)*Math.sin(a)*s;
+    sp.life=1;sp.mesh.position.set(x,y,z);sp.mesh.visible=true;c++;
   }
 }
 
-function registerHit(x,y,z){
-  const now=performance.now();
-  if(now-lastHitTime<140)return;
-  lastHitTime=now; hitCount++;
-  document.getElementById('hits').textContent=hitCount;
-  spawnSparks(x,y,z);
-  cameraShake=0.4;
-}
-
-// ═══════════════ AIM ARROW ═══════════════
-const arrowGroup=new THREE.Group();
-const arrowShaft=new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,1,6),new THREE.MeshBasicMaterial({color:0xff4444,transparent:true,opacity:.85}));
-arrowShaft.position.y=.5;
-const arrowHead=new THREE.Mesh(new THREE.ConeGeometry(.12,.35,6),new THREE.MeshBasicMaterial({color:0xff4444}));
-arrowHead.position.y=1.18;
-arrowGroup.add(arrowShaft,arrowHead);
-arrowGroup.visible=false;
-scene.add(arrowGroup);
-
-// Trajectory dots
-const dotGeo=new THREE.SphereGeometry(.06,6,4);
-const dotMat=new THREE.MeshBasicMaterial({color:0xff8888,transparent:true,opacity:.5});
-const trajDots=[];
-for(let i=0;i<20;i++){const d=new THREE.Mesh(dotGeo,dotMat);d.visible=false;scene.add(d);trajDots.push(d);}
-
-function updateAim(){
-  if(!dragStart||!gameActive||launched){
-    arrowGroup.visible=false;
-    trajDots.forEach(d=>d.visible=false);
-    document.getElementById('power-wrap').style.display='none';
-    return;
-  }
-  const dx=dragStart.ex-dragStart.sx, dy=dragStart.ey-dragStart.sy;
-  const len=Math.min(Math.hypot(dx,dy),180);
-  const pwr=len/180;
-  document.getElementById('power-wrap').style.display='block';
-  document.getElementById('power-fill').style.width=(pwr*100)+'%';
-
-  const {vx,vy,vz}=computeThrow(dx,dy,len);
-  const chest=rd[2];
-  arrowGroup.visible=true;
-  arrowGroup.position.set(chest.x,chest.y,chest.z);
-  const dir=new THREE.Vector3(vx,vy,vz).normalize();
-  arrowGroup.quaternion.setFromUnitVectors(_yUp,dir);
-  arrowGroup.scale.setScalar(.8+pwr*1.2);
-
-  // trajectory dots
-  let tx=chest.x,ty=chest.y,tz=chest.z;
-  let tvx=vx/60,tvy=vy/60,tvz=vz/60;
-  for(let i=0;i<20;i++){
-    tvy-=20*(.016*.016);
-    tx+=tvx*8; ty+=tvy*8; tz+=tvz*8;
-    if(ty<0){trajDots[i].visible=false;continue;}
-    trajDots[i].position.set(tx,ty,tz);
-    trajDots[i].visible=true;
-    trajDots[i].material.opacity=.5*(1-i/20);
-  }
-}
-
-function computeThrow(dx,dy,len){
-  const pwr=Math.min(len,180)/180;
-  const spd=18*pwr;
-  // Camera right vector → maps screen X drag to world
-  const camRight=new THREE.Vector3();
-  camRight.crossVectors(camera.getWorldDirection(new THREE.Vector3()), new THREE.Vector3(0,1,0)).normalize();
-  const throwX= camRight.x * (-dx/180)*10;
-  const throwZ= spd;
-  const throwY= Math.max(1, (-dy/180)*14) + 3*pwr;
-  return {vx:throwX, vy:throwY, vz:throwZ};
-}
+// ═══════════════ CAMERA ═══════════════
+const camPos=new THREE.Vector3(-7,4,-2);
+const camLook=new THREE.Vector3(5,1.5,0);
+let camShake=0;
 
 // ═══════════════ GAME STATE ═══════════════
-let gameActive=false, launched=false;
-let throwsLeft=3, maxDist=0, bestDist=0;
-let dragStart=null, settleFrames=0;
-let cameraShake=0;
-const camPos=new THREE.Vector3(-8,5,-5);
-const camLook=new THREE.Vector3(0,2,8);
+let gameActive=false,throwsLeft=3,knockedCount=0,score=0;
+let dragStart=null,activeTool='launch';
 
-function launchRagdoll(vx,vy,vz){
-  for(const p of rd){p.ox=p.x-vx/60;p.oy=p.y-vy/60;p.oz=p.z-vz/60;}
+function setTool(t){
+  activeTool=t;
+  document.querySelectorAll('.tbtn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tool'+t.charAt(0).toUpperCase()+t.slice(1)).classList.add('active');
+}
+document.getElementById('toolLaunch').onclick=()=>setTool('launch');
+document.getElementById('toolPunch').onclick=()=>{if(gameActive)punchNearest();};
+document.getElementById('toolExplo').onclick=()=>{if(gameActive)explosion();};
+document.getElementById('toolReset').onclick=()=>{if(gameActive)resetDummies();};
+
+function punchNearest(){
+  // Punch nearest awake-able dummy
+  let best=null,bd=Infinity;
+  for(const d of dummies){
+    const dist=Math.hypot(d.pos.x-5,d.pos.z);
+    if(dist<bd){best=d;bd=dist;}
+  }
+  if(best){
+    const hx=best.nodes[2].x,hy=best.nodes[2].y,hz=best.nodes[2].z;
+    wakeOrHitDummy(best,15+Math.random()*5,8+Math.random()*4,(Math.random()-.5)*6,hx,hy,hz);
+    burst(hx,hy,hz,15);camShake=.5;
+  }
 }
 
-function isSettled(){
-  let m=0;
-  for(const p of rd){if(Math.abs(p.x-p.ox)>.015||Math.abs(p.y-p.oy)>.015||Math.abs(p.z-p.oz)>.015)m++;}
-  return m<4;
-}
-
-function resetThrow(){
-  buildRagdoll(0,0,0);
-  launched=false; dragStart=null; maxDist=0; settleFrames=0;
-  camPos.set(-8,5,-5); camLook.set(0,2,8);
-  document.getElementById('dist').textContent='0';
-  document.getElementById('aim-hint').style.display='block';
-}
-
-function endGame(){
-  gameActive=false;
-  const msg=document.getElementById('msg');
-  msg.querySelector('h2').textContent='Game Over!';
-  msg.querySelector('p').textContent=`Best: ${bestDist}m · Total Hits: ${hitCount}`;
-  msg.querySelector('button').textContent='Play Again';
-  msg.style.display='block';
+function explosion(){
+  // Explosion at center of screen target area
+  const ex=14,ey=0,ez=0;
+  burst(ex,1,ez,20);camShake=1;
+  for(const d of dummies){
+    const dx=d.pos.x-ex,dz=d.pos.z-ez;
+    const dist=Math.hypot(dx,dz);
+    if(dist<6){
+      const force=12*(1-dist/6);
+      wakeOrHitDummy(d,(dx/dist)*force,8,(dz/dist)*force,d.nodes[2].x,d.nodes[2].y,d.nodes[2].z);
+    }
+  }
+  // Player ragdoll
+  if(pRD&&pLaunched){
+    const dx2=pRD[2].x-ex,dz2=pRD[2].z-ez;
+    const dist2=Math.hypot(dx2,dz2);
+    if(dist2<6)applyImpulseAt(pRD,pRD[2].x,pRD[2].y,pRD[2].z,(dx2/Math.max(dist2,.01))*10,10,(dz2/Math.max(dist2,.01))*10);
+  }
 }
 
 function startGame(){
-  hitCount=0; throwsLeft=3; bestDist=0; maxDist=0;
-  launched=false; dragStart=null; settleFrames=0; cameraShake=0;
-  for(const sp of sparkPool){sp.life=0;sp.mesh.visible=false;}
-  buildRagdoll(0,0,0);
-  ['hits','dist','best'].forEach(id=>document.getElementById(id).textContent='0');
-  document.getElementById('throws').textContent='3';
+  gameActive=true;throwsLeft=3;knockedCount=0;score=0;
   document.getElementById('msg').style.display='none';
-  document.getElementById('aim-hint').style.display='block';
-  camPos.set(-8,5,-5); camLook.set(0,2,8);
-  camera.position.copy(camPos); camera.lookAt(camLook);
-  gameActive=true;
+  document.getElementById('hint').style.display='block';
+  document.getElementById('tools').style.display='flex';
+  document.getElementById('throwsEl').textContent='3';
+  document.getElementById('knocked').textContent='0';
+  document.getElementById('scoreEl').textContent='0';
+  buildPlayerRD();buildAllDummies();
+  pLaunched=false;dragStart=null;
+  camPos.set(-7,4,-2);camLook.set(5,1.5,0);
+  camera.position.copy(camPos);camera.lookAt(camLook);
+}
+
+function resetThrow(){
+  buildPlayerRD();pLaunched=false;dragStart=null;pSettleF=0;
+  camPos.set(-7,4,-2);camLook.set(5,1.5,0);
+  if(throwsLeft===0){
+    setTimeout(()=>{
+      document.getElementById('msg').style.display='block';
+      document.getElementById('msg').querySelector('h2').textContent='Round Over!';
+      document.getElementById('msg').querySelector('p').textContent=`Knocked ${knockedCount}/${DUMMY_POSITIONS.length} · Score ${score}`;
+      document.getElementById('startBtn').textContent='Play Again';
+      document.getElementById('resetBtn').style.display='inline-block';
+    },800);
+  }
+}
+
+document.getElementById('startBtn').onclick=startGame;
+document.getElementById('resetBtn').onclick=()=>{resetDummies();document.getElementById('msg').style.display='none';throwsLeft=3;score=0;document.getElementById('throwsEl').textContent='3';document.getElementById('scoreEl').textContent='0';};
+
+// ═══════════════ AIM ═══════════════
+const arrowGrp=new THREE.Group();
+const arwShaft=new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,1,6),new THREE.MeshBasicMaterial({color:0xff4444,transparent:true,opacity:.85}));
+arwShaft.position.y=.5;
+const arwHead=new THREE.Mesh(new THREE.ConeGeometry(.12,.35,6),new THREE.MeshBasicMaterial({color:0xff4444}));
+arwHead.position.y=1.18;
+arrowGrp.add(arwShaft,arwHead);arrowGrp.visible=false;scene.add(arrowGrp);
+
+const dotGeo=new THREE.SphereGeometry(.07,6,4);
+const dotMat=new THREE.MeshBasicMaterial({color:0xff6666,transparent:true,opacity:.5});
+const dots=[];for(let i=0;i<22;i++){const d=new THREE.Mesh(dotGeo,dotMat);d.visible=false;scene.add(d);dots.push(d);}
+
+function computeThrow(dx,dy,len){
+  const pwr=Math.min(len,180)/180;
+  const camRight=new THREE.Vector3();
+  camera.getWorldDirection(new THREE.Vector3());
+  camRight.crossVectors(camera.getWorldDirection(new THREE.Vector3()),new THREE.Vector3(0,1,0)).normalize();
+  return{
+    vx:camRight.x*(-dx/180)*12,
+    vy:Math.max(2,(-dy/180)*18)+4*pwr,
+    vz:22*pwr,
+    pwr
+  };
+}
+
+function updateAim(){
+  const show=dragStart&&gameActive&&!pLaunched;
+  arrowGrp.visible=show;
+  dots.forEach(d=>d.visible=false);
+  document.getElementById('pwrap').style.display=show?'block':'none';
+  if(!show)return;
+  const dx=dragStart.ex-dragStart.sx,dy=dragStart.ey-dragStart.sy;
+  const len=Math.min(Math.hypot(dx,dy),180);
+  document.getElementById('pfill').style.width=(len/180*100)+'%';
+  const{vx,vy,vz,pwr}=computeThrow(dx,dy,len);
+  const chest=pRD[2];
+  arrowGrp.position.set(chest.x,chest.y,chest.z);
+  const dir=new THREE.Vector3(vx,vy,vz).normalize();
+  arrowGrp.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir);
+  arrowGrp.scale.setScalar(.8+pwr*1.4);
+  // Trajectory
+  let tx=chest.x,ty=chest.y,tz=chest.z,tvx=vx/60,tvy=vy/60,tvz=vz/60;
+  for(let i=0;i<22;i++){
+    tvy-=G*(1/60)*(1/60);tx+=tvx*7;ty+=tvy*7;tz+=tvz*7;
+    if(ty<0){dots[i].visible=false;continue;}
+    dots[i].position.set(tx,ty,tz);dots[i].visible=true;
+    dots[i].material.opacity=.55*(1-i/22);
+  }
+}
+
+// ═══════════════ COLLISION CHECK ═══════════════
+let lastHit=0;
+function checkCollisions(){
+  if(!pRD||!pLaunched)return;
+  const now=performance.now();
+  for(const d of dummies){
+    for(const pp of pRD){
+      for(const dp of d.nodes){
+        const dist=Math.hypot(pp.x-dp.x,pp.y-dp.y,pp.z-dp.z);
+        if(dist<.35){
+          const ivx=(pp.x-pp.ox)*60,ivy=(pp.y-pp.oy)*60,ivz=(pp.z-pp.oz)*60;
+          if(now-lastHit>80){
+            lastHit=now;
+            burst(pp.x,pp.y,pp.z,10);
+            camShake=.4;
+            if(!d.knocked) score+=100;
+            wakeOrHitDummy(d,ivx*1.1,Math.abs(ivy)*1.2+2,ivz*1.1,pp.x,pp.y,pp.z);
+          }
+          // Bounce player ragdoll slightly
+          applyImpulseAt(pRD,pp.x,pp.y,pp.z,-ivx*.3,-ivy*.3,-ivz*.3,.5);
+          document.getElementById('scoreEl').textContent=score;
+        }
+      }
+    }
+  }
 }
 
 // ═══════════════ MAIN LOOP ═══════════════
 let lastT=0;
 function loop(ts){
   requestAnimationFrame(loop);
-  const dt=Math.min((ts-lastT)/1000,.033); lastT=ts;
-
-  if(gameActive&&rd&&launched){
-    const STEPS=8, sdt=dt/STEPS;
+  const dt=Math.min((ts-lastT)/1000,.033);lastT=ts;
+  if(gameActive&&pRD&&pLaunched){
+    const sdt=dt/STEPS;
     for(let s=0;s<STEPS;s++){
-      for(const p of rd) p.update(sdt);
-      for(let i=0;i<6;i++) for(const st of rdSticks) st.solve();
-      for(const p of rd) p.floor();
-      collideObstacles();
+      stepRD(pRD,pSticks,sdt);
+      for(const d of dummies){if(d.awake)stepRD(d.nodes,d.sticks,sdt);}
     }
-
-    const head=rd[0];
-    rdLight.position.set(head.x,head.y+1,head.z);
-
-    const d=Math.round(Math.max(0,head.z)*3.5);
-    if(d>maxDist){maxDist=d;document.getElementById('dist').textContent=maxDist;}
-
-    // Camera follows ragdoll from side-back
-    const tx=head.x-9, ty=Math.max(4,head.y+5), tz=head.z-5;
-    camPos.lerp(new THREE.Vector3(tx,ty,tz),.06);
-    camLook.lerp(new THREE.Vector3(head.x,head.y+.5,head.z+6),.06);
-
-    settleFrames++;
-    if(settleFrames>100&&isSettled()){
-      if(maxDist>bestDist){bestDist=maxDist;document.getElementById('best').textContent=bestDist;}
-      launched=false;
-      if(throwsLeft>0) setTimeout(resetThrow,1100);
-      else setTimeout(endGame,1300);
+    checkCollisions();
+    // Camera follow head
+    const h=pRD[0];
+    camPos.lerp(new THREE.Vector3(h.x-8,Math.max(3.5,h.y+5),h.z-4),.06);
+    camLook.lerp(new THREE.Vector3(h.x,h.y+.5,h.z+5),.06);
+    // Settle
+    pSettleF++;
+    if(pSettleF>80){
+      let mv=0;
+      for(const p of pRD)if(Math.abs(p.x-p.ox)>.012||Math.abs(p.y-p.oy)>.012||Math.abs(p.z-p.oz)>.012)mv++;
+      if(mv<3){pLaunched=false;setTimeout(resetThrow,900);}
     }
+    document.getElementById('scoreEl').textContent=score;
   }
-
-  // Update sparks
-  for(const sp of sparkPool){
-    if(sp.life<=0)continue;
-    sp.life-=dt*2.5;
-    sp.mesh.position.x+=sp.vx*dt;
-    sp.mesh.position.y+=sp.vy*dt;
-    sp.mesh.position.z+=sp.vz*dt;
-    sp.vy-=22*dt;
-    sp.mesh.visible=sp.life>0;
+  // Step awake dummies even when not launched (after punch/explosion)
+  if(!pLaunched){
+    const sdt=dt/STEPS;
+    for(let s=0;s<STEPS;s++) for(const d of dummies)if(d.awake)stepRD(d.nodes,d.sticks,sdt);
   }
-
-  // Camera shake
-  cameraShake*=.85;
-  const shakeX=(Math.random()-.5)*cameraShake*.3;
-  const shakeY=(Math.random()-.5)*cameraShake*.3;
-
+  // Sparks
+  for(const sp of sparkPool){if(sp.life<=0)continue;sp.life-=dt*2.5;sp.mesh.position.x+=sp.vx*dt;sp.mesh.position.y+=sp.vy*dt;sp.mesh.position.z+=sp.vz*dt;sp.vy-=25*dt;sp.mesh.visible=sp.life>0;}
+  // Camera
+  camShake*=.84;
   camera.position.lerp(camPos,.08);
-  camera.position.x+=shakeX;
-  camera.position.y+=shakeY;
+  camera.position.x+=(Math.random()-.5)*camShake*.25;
+  camera.position.y+=(Math.random()-.5)*camShake*.15;
   camera.lookAt(camLook);
-
-  syncMeshes();
+  // Sync meshes
+  if(pRD)syncMeshes(pRD,pMeshes);
+  for(const d of dummies)syncMeshes(d.nodes,d.meshes);
   updateAim();
   renderer.render(scene,camera);
 }
 
 // ═══════════════ INPUT ═══════════════
-function getPos(e){const s=e.touches?e.touches[0]:e;return{x:s.clientX,y:s.clientY};}
-
-canvas.addEventListener('mousedown',e=>{
-  if(!gameActive||launched)return;
-  const p=getPos(e); dragStart={sx:p.x,sy:p.y,ex:p.x,ey:p.y};
-  document.getElementById('aim-hint').style.display='none';
-});
-canvas.addEventListener('mousemove',e=>{
-  if(!dragStart)return; const p=getPos(e); dragStart.ex=p.x; dragStart.ey=p.y;
-});
+function getP(e){const s=e.touches?e.touches[0]:e;return{x:s.clientX,y:s.clientY};}
+canvas.addEventListener('mousedown',e=>{if(!gameActive||pLaunched)return;const p=getP(e);dragStart={sx:p.x,sy:p.y,ex:p.x,ey:p.y};});
+canvas.addEventListener('mousemove',e=>{if(!dragStart)return;const p=getP(e);dragStart.ex=p.x;dragStart.ey=p.y;});
 canvas.addEventListener('mouseup',()=>{
   if(!dragStart||!gameActive)return;
-  const dx=dragStart.ex-dragStart.sx, dy=dragStart.ey-dragStart.sy;
+  const dx=dragStart.ex-dragStart.sx,dy=dragStart.ey-dragStart.sy;
   const len=Math.min(Math.hypot(dx,dy),180);
   if(len<12){dragStart=null;return;}
-  const {vx,vy,vz}=computeThrow(dx,dy,len);
-  launchRagdoll(vx,vy,vz);
-  launched=true; throwsLeft--; maxDist=0; settleFrames=0;
-  document.getElementById('throws').textContent=throwsLeft;
-  trajDots.forEach(d=>d.visible=false);
+  const{vx,vy,vz}=computeThrow(dx,dy,len);
+  applyImpulse(pRD,vx,vy,vz);
+  pLaunched=true;throwsLeft--;pSettleF=0;
+  document.getElementById('throwsEl').textContent=throwsLeft;
+  document.getElementById('hint').style.display='none';
+  dots.forEach(d=>d.visible=false);arrowGrp.visible=false;
   dragStart=null;
 });
-
-canvas.addEventListener('touchstart',e=>{e.preventDefault();if(!gameActive||launched)return;const p=getPos(e);dragStart={sx:p.x,sy:p.y,ex:p.x,ey:p.y};document.getElementById('aim-hint').style.display='none';},{passive:false});
-canvas.addEventListener('touchmove',e=>{e.preventDefault();if(!dragStart)return;const p=getPos(e);dragStart.ex=p.x;dragStart.ey=p.y;},{passive:false});
+canvas.addEventListener('touchstart',e=>{e.preventDefault();if(!gameActive||pLaunched)return;const p=getP(e);dragStart={sx:p.x,sy:p.y,ex:p.x,ey:p.y};},{passive:false});
+canvas.addEventListener('touchmove',e=>{e.preventDefault();if(!dragStart)return;const p=getP(e);dragStart.ex=p.x;dragStart.ey=p.y;},{passive:false});
 canvas.addEventListener('touchend',()=>{
   if(!dragStart||!gameActive)return;
-  const dx=dragStart.ex-dragStart.sx, dy=dragStart.ey-dragStart.sy;
+  const dx=dragStart.ex-dragStart.sx,dy=dragStart.ey-dragStart.sy;
   const len=Math.min(Math.hypot(dx,dy),180);
   if(len<12){dragStart=null;return;}
-  const {vx,vy,vz}=computeThrow(dx,dy,len);
-  launchRagdoll(vx,vy,vz);
-  launched=true; throwsLeft--; maxDist=0; settleFrames=0;
-  document.getElementById('throws').textContent=throwsLeft;
-  trajDots.forEach(d=>d.visible=false);
+  const{vx,vy,vz}=computeThrow(dx,dy,len);
+  applyImpulse(pRD,vx,vy,vz);
+  pLaunched=true;throwsLeft--;pSettleF=0;
+  document.getElementById('throwsEl').textContent=throwsLeft;
+  document.getElementById('hint').style.display='none';
+  dots.forEach(d=>d.visible=false);arrowGrp.visible=false;
   dragStart=null;
-});
-
-document.getElementById('startBtn').addEventListener('click',startGame);
-document.getElementById('msg').style.display='block';
+},{passive:false});
 
 requestAnimationFrame(loop);
 </script>

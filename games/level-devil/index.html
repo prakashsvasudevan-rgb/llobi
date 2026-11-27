@@ -7,38 +7,71 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 body{background:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:'Segoe UI',sans-serif;overflow:hidden;}
-canvas{display:block;border:3px solid #ff3300;border-radius:4px;image-rendering:pixelated;}
-#ui{color:#fff;font-size:14px;margin-bottom:8px;display:flex;gap:24px;align-items:center;}
+canvas{display:block;border:3px solid #ff3300;border-radius:4px;image-rendering:pixelated;cursor:crosshair;}
+#ui{color:#fff;font-size:14px;margin-bottom:6px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;justify-content:center;}
 #deaths-label{color:#ff5533;font-weight:800;font-size:18px;}
 #level-label{color:#ffcc00;font-weight:800;font-size:18px;}
-#hint{color:#ff4400;font-size:13px;margin-top:6px;height:16px;text-align:center;font-style:italic;letter-spacing:.5px;}
+#hint{color:#ff4400;font-size:13px;margin-top:4px;height:16px;text-align:center;font-style:italic;}
+.btn{padding:5px 13px;border-radius:6px;border:2px solid #664400;background:#2a1200;color:#ffcc88;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s;}
+.btn:hover{background:#441800;border-color:#ff8800;}
+.btn.active{background:#aa3300;border-color:#ff5500;color:#fff;}
+
+/* editor toolbar */
+#editor-bar{display:none;flex-direction:column;gap:6px;margin-top:6px;width:480px;}
+#palette{display:flex;gap:4px;flex-wrap:wrap;}
+.tile-btn{width:38px;height:38px;border:2px solid #442200;border-radius:5px;cursor:pointer;font-size:17px;display:flex;align-items:center;justify-content:center;background:#1a0a00;transition:all .12s;}
+.tile-btn:hover{border-color:#ff6600;}
+.tile-btn.sel{border-color:#ffdd00;background:#331100;box-shadow:0 0 8px #ff6600;}
+#editor-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+#code-box{background:#0d0600;border:1px solid #442200;color:#ffaa44;font-size:11px;padding:4px 8px;border-radius:5px;width:200px;font-family:monospace;}
+#editor-hint{font-size:11px;color:#886644;margin-left:4px;}
 </style>
 </head>
 <body>
+
 <div id="ui">
   <span id="level-label">Level 1</span>
-  <span style="color:#555">|</span>
+  <span style="color:#444">|</span>
   <span>💀 Deaths: <span id="deaths-label">0</span></span>
+  <span style="color:#444">|</span>
+  <button class="btn" id="edit-btn" onclick="toggleEditor()">✏️ Level Editor</button>
 </div>
+
 <canvas id="c" width="480" height="320"></canvas>
+
+<div id="editor-bar">
+  <div id="palette"></div>
+  <div id="editor-actions">
+    <button class="btn" onclick="testCustom()">▶ Test Level</button>
+    <button class="btn" onclick="backToGame()">↩ Back to Levels</button>
+    <button class="btn" onclick="clearEditor()">🗑 Clear</button>
+    <button class="btn" onclick="saveCode()">📋 Copy Code</button>
+    <button class="btn" onclick="loadCode()">📥 Load Code</button>
+    <span id="editor-hint">Left-click: place &nbsp;|&nbsp; Right-click: erase</span>
+  </div>
+</div>
+
 <div id="hint"></div>
+
 <script>
 const C=document.getElementById('c');
 const ctx=C.getContext('2d');
 const W=480,H=320;
 const TW=24,TH=24;
-const COLS=Math.floor(W/TW),ROWS=Math.floor(H/TH); // 20 x 13
+const COLS=Math.floor(W/TW),ROWS=Math.floor(H/TH);
 const GRAVITY=0.42,JUMP=-13,SPEED=3.4;
 
-let deaths=0,levelNum=0,frameN=0,gameWon=false;
+let deaths=0,levelNum=0,frameN=0;
+let editorMode=false;
+let testingCustom=false;
 
 // ── INPUT ──────────────────────────────────────────────────
 const keys={};
 document.addEventListener('keydown',e=>{
+  if(editorMode) return;
   keys[e.code]=true;
   if((e.code==='Space'||e.code==='ArrowUp'||e.code==='KeyW')&&P.onGround&&!P.dead){
-    P.vy=JUMP; P.onGround=false;
-    e.preventDefault();
+    P.vy=JUMP; P.onGround=false; e.preventDefault();
   }
 });
 document.addEventListener('keyup',e=>keys[e.code]=false);
@@ -46,383 +79,186 @@ document.addEventListener('keyup',e=>keys[e.code]=false);
 // ── PLAYER ────────────────────────────────────────────────
 const P={x:0,y:0,vx:0,vy:0,w:16,h:20,onGround:false,dead:false,deathTimer:0};
 
-// ── WORLD STATE ───────────────────────────────────────────
+// ── WORLD ─────────────────────────────────────────────────
 let tiles=[];
-let traps=[];     // active trap objects
-let platforms=[]; // {x,y,w,h,vx,vy,dir,bounds,bounds_y}
-let trapFlash=[]; // visual flash {x,y,w,h,timer,color}
+let traps=[];
+let platforms=[];
+let trapFlash=[];
 
 function tile(c,r){return(c>=0&&c<COLS&&r>=0&&r<ROWS)?tiles[r*COLS+c]:(r>=ROWS?0:1);}
 function setTile(c,r,v){if(c>=0&&c<COLS&&r>=0&&r<ROWS)tiles[r*COLS+c]=v;}
-
-// tile ids: 0=air 1=solid 2=spike_up 3=spike_down 4=spike_left 5=spike_right 6=goal 7=fake(looks solid, is air)
 function isSolid(t){return t===1||t===7;}
 function isKill(t){return t>=2&&t<=5;}
 function isGoal(t){return t===6;}
 
-// ── TRAP SYSTEM ───────────────────────────────────────────
-// each trap: {trigger fn, fire fn, triggered, delay (frames after trigger before fire), done}
+// ── TRAPS ─────────────────────────────────────────────────
 function addTrap(trigger,fire,delay=0){
   traps.push({trigger,fire,delay,triggered:false,countdown:-1,done:false});
 }
-
 function updateTraps(){
   for(const t of traps){
     if(t.done) continue;
-    if(!t.triggered&&t.trigger()){
-      t.triggered=true;
-      t.countdown=t.delay;
-    }
+    if(!t.triggered&&t.trigger()){t.triggered=true;t.countdown=t.delay;}
     if(!t.triggered) continue;
     if(t.countdown>0){t.countdown--;continue;}
-    if(t.countdown===0){
-      t.fire();
-      t.done=true;
-    }
+    if(t.countdown===0){t.fire();t.done=true;}
   }
 }
-
-function flash(x,y,w,h,color='#ff2200'){
-  trapFlash.push({x,y,w,h,timer:12,color});
-}
-
+function flash(x,y,w,h){trapFlash.push({x,y,w,h,timer:12});}
 function spikeUp(c,r){setTile(c,r,2);flash(c*TW,r*TH,TW,TH);}
 function spikeDown(c,r){setTile(c,r,3);flash(c*TW,r*TH,TW,TH);}
+function spikeLeft(c,r){setTile(c,r,4);flash(c*TW,r*TH,TW,TH);}
 function spikeRight(c,r){setTile(c,r,5);flash(c*TW,r*TH,TW,TH);}
 function dropTile(c,r){setTile(c,r,0);}
-
-// ── CURATED LEVELS (1-10) ─────────────────────────────────
-const CURATED=[
-{hint:"Looks safe...",build(){
-  fill();border();floor();
-  plat(3,10,5);plat(10,8,5);plat(15,10,3);
-  goal(COLS-2,ROWS-2);
-  start(1,ROWS-2);
-  // floor opens under player right as they reach the mid-gap
-  addTrap(()=>P.x>8*TW&&P.x<10*TW, ()=>{
-    for(let c=8;c<=10;c++) dropTile(c,ROWS-1);
-  }, 0);
-  // spikes pop right as player lands on final platform
-  addTrap(()=>P.onGround&&P.x>14*TW&&P.y>9*TH, ()=>{
-    spikeUp(16,ROWS-2); spikeUp(17,ROWS-2);
-  }, 20);
-}},
-
-{hint:"Shortcut? Or shortcut to death?",build(){
-  fill();border();floor();
-  plat(2,8,4); plat(8,6,4); plat(13,4,4);
-  // "shortcut" bridge - collapses
-  for(let c=2;c<=17;c++) setTile(c,ROWS-2,1);
-  goal(COLS-2,3);
-  start(1,ROWS-2);
-  // the nice bridge crumbles 1.5s after player steps on it
-  addTrap(()=>P.onGround&&P.y>=(ROWS-2)*TH-P.h-1&&P.x>2*TW, ()=>{
-    for(let c=3;c<=17;c++) dropTile(c,ROWS-2);
-  }, 90);
-  // ceiling spikes drop when player gets half-way up
-  addTrap(()=>P.y<7*TH, ()=>{
-    for(let c=2;c<=7;c++) spikeDown(c,1);
-  }, 0);
-}},
-
-{hint:"The floor looks solid.",build(){
-  fill();border();
-  // whole floor is FAKE (looks solid but falls through = air below)
-  for(let c=1;c<COLS-1;c++) setTile(c,ROWS-1,7);
-  // real floor under only the start and goal
-  setTile(1,ROWS-1,1);setTile(2,ROWS-1,1);
-  setTile(COLS-2,ROWS-1,1);setTile(COLS-3,ROWS-1,1);
-  plat(6,8,3); plat(12,6,3);
-  goal(COLS-2,ROWS-2);
-  start(1,ROWS-2);
-  // fake floor reveals as player walks across
-  addTrap(()=>P.x>3*TW, ()=>{
-    for(let c=3;c<=COLS-4;c++) setTile(c,ROWS-1,0);
-  }, 8);
-}},
-
-{hint:"Almost there...",build(){
-  fill();border();floor();
-  plat(3,9,3);plat(7,7,3);plat(11,5,3);plat(15,7,3);
-  goal(17,6);
-  start(1,ROWS-2);
-  // first platform collapses 0.8s after landing
-  addTrap(()=>P.onGround&&P.x>2*TW&&P.x<6*TW&&P.y>8*TH, ()=>{
-    for(let c=3;c<=5;c++) dropTile(c,9);
-  }, 50);
-  // spikes shoot from platform edge when player jumps from it
-  addTrap(()=>P.vy<-5&&P.x>7*TW&&P.x<10*TW, ()=>{
-    spikeUp(7,6); spikeUp(9,6);
-  }, 0);
-  // wall of spikes closes from right when near goal
-  addTrap(()=>P.x>14*TW&&P.y<8*TH, ()=>{
-    for(let r=5;r<=ROWS-2;r++) spikeRight(1,r);
-  }, 30);
-}},
-
-{hint:"Walls are your friends.",build(){
-  fill();border();floor();
-  // vertical maze-ish
-  for(let r=2;r<=9;r++) setTile(5,r,1);
-  for(let r=4;r<=ROWS-2;r++) setTile(10,r,1);
-  for(let r=1;r<=8;r++) setTile(15,r,1);
-  setTile(5,9,0);setTile(10,4,0);setTile(15,8,0);
-  goal(COLS-2,1);
-  start(1,ROWS-2);
-  // spikes in the gaps appear after player passes each wall
-  addTrap(()=>P.x>5*TW, ()=>{ spikeUp(6,ROWS-1);spikeUp(7,ROWS-1);spikeUp(8,ROWS-1); }, 15);
-  addTrap(()=>P.x>10*TW, ()=>{ for(let r=4;r<=7;r++) spikeRight(10,r); }, 0);
-  addTrap(()=>P.x>15*TW, ()=>{ for(let c=16;c<=18;c++) spikeDown(c,1); }, 10);
-}},
-
-{hint:"Look up.",build(){
-  fill();border();floor();
-  plat(2,10,16);
-  goal(COLS-2,ROWS-2);
-  start(1,ROWS-2);
-  // entire platform drops when player is in the middle
-  addTrap(()=>P.onGround&&P.x>8*TW&&P.x<12*TW&&P.y>9*TH, ()=>{
-    for(let c=2;c<=17;c++) dropTile(c,10);
-  }, 0);
-  // ceiling is about to fall - spikes appear above
-  addTrap(()=>P.y<7*TH, ()=>{
-    for(let c=1;c<=COLS-2;c++) spikeDown(c,0);
-  }, 0);
-  // floor spikes after the fall
-  addTrap(()=>P.y>ROWS*TH-TH*2, ()=>{
-    for(let c=5;c<=14;c++) spikeUp(c,ROWS-2);
-  }, 25);
-}},
-
-{hint:"Moving is living.",build(){
-  fill();border();floor();
-  goal(COLS-2,2);
-  start(1,ROWS-2);
-  platforms.push({x:60,y:220,w:72,h:12,vx:2,dir:1,bounds:[24,350]});
-  platforms.push({x:220,y:170,w:60,h:12,vx:0,vy:1.8,dir:1,bounds_y:[80,250]});
-  platforms.push({x:330,y:120,w:72,h:12,vx:2.2,dir:1,bounds:[240,432]});
-  // as player gets high, floor drops
-  addTrap(()=>P.y<10*TH, ()=>{ for(let c=1;c<COLS-1;c++) dropTile(c,ROWS-1); }, 0);
-  // spikes from ceiling when near top
-  addTrap(()=>P.y<4*TH, ()=>{ for(let c=1;c<COLS-1;c++) spikeDown(c,0); }, 0);
-  // right wall grows spikes
-  addTrap(()=>P.x>16*TW, ()=>{ for(let r=2;r<=ROWS-2;r++) spikeRight(COLS-2,r); }, 20);
-}},
-
-{hint:"It's just a simple room.",build(){
-  fill();border();floor();
-  goal(COLS-2,ROWS-2);
-  start(1,ROWS-2);
-  // looks totally empty. three traps fire in sequence.
-  addTrap(()=>P.x>5*TW, ()=>{ for(let c=5;c<=8;c++) spikeUp(c,ROWS-2); }, 5);
-  addTrap(()=>P.x>9*TW, ()=>{ for(let c=9;c<=12;c++) spikeUp(c,ROWS-2); }, 5);
-  addTrap(()=>P.x>13*TW, ()=>{ for(let c=13;c<=16;c++) spikeUp(c,ROWS-2); }, 5);
-  // ceiling drops spikes if player jumps
-  addTrap(()=>P.vy<-3, ()=>{ for(let c=1;c<COLS-1;c++) spikeDown(c,0); }, 0);
-}},
-
-{hint:"Don't stop moving.",build(){
-  fill();border();floor();
-  plat(3,8,2);plat(7,6,2);plat(11,4,2);plat(15,8,2);
-  goal(17,7);
-  start(1,ROWS-2);
-  // moving crusher wall from left
-  platforms.push({x:-300,y:0,w:24,h:H,vx:0.6,dir:1,bounds:[-300,W+100],isCrusher:true});
-  addTrap(()=>true,()=>{},0); // start crusher immediately
-  // spikes on platforms
-  addTrap(()=>P.x>3*TW&&P.y<9*TH, ()=>{ spikeUp(3,7);spikeUp(4,7); }, 30);
-  addTrap(()=>P.x>7*TW&&P.y<7*TH, ()=>{ spikeUp(7,5);spikeUp(8,5); }, 30);
-}},
-
-{hint:"You can do this 😈",build(){
-  fill();border();floor();
-  // narrow corridor
-  for(let r=1;r<=ROWS-2;r++){setTile(3,r,1);setTile(16,r,1);}
-  setTile(3,ROWS-2,0);setTile(16,ROWS-2,0); // entry/exit gaps
-  // platforms inside
-  plat(5,9,3);plat(9,7,3);plat(12,5,3);
-  goal(COLS-2,1);
-  start(1,ROWS-2);
-  // fake exit gap - spike appears as player reaches exit
-  addTrap(()=>P.x>15*TW&&P.y>ROWS*TH-3*TH, ()=>{
-    spikeLeft(COLS-1,ROWS-2); spikeLeft(COLS-2,ROWS-2);
-  }, 0);
-  // spikes inside the corridor
-  addTrap(()=>P.x>4*TW&&P.y<10*TH, ()=>{
-    for(let r=5;r<=8;r++) spikeRight(3,r);
-  }, 20);
-  addTrap(()=>P.x>9*TW&&P.y<8*TH, ()=>{
-    spikeDown(9,1);spikeDown(10,1);spikeDown(11,1);
-  }, 10);
-}},
-];
-
-// ── PROC-GEN LEVELS ───────────────────────────────────────
-function rnd(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
-function chance(p){return Math.random()<p;}
-
-function buildProc(lvl){
-  fill();border();floor();
-  const hard=Math.min((lvl-10)/20,1); // 0..1 hardness ramp
-  goal(COLS-2,rnd(2,ROWS-3));
-  start(1,ROWS-2);
-
-  // scatter platforms
-  const nplat=rnd(3,6);
-  const platList=[];
-  for(let i=0;i<nplat;i++){
-    const c=rnd(2,COLS-5), r=rnd(3,ROWS-3), len=rnd(2,5);
-    for(let x=c;x<c+len&&x<COLS-1;x++) setTile(x,r,1);
-    platList.push({c,r,len});
-  }
-
-  // trap pool – pick random tricks
-  const pool=[
-    // delayed floor drop under player
-    ()=>addTrap(()=>P.x>rnd(5,10)*TW, ()=>{
-      const c=rnd(4,12);
-      for(let x=c;x<=c+rnd(2,4);x++) dropTile(x,ROWS-1);
-    }, rnd(0,15)),
-
-    // spikes from floor as player walks over
-    ()=>{ const sc=rnd(4,14),sn=rnd(2,5);
-      addTrap(()=>P.x>sc*TW, ()=>{
-        for(let x=sc;x<sc+sn&&x<COLS-2;x++) spikeUp(x,ROWS-2);
-      }, rnd(5,20));
-    },
-
-    // ceiling spikes drop when player jumps
-    ()=>{ const sc=rnd(2,14),sn=rnd(3,6);
-      addTrap(()=>P.vy<-4&&P.x>sc*TW, ()=>{
-        for(let x=sc;x<sc+sn;x++) spikeDown(x,1);
-      }, rnd(0,10));
-    },
-
-    // platform collapses when player lands on it
-    ()=>{ if(!platList.length)return; const pl=platList[rnd(0,platList.length-1)];
-      addTrap(()=>P.onGround&&Math.abs(P.y-(pl.r*TH-P.h))<4&&P.x>pl.c*TW&&P.x<(pl.c+pl.len)*TW, ()=>{
-        for(let x=pl.c;x<pl.c+pl.len;x++) dropTile(x,pl.r);
-      }, rnd(20,60));
-    },
-
-    // wall spikes from left when player goes far right
-    ()=>{ const tr=rnd(10,16)*TW;
-      addTrap(()=>P.x>tr, ()=>{
-        for(let r=ROWS-4;r<=ROWS-2;r++) spikeRight(1,r);
-      }, rnd(0,20));
-    },
-
-    // right-wall spikes when near goal
-    ()=>addTrap(()=>P.x>15*TW&&P.y<5*TH, ()=>{
-      for(let r=1;r<=5;r++) spikeLeft(COLS-2,r);
-    }, rnd(10,30)),
-
-    // fake floor section (tile 7)
-    ()=>{ const sc=rnd(3,10),sn=rnd(2,4);
-      for(let x=sc;x<sc+sn&&x<COLS-2;x++) setTile(x,ROWS-1,7);
-      addTrap(()=>P.x>sc*TW, ()=>{
-        for(let x=sc;x<sc+sn&&x<COLS-2;x++) setTile(x,ROWS-1,0);
-      }, rnd(5,25));
-    },
-
-    // moving platform
-    ()=>{ const py=rnd(H/3,H*2/3), pw=rnd(48,80);
-      platforms.push({x:rnd(50,200),y:py,w:pw,h:12,vx:rnd(1,3)*0.5,dir:1,bounds:[24,432]});
-    },
-
-    // spikes erupt from platform top after delay
-    ()=>{ if(!platList.length)return; const pl=platList[rnd(0,platList.length-1)];
-      addTrap(()=>P.x>(pl.c+1)*TW, ()=>{
-        spikeUp(pl.c,pl.r-1);spikeUp(pl.c+pl.len-1,pl.r-1);
-      }, rnd(30,80));
-    },
-  ];
-
-  // number of traps scales with difficulty
-  const ntrap=rnd(3+Math.floor(hard*5),4+Math.floor(hard*7));
-  for(let i=0;i<ntrap;i++){
-    const fn=pool[rnd(0,pool.length-1)];
-    fn();
-  }
-}
-
-// ── HELPERS ───────────────────────────────────────────────
 function fill(){tiles=new Array(COLS*ROWS).fill(0);}
-function border(){for(let r=0;r<ROWS;r++){setTile(0,r,1);setTile(COLS-1,r,1);}for(let c=0;c<COLS;c++){setTile(c,0,1);}}
+function border(){for(let r=0;r<ROWS;r++){setTile(0,r,1);setTile(COLS-1,r,1);}for(let c=0;c<COLS;c++) setTile(c,0,1);}
 function floor(){for(let c=0;c<COLS;c++) setTile(c,ROWS-1,1);}
 function plat(c,r,len){for(let x=c;x<c+len;x++) setTile(x,r,1);}
 function goal(c,r){setTile(c,r,6);}
 function start(c,r){P.x=c*TW+2;P.y=(r-1)*TH;}
-function spikeLeft(c,r){setTile(c,r,4);flash(c*TW,r*TH,TW,TH);}
 
-// ── LOAD LEVEL ────────────────────────────────────────────
-const HINTS_PROC=[
-  "Nothing suspicious here...","Watch your step!","The devil is in the details.",
-  "Almost too easy.","Don't get comfortable.","Something feels off...",
-  "Trust nothing.","Looks harmless!","One step at a time... carefully.",
-  "😈","Your confidence is your enemy.","Maybe this time?",
+// ── CURATED LEVELS ────────────────────────────────────────
+const CURATED=[
+{hint:"Looks safe...",build(){
+  fill();border();floor();
+  plat(3,10,5);plat(10,8,5);plat(15,10,3);
+  goal(COLS-2,ROWS-2);start(1,ROWS-2);
+  addTrap(()=>P.x>8*TW&&P.x<10*TW,()=>{for(let c=8;c<=10;c++) dropTile(c,ROWS-1);},0);
+  addTrap(()=>P.onGround&&P.x>14*TW&&P.y>9*TH,()=>{spikeUp(16,ROWS-2);spikeUp(17,ROWS-2);},20);
+}},
+{hint:"Shortcut? Or shortcut to death?",build(){
+  fill();border();floor();
+  plat(2,8,4);plat(8,6,4);plat(13,4,4);
+  for(let c=2;c<=17;c++) setTile(c,ROWS-2,1);
+  goal(COLS-2,3);start(1,ROWS-2);
+  addTrap(()=>P.onGround&&P.y>=(ROWS-2)*TH-P.h-1&&P.x>2*TW,()=>{for(let c=3;c<=17;c++) dropTile(c,ROWS-2);},90);
+  addTrap(()=>P.y<7*TH,()=>{for(let c=2;c<=7;c++) spikeDown(c,1);},0);
+}},
+{hint:"The floor looks solid.",build(){
+  fill();border();
+  for(let c=1;c<COLS-1;c++) setTile(c,ROWS-1,7);
+  setTile(1,ROWS-1,1);setTile(2,ROWS-1,1);setTile(COLS-2,ROWS-1,1);setTile(COLS-3,ROWS-1,1);
+  plat(6,8,3);plat(12,6,3);goal(COLS-2,ROWS-2);start(1,ROWS-2);
+  addTrap(()=>P.x>3*TW,()=>{for(let c=3;c<=COLS-4;c++) setTile(c,ROWS-1,0);},8);
+}},
+{hint:"Almost there...",build(){
+  fill();border();floor();
+  plat(3,9,3);plat(7,7,3);plat(11,5,3);plat(15,7,3);
+  goal(17,6);start(1,ROWS-2);
+  addTrap(()=>P.onGround&&P.x>2*TW&&P.x<6*TW&&P.y>8*TH,()=>{for(let c=3;c<=5;c++) dropTile(c,9);},50);
+  addTrap(()=>P.vy<-5&&P.x>7*TW&&P.x<10*TW,()=>{spikeUp(7,6);spikeUp(9,6);},0);
+  addTrap(()=>P.x>14*TW&&P.y<8*TH,()=>{for(let r=5;r<=ROWS-2;r++) spikeRight(1,r);},30);
+}},
+{hint:"Walls are your friends.",build(){
+  fill();border();floor();
+  for(let r=2;r<=9;r++) setTile(5,r,1);
+  for(let r=4;r<=ROWS-2;r++) setTile(10,r,1);
+  for(let r=1;r<=8;r++) setTile(15,r,1);
+  setTile(5,9,0);setTile(10,4,0);setTile(15,8,0);
+  goal(COLS-2,1);start(1,ROWS-2);
+  addTrap(()=>P.x>5*TW,()=>{spikeUp(6,ROWS-1);spikeUp(7,ROWS-1);spikeUp(8,ROWS-1);},15);
+  addTrap(()=>P.x>10*TW,()=>{for(let r=4;r<=7;r++) spikeRight(10,r);},0);
+  addTrap(()=>P.x>15*TW,()=>{for(let c=16;c<=18;c++) spikeDown(c,1);},10);
+}},
+{hint:"Look up.",build(){
+  fill();border();floor();plat(2,10,16);goal(COLS-2,ROWS-2);start(1,ROWS-2);
+  addTrap(()=>P.onGround&&P.x>8*TW&&P.x<12*TW&&P.y>9*TH,()=>{for(let c=2;c<=17;c++) dropTile(c,10);},0);
+  addTrap(()=>P.y<7*TH,()=>{for(let c=1;c<=COLS-2;c++) spikeDown(c,0);},0);
+  addTrap(()=>P.y>ROWS*TH-TH*2,()=>{for(let c=5;c<=14;c++) spikeUp(c,ROWS-2);},25);
+}},
+{hint:"Moving is living.",build(){
+  fill();border();floor();goal(COLS-2,2);start(1,ROWS-2);
+  platforms.push({x:60,y:220,w:72,h:12,vx:2,dir:1,bounds:[24,350]});
+  platforms.push({x:220,y:170,w:60,h:12,vx:0,vy:1.8,dir:1,bounds_y:[80,250]});
+  platforms.push({x:330,y:120,w:72,h:12,vx:2.2,dir:1,bounds:[240,432]});
+  addTrap(()=>P.y<10*TH,()=>{for(let c=1;c<COLS-1;c++) dropTile(c,ROWS-1);},0);
+  addTrap(()=>P.y<4*TH,()=>{for(let c=1;c<COLS-1;c++) spikeDown(c,0);},0);
+  addTrap(()=>P.x>16*TW,()=>{for(let r=2;r<=ROWS-2;r++) spikeRight(COLS-2,r);},20);
+}},
+{hint:"It's just a simple room.",build(){
+  fill();border();floor();goal(COLS-2,ROWS-2);start(1,ROWS-2);
+  addTrap(()=>P.x>5*TW,()=>{for(let c=5;c<=8;c++) spikeUp(c,ROWS-2);},5);
+  addTrap(()=>P.x>9*TW,()=>{for(let c=9;c<=12;c++) spikeUp(c,ROWS-2);},5);
+  addTrap(()=>P.x>13*TW,()=>{for(let c=13;c<=16;c++) spikeUp(c,ROWS-2);},5);
+  addTrap(()=>P.vy<-3,()=>{for(let c=1;c<COLS-1;c++) spikeDown(c,0);},0);
+}},
+{hint:"Don't stop moving.",build(){
+  fill();border();floor();goal(COLS-2,2);start(1,ROWS-2);
+  platforms.push({x:60,y:220,w:72,h:12,vx:2,dir:1,bounds:[24,350]});
+  platforms.push({x:220,y:170,w:60,h:12,vx:0,vy:1.8,dir:1,bounds_y:[80,250]});
+  platforms.push({x:330,y:120,w:72,h:12,vx:2.2,dir:1,bounds:[240,432]});
+  platforms.push({x:-300,y:0,w:24,h:H,vx:0.6,dir:1,bounds:[-300,W+100],isCrusher:true});
+  addTrap(()=>P.x>3*TW&&P.y<9*TH,()=>{spikeUp(3,7);spikeUp(4,7);},30);
+  addTrap(()=>P.x>7*TW&&P.y<7*TH,()=>{spikeUp(7,5);spikeUp(8,5);},30);
+}},
+{hint:"You can do this 😈",build(){
+  fill();border();floor();
+  for(let r=1;r<=ROWS-2;r++){setTile(3,r,1);setTile(16,r,1);}
+  setTile(3,ROWS-2,0);setTile(16,ROWS-2,0);
+  plat(5,9,3);plat(9,7,3);plat(12,5,3);goal(COLS-2,1);start(1,ROWS-2);
+  addTrap(()=>P.x>15*TW&&P.y>ROWS*TH-3*TH,()=>{spikeLeft(COLS-1,ROWS-2);spikeLeft(COLS-2,ROWS-2);},0);
+  addTrap(()=>P.x>4*TW&&P.y<10*TH,()=>{for(let r=5;r<=8;r++) spikeRight(3,r);},20);
+  addTrap(()=>P.x>9*TW&&P.y<8*TH,()=>{spikeDown(9,1);spikeDown(10,1);spikeDown(11,1);},10);
+}},
 ];
 
+// ── PROC-GEN ──────────────────────────────────────────────
+function rnd(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
+function buildProc(lvl){
+  fill();border();floor();
+  const hard=Math.min((lvl-10)/20,1);
+  goal(COLS-2,rnd(2,ROWS-3));start(1,ROWS-2);
+  const nplat=rnd(3,6);const platList=[];
+  for(let i=0;i<nplat;i++){const c=rnd(2,COLS-5),r=rnd(3,ROWS-3),len=rnd(2,5);for(let x=c;x<c+len&&x<COLS-1;x++) setTile(x,r,1);platList.push({c,r,len});}
+  const pool=[
+    ()=>addTrap(()=>P.x>rnd(5,10)*TW,()=>{const c=rnd(4,12);for(let x=c;x<=c+rnd(2,4);x++) dropTile(x,ROWS-1);},rnd(0,15)),
+    ()=>{const sc=rnd(4,14),sn=rnd(2,5);addTrap(()=>P.x>sc*TW,()=>{for(let x=sc;x<sc+sn&&x<COLS-2;x++) spikeUp(x,ROWS-2);},rnd(5,20));},
+    ()=>{const sc=rnd(2,14),sn=rnd(3,6);addTrap(()=>P.vy<-4&&P.x>sc*TW,()=>{for(let x=sc;x<sc+sn;x++) spikeDown(x,1);},rnd(0,10));},
+    ()=>{if(!platList.length)return;const pl=platList[rnd(0,platList.length-1)];addTrap(()=>P.onGround&&Math.abs(P.y-(pl.r*TH-P.h))<4&&P.x>pl.c*TW&&P.x<(pl.c+pl.len)*TW,()=>{for(let x=pl.c;x<pl.c+pl.len;x++) dropTile(x,pl.r);},rnd(20,60));},
+    ()=>{const tr=rnd(10,16)*TW;addTrap(()=>P.x>tr,()=>{for(let r=ROWS-4;r<=ROWS-2;r++) spikeRight(1,r);},rnd(0,20));},
+    ()=>addTrap(()=>P.x>15*TW&&P.y<5*TH,()=>{for(let r=1;r<=5;r++) spikeLeft(COLS-2,r);},rnd(10,30)),
+    ()=>{const sc=rnd(3,10),sn=rnd(2,4);for(let x=sc;x<sc+sn&&x<COLS-2;x++) setTile(x,ROWS-1,7);addTrap(()=>P.x>sc*TW,()=>{for(let x=sc;x<sc+sn&&x<COLS-2;x++) setTile(x,ROWS-1,0);},rnd(5,25));},
+    ()=>{const py=rnd(H/3,H*2/3),pw=rnd(48,80);platforms.push({x:rnd(50,200),y:py,w:pw,h:12,vx:rnd(1,3)*0.5,dir:1,bounds:[24,432]});},
+  ];
+  const ntrap=rnd(3+Math.floor(hard*5),4+Math.floor(hard*7));
+  for(let i=0;i<ntrap;i++) pool[rnd(0,pool.length-1)]();
+}
+
+// ── LOAD LEVEL ────────────────────────────────────────────
+const HINTS_PROC=["Nothing suspicious here...","Watch your step!","The devil is in the details.","Almost too easy.","Don't get comfortable.","Something feels off...","Trust nothing.","Looks harmless!","One step at a time... carefully.","😈","Your confidence is your enemy.","Maybe this time?"];
 function loadLevel(n){
   levelNum=n;frameN=0;traps=[];platforms=[];trapFlash=[];
   P.dead=false;P.vx=0;P.vy=0;P.onGround=false;
-  if(n<CURATED.length){
-    CURATED[n].build();
-    setHint(CURATED[n].hint);
-  } else {
-    buildProc(n);
-    setHint(HINTS_PROC[(n-CURATED.length)%HINTS_PROC.length]);
-  }
+  if(n<CURATED.length){CURATED[n].build();setHint(CURATED[n].hint);}
+  else{buildProc(n);setHint(HINTS_PROC[(n-CURATED.length)%HINTS_PROC.length]);}
   document.getElementById('level-label').textContent='Level '+(n+1);
 }
-
 let _hintTimer;
-function setHint(msg){
-  document.getElementById('hint').textContent=msg;
-  clearTimeout(_hintTimer);
-  _hintTimer=setTimeout(()=>document.getElementById('hint').textContent='',3000);
-}
+function setHint(msg){document.getElementById('hint').textContent=msg;clearTimeout(_hintTimer);_hintTimer=setTimeout(()=>document.getElementById('hint').textContent='',3000);}
 
 // ── PHYSICS ───────────────────────────────────────────────
 function updatePlayer(){
-  if(P.dead){
-    P.deathTimer++;
-    if(P.deathTimer>50) loadLevel(levelNum);
-    return;
-  }
+  if(P.dead){P.deathTimer++;if(P.deathTimer>50){if(testingCustom)loadCustomLevel();else loadLevel(levelNum);}return;}
   P.vx=(keys['ArrowLeft']||keys['KeyA'])?-SPEED:(keys['ArrowRight']||keys['KeyD'])?SPEED:0;
   P.vy=Math.min(P.vy+GRAVITY,16);
-  P.x+=P.vx; resolveX();
-  P.y+=P.vy; P.onGround=false; resolveY();
-
-  // platform collisions
+  P.x+=P.vx;resolveX();P.y+=P.vy;P.onGround=false;resolveY();
   for(const pl of platforms){
-    if(pl.isCrusher){
-      if(P.x+P.w>pl.x&&P.x<pl.x+pl.w&&P.y+P.h>pl.y&&P.y<pl.y+pl.h) die();
-      continue;
-    }
-    if(P.x+P.w>pl.x&&P.x<pl.x+pl.w&&P.y+P.h>=pl.y&&P.y+P.h<=pl.y+pl.h+8&&P.vy>=0){
-      P.y=pl.y-P.h; P.vy=0; P.onGround=true;
-      if(pl.vx) P.x+=pl.dir*pl.vx;
-    }
+    if(pl.isCrusher){if(P.x+P.w>pl.x&&P.x<pl.x+pl.w&&P.y+P.h>pl.y&&P.y<pl.y+pl.h) die();continue;}
+    if(P.x+P.w>pl.x&&P.x<pl.x+pl.w&&P.y+P.h>=pl.y&&P.y+P.h<=pl.y+pl.h+8&&P.vy>=0){P.y=pl.y-P.h;P.vy=0;P.onGround=true;if(pl.vx) P.x+=pl.dir*pl.vx;}
   }
   if(P.y>H+40) die();
 }
-
 function resolveX(){
-  const l=Math.floor(P.x/TW),r=Math.floor((P.x+P.w-1)/TW);
-  const t=Math.floor(P.y/TH),b=Math.floor((P.y+P.h-1)/TH);
+  const l=Math.floor(P.x/TW),r=Math.floor((P.x+P.w-1)/TW),t=Math.floor(P.y/TH),b=Math.floor((P.y+P.h-1)/TH);
   for(let row=t;row<=b;row++){
-    if(isSolid(tile(l,row))&&P.vx<0){P.x=l*TW+TW;}
-    if(isSolid(tile(r,row))&&P.vx>0){P.x=r*TW-P.w;}
+    if(isSolid(tile(l,row))&&P.vx<0) P.x=l*TW+TW;
+    if(isSolid(tile(r,row))&&P.vx>0) P.x=r*TW-P.w;
     if(isKill(tile(l,row))||isKill(tile(r,row))){die();return;}
     if(isGoal(tile(l,row))||isGoal(tile(r,row))){winLevel();return;}
   }
 }
-
 function resolveY(){
-  const l=Math.floor(P.x/TW),r=Math.floor((P.x+P.w-1)/TW);
-  const t=Math.floor(P.y/TH),b=Math.floor((P.y+P.h-1)/TH);
+  const l=Math.floor(P.x/TW),r=Math.floor((P.x+P.w-1)/TW),t=Math.floor(P.y/TH),b=Math.floor((P.y+P.h-1)/TH);
   for(let c=l;c<=r;c++){
     if(isSolid(tile(c,t))&&P.vy<0){P.y=t*TH+TH;P.vy=0;}
     if(isSolid(tile(c,b))&&P.vy>0){P.y=b*TH-P.h;P.vy=0;P.onGround=true;}
@@ -430,38 +266,39 @@ function resolveY(){
     if(isGoal(tile(c,t))||isGoal(tile(c,b))){winLevel();return;}
   }
 }
-
 function updatePlatforms(){
   for(const pl of platforms){
-    if(pl.vx){pl.x+=pl.dir*pl.vx; if(pl.bounds&&(pl.x<=pl.bounds[0]||pl.x+pl.w>=pl.bounds[1])) pl.dir*=-1;}
-    if(pl.vy){pl.y+=pl.dir*pl.vy; if(pl.bounds_y&&(pl.y<=pl.bounds_y[0]||pl.y+pl.h>=pl.bounds_y[1])) pl.dir*=-1;}
+    if(pl.vx){pl.x+=pl.dir*pl.vx;if(pl.bounds&&(pl.x<=pl.bounds[0]||pl.x+pl.w>=pl.bounds[1])) pl.dir*=-1;}
+    if(pl.vy){pl.y+=pl.dir*pl.vy;if(pl.bounds_y&&(pl.y<=pl.bounds_y[0]||pl.y+pl.h>=pl.bounds_y[1])) pl.dir*=-1;}
   }
 }
-
 function die(){
-  if(P.dead)return;
-  P.dead=true;P.deathTimer=0;
-  deaths++;
-  document.getElementById('deaths-label').textContent=deaths;
+  if(P.dead)return;P.dead=true;P.deathTimer=0;
+  deaths++;document.getElementById('deaths-label').textContent=deaths;
   setHint(['💀 Gotcha!','😈 Hehe.','Oops!','Did you expect that?','So close!'][Math.floor(Math.random()*5)]);
 }
-
 function winLevel(){
-  loadLevel(levelNum+1);
-  setTimeout(()=>setHint('Level '+(levelNum+1)+' — keep going!'),100);
+  if(testingCustom){setHint('🎉 Level complete! Nice design!');setTimeout(()=>{testingCustom=false;toggleEditor();},1500);}
+  else{loadLevel(levelNum+1);setTimeout(()=>setHint('Level '+(levelNum+1)+'!'),100);}
 }
 
 // ── DRAWING ───────────────────────────────────────────────
 function drawBg(){
-  ctx.fillStyle='#140600';
+  ctx.fillStyle=editorMode?'#0a0a1a':'#140600';
   ctx.fillRect(0,0,W,H);
-  ctx.fillStyle='rgba(255,60,0,0.04)';
-  for(let x=0;x<W;x+=TW) for(let y=0;y<H;y+=TH) ctx.fillRect(x,y,2,2);
+  if(editorMode){
+    // grid
+    ctx.strokeStyle='rgba(80,80,180,0.18)';ctx.lineWidth=1;
+    for(let x=0;x<=W;x+=TW){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+    for(let y=0;y<=H;y+=TH){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+  } else {
+    ctx.fillStyle='rgba(255,60,0,0.04)';
+    for(let x=0;x<W;x+=TW) for(let y=0;y<H;y+=TH) ctx.fillRect(x,y,2,2);
+  }
 }
-
 function drawTiles(){
   for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
-    const t=tile(c,r), x=c*TW, y=r*TH;
+    const t=tile(c,r),x=c*TW,y=r*TH;
     if(t===1||t===7){
       ctx.fillStyle=t===7?'#cc3300':'#bb2f00';
       ctx.fillRect(x,y,TW,TH);
@@ -471,106 +308,237 @@ function drawTiles(){
       const off=(r%2)*12;
       for(let bx=x;bx<x+TW;bx+=24) ctx.fillRect(bx+off,y,1,TH);
       ctx.fillRect(x,y+TH/2,TW,1);
-    } else if(t===2){
-      ctx.fillStyle='#ff1a00';
-      const mx=x+TW/2;
-      ctx.beginPath();ctx.moveTo(mx,y+1);ctx.lineTo(x+2,y+TH);ctx.lineTo(x+TW-2,y+TH);ctx.closePath();ctx.fill();
-    } else if(t===3){
-      ctx.fillStyle='#ff1a00';
-      const mx=x+TW/2;
-      ctx.beginPath();ctx.moveTo(mx,y+TH-1);ctx.lineTo(x+2,y);ctx.lineTo(x+TW-2,y);ctx.closePath();ctx.fill();
-    } else if(t===4){
-      ctx.fillStyle='#ff1a00';
-      ctx.beginPath();ctx.moveTo(x+1,y+TH/2);ctx.lineTo(x+TW,y+2);ctx.lineTo(x+TW,y+TH-2);ctx.closePath();ctx.fill();
-    } else if(t===5){
-      ctx.fillStyle='#ff1a00';
-      ctx.beginPath();ctx.moveTo(x+TW-1,y+TH/2);ctx.lineTo(x,y+2);ctx.lineTo(x,y+TH-2);ctx.closePath();ctx.fill();
-    } else if(t===6){
-      const p=0.65+0.35*Math.sin(frameN*0.13);
-      ctx.fillStyle=`rgba(255,220,0,${p})`;
-      const cx=x+TW/2,cy=y+TH/2,r1=TW*0.44,r2=TW*0.18;
-      ctx.beginPath();
-      for(let i=0;i<10;i++){const a=i*Math.PI/5-Math.PI/2,rr=i%2?r2:r1;ctx.lineTo(cx+Math.cos(a)*rr,cy+Math.sin(a)*rr);}
-      ctx.closePath();ctx.fill();
+      if(t===7){ctx.fillStyle='rgba(255,255,0,0.12)';ctx.fillRect(x,y,TW,TH);}
+    } else if(t===2){ctx.fillStyle='#ff1a00';const mx=x+TW/2;ctx.beginPath();ctx.moveTo(mx,y+1);ctx.lineTo(x+2,y+TH);ctx.lineTo(x+TW-2,y+TH);ctx.closePath();ctx.fill();}
+    else if(t===3){ctx.fillStyle='#ff1a00';const mx=x+TW/2;ctx.beginPath();ctx.moveTo(mx,y+TH-1);ctx.lineTo(x+2,y);ctx.lineTo(x+TW-2,y);ctx.closePath();ctx.fill();}
+    else if(t===4){ctx.fillStyle='#ff1a00';ctx.beginPath();ctx.moveTo(x+1,y+TH/2);ctx.lineTo(x+TW,y+2);ctx.lineTo(x+TW,y+TH-2);ctx.closePath();ctx.fill();}
+    else if(t===5){ctx.fillStyle='#ff1a00';ctx.beginPath();ctx.moveTo(x+TW-1,y+TH/2);ctx.lineTo(x,y+2);ctx.lineTo(x,y+TH-2);ctx.closePath();ctx.fill();}
+    else if(t===6){const p=0.65+0.35*Math.sin(frameN*0.13);ctx.fillStyle=`rgba(255,220,0,${p})`;const cx=x+TW/2,cy=y+TH/2,r1=TW*0.44,r2=TW*0.18;ctx.beginPath();for(let i=0;i<10;i++){const a=i*Math.PI/5-Math.PI/2,rr=i%2?r2:r1;ctx.lineTo(cx+Math.cos(a)*rr,cy+Math.sin(a)*rr);}ctx.closePath();ctx.fill();}
+    else if(t===8){// start marker
+      ctx.fillStyle='rgba(0,255,100,0.25)';ctx.fillRect(x,y,TW,TH);
+      ctx.fillStyle='#00ff66';ctx.font='bold 14px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText('S',x+TW/2,y+TH/2);
     }
   }
 }
-
 function drawPlatforms(){
   for(const pl of platforms){
     if(pl.isCrusher){
-      ctx.fillStyle='#991100';
-      ctx.fillRect(pl.x,pl.y,pl.w,pl.h);
-      // draw spikes on front
-      for(let y=0;y<H;y+=TH){
-        ctx.fillStyle='#ff2200';
-        ctx.beginPath();ctx.moveTo(pl.x+pl.w,y+TH/2);ctx.lineTo(pl.x+pl.w-10,y+2);ctx.lineTo(pl.x+pl.w-10,y+TH-2);ctx.closePath();ctx.fill();
-      }
+      ctx.fillStyle='#991100';ctx.fillRect(pl.x,pl.y,pl.w,pl.h);
+      for(let y=0;y<H;y+=TH){ctx.fillStyle='#ff2200';ctx.beginPath();ctx.moveTo(pl.x+pl.w,y+TH/2);ctx.lineTo(pl.x+pl.w-10,y+2);ctx.lineTo(pl.x+pl.w-10,y+TH-2);ctx.closePath();ctx.fill();}
     } else {
-      ctx.fillStyle='#884400';
-      ctx.fillRect(pl.x,pl.y,pl.w,pl.h);
-      ctx.fillStyle='#aa6622';
-      ctx.fillRect(pl.x,pl.y,pl.w,3);
+      ctx.fillStyle='#884400';ctx.fillRect(pl.x,pl.y,pl.w,pl.h);ctx.fillStyle='#aa6622';ctx.fillRect(pl.x,pl.y,pl.w,3);
     }
   }
 }
-
 function drawFlash(){
-  trapFlash=trapFlash.filter(f=>{
-    ctx.fillStyle=f.color;
-    ctx.globalAlpha=f.timer/12;
-    ctx.fillRect(f.x,f.y,f.w,f.h);
-    ctx.globalAlpha=1;
-    return --f.timer>0;
+  trapFlash=trapFlash.filter(f=>{ctx.fillStyle='rgba(255,100,0,'+f.timer/12+')';ctx.fillRect(f.x,f.y,f.w,f.h);return --f.timer>0;});
+}
+function drawPlayer(){
+  if(P.dead){
+    ctx.save();ctx.globalAlpha=Math.max(0,1-P.deathTimer/35);ctx.translate(P.x+P.w/2,P.y+P.h/2);ctx.rotate(P.deathTimer*0.3);
+    ctx.fillStyle='#fff';ctx.fillRect(-P.w/2,-P.h/2,P.w,P.h);
+    ctx.fillStyle='#ff2200';ctx.font='bold 9px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('×_×',0,0);
+    ctx.restore();return;
+  }
+  ctx.fillStyle='#eeeeff';ctx.fillRect(P.x,P.y,P.w,P.h);
+  ctx.fillStyle='#111';ctx.fillRect(P.x+3,P.y+4,3,3);ctx.fillRect(P.x+10,P.y+4,3,3);ctx.fillRect(P.x+4,P.y+12,8,2);
+  if(keys['ArrowLeft']||keys['KeyA']||keys['ArrowRight']||keys['KeyD']){const lk=Math.sin(frameN*0.45)*4;ctx.fillStyle='#aaa';ctx.fillRect(P.x+1,P.y+P.h,5,4+lk);ctx.fillRect(P.x+P.w-6,P.y+P.h,5,4-lk);}
+  else{ctx.fillStyle='#aaa';ctx.fillRect(P.x+1,P.y+P.h,5,4);ctx.fillRect(P.x+P.w-6,P.y+P.h,5,4);}
+}
+
+// ══════════════════════════════════════════════════════════
+// ── LEVEL EDITOR ─────────────────────────────────────────
+// ══════════════════════════════════════════════════════════
+
+// tile id 8 = start marker (editor only, converted to player start on test)
+const PALETTE=[
+  {id:1,  label:'🧱', title:'Solid Wall'},
+  {id:7,  label:'👻', title:'Fake Floor (looks solid, then vanishes!)'},
+  {id:2,  label:'🔺', title:'Spike Up'},
+  {id:3,  label:'🔻', title:'Spike Down'},
+  {id:4,  label:'◀',  title:'Spike Left'},
+  {id:5,  label:'▶',  title:'Spike Right'},
+  {id:6,  label:'⭐', title:'Goal (reach this to win)'},
+  {id:8,  label:'🚀', title:'Player Start'},
+  {id:0,  label:'🗑',  title:'Eraser'},
+];
+
+let editorTiles=new Array(COLS*ROWS).fill(0);
+let selectedTile=1;
+let mouseDown=false;
+let erasing=false;
+
+function initEditorTiles(){
+  editorTiles=new Array(COLS*ROWS).fill(0);
+  // default: border + floor
+  for(let r=0;r<ROWS;r++){editorTiles[r*COLS+0]=1;editorTiles[r*COLS+COLS-1]=1;}
+  for(let c=0;c<COLS;c++){editorTiles[0*COLS+c]=1;editorTiles[(ROWS-1)*COLS+c]=1;}
+  // default start and goal
+  editorTiles[(ROWS-2)*COLS+1]=8;
+  editorTiles[(ROWS-2)*COLS+(COLS-2)]=6;
+}
+
+function buildPalette(){
+  const pal=document.getElementById('palette');
+  pal.innerHTML='';
+  PALETTE.forEach(p=>{
+    const btn=document.createElement('div');
+    btn.className='tile-btn'+(selectedTile===p.id?' sel':'');
+    btn.title=p.title;
+    btn.textContent=p.label;
+    btn.onclick=()=>{selectedTile=p.id;buildPalette();};
+    pal.appendChild(btn);
   });
 }
 
-function drawPlayer(){
-  if(P.dead){
-    ctx.save();
-    ctx.globalAlpha=Math.max(0,1-P.deathTimer/35);
-    ctx.translate(P.x+P.w/2,P.y+P.h/2);
-    ctx.rotate(P.deathTimer*0.3);
-    ctx.fillStyle='#fff';
-    ctx.fillRect(-P.w/2,-P.h/2,P.w,P.h);
-    ctx.fillStyle='#ff2200';
-    ctx.font='bold 9px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText('×_×',0,0);
-    ctx.restore();
-    return;
-  }
-  ctx.fillStyle='#eeeeff';
-  ctx.fillRect(P.x,P.y,P.w,P.h);
-  ctx.fillStyle='#111';
-  ctx.fillRect(P.x+3,P.y+4,3,3);
-  ctx.fillRect(P.x+10,P.y+4,3,3);
-  ctx.fillRect(P.x+4,P.y+12,8,2);
-  if(keys['ArrowLeft']||keys['KeyA']||keys['ArrowRight']||keys['KeyD']){
-    const lk=Math.sin(frameN*0.45)*4;
-    ctx.fillStyle='#aaa';
-    ctx.fillRect(P.x+1,P.y+P.h,5,4+lk);
-    ctx.fillRect(P.x+P.w-6,P.y+P.h,5,4-lk);
+function toggleEditor(){
+  editorMode=!editorMode;
+  testingCustom=false;
+  document.getElementById('editor-bar').style.display=editorMode?'flex':'none';
+  document.getElementById('edit-btn').classList.toggle('active',editorMode);
+  document.getElementById('level-label').textContent=editorMode?'Level Editor':'Level '+(levelNum+1);
+  if(editorMode){
+    tiles=[...editorTiles];
+    buildPalette();
   } else {
-    ctx.fillStyle='#aaa';
-    ctx.fillRect(P.x+1,P.y+P.h,5,4);
-    ctx.fillRect(P.x+P.w-6,P.y+P.h,5,4);
+    loadLevel(levelNum);
   }
 }
 
-// ── LOOP ──────────────────────────────────────────────────
+function getCanvasTile(e){
+  const rect=C.getBoundingClientRect();
+  const scaleX=W/rect.width, scaleY=H/rect.height;
+  const mx=(e.clientX-rect.left)*scaleX;
+  const my=(e.clientY-rect.top)*scaleY;
+  return {c:Math.floor(mx/TW),r:Math.floor(my/TH)};
+}
+
+function paintTile(e,rightClick){
+  const {c,r}=getCanvasTile(e);
+  if(c<0||c>=COLS||r<0||r>=ROWS) return;
+  const tid=rightClick||erasing?0:selectedTile;
+  // only one start marker allowed
+  if(tid===8){for(let i=0;i<editorTiles.length;i++) if(editorTiles[i]===8) editorTiles[i]=0;}
+  editorTiles[r*COLS+c]=tid;
+  tiles=[...editorTiles];
+}
+
+C.addEventListener('mousedown',e=>{
+  if(!editorMode) return;
+  mouseDown=true;erasing=e.button===2;
+  paintTile(e,e.button===2);
+  e.preventDefault();
+});
+C.addEventListener('mousemove',e=>{if(editorMode&&mouseDown) paintTile(e,erasing);});
+C.addEventListener('mouseup',()=>mouseDown=false);
+C.addEventListener('contextmenu',e=>{if(editorMode) e.preventDefault();});
+
+// touch support for editor
+C.addEventListener('touchstart',e=>{
+  if(!editorMode) return;
+  mouseDown=true;erasing=false;
+  paintTile(e.touches[0],false);e.preventDefault();
+},{passive:false});
+C.addEventListener('touchmove',e=>{
+  if(editorMode&&mouseDown) paintTile(e.touches[0],false);e.preventDefault();
+},{passive:false});
+C.addEventListener('touchend',()=>mouseDown=false);
+
+function clearEditor(){
+  initEditorTiles();
+  tiles=[...editorTiles];
+}
+
+function loadCustomLevel(){
+  tiles=[...editorTiles];
+  traps=[];platforms=[];trapFlash=[];
+  P.dead=false;P.vx=0;P.vy=0;P.onGround=false;
+  // find start marker
+  let sx=1,sy=ROWS-2;
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) if(editorTiles[r*COLS+c]===8){sx=c;sy=r;break;}
+  P.x=sx*TW+2;P.y=(sy-1)*TH;
+  // remove start marker from live tiles
+  setTile(sx,sy,0);
+  // fake floors auto-trap: each fake tile drops after player walks within 3 tiles
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+    if(editorTiles[r*COLS+c]===7){
+      const fc=c,fr=r;
+      addTrap(()=>Math.abs(P.x/TW-fc)<4&&P.y/TH>=fr-2,()=>setTile(fc,fr,0),rnd(8,20));
+    }
+  }
+  frameN=0;
+}
+
+function testCustom(){
+  if(!hasGoal()){setHint('⚠️ Place a ⭐ Goal first!');return;}
+  testingCustom=true;
+  loadCustomLevel();
+  editorMode=false;
+  document.getElementById('editor-bar').style.display='none';
+  document.getElementById('edit-btn').classList.remove('active');
+  document.getElementById('level-label').textContent='Testing Custom Level';
+  setHint('Arrow keys / WASD + Space to jump');
+}
+
+function backToGame(){
+  editorMode=false;testingCustom=false;
+  document.getElementById('editor-bar').style.display='none';
+  document.getElementById('edit-btn').classList.remove('active');
+  loadLevel(levelNum);
+}
+
+function hasGoal(){
+  return editorTiles.some(t=>t===6);
+}
+
+// ── SAVE / LOAD CODE ─────────────────────────────────────
+function saveCode(){
+  if(!hasGoal()){setHint('⚠️ Place a ⭐ Goal first!');return;}
+  // pack tiles as base64: each tile 0-8 fits in 4 bits → 2 tiles per byte
+  const bytes=[];
+  for(let i=0;i<editorTiles.length;i+=2){
+    bytes.push((editorTiles[i]&0xF)|((editorTiles[i+1]||0)<<4));
+  }
+  const code=btoa(String.fromCharCode(...bytes));
+  try{navigator.clipboard.writeText(code);setHint('📋 Code copied! Share it with friends.');}
+  catch{prompt('Copy this code:',code);}
+}
+
+function loadCode(){
+  const code=prompt('Paste a Level Devil code:','');
+  if(!code) return;
+  try{
+    const bytes=[...atob(code)].map(c=>c.charCodeAt(0));
+    const loaded=[];
+    for(const b of bytes){loaded.push(b&0xF);loaded.push((b>>4)&0xF);}
+    if(loaded.length<COLS*ROWS){setHint('❌ Invalid code');return;}
+    editorTiles=loaded.slice(0,COLS*ROWS);
+    tiles=[...editorTiles];
+    setHint('✅ Level loaded!');
+  }catch{setHint('❌ Invalid code');}
+}
+
+// ── MAIN LOOP ─────────────────────────────────────────────
 function loop(){
   frameN++;
-  updatePlayer();
-  updateTraps();
-  updatePlatforms();
-  drawBg();
-  drawTiles();
-  drawPlatforms();
-  drawFlash();
-  drawPlayer();
+  if(!editorMode){updatePlayer();updateTraps();updatePlatforms();}
+  drawBg();drawTiles();
+  if(!editorMode){drawPlatforms();drawFlash();drawPlayer();}
+  if(editorMode){
+    // hover preview
+    ctx.fillStyle='rgba(255,255,255,0.06)';
+    ctx.fillRect(hoverC*TW,hoverR*TH,TW,TH);
+  }
   requestAnimationFrame(loop);
 }
 
+let hoverC=0,hoverR=0;
+C.addEventListener('mousemove',e=>{
+  const {c,r}=getCanvasTile(e);hoverC=c;hoverR=r;
+});
+
+initEditorTiles();
 loadLevel(0);
 loop();
 </script>

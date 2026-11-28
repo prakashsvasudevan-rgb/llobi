@@ -72,7 +72,8 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
 /* Dialog */
 /* ── Normal dialog (elders, riders, villagers, Blane) ── */
 #dialog{position:absolute;bottom:60px;left:50%;transform:translateX(-50%);width:92%;max-width:460px;max-height:65vh;overflow-y:auto;background:rgba(0,0,0,.92);border:2px solid #FFD700;padding:12px 14px;display:none;z-index:7;pointer-events:all}
-#dialog-name{font-size:.45rem;color:#FFD700;margin-bottom:6px}
+#dialog-name{font-size:.45rem;color:#FFD700;margin-bottom:2px}
+#dialog-subtitle{font-size:.28rem;color:#aaa;margin-bottom:6px;letter-spacing:.04em}
 #dialog-text{font-size:.38rem;color:#eee;line-height:1.9;margin-bottom:10px;white-space:pre-wrap}
 #dialog-close{font-size:.35rem;color:#888;text-align:right}
 .d-choice{display:block;width:100%;font-size:.35rem;color:#88ddff;background:rgba(0,80,120,.35);border:1px solid #446688;padding:6px 10px;cursor:pointer;text-align:left;margin-bottom:3px;font-family:'Press Start 2P',monospace}
@@ -83,6 +84,7 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
 /* ── Shop dialog mode ── */
 #dialog.shop-mode{bottom:0;left:0;right:0;width:100%;max-width:none;max-height:none;overflow:visible;background:none;border:none;padding:0;transform:none}
 #dialog.shop-mode #dialog-name{font-size:.34rem;color:#FFD700;text-align:center;margin-top:4px;letter-spacing:.05em;margin-bottom:0}
+#dialog.shop-mode #dialog-subtitle{font-size:.24rem;color:#cca860;text-align:center;margin-bottom:4px;letter-spacing:.03em}
 #dialog.shop-mode #dialog-text{font-size:.35rem;color:#f0e8d0;line-height:1.85;margin-bottom:8px;white-space:pre-wrap;max-height:120px;overflow-y:auto;background:rgba(0,0,0,.45);border:2px solid #6B4423;padding:7px 9px}
 #dialog.shop-mode #dialog-close{font-size:.28rem;color:#a07840;text-align:right;margin-top:3px}
 #dialog.shop-mode .d-choice{font-size:.32rem;color:#ffe8a0;background:#3a2208;border:2px solid #8B5E2E;padding:5px 9px}
@@ -188,6 +190,7 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
   <!-- Dialog -->
   <div id="dialog">
     <div id="dialog-name"></div>
+    <div id="dialog-subtitle"></div>
     <div id="dialog-text"></div>
     <div id="dialog-choices"></div>
     <div id="dialog-close">[ E / TAP ] CLOSE</div>
@@ -235,7 +238,7 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
   </div>
 
   <!-- Human badge -->
-  <div id="human-badge">🧍 HUMAN · T=RIDE · WASD=WALK · SHIFT=SWORD SWING · B=FIREBALL(sword)/SHIELD · J=JUMP · E=TALK/MOUNT</div>
+  <div id="human-badge">🧍 HUMAN · T=RIDE · WASD=WALK · E=TALK · SHIFT=SWORD · B=FIREBALL/SHIELD · J=JUMP</div>
 
   <!-- Interact hint -->
   <div id="interact-hint"></div>
@@ -277,7 +280,7 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
         <tr><td style="color:#ffee88">[6]</td><td>⚡ Fire ALL powers at once</td></tr>
         <tr><td colspan="2" style="color:#ffaa44;padding:8px 0 4px">── WORLD ──</td></tr>
         <tr><td style="color:#ffee88">E</td><td>Talk / Mount / Pick up / Tame</td></tr>
-        <tr><td style="color:#ffee88">T</td><td>Dismount (become human rider)</td></tr>
+        <tr><td style="color:#ffee88">T / 5</td><td>Dismount (become human rider)</td></tr>
         <tr><td style="color:#ffee88">M</td><td>World map</td></tr>
         <tr><td style="color:#ffee88">4</td><td>Teleport to Dragon Mountain</td></tr>
         <tr><td style="color:#ffee88">7</td><td>🐉 Teleport army to your position</td></tr>
@@ -2978,53 +2981,53 @@ function spawnGreatCity(){
   }
 
   // Weapon shop keeper
-  spawnCityNPC(CITY_X,CITY_Z-250,'Blacksmith','Welcome to my forge! I sell the finest blades.\n\n[B] Browse weapons','shopkeeper',{isCityWeaponShop:true,choices:[
+  spawnCityNPC(CITY_X,CITY_Z-80,'Blacksmith','Welcome to my forge! I sell the finest blades.\n\n[B] Browse weapons','shopkeeper',{isCityWeaponShop:true,choices:[
     {q:'What do you sell?',a:'Iron Sword (150pts), Steel Blade (400pts), Dragon Lance (900pts). Each upgrades your melee damage. Press [B] in this dialog to browse!'},
     {q:'Are these for dragon riders?',a:'Any warrior with coin! But dragon riders tell me the blades help even when mounted.'},
   ]});
   // Armor shop keeper
-  spawnCityNPC(CITY_X,CITY_Z+250,'Armorer','Strong armor for brave souls!\n\n[B] Browse armor','shopkeeper',{isCityArmorShop:true,choices:[
+  spawnCityNPC(CITY_X,CITY_Z+80,'Armorer','Strong armor for brave souls!\n\n[B] Browse armor','shopkeeper',{isCityArmorShop:true,choices:[
     {q:'What armor do you have?',a:'Leather Vest (120pts +30HP), Chain Mail (350pts +70HP), Plate Armor (800pts +140HP). Press [B] to buy.'},
   ]});
   // Doctor / hospital
-  spawnCityNPC(CITY_X+250,CITY_Z,'Healer','The city hospital — we heal all wounds.\n\n[B] Buy healing','shopkeeper',{isCityHospital:true,choices:[
+  spawnCityNPC(CITY_X+80,CITY_Z,'Healer','The city hospital — we heal all wounds.\n\n[B] Buy healing','shopkeeper',{isCityHospital:true,choices:[
     {q:'How do I heal?',a:'Press [B] here to buy healing items. We have Minor Heal (80pts), Greater Heal (200pts), or Full Restore (500pts).'},
     {q:'Can you heal my dragon?',a:'Your bond with your dragon means your healing transfers to them too. Buy the Full Restore if your dragon is low!'},
   ]});
   // Tavern keeper
-  spawnCityNPC(CITY_X-250,CITY_Z,'Tavern Keeper','Welcome to the Golden Flagon! Food, drink, tales!\n\n[B] Buy food','shopkeeper',{isCityTavern:true,choices:[
+  spawnCityNPC(CITY_X-80,CITY_Z,'Tavern Keeper','Welcome to the Golden Flagon! Food, drink, tales!\n\n[B] Buy food','shopkeeper',{isCityTavern:true,choices:[
     {q:'What news?',a:'Strange dark shapes were seen flying south — giant black dragons with glowing eyes. The Princes of Death, some say. The city guard doubled the hunters on the walls.'},
     {q:'Do you know of Blane?',a:'The legendary rider Blane? Of course! He trained half the riders in this city. If you find him, tell him the Flagon still has his favourite table.'},
     {q:'What food do you serve?',a:'Bread (30pts, +15HP), Hearty Stew (60pts, +35HP), or the full Feast (150pts, +100HP). Press [B] to order!'},
   ]});
   // Potion seller
-  spawnCityNPC(CITY_X+200,CITY_Z-200,'Alchemist','Potions, elixirs, and rare draughts!\n\n[B] Browse potions','shopkeeper',{isCityPotionShop:true,choices:[
+  spawnCityNPC(CITY_X+70,CITY_Z-70,'Alchemist','Potions, elixirs, and rare draughts!\n\n[B] Browse potions','shopkeeper',{isCityPotionShop:true,choices:[
     {q:'What potions do you have?',a:'Minor Heal (80pts +30HP), Greater Heal (200pts +80HP), and the legendary Full Restore (500pts — full HP). Press [B] to buy.'},
     {q:'Do potions work on dragons?',a:'Yes! When you are bonded to your dragon, whatever heals you heals it.'},
   ]});
 
   // Wizard Shop keeper
-  spawnCityNPC(CITY_X-200,CITY_Z-200,'Zephyrus','I am Zephyrus, arcane master of the city! I sell forbidden magic.\n\n[B] Browse spells  [N] Next spell  [M] Cast active spell','shopkeeper',{isCityWizardShop:true,choices:[
+  spawnCityNPC(CITY_X-70,CITY_Z-70,'Zephyrus','I am Zephyrus, arcane master of the city! I sell forbidden magic.\n\n[B] Browse spells  [N] Next spell  [M] Cast active spell','shopkeeper',{isCityWizardShop:true,choices:[
     {q:'What magic do you sell?',a:'Seven schools of arcane power: Meteor Storm, Time Freeze, God Lightning, Soul Vortex, Mega Quake, Ice Age, and Fire God. Each costs 250-400 pts. Press [N] to cycle spells, [B] to buy & equip, [M] to cast!'},
     {q:'How do I cast spells?',a:'First buy a spell here with [B]. Then press [M] from anywhere in the world to unleash it! Spells last 6-10 seconds of devastating power. You can only have one spell equipped at a time.'},
     {q:'Are these safe to use near the city?',a:'...Probably. I would aim away from the cookie shop.'},
     {q:'Who else studies magic here?',a:'My apprentices Lyra and Vorak guard the tower door. The librarian Eldris also knows ancient lore — seek her in the library to the east.'},
   ]});
   // Cookie shop keeper
-  spawnCityNPC(CITY_X+200,CITY_Z+200,'Madame Crumble','Welcome to Madame Crumble\'s Cookie Emporium! 🍪\nOur legendary cookies grant 20 seconds of immortality, healing, and speed!\n\n[B] Buy a Cookie (200pts)','shopkeeper',{isCityCookieShop:true,choices:[
+  spawnCityNPC(CITY_X+70,CITY_Z+70,'Madame Crumble','Welcome to Madame Crumble\'s Cookie Emporium! 🍪\nOur legendary cookies grant 20 seconds of immortality, healing, and speed!\n\n[B] Buy a Cookie (200pts)','shopkeeper',{isCityCookieShop:true,choices:[
     {q:'What do cookies do?',a:'For 20 glorious seconds: you cannot die (complete immortality!), your HP heals 5 per second, and your dragon flies at triple speed. That\'s the Crumble Guarantee!'},
     {q:'Are these really magic cookies?',a:'Ancient recipe, passed down from the Dragon Witches of the Eastern Peaks. Each cookie contains crystallised starlight and three drops of phoenix tears. Completely delicious.'},
     {q:'Can I eat more than one?',a:'You can! But the effects don\'t stack — eating a second cookie simply refreshes the 20-second timer. So eat wisely, or eat immediately!'},
   ]});
 
   // ── Wizard at top of tower — sells magic books ──
-  spawnCityNPC(CITY_X-200,CITY_Z-200,'Grand Wizard Morthex','I am Morthex, Arch-Wizard of the High Tower. I have books of forbidden lore — for those worthy of knowledge.\n\n[B] Browse  [N] Next Book  [R] Read','shopkeeper',{isCityWizardBook:true,choices:[
+  spawnCityNPC(CITY_X-100,CITY_Z-100,'Grand Wizard Morthex','I am Morthex, Arch-Wizard of the High Tower. I have books of forbidden lore — for those worthy of knowledge.\n\n[B] Browse  [N] Next Book  [R] Read','shopkeeper',{isCityWizardBook:true,choices:[
     {q:'Who are you?',a:'I have studied the arcane arts for three hundred years. Zephyrus is my student\'s student. I live at the top of this tower because the lower floors are beneath me — literally and philosophically.'},
     {q:'What books do you sell?',a:'Only two volumes: the Codex of Shadows — the truth about the Princes of Death — and my own Wizard\'s Secret Tome. Both are essential. Both are dangerous. You have been warned.'},
     {q:'Why are you at the top of the tower?',a:'The view. Also the ley lines converge at this altitude. Also I lost the stairs in a spell mishap and I refuse to admit it.'},
   ]});
   // ── Library keeper (SE, at library) ──
-  spawnCityNPC(CITY_X+350,CITY_Z+350,'Librarian Eldris','Welcome to the Grand Library! Ancient tomes, lore, and dragon knowledge.\n\n[B] Browse books','shopkeeper',{isCityLibrary:true,choices:[
+  spawnCityNPC(CITY_X+100,CITY_Z+100,'Librarian Eldris','Welcome to the Grand Library! Ancient tomes, lore, and dragon knowledge.\n\n[B] Browse books','shopkeeper',{isCityLibrary:true,choices:[
     {q:'What books do you have?',a:'Dragon Lore (200pts — reveals all dragon types), Battle Tactics (150pts — +10% melee dmg), Rider\'s Handbook (100pts), History of the Realm (80pts). Press [B] to browse!'},
     {q:'What is the oldest book here?',a:'The Codex of Shadows — written by the first dragon riders 1,000 years ago. It speaks of the Princes of Death and their ancient pact with Shadow Dragons.'},
     {q:'Do you know of Blane?',a:'Blane the Rider? Yes! He returned a rare volume on Shadow Dragons to us last winter. A serious man, but kind. He resides near Dragon Mountain, they say.'},
@@ -3032,19 +3035,19 @@ function spawnGreatCity(){
   ]});
 
   // ── Wizard tower guards — Mage apprentices ──
-  spawnCityNPC(CITY_X-220,CITY_Z-180,'Apprentice Lyra','I guard the Wizard Tower for Master Zephyrus. No unauthorised access beyond this point!','citizen',{choices:[
+  spawnCityNPC(CITY_X-110,CITY_Z-90,'Apprentice Lyra','I guard the Wizard Tower for Master Zephyrus. No unauthorised access beyond this point!','citizen',{choices:[
     {q:'Can I go inside?',a:'Only if Zephyrus permits it. He\'s inside — press E on him to browse the arcane wares. I\'m here to keep the shadows out!'},
     {q:'Are you learning magic?',a:'Three years as Zephyrus\'s apprentice. I can already summon minor lightning and read the runes of the Ancient Tongue. One day I\'ll have my own tower.'},
     {q:'What\'s the most dangerous spell?',a:'Fire God, without question. I saw Zephyrus test it once on a mountain range to the north. The range... no longer exists.'},
   ]});
-  spawnCityNPC(CITY_X-180,CITY_Z-220,'Apprentice Vorak','Another visitor to the tower? Zephyrus is busy with his research, but his wares are open.','citizen',{choices:[
+  spawnCityNPC(CITY_X-90,CITY_Z-110,'Apprentice Vorak','Another visitor to the tower? Zephyrus is busy with his research, but his wares are open.','citizen',{choices:[
     {q:'What are you researching?',a:'I\'m studying shadow runes found near Dragon Mountain. The script predates the city — older than any kingdom. Fascinating and deeply unsettling.'},
     {q:'Are the Princes of Death real?',a:'...I have seen their shadows in the runes. They are real. And they are coming. Do not tell the townspeople — it would cause a panic.'},
     {q:'Can you teach me magic?',a:'See Zephyrus for that. My role is research, not instruction. Though I could point you toward the library — Eldris has texts on elemental theory.'},
   ]});
 
   // ── Library mage scholar ──
-  spawnCityNPC(CITY_X+340,CITY_Z+320,'Scholar Maren','The pursuit of knowledge is the highest calling. What brings you to the library?','citizen',{choices:[
+  spawnCityNPC(CITY_X+110,CITY_Z+90,'Scholar Maren','The pursuit of knowledge is the highest calling. What brings you to the library?','citizen',{choices:[
     {q:'What are you studying?',a:'The migration patterns of Shadow Dragons. They follow ley lines — invisible channels of dark energy in the earth. Dragon Mountain sits at their convergence.'},
     {q:'Can I read the books freely?',a:'The public shelves are free to browse. The restricted section — behind the iron door — requires Eldris\'s approval. The Codex of Shadows is kept there.'},
     {q:'Do you know any spells?',a:'A few defensive wards, nothing offensive. For battle magic, speak to Zephyrus. I prefer the quiet of the page to the chaos of combat.'},
@@ -5788,19 +5791,14 @@ document.addEventListener('keydown',e=>{
       // Queue hatchery tour — Blane will lead them to the hatchery
       hatcheryQueue.push({recruit:nearNPC,phase:'fetch',t:0});
     }
-    if(e.code==='KeyT'&&!dialogOpen&&!mapOpen)toggleHumanMode();
+    if((e.code==='KeyT'||e.code==='Digit5')&&!dialogOpen&&!mapOpen)toggleHumanMode();
     if(e.code==='Digit4'&&!dialogOpen){
       // Teleport to Dragon Mountain
       const ref=isHuman&&humanMesh?humanMesh.position:dragonMesh.position;
       ref.set(DM_X,groundY(DM_X,DM_Z-10)+3,DM_Z-10);
       floatWorld(ref.clone().add(new THREE.Vector3(0,8,0)),'🏔 DRAGON MOUNTAIN','#44aaff');
     }
-    if(e.code==='Digit5'&&!dialogOpen){
-      // Teleport to Great City
-      const ref=isHuman&&humanMesh?humanMesh.position:dragonMesh.position;
-      ref.set(CITY_X,groundY(CITY_X,CITY_Z)+5,CITY_Z);
-      floatWorld(ref.clone().add(new THREE.Vector3(0,8,0)),'🏙 GREAT CITY','#ffdd44');
-    }
+    // Digit5 now handled by walk toggle above (was city teleport)
     // Cast wizard spell with M key (outside dialog)
     if(e.code==='KeyM'&&!dialogOpen&&wizardMagicType){
       wizardMagicT=8;
@@ -6712,6 +6710,7 @@ function openDialog(npc){
   const dialogEl=document.getElementById('dialog');
   dialogEl.classList.toggle('shop-mode',isShopNPC);
   document.getElementById('dialog-name').textContent=npc.userData.npcName;
+  {const sub=npc.userData.npcSubtitle||(npc.userData.isCityWizardBook?'📖 Wizard — Books & Spells':npc.userData.isCityLibrary?'📚 Librarian — [ E ] Talk · [ B ] Browse · [ N ] Next · [ R ] Read':npc.userData.isCityWeaponShop?'⚔ City Blacksmith':npc.userData.isCityArmorShop?'🛡 City Armorer':npc.userData.isCityHospital?'⚕ City Healer':npc.userData.isCityTavern?'🍺 Tavern Keeper':npc.userData.isCityPotionShop?'🧪 Alchemist':npc.userData.isCityWizardShop?'🔮 Wizard Mage':npc.userData.isCityCookieShop?'🍪 Cookie Shop':npc.userData.isBlane?'🐉 Dragon Rider Master':npc.userData.isRecruitable?'🐉 Recruitable Rider — [ R ] Recruit':'');document.getElementById('dialog-subtitle').textContent=sub;}
   document.getElementById('dialog-text').textContent=txt;
   // Populate right-side item shelf (shop mode only)
   if(isShopNPC){const shelf=document.getElementById('dialog-items');shelf.innerHTML='';
@@ -7142,6 +7141,13 @@ function update(ts){
         }
         if(up){isLanded=false;dPitchVel=-0.5;} // take off
       }
+      // NPC proximity while dragon is landed — show hint and allow E to talk
+      {let _nc=null,_nd=32;
+      for(const _n of friendlyNPCs){const _d=dragonMesh.position.distanceTo(_n.position);if(_d<_nd){_nc=_n;_nd=_d;}}
+      nearNPC=_nc;
+      const _hint=document.getElementById('interact-hint');
+      if(_nc){const _extra=_nc.userData.isRecruitable&&!_nc.userData.recruited&&dragonArmy.length<MAX_ARMY?' · [ R ] RECRUIT':'';_hint.textContent='[ E ] Talk · '+_nc.userData.npcName+_extra;_hint.style.display='block';}
+      else{_hint.style.display='none';}}
     } else {
       // ── FLYING STATE ──
       const turnSpd=1.6,pitchSpd=1.0,turnDrag=0.82,pitchDrag=0.78;
@@ -7159,32 +7165,21 @@ function update(ts){
       if(cookieT>0){cookieT-=dt;earthInvT=Math.max(earthInvT,0.1);dhp=Math.min(dmaxHp,dhp+5*dt);if(Math.random()<0.1)spawnAbilityCloud(dragonMesh.position.clone(),0xff88ff,10,0.4);}
       const speedMult=playerSlowT>0?0.4:cookieT>0?3.0:1.0;
       dragonMesh.position.addScaledVector(fwd,dtype.speed*2.2*dt*speedMult);
-      // Land if descend to ground (or touch city floor while descending)
+      // Land if descend to ground — also auto-sit on landing
       if(dragonMesh.position.y<=landThreshold&&(dPitch>=0.1||dragonMesh.position.y<=landThreshold+0.5)){
-        isLanded=true;landedY=landThreshold;
+        isLanded=true;landedY=landThreshold;isSitting=true;
         dragonMesh.position.y=landedY;dPitchVel=0;dYawVel*=0.3;
       } else if(dragonMesh.position.y<landThreshold){
         dragonMesh.position.y=landThreshold;dPitchVel=Math.min(0,dPitchVel);
       }
-      // Don't let dragon go below sea level in ocean
-      if(dragonMesh.position.y<2&&islandFalloff(dragonMesh.position.x,dragonMesh.position.z)<=0){
+      // Don't let dragon go below sea level in ocean (but allow descent near city/forest)
+      const nearCityArea=greatCitySpawned&&Math.abs(dragonMesh.position.x-CITY_X)<2000&&Math.abs(dragonMesh.position.z-CITY_Z)<2000;
+      if(!nearCityArea&&dragonMesh.position.y<2&&islandFalloff(dragonMesh.position.x,dragonMesh.position.z)<=0){
         dragonMesh.position.y=2;dPitchVel=Math.min(0,dPitchVel);
       }
     }
 
-    // ── CITY GATE — flying dragon cannot enter city walls; walking dragon and human can ──
-    if(greatCitySpawned&&!isHuman&&!isLanded){
-      const cx=dragonMesh.position.x-CITY_X,cz=dragonMesh.position.z-CITY_Z;
-      const WALL_R2=630;
-      // Push flying dragon out if inside the wall rectangle
-      if(Math.abs(cx)<WALL_R2&&Math.abs(cz)<WALL_R2&&dragonMesh.position.y<60){
-        const pushX=cx>=0?WALL_R2-cx:-(WALL_R2+cx);
-        const pushZ=cz>=0?WALL_R2-cz:-(WALL_R2+cz);
-        if(Math.abs(pushX)<Math.abs(pushZ)){dragonMesh.position.x+=pushX;}
-        else{dragonMesh.position.z+=pushZ;}
-        floatWorld(dragonMesh.position.clone().add(new THREE.Vector3(0,8,0)),'⛩ Land first to enter city — [ArrowDown] to descend','#ff8844');
-      }
-    }
+    // City and forest: no wall block — dragon can fly in and auto-land freely
     // ── KING ISLAND TRAP — cannot leave while boss is alive ──
     for(const e of activeEnemies){
       if(!e.userData.isKingDragon||!e.userData.alive)continue;
@@ -7997,7 +7992,7 @@ function update(ts){
       camera.position.copy(eyePos);
       camera.lookAt(eyePos.clone().add(lookDir));
       // NPC proximity check
-      let closest=null,closestD=18;
+      let closest=null,closestD=60;
       for(const npc of friendlyNPCs){
         const d=humanMesh.position.distanceTo(npc.position);
         if(d<closestD){closest=npc;closestD=d;}
@@ -8063,14 +8058,11 @@ function update(ts){
       for(let i=orbDrops.length-1;i>=0;i--){
         if(humanMesh.position.distanceTo(orbDrops[i].pos)<ORB_RADIUS)collectOrb(orbDrops[i]);
       }
-      // Auto-mount: walk (W) or press E near dragon
+      // Mount with T near dragon
       const distToDragon=humanMesh.position.distanceTo(dragonMesh.position);
       if(distToDragon<7){
         const hint=document.getElementById('interact-hint');
-        if(!nearNPC){hint.textContent='[ W ] or [ E ] Mount Dragon';hint.style.display='block';}
-        if((hFW||keys['KeyE'])&&distToDragon<7){
-          toggleHumanMode(); // remount
-        }
+        if(!nearNPC){hint.textContent='[ T ] Mount Dragon';hint.style.display='block';}
       }
       // Tick fire cooldown
       if(humanFireCooldown>0)humanFireCooldown-=dt;
@@ -8085,7 +8077,7 @@ function update(ts){
           }
         }
       }
-    } else if(!isHuman){
+    } else if(!isHuman&&!isLanded){
       document.getElementById('interact-hint').style.display='none';
     }
 

@@ -5144,7 +5144,7 @@ function startGame(){
   dtype=DT[selectedType];
   gs='playing';score=0;kills=0;frame=0;
   ddead=false;ddeathT=0;dinvT=0;fireArr=[];projectiles.forEach(p=>scene.remove(p));projectiles=[];
-  abilityCooldown={attack:0,heal:0,ice:0,fire:0,soul:0,earth:0,bite:0};soulShieldHP=0;earthInvT=0;burnMap=new Map();freezeMap=new Map();poisonMap=new Map();
+  abilityCooldown={attack:0,heal:0,ice:0,fire:0,soul:0,earth:0,bite:0,power:0,pBite:0,pTail:0,pRoar:0};soulShieldHP=0;earthInvT=0;burnMap=new Map();freezeMap=new Map();poisonMap=new Map();
   abilityFX.forEach(fx=>scene.remove(fx.group));abilityFX=[];
   activeEnemies=[];activeBuildings=[];friendlyNPCs=[];roamDragons=[];
   orbDrops.forEach(o=>scene.remove(o.mesh));orbDrops=[];

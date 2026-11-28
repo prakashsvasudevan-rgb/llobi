@@ -1809,8 +1809,8 @@ function buildingFloorY(x,z){
   if(Math.abs(x-(CITY_X-150))<20&&Math.abs(z-(CITY_Z-5300))<18)return BFY; // guard barracks
   if(Math.abs(x-(CITY_X+160))<20&&Math.abs(z-(CITY_Z-5400))<18)return BFY; // scholar's house
   if(Math.abs(x-(CITY_X-160))<20&&Math.abs(z-(CITY_Z-5500))<18)return BFY; // merchant's house
-  // 20 random house pockets at CITY_Z-5600 to CITY_Z-7120 step 80
-  for(let _i=0;_i<20;_i++){if(Math.abs(z-(CITY_Z-5600-_i*80))<20)return BFY;}
+  // 50 random house pockets at CITY_Z-5600 to CITY_Z-9520 step 80
+  for(let _i=0;_i<50;_i++){if(Math.abs(z-(CITY_Z-5600-_i*80))<20)return BFY;}
   return null;
 }
 
@@ -2990,11 +2990,10 @@ function spawnGreatCity(){
     const wgH=new THREE.Mesh(new THREE.BoxGeometry(5,4,0.4),new THREE.MeshBasicMaterial({color:0xffee88,transparent:true,opacity:0.45,blending:THREE.AdditiveBlending}));
     wgH.position.set(CITY_X+hx+8,cy+10,CITY_Z+hz+13);scene.add(wgH);
     // First 20 houses are enterable — pocket at CITY_Z-5600 to CITY_Z-5600-19*80
-    if(i<20){
-      const pz=CITY_Z-5600-i*80;
-      cityDoors.push({name:'House',enterPos:{x:CITY_X+hx,y:BFY+1.5,z:pz},exitPos:{x:CITY_X+hx,y:cy+1.5,z:CITY_Z+hz+18},checkX:CITY_X+hx,checkZ:CITY_Z+hz+13.5,checkR:10,hintText:'[ B ] Enter House'});
-      cityDoors.push({name:'EXIT House',isExit:true,exitPos:{x:CITY_X+hx,y:cy+1.5,z:CITY_Z+hz+18},checkX:CITY_X+hx,checkZ:pz+10,checkR:10,hintText:'[ B ] Exit House'});
-    }
+    // All 50 houses are enterable — pockets at CITY_Z-5600 step 80
+    const pz=CITY_Z-5600-i*80;
+    cityDoors.push({name:'House',enterPos:{x:CITY_X+hx,y:BFY+1.5,z:pz},exitPos:{x:CITY_X+hx,y:cy+1.5,z:CITY_Z+hz+18},checkX:CITY_X+hx,checkZ:CITY_Z+hz+13.5,checkR:10,hintText:'[ B ] Enter House'});
+    cityDoors.push({name:'EXIT House',isExit:true,exitPos:{x:CITY_X+hx,y:cy+1.5,z:CITY_Z+hz+18},checkX:CITY_X+hx,checkZ:pz+10,checkR:10,hintText:'[ B ] Exit House'});
   });
 
   // ── 3 named enterable houses at fixed positions ──
@@ -3443,10 +3442,9 @@ function spawnGreatCity(){
 
   // ── Generic interiors for the 20 enterable random houses ──
   {
-    const resNames=['Anna','Bren','Corin','Dara','Edric','Fyla','Gorn','Hesta','Ivar','Jola','Keld','Lysa','Mira','Nort','Olda','Pera','Rand','Syla','Tova','Urso'];
-    const resLines=['Just a simple home. Make yourself welcome.','Mind the step — it\'s been loose for years.','Come in, come in. Tea?','I wasn\'t expecting visitors!','Good to see a friendly face.','Careful — my cat sleeps right there.','Don\'t mind the mess.','Welcome, traveller.','Sit, sit! You look tired.','The city\'s busy lately, yes?'];
+    const resNames=['Anna','Bren','Corin','Dara','Edric','Fyla','Gorn','Hesta','Ivar','Jola','Keld','Lysa','Mira','Nort','Olda','Pera','Rand','Syla','Tova','Urso','Aldric','Bessa','Cato','Delia','Emric','Fenn','Gala','Holt','Isla','Jorn','Kara','Lev','Mona','Nels','Orla','Piet','Reva','Sten','Thea','Ulric','Vana','Wren','Xan','Yori','Zell','Alva','Borin','Clea','Dusk','Eryn'];
+    const resLines=['Just a simple home. Make yourself welcome.','Mind the step — it\'s been loose for years.','Come in, come in. Tea?','I wasn\'t expecting visitors!','Good to see a friendly face.','Careful — my cat sleeps right there.','Don\'t mind the mess.','Welcome, traveller.','Sit, sit! You look tired.','The city\'s busy lately, yes?','Quiet neighbourhood, mostly.','I heard a dragon flew over last night.','My neighbour saw a shadow creature near the wall.','The hunters keep us safe, mostly.','Strange times. Strange times indeed.','I used to live outside the walls. Not anymore.','My kids think dragons are exciting. They\'ve never been attacked by one.','The library has good books on dragon history if you\'re curious.','I saw the Grand Wizard looking troubled yesterday.','Have you been to the inn? Best stew in the city.'];
     housePositions.forEach(({hx,hz},i)=>{
-      if(i>=20)return;
       const pz=CITY_Z-5600-i*80;
       const wx=CITY_X+hx,wz=pz;
       // Simple room: floor, 4 walls, ceiling

@@ -238,7 +238,7 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
   </div>
 
   <!-- Human badge -->
-  <div id="human-badge">🧍 HUMAN · T=RIDE · WASD=WALK · E=TALK · SHIFT=SWORD · B=FIREBALL/SHIELD · J=JUMP</div>
+  <div id="human-badge">🧍 HUMAN · T=RIDE · WASD=WALK · E=TALK · SHIFT=SWORD · B=FIREBALL/SHIELD · J=JUMP · I=BOOKS</div>
 
   <!-- Interact hint -->
   <div id="interact-hint"></div>
@@ -6071,6 +6071,47 @@ document.addEventListener('keydown',e=>{
         // Beam up from caster
         spawnBeamFX(ref.clone(),ref.clone().add(new THREE.Vector3(0,200,0)),c);
       }
+    }
+    // [ I ] — open owned books bag anywhere
+    if(e.code==='KeyI'&&!dialogOpen){
+      const owned=CITY_BOOKS.filter(b=>playerBooks.includes(b.id));
+      let bookOv=document.getElementById('book-overlay');
+      if(bookOv&&bookOv.style.display!=='none'){bookOv.style.display='none';readingBook=null;return;}
+      if(owned.length===0){
+        const ref2=isHuman&&humanMesh?humanMesh.position:dragonMesh?.position;
+        if(ref2)floatWorld(ref2.clone().add(new THREE.Vector3(0,8,0)),'📚 No books owned yet — buy from Librarian Eldris or Morthex','#aaddff');
+        return;
+      }
+      let bagIdx=readingBook?owned.findIndex(b=>b.id===readingBook):0;
+      if(bagIdx<0)bagIdx=0;
+      function showBookBag(idx){
+        const bk=owned[idx];
+        if(!bookOv){
+          bookOv=document.createElement('div');bookOv.id='book-overlay';
+          bookOv.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.88);z-index:9999;display:flex;align-items:center;justify-content:center;';
+          const inner=document.createElement('div');inner.style.cssText='max-width:460px;max-height:80vh;overflow-y:auto;background:#221a0a;border:2px solid #885522;padding:18px;border-radius:6px;font-size:.28rem;color:#f0d8a0;line-height:1.7;white-space:pre-wrap;font-family:monospace;';
+          inner.id='book-inner';bookOv.appendChild(inner);
+          const closeBtn=document.createElement('div');closeBtn.textContent='[ I ] or [ E ] Close';closeBtn.style.cssText='position:absolute;top:12px;right:16px;color:#ffaa44;font-size:.28rem;cursor:pointer;';
+          closeBtn.onclick=()=>{bookOv.style.display='none';readingBook=null;};bookOv.appendChild(closeBtn);
+          document.body.appendChild(bookOv);
+        }
+        const header='📚 MY BOOKS  ('+( idx+1)+'/'+owned.length+')  [ N ] Next  [ P ] Prev  [ I / E ] Close\n'+'═'.repeat(38)+'\n';
+        document.getElementById('book-inner').textContent=header+bk.lore;
+        bookOv.style.display='flex';
+        document.getElementById('book-inner').scrollTop=0;
+        readingBook=bk.id;
+      }
+      showBookBag(bagIdx);
+      const bagKey=e2=>{
+        if(!readingBook)return;
+        if(e2.code==='KeyN'){bagIdx=(bagIdx+1)%owned.length;showBookBag(bagIdx);}
+        if(e2.code==='KeyP'){bagIdx=(bagIdx-1+owned.length)%owned.length;showBookBag(bagIdx);}
+        if(e2.code==='KeyI'||e2.code==='KeyE'){
+          const ov=document.getElementById('book-overlay');if(ov)ov.style.display='none';readingBook=null;
+          document.removeEventListener('keydown',bagKey);
+        }
+      };
+      document.addEventListener('keydown',bagKey);
     }
     if(e.code==='Backquote'&&!dialogOpen){
       // Teleport to Blane

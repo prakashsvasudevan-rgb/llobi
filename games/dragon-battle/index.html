@@ -3746,7 +3746,7 @@ document.addEventListener('keydown',e=>{
   }
   if(gs==='dead'&&(e.code==='Enter'||e.code==='Space'))showSelect();
   if(gs==='playing'){
-    if(e.code==='KeyM'){toggleWorldMap();return;}
+    if(e.code==='KeyM'&&!dialogOpen){toggleWorldMap();return;}
     if(e.code==='Escape'){const ho=document.getElementById('help-overlay');if(ho&&ho.style.display!=='none'){ho.style.display='none';return;}}
     if(e.code==='KeyC'&&!isHuman&&isLanded){isSitting=!isSitting;floatWorld(dragonMesh.position,isSitting?'🐉 SIT':'🐉 STAND','#88ff44');}
     if(e.code==='KeyF'&&!dialogOpen){
@@ -4467,7 +4467,7 @@ function fireAtkPower(a){
           gm.position.copy(gpos);
           gm.traverse(c=>{if(c.isMesh&&c.material){c.material=c.material.clone();c.material.color.set(0xaa66ff);c.material.transparent=true;c.material.opacity=0.6;c.material.blending=THREE.AdditiveBlending;}});
           scene.add(gm);
-          gm.userData.alive=true;gm.userData.hp=200;gm.userData.maxHp=200;gm.userData.friendly=true;gm.userData.ghostT=12;
+          gm.userData.alive=true;gm.userData.hp=200;gm.userData.maxHp=200;gm.userData.friendly=true;gm.userData.ghostLife=12;
           dragonArmy.push({mesh:gm,name:'Ghost',elem:'soul',isGhost:true});
           spawned++;
         }

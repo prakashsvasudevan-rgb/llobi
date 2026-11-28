@@ -5575,6 +5575,7 @@ function update(ts){
         e.userData.shootT-=dt;
         if(e.userData.shootT<=0&&dist<500){
           e.userData.shootT=1.5+Math.random();
+          if(e.userData.jawGroup){e.userData.jawT=0.7;e.userData.jawDur=0.7;}
           const shotGeo=new THREE.SphereGeometry(1.8,5,4);
           const shotMat=new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.9,blending:THREE.AdditiveBlending});
           const fwd=new THREE.Vector3().subVectors(ref,e.position).normalize();

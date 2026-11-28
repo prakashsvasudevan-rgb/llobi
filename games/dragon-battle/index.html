@@ -1513,7 +1513,7 @@ function updateProjectiles(dt){
   for(let i=projectiles.length-1;i>=0;i--){
     const p=projectiles[i];
     p.position.addScaledVector(p.userData.vel,dt);
-    p.userData.vel.y-=5*dt; // gravity
+    if(!p.userData.noGravity)p.userData.vel.y-=5*dt; // gravity
     p.userData.life-=dt;
     if(p.userData.spin)p.rotation.y+=dt*12;
     if(p.userData.life<=0){scene.remove(p);projectiles.splice(i,1);continue;}
@@ -1522,7 +1522,14 @@ function updateProjectiles(dt){
       for(const e of activeEnemies){
         if(!e.userData.alive)continue;
         if(p.position.distanceTo(e.position)<6){
-          hitEnemy(e,p.userData.dmg);
+          if(p.userData.aoe){
+            // AoE splash — hit all enemies within 40 units of impact
+            for(const ae of activeEnemies){if(!ae.userData.alive)continue;if(p.position.distanceTo(ae.position)<40){hitEnemy(ae,p.userData.dmg);if(p.userData.onHit)p.userData.onHit(ae);}}
+            spawnAbilityCloud(p.position.clone(),p.userData.dtCol||0xff4400,45,1.0);
+          } else {
+            hitEnemy(e,p.userData.dmg);
+            if(p.userData.onHit)p.userData.onHit(e);
+          }
           scene.remove(p);projectiles.splice(i,1);break;
         }
       }
@@ -3418,7 +3425,8 @@ function armyDmg(a,dmg){if(Math.random()<0.4)a.mesh.userData.shieldHitT=0.6;retu
 // ── Hit logic ─────────────────────────────────────────────────────────────────
 function hitEnemy(e,dmgAmt){
   if(!e.userData.alive)return;
-  const dmg=dmgAmt||dtype.dmg;
+  if(gs!=='playing')return;
+  const dmg=dmgAmt!==undefined?dmgAmt:dtype.dmg;
   e.userData.hp-=dmg;
   if(dtype.id==='ice')e.userData.shootT+=3;
   if(e.userData.hp<=0){
@@ -4862,9 +4870,12 @@ const ARMOR_TIERS=[
   {name:'Elemental Crystal', cost:1200,hpBonus:160, orbs:8, dust:2, desc:'Pure elemental crystal. 1200pts + 8 orbs + 2 dust.'},
 ];
 function openDialog(npc){
+  if(!npc||!npc.userData)return;
+  // Don't open dialog for objects with no NPC text or name (e.g. army dragon meshes)
+  if(!npc.userData.npcName&&!npc.userData.isBlane)return;
   dialogOpen=true;
   const isSmith=npc.userData.npcName==='Blacksmith'&&armorLevel<3;
-  let txt=npc.userData.npcText;
+  let txt=npc.userData.npcText||'';
   // Update Blane's text based on quest state
   if(npc.userData.isBlane){
     if(blaneQuest==='inactive')txt='I train dragon riders. Defeat 3 shadow dragons, gather 5 shadow dust & 6 mage orbs, and claim a King Weapon — then I will give you the quest.';
@@ -6311,7 +6322,7 @@ function update(ts){
             floatWorld(fp,'🪨 BOULDER!','#aa8844');
           } else if(eid==='lightning'||eid==='thunder'){
             // Chain bolt
-            for(let li=0;li<5;li++){setTimeout(()=>{const le=activeEnemies.filter(ae=>ae.userData.alive&&a.mesh.position.distanceTo(ae.position)<200);if(le.length){const lt=le[Math.floor(Math.random()*le.length)];spawnBeamFX(fp.clone(),lt.position.clone(),0xffff44);hitEnemy(lt,upgradedDmg()*7);}},li*80);}
+            for(let li=0;li<5;li++){setTimeout(()=>{if(gs!=='playing'||!a.mesh)return;const le=activeEnemies.filter(ae=>ae.userData.alive&&a.mesh.position.distanceTo(ae.position)<200);if(le.length){const lt=le[Math.floor(Math.random()*le.length)];spawnBeamFX(fp.clone(),lt.position.clone(),0xffff44);hitEnemy(lt,upgradedDmg()*7);}},li*80);}
             floatWorld(fp,'⚡ CHAIN BOLT!','#ffff44');
           } else if(eid==='soul'||eid==='sun'){
             // Soul Beam
@@ -6357,7 +6368,7 @@ function update(ts){
             floatWorld(fp,'🛡 EARTH SHIELD!','#aa8844');
           } else if(eid==='lightning'||eid==='thunder'){
             // Lightning storm — 10 chain hits
-            for(let li=0;li<10;li++){setTimeout(()=>{const le=activeEnemies.filter(ae=>ae.userData.alive&&a.mesh.position.distanceTo(ae.position)<200);if(le.length){const lt=le[Math.floor(Math.random()*le.length)];spawnBeamFX(fp.clone(),lt.position.clone(),0xffff44);hitEnemy(lt,upgradedDmg()*5);}},li*80);}
+            for(let li=0;li<10;li++){setTimeout(()=>{if(gs!=='playing'||!a.mesh)return;const le=activeEnemies.filter(ae=>ae.userData.alive&&a.mesh.position.distanceTo(ae.position)<200);if(le.length){const lt=le[Math.floor(Math.random()*le.length)];spawnBeamFX(fp.clone(),lt.position.clone(),0xffff44);hitEnemy(lt,upgradedDmg()*5);}},li*80);}
             floatWorld(fp,'⚡ LIGHTNING STORM!','#ffff44');
           } else if(eid==='soul'||eid==='sun'){
             // Soul Heal — restore all army
@@ -6401,7 +6412,7 @@ function update(ts){
             const mm=new THREE.Mesh(new THREE.SphereGeometry(4,6,4),new THREE.MeshBasicMaterial({color:0xff6600,transparent:true,opacity:0.9,blending:THREE.AdditiveBlending}));
             const mstart=fp.clone().add(new THREE.Vector3(0,80,0));mm.position.copy(mstart);
             const md=new THREE.Vector3().subVectors(aNearest.position,mstart).normalize().multiplyScalar(60);
-            mm.userData={vel:md,dmg:upgradedDmg()*20,life:4,projType:'earth',friendly:true,aoe:true};scene.add(mm);projectiles.push(mm);
+            mm.userData={vel:md,dmg:upgradedDmg()*20,life:4,projType:'earth',friendly:true,aoe:true,noGravity:true};scene.add(mm);projectiles.push(mm);
             floatWorld(fp,'☄ METEOR!','#ff6600');
           } else if(eid==='lightning'||eid==='thunder'){
             // Mega storm — all enemies in range

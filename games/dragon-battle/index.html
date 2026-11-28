@@ -2757,15 +2757,45 @@ function spawnGreatCity(){
   // City floor / ground plane
   cb(1400,2,1400,mat(0x778866,{flatShading:true}),0,-1,0);
 
-  // City wall perimeter
-  for(let i=0;i<36;i++){
-    const a=i/36*Math.PI*2;const r=600;
-    cb(18,22,18,stone,Math.cos(a)*r,0,Math.sin(a)*r);
-  }
-  // Corner towers
-  [[580,580],[580,-580],[-580,580],[-580,-580]].forEach(([tx,tz])=>{
-    cb(30,40,30,stone,tx,0,tz);
-    cb(32,4,32,mat(0x667766,{flatShading:true}),tx,40,tz); // parapet
+  // City wall — 4 solid sides with a gate on south wall (facing approach)
+  const WALL_R=620,WALL_H=28,WALL_T=14;
+  // North wall
+  cb(WALL_R*2,WALL_H,WALL_T,stone,0,0,-WALL_R);
+  cb(WALL_R*2,4,WALL_T+2,mat(0x667766,{flatShading:true}),0,WALL_H,-WALL_R);
+  // South wall (with gate gap at centre)
+  cb(WALL_R*2*0.35,WALL_H,WALL_T,stone,-WALL_R*0.65,0,WALL_R); // left chunk
+  cb(WALL_R*2*0.35,WALL_H,WALL_T,stone, WALL_R*0.65,0,WALL_R); // right chunk
+  cb(WALL_R*2,4,WALL_T+2,mat(0x667766,{flatShading:true}),0,WALL_H,WALL_R); // parapet continues over gate
+  // East wall
+  cb(WALL_T,WALL_H,WALL_R*2,stone,WALL_R,0,0);
+  cb(WALL_T+2,4,WALL_R*2,mat(0x667766,{flatShading:true}),WALL_R,WALL_H,0);
+  // West wall
+  cb(WALL_T,WALL_H,WALL_R*2,stone,-WALL_R,0,0);
+  cb(WALL_T+2,4,WALL_R*2,mat(0x667766,{flatShading:true}),-WALL_R,WALL_H,0);
+  // Corner towers (taller)
+  [[WALL_R,WALL_R],[WALL_R,-WALL_R],[-WALL_R,WALL_R],[-WALL_R,-WALL_R]].forEach(([tx,tz])=>{
+    cb(38,46,38,stone,tx,0,tz);
+    cb(40,6,40,mat(0x556655,{flatShading:true}),tx,46,tz); // parapet
+  });
+  // Gate towers flanking south gate
+  cb(28,38,28,stone,-WALL_R*0.3,0,WALL_R);
+  cb(28,38,28,stone, WALL_R*0.3,0,WALL_R);
+  cb(30,6,30,mat(0x667766,{flatShading:true}),-WALL_R*0.3,38,WALL_R);
+  cb(30,6,30,mat(0x667766,{flatShading:true}), WALL_R*0.3,38,WALL_R);
+  // Gate arch (decorative lintel)
+  cb(WALL_R*0.6-56,10,WALL_T+2,mat(0x556644,{flatShading:true}),0,20,WALL_R);
+  // Ballistas on walls — 8 total
+  [[0,-WALL_R,0],[WALL_R,0,Math.PI/2],[-WALL_R,0,-Math.PI/2],[0,WALL_R,Math.PI],[WALL_R*0.6,-WALL_R,0],[-WALL_R*0.6,-WALL_R,0],[WALL_R,-WALL_R*0.6,Math.PI/2],[-WALL_R,-WALL_R*0.6,-Math.PI/2]].forEach(([bx,bz,ba])=>{
+    const ballista=new THREE.Group();
+    const frame=new THREE.Mesh(new THREE.BoxGeometry(8,5,12),mat(0x554422,{flatShading:true}));
+    const arm=new THREE.Mesh(new THREE.BoxGeometry(16,2,2),mat(0x665533,{flatShading:true}));
+    arm.position.set(0,3,0);
+    const bolt=new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.5,10,5),mat(0x888866,{flatShading:true}));
+    bolt.rotation.x=Math.PI/2;bolt.position.set(0,4,2);
+    ballista.add(frame);ballista.add(arm);ballista.add(bolt);
+    ballista.position.set(CITY_X+bx,cy+WALL_H+2,CITY_Z+bz);
+    ballista.rotation.y=ba;
+    scene.add(ballista);
   });
 
   // Central plaza / market
@@ -2781,71 +2811,105 @@ function spawnGreatCity(){
     cb(1.5,8,1.5,wood,sx-6,0,sz-4);cb(1.5,8,1.5,wood,sx+6,0,sz-4); // poles
   }
 
-  // ── Weapon Shop (north) ──
-  cb(60,24,50,stone,0,0,-250);cb(62,4,52,mat(0x667766,{flatShading:true}),0,24,-250);
-  cb(60,2,50,roof,0,26,-250);
-  const wsSign=new THREE.Mesh(new THREE.BoxGeometry(28,8,1),mat(0xddaa22,{flatShading:true}));
-  wsSign.position.set(0,28,-225);g.add(wsSign);
+  // ── Weapon Shop (north) — 2-storey forge ──
+  cb(70,20,55,stone,0,0,-250);        // ground floor
+  cb(68,18,53,mat(0x778888,{flatShading:true}),0,20,-250); // 2nd floor
+  cb(72,4,58,mat(0x667766,{flatShading:true}),0,38,-250);  // parapet
+  cb(72,3,58,roof,0,40,-250);         // roof cap
+  const wsSign=new THREE.Mesh(new THREE.BoxGeometry(32,9,1),mat(0xddaa22,{flatShading:true}));
+  wsSign.position.set(0,32,-225);g.add(wsSign);
 
-  // ── Armor Shop (south) ──
-  cb(60,24,50,stone,0,0,250);cb(60,2,50,mat(0x224466,{flatShading:true}),0,26,250);
+  // ── Armor Shop (south) — 2-storey ──
+  cb(70,20,55,stone,0,0,250);
+  cb(68,18,53,mat(0x667788,{flatShading:true}),0,20,250);
+  cb(72,3,58,mat(0x224466,{flatShading:true}),0,38,250);
 
-  // ── Hospital (east) — white cross ──
-  cb(60,24,50,mat(0xeeeedd,{flatShading:true}),250,0,0);
-  cb(10,30,6,mat(0xff2222,{flatShading:true}),250,20,25); // cross vertical
-  cb(24,6,6,mat(0xff2222,{flatShading:true}),250,32,25); // cross horizontal
+  // ── Hospital (east) — 3-storey white tower ──
+  cb(65,20,55,mat(0xeeeedd,{flatShading:true}),250,0,0);
+  cb(63,20,53,mat(0xddddc8,{flatShading:true}),250,20,0);
+  cb(61,16,51,mat(0xccccbb,{flatShading:true}),250,40,0);
+  cb(10,34,6,mat(0xff2222,{flatShading:true}),250,38,25);  // cross vertical
+  cb(26,7,6,mat(0xff2222,{flatShading:true}),250,52,25);   // cross horizontal
 
-  // ── Tavern (west) ──
-  cb(60,20,50,wood,-250,0,0);cb(60,3,52,roof,-250,20,0);
-  cb(14,24,8,wood,-250,0,-20); // chimney
-  cb(6,28,6,mat(0x553311,{flatShading:true}),-250,20,-20);
+  // ── Tavern (west) — 2-storey inn ──
+  cb(70,20,55,wood,-250,0,0);
+  cb(70,16,55,mat(0x664422,{flatShading:true}),-250,20,0);
+  cb(72,4,57,roof,-250,36,0);
+  cb(14,28,8,wood,-250,0,-22);        // chimney base
+  cb(6,34,6,mat(0x553311,{flatShading:true}),-250,22,-22); // chimney top
 
-  // ── Potion Shop (NE) ──
-  cb(40,18,40,mat(0x334455,{flatShading:true}),200,0,-200);
+  // ── Potion Shop (NE) — 2-storey alchemist tower ──
+  cb(45,20,45,mat(0x334455,{flatShading:true}),200,0,-200);
+  cb(43,18,43,mat(0x445566,{flatShading:true}),200,20,-200);
+  cb(45,3,45,mat(0x223344,{flatShading:true}),200,38,-200);
   // Purple glow orbs
   for(let i=0;i<4;i++){
     const po=new THREE.Mesh(new THREE.SphereGeometry(3,6,5),new THREE.MeshBasicMaterial({color:0xaa44ff,transparent:true,opacity:0.8,blending:THREE.AdditiveBlending}));
-    po.position.set(CITY_X+200+(i%2)*20-10,cy+22,CITY_Z-200+(i<2?0:20));scene.add(po);
+    po.position.set(CITY_X+200+(i%2)*22-11,cy+28,CITY_Z-200+(i<2?0:22));scene.add(po);
   }
 
-  // ── Wizard Shop (NW) — dark tower with magic runes ──
-  cb(44,36,44,mat(0x1a0a2e,{flatShading:true}),-200,0,-200); // main tower
-  cb(46,4,46,mat(0x2a0a44,{flatShading:true}),-200,36,-200); // parapet ring
+  // ── Wizard Tower (NW) — tall 3-storey dark tower ──
+  cb(50,24,50,mat(0x1a0a2e,{flatShading:true}),-200,0,-200);  // floor 1
+  cb(46,22,46,mat(0x150828,{flatShading:true}),-200,24,-200); // floor 2
+  cb(40,20,40,mat(0x100620,{flatShading:true}),-200,46,-200); // floor 3 (narrowing)
+  cb(48,4,48,mat(0x2a0a44,{flatShading:true}),-200,66,-200);  // parapet
   // Pointy roof
-  const wizRoof=new THREE.Mesh(new THREE.ConeGeometry(24,22,8),mat(0x220044,{flatShading:true}));
-  wizRoof.position.set(CITY_X-200,cy+50,CITY_Z-200);scene.add(wizRoof);
-  // Rotating magic rings
+  const wizRoof=new THREE.Mesh(new THREE.ConeGeometry(26,28,8),mat(0x220044,{flatShading:true}));
+  wizRoof.position.set(CITY_X-200,cy+84,CITY_Z-200);scene.add(wizRoof);
+  // Rotating magic rings (taller now)
   for(let ri=0;ri<3;ri++){
-    const ring=new THREE.Mesh(new THREE.TorusGeometry(18+ri*4,0.5,5,16),new THREE.MeshBasicMaterial({color:[0xaa44ff,0x4488ff,0xff44aa][ri],transparent:true,opacity:0.75,blending:THREE.AdditiveBlending}));
-    ring.position.set(CITY_X-200,cy+28+ri*5,CITY_Z-200);ring.userData.wizRing=ri;scene.add(ring);
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(20+ri*5,0.6,5,16),new THREE.MeshBasicMaterial({color:[0xaa44ff,0x4488ff,0xff44aa][ri],transparent:true,opacity:0.75,blending:THREE.AdditiveBlending}));
+    ring.position.set(CITY_X-200,cy+40+ri*8,CITY_Z-200);ring.userData.wizRing=ri;scene.add(ring);
   }
   // Glowing orb at top
-  const wizOrb=new THREE.Mesh(new THREE.SphereGeometry(5,8,6),new THREE.MeshBasicMaterial({color:0xdd88ff,transparent:true,opacity:0.9,blending:THREE.AdditiveBlending}));
-  wizOrb.position.set(CITY_X-200,cy+62,CITY_Z-200);scene.add(wizOrb);
+  const wizOrb=new THREE.Mesh(new THREE.SphereGeometry(6,8,6),new THREE.MeshBasicMaterial({color:0xdd88ff,transparent:true,opacity:0.9,blending:THREE.AdditiveBlending}));
+  wizOrb.position.set(CITY_X-200,cy+98,CITY_Z-200);scene.add(wizOrb);
+  // Floor 2 and 3 windows glow
+  for(let wf=0;wf<6;wf++){
+    const wgw=new THREE.Mesh(new THREE.BoxGeometry(4,5,0.5),new THREE.MeshBasicMaterial({color:0xaa44ff,transparent:true,opacity:0.5,blending:THREE.AdditiveBlending}));
+    const wfAngle=wf/6*Math.PI*2;
+    wgw.position.set(CITY_X-200+Math.cos(wfAngle)*24,cy+32+((wf%2)*22),CITY_Z-200+Math.sin(wfAngle)*24);scene.add(wgw);
+  }
 
-  // ── Cookie Shop (SE) — cozy pink bakery ──
-  cb(44,20,44,mat(0xffaabb,{flatShading:true}),200,0,200); // main building
-  cb(48,4,48,mat(0xff88aa,{flatShading:true}),200,20,200); // awning ring
+  // ── Library (SE, opposite wizard) — grand stone hall ──
+  cb(80,22,60,mat(0x998877,{flatShading:true}),350,0,350);  // main hall
+  cb(78,20,58,mat(0x887766,{flatShading:true}),350,22,350); // 2nd floor
+  cb(82,4,62,mat(0x776655,{flatShading:true}),350,42,350);  // parapet
+  cb(82,3,62,mat(0x554433,{flatShading:true}),350,44,350);  // roof
+  // Pillars at entrance
+  [-28,-10,10,28].forEach(px=>{
+    cb(5,28,5,mat(0xaabb99,{flatShading:true}),350+px,0,322);
+  });
+  // Book sign (blue banner)
+  const libSign=new THREE.Mesh(new THREE.BoxGeometry(36,10,1),mat(0x336699,{flatShading:true}));
+  libSign.position.set(CITY_X+350,cy+30,CITY_Z+321);scene.add(libSign);
+
+  // ── Cookie Shop (SE near centre) — cozy pink bakery ──
+  cb(48,22,48,mat(0xffaabb,{flatShading:true}),200,0,200); // main building
+  cb(50,4,50,mat(0xff88aa,{flatShading:true}),200,22,200); // awning ring
   // Cookie sign (golden disc)
   const cookieSign=new THREE.Mesh(new THREE.CylinderGeometry(10,10,1.5,12),mat(0xddaa33,{flatShading:true}));
-  cookieSign.position.set(CITY_X+200,cy+26,CITY_Z+175);scene.add(cookieSign);
+  cookieSign.position.set(CITY_X+200,cy+28,CITY_Z+175);scene.add(cookieSign);
   // Chocolate chips on sign
   for(let ci=0;ci<6;ci++){
     const chip=new THREE.Mesh(new THREE.SphereGeometry(1.5,5,4),mat(0x442200,{flatShading:true}));
-    chip.position.set(CITY_X+200+(Math.cos(ci/6*Math.PI*2)*6),cy+28,CITY_Z+175+(Math.sin(ci/6*Math.PI*2)*6));scene.add(chip);
+    chip.position.set(CITY_X+200+(Math.cos(ci/6*Math.PI*2)*6),cy+30,CITY_Z+175+(Math.sin(ci/6*Math.PI*2)*6));scene.add(chip);
   }
   // Warm glow from windows
   for(let wi=0;wi<4;wi++){
     const wg=new THREE.Mesh(new THREE.BoxGeometry(5,5,0.5),new THREE.MeshBasicMaterial({color:0xffee88,transparent:true,opacity:0.6,blending:THREE.AdditiveBlending}));
-    wg.position.set(CITY_X+200+(wi<2?-16:16),cy+10,CITY_Z+200+(wi%2===0?-22:22));scene.add(wg);
+    wg.position.set(CITY_X+200+(wi<2?-18:18),cy+12,CITY_Z+200+(wi%2===0?-24:24));scene.add(wg);
   }
 
-  // ── Houses: 40 scattered houses ──
-  for(let i=0;i<40;i++){
-    const hx=(Math.random()-0.5)*1000,hz=(Math.random()-0.5)*1000;
-    if(Math.abs(hx)<120&&Math.abs(hz)<120)continue; // no house in plaza
-    cb(28,16,22,mat([0x886644,0x776655,0x998877,0x667788][i%4],{flatShading:true}),hx,0,hz);
-    cb(30,4,24,mat([0x993322,0x772211,0xaa4433][i%3],{flatShading:true}),hx,16,hz);
+  // ── Houses: 50 scattered houses, bigger ──
+  for(let i=0;i<50;i++){
+    const hx=(Math.random()-0.5)*1100,hz=(Math.random()-0.5)*1100;
+    if(Math.abs(hx)<130&&Math.abs(hz)<130)continue;
+    if(Math.abs(hx-350)<90&&Math.abs(hz-350)<70)continue; // clear library space
+    const hFloors=1+(i%3===0?1:0); // every 3rd house is 2-storey
+    cb(32,18,26,mat([0x886644,0x776655,0x998877,0x667788,0x775544][i%5],{flatShading:true}),hx,0,hz);
+    if(hFloors>1) cb(30,14,24,mat([0x775533,0x665544,0x887766][i%3],{flatShading:true}),hx,18,hz);
+    cb(34,5,28,mat([0x993322,0x772211,0xaa4433,0x883322][i%4],{flatShading:true}),hx,hFloors*16+2,hz);
   }
 
   g.userData={type:'city',isCity:true,safe:true,alive:true,hp:999999,maxHp:999999,radius:700};
@@ -2897,6 +2961,7 @@ function spawnGreatCity(){
     {q:'What magic do you sell?',a:'Seven schools of arcane power: Meteor Storm, Time Freeze, God Lightning, Soul Vortex, Mega Quake, Ice Age, and Fire God. Each costs 250-400 pts. Press [N] to cycle spells, [B] to buy & equip, [M] to cast!'},
     {q:'How do I cast spells?',a:'First buy a spell here with [B]. Then press [M] from anywhere in the world to unleash it! Spells last 6-10 seconds of devastating power. You can only have one spell equipped at a time.'},
     {q:'Are these safe to use near the city?',a:'...Probably. I would aim away from the cookie shop.'},
+    {q:'Who else studies magic here?',a:'My apprentices Lyra and Vorak guard the tower door. The librarian Eldris also knows ancient lore — seek her in the library to the east.'},
   ]});
   // Cookie shop keeper
   spawnCityNPC(CITY_X+200,CITY_Z+200,'Madame Crumble','Welcome to Madame Crumble\'s Cookie Emporium! 🍪\nOur legendary cookies grant 20 seconds of immortality, healing, and speed!\n\n[B] Buy a Cookie (200pts)','shopkeeper',{isCityCookieShop:true,choices:[
@@ -2905,7 +2970,53 @@ function spawnGreatCity(){
     {q:'Can I eat more than one?',a:'You can! But the effects don\'t stack — eating a second cookie simply refreshes the 20-second timer. So eat wisely, or eat immediately!'},
   ]});
 
-  // Citizens — wander & chatter
+  // ── Wizard at top of tower — sells magic books ──
+  spawnCityNPC(CITY_X-200,CITY_Z-200,'Grand Wizard Morthex','I am Morthex, Arch-Wizard of the High Tower. I have books of forbidden lore — for those worthy of knowledge.\n\n[B] Browse  [N] Next Book  [R] Read','shopkeeper',{isCityWizardBook:true,choices:[
+    {q:'Who are you?',a:'I have studied the arcane arts for three hundred years. Zephyrus is my student\'s student. I live at the top of this tower because the lower floors are beneath me — literally and philosophically.'},
+    {q:'What books do you sell?',a:'Only two volumes: the Codex of Shadows — the truth about the Princes of Death — and my own Wizard\'s Secret Tome. Both are essential. Both are dangerous. You have been warned.'},
+    {q:'Why are you at the top of the tower?',a:'The view. Also the ley lines converge at this altitude. Also I lost the stairs in a spell mishap and I refuse to admit it.'},
+  ]});
+  // ── Library keeper (SE, at library) ──
+  spawnCityNPC(CITY_X+350,CITY_Z+350,'Librarian Eldris','Welcome to the Grand Library! Ancient tomes, lore, and dragon knowledge.\n\n[B] Browse books','shopkeeper',{isCityLibrary:true,choices:[
+    {q:'What books do you have?',a:'Dragon Lore (200pts — reveals all dragon types), Battle Tactics (150pts — +10% melee dmg), Rider\'s Handbook (100pts), History of the Realm (80pts). Press [B] to browse!'},
+    {q:'What is the oldest book here?',a:'The Codex of Shadows — written by the first dragon riders 1,000 years ago. It speaks of the Princes of Death and their ancient pact with Shadow Dragons.'},
+    {q:'Do you know of Blane?',a:'Blane the Rider? Yes! He returned a rare volume on Shadow Dragons to us last winter. A serious man, but kind. He resides near Dragon Mountain, they say.'},
+    {q:'Can anyone learn magic from these books?',a:'The books grant insight, not raw power. For spells, see Zephyrus at the Wizard Tower to the northwest. But knowledge prepares the mind!'},
+  ]});
+
+  // ── Wizard tower guards — Mage apprentices ──
+  spawnCityNPC(CITY_X-220,CITY_Z-180,'Apprentice Lyra','I guard the Wizard Tower for Master Zephyrus. No unauthorised access beyond this point!','citizen',{choices:[
+    {q:'Can I go inside?',a:'Only if Zephyrus permits it. He\'s inside — press E on him to browse the arcane wares. I\'m here to keep the shadows out!'},
+    {q:'Are you learning magic?',a:'Three years as Zephyrus\'s apprentice. I can already summon minor lightning and read the runes of the Ancient Tongue. One day I\'ll have my own tower.'},
+    {q:'What\'s the most dangerous spell?',a:'Fire God, without question. I saw Zephyrus test it once on a mountain range to the north. The range... no longer exists.'},
+  ]});
+  spawnCityNPC(CITY_X-180,CITY_Z-220,'Apprentice Vorak','Another visitor to the tower? Zephyrus is busy with his research, but his wares are open.','citizen',{choices:[
+    {q:'What are you researching?',a:'I\'m studying shadow runes found near Dragon Mountain. The script predates the city — older than any kingdom. Fascinating and deeply unsettling.'},
+    {q:'Are the Princes of Death real?',a:'...I have seen their shadows in the runes. They are real. And they are coming. Do not tell the townspeople — it would cause a panic.'},
+    {q:'Can you teach me magic?',a:'See Zephyrus for that. My role is research, not instruction. Though I could point you toward the library — Eldris has texts on elemental theory.'},
+  ]});
+
+  // ── Library mage scholar ──
+  spawnCityNPC(CITY_X+340,CITY_Z+320,'Scholar Maren','The pursuit of knowledge is the highest calling. What brings you to the library?','citizen',{choices:[
+    {q:'What are you studying?',a:'The migration patterns of Shadow Dragons. They follow ley lines — invisible channels of dark energy in the earth. Dragon Mountain sits at their convergence.'},
+    {q:'Can I read the books freely?',a:'The public shelves are free to browse. The restricted section — behind the iron door — requires Eldris\'s approval. The Codex of Shadows is kept there.'},
+    {q:'Do you know any spells?',a:'A few defensive wards, nothing offensive. For battle magic, speak to Zephyrus. I prefer the quiet of the page to the chaos of combat.'},
+  ]});
+
+  // ── Named city guards near gate ──
+  spawnCityNPC(CITY_X-30,CITY_Z-580,'Captain Aldric','I am Captain Aldric, commander of the city guard. The city is under my protection!','citizen',{choices:[
+    {q:'What threats face the city?',a:'Shadow Dragons have been spotted to the north. And there are rumours of Princes of Death — dark riders on black dragons. We have doubled the watch.'},
+    {q:'How do I become a guard?',a:'Prove your worth in battle. Defeat enough enemies, collect shadow dust, and return here. We always need brave souls willing to face the dragon lords.'},
+    {q:'Do you know of Blane?',a:'Blane trained me personally, years ago! He roams the wilds near Dragon Mountain now. If you find him, tell him the captain says the city still stands — thanks to his teachings.'},
+  ]});
+  spawnCityNPC(CITY_X+30,CITY_Z-580,'Guard Petra','Halt! ...Oh, a visitor. Welcome to the Great City. Mind yourself near the market — pickpockets are bold today.','citizen',{choices:[
+    {q:'Any trouble today?',a:'Three shadow creatures were spotted beyond the east wall. The hunters drove them off, but they\'ll be back. Always are.'},
+    {q:'Where is the captain?',a:'Captain Aldric is usually near the north gate. If not there, check the tavern — the Golden Flagon is his second post, he jokes.'},
+  ]});
+
+  // ── Citizens — wander & chatter ──
+  const citizenNames=['Mira','Torin','Bela','Osin','Fara','Heck','Yula','Drem','Sola','Pax',
+    'Keth','Nila','Jorn','Vesa','Ruck','Thea','Oryn','Calla','Brand','Sera'];
   const citizenLines=[
     'Have you seen the dragon riders lately? Incredible sight!',
     'The market is busiest at sunrise. Come back then for the best deals.',
@@ -2917,25 +3028,44 @@ function spawnGreatCity(){
     'If you see a rider on a dragon flying over the city — report it to the guard!',
     'I would love to ride a dragon someday.',
     'The armor shop has new stock — go check it out!',
+    'Did you hear? A giant shadow was seen over the mountains last night.',
+    'The library has new arrivals — tomes from the eastern kingdom!',
+    'Zephyrus\'s magic rings spun backwards last night. Bad omen, the elders say.',
+    'My cousin saw Blane riding a dragon near Dragon Mountain. Incredible!',
+    'The city wall is thicker on the north side. We know where the threats come from.',
+    'I bought a dragon lance from the blacksmith. Saving up for the plate armor next.',
+    'Madame Crumble\'s cookies are magical — literally. I ran from a Shadow Dragon all the way back here without getting tired!',
+    'The Princes of Death are just a myth, the captain says. I hope he\'s right.',
+    'Apprentice Vorak looked very pale this morning. Something in those runes scared him.',
+    'The Golden Flagon serves the best stew this side of the volcano.',
   ];
-  for(let i=0;i<30;i++){
-    const cx2=CITY_X+(Math.random()-0.5)*1000;
-    const cz2=CITY_Z+(Math.random()-0.5)*1000;
-    spawnCityNPC(cx2,cz2,'Citizen '+(i+1),citizenLines[i%citizenLines.length],'citizen',{
-      isCitizen:true,wanderX:cx2,wanderZ:cz2,wanderR:60+Math.random()*80,wanderA:Math.random()*Math.PI*2,
-      choices:[{q:'Any news?',a:citizenLines[(i+3)%citizenLines.length]}],
+  for(let i=0;i<40;i++){
+    const cx2=CITY_X+(Math.random()-0.5)*1100;
+    const cz2=CITY_Z+(Math.random()-0.5)*1100;
+    const cname=citizenNames[i%citizenNames.length]+(i>=citizenNames.length?' the '+['Elder','Smith','Farmer','Merchant','Guard'][i%5]:'');
+    spawnCityNPC(cx2,cz2,cname,citizenLines[i%citizenLines.length],'citizen',{
+      isCitizen:true,wanderX:cx2,wanderZ:cz2,wanderR:60+Math.random()*90,wanderA:Math.random()*Math.PI*2,
+      choices:[{q:'Any news?',a:citizenLines[(i+7)%citizenLines.length]},{q:'What do you do here?',a:'I\'ve lived in the Great City all my life. '+ citizenLines[(i+2)%citizenLines.length]}],
     });
   }
 
-  // Hunters — hostile to dragon, friendly in human mode (40 posted around city)
+  // ── Hunters — wall patrol + inner city guards ──
   for(let i=0;i<40;i++){
-    const ha=(i/40)*Math.PI*2;const hr=500+Math.random()*80;
+    const ha=(i/40)*Math.PI*2;const hr=510+Math.random()*70;
     const hx=CITY_X+Math.cos(ha)*hr,hz=CITY_Z+Math.sin(ha)*hr;
     const h=spawnCityNPC(hx,hz,'City Hunter','I keep the city safe from rogue dragon raids!','hunter',{
       isCityHunter:true,shootT:0,shootRange:600,dmg:18,
     });
     h.userData.baseX=hx;h.userData.baseZ=hz;
   }
+  // Inner guards posted at key buildings
+  const innerGuardPosts=[[CITY_X-230,CITY_Z-230],[CITY_X+230,CITY_Z-230],[CITY_X+230,CITY_Z+230],[CITY_X-230,CITY_Z+230],[CITY_X,CITY_Z-430],[CITY_X,CITY_Z+430],[CITY_X+430,CITY_Z],[CITY_X-430,CITY_Z]];
+  innerGuardPosts.forEach(([gx,gz])=>{
+    const h=spawnCityNPC(gx,gz,'City Hunter','Stand down, dragon! This district is under guard.','hunter',{
+      isCityHunter:true,shootT:0,shootRange:500,dmg:16,
+    });
+    h.userData.baseX=gx;h.userData.baseZ=gz;
+  });
 
   floatWorld(new THREE.Vector3(CITY_X,cy+40,CITY_Z),'🏙 GREAT CITY — WELCOME!','#ffdd44');
 }
@@ -2943,6 +3073,8 @@ function spawnGreatCity(){
 // Cookie & Wizard state
 let cookieT=0; // seconds of cookie immortality/speed/heal buff remaining
 let wizardMagicT=0; // seconds of active wizard spell remaining
+let playerBooks=[]; // books the player has purchased from the library
+let readingBook=null; // book currently being read (overlay)
 let wizardMagicType=''; // which spell is active
 const WIZARD_SPELLS=[
   {id:'meteor_storm', name:'☄ Meteor Storm',   cost:300, desc:'Rain meteors on ALL enemies for 8s',      color:'#ff6600'},
@@ -2954,6 +3086,21 @@ const WIZARD_SPELLS=[
   {id:'fire_god',     name:'🔥 Fire God',       cost:400, desc:'Endless fire walls engulf all foes for 8s',color:'#ff2200'},
 ];
 let wizardSpellIdx=0; // which spell player currently has selected
+const CITY_BOOKS=[
+  {id:'dragon_lore',    name:'📖 Dragon Lore',       cost:200, bonus:'reveals_dragons',
+   lore:'DRAGON LORE — THE ANCIENT COMPENDIUM\n\nIn the age before memory, when the world was young and fire ran through the veins of the earth, the first dragons descended from the storms. Eight great clans were formed — Fire and Water, Earth and Nature, Air and Smoke, Lava and Ice, Thunder and Lightning, Sun and Soul, Bone and Acid, Metal and Glass.\n\nEach clan carved a mountain kingdom. Their kings ruled for centuries. Then the Shadow came — a darkness beyond the world — and the King Dragons fell one by one, their islands becoming ruin-shrines. Only their weapons remain, waiting for a rider strong enough to wield them.\n\nThe Shadow Dragons serve no king. They are shards of the darkness itself, hunters without end.'},
+  {id:'shadow_history', name:'📜 Codex of Shadows',  cost:350, bonus:'reveals_shadow',
+   lore:'CODEX OF SHADOWS — RESTRICTED VOLUME\n\nThe Princes of Death were once mortal riders — the greatest warriors of the old age. They made a pact with the Shadow: in exchange for eternal life, they would ride the shadow winds forever and harvest the life-force of the living.\n\nThey ride on dragon-shaped darkness. No arrow, sword, or spell can harm them. Only the one who holds all eight King Weapons — forged from the essence of the eight dragon clans — can challenge them.\n\nBlane knew this. He trained for a decade. He believes it is the only way. Find him at Dragon Mountain if you wish to follow this path.'},
+  {id:'battle_tactics', name:'⚔ Battle Tactics',     cost:150, bonus:'melee_boost',
+   lore:'BATTLE TACTICS — A WARRIOR\'S GUIDE\n\nChapter 1: The Dragon Rider\'s Advantage\nA rider mounted on a dragon is worth fifty soldiers on foot. Use speed and height — attack from above, never let your enemy dictate the angle of engagement.\n\nChapter 3: Shadow Creatures\nShadow creatures dissolve in strong light. Drive them toward open ground. Their dust — Shadow Dust — crystallises at death. It has powerful alchemical properties and can enhance weapons of legend.\n\nChapter 7: The King Dragons\nDo not engage a King Dragon alone the first time. Study its attacks. King Dragons have three phases — Patrol, Aggression, and Frenzy. Survive Frenzy and the battle is nearly won.'},
+  {id:'rider_handbook', name:'📗 Rider\'s Handbook',  cost:100, bonus:'none',
+   lore:'THE RIDER\'S HANDBOOK — STANDARD ISSUE\n\nCongratulations on your dragon bond. This handbook covers the basics.\n\n[T] — Toggle between dragon and human form. As a human, you may enter cities, speak to NPCs, and use shops.\n\n[E] — Interact with any friendly NPC in human form. This opens dialogue and shop menus.\n\n[B] — Browse/Buy when inside a shop dialogue. Some shops use [N] and [M] for additional options.\n\n[1][2][3] — Use your dragon\'s special attacks. Each attack type differs by dragon clan.\n\nStay alert. The world is vast and full of danger. Trust your dragon. Fly well.'},
+  {id:'realm_history',  name:'🏛 History of the Realm',cost:80, bonus:'none',
+   lore:'HISTORY OF THE REALM — POPULAR EDITION\n\nThe Great City was founded 600 years ago by refugees fleeing the Shadow War. Its walls have never been breached. Three kings, two queens, and one very surprised court jester have ruled from this seat.\n\nThe Dragon Mountain range to the north has always been sacred — a place where riders trained, dragons nested, and the boundary between our world and the Shadow Plane grew thin.\n\nBlane the Rider is the most celebrated hero of this generation. He single-handedly drove back the Shadow Siege of Year 487, using techniques only he understood. He retired to Dragon Mountain to continue his research. Some say he found something there. Something old. Something that cannot be undone.'},
+  {id:'wizards_tome',   name:'🔮 Wizard\'s Secret Tome',cost:300, bonus:'wizard_boost',
+   lore:'WIZARD\'S SECRET TOME — TOWER EDITION\n\nWritten by Zephyrus himself for his advanced students.\n\nOn Spell Theory: Magic is simply the universe correcting an imbalance you created. When you cast a Meteor Storm, you are not summoning meteors — you are persuading gravity to be enthusiastic in one specific location.\n\nOn Time Freeze: Time Freeze does not stop time. It makes everything else very, very convinced that it already has. The difference matters for the exam.\n\nOn Fire God: I should not have included this one. If you are reading this, please close the book. Put it back on the shelf. Walk away slowly. Do not look at the pages at the back.'},
+];
+let libraryBookIdx=0; // currently selected book at library
 // King Dragon islands orbit Dragon Mountain at r=1200, evenly spaced (min dist ~918u)
 const _KR=1200;
 const KING_RUINS_CFG=[
@@ -4987,7 +5134,7 @@ function openDialog(npc){
     if(armorLevel>0)txt+=`\nCurrent: ${ARMOR_TIERS[armorLevel-1].name} (+${ARMOR_TIERS.slice(0,armorLevel).reduce((s,t)=>s+t.hpBonus,0)} HP)`;
   }
   // Determine if this is a shopkeeper NPC
-  const isShopNPC=!!(npc.userData.isCityWeaponShop||npc.userData.isCityArmorShop||npc.userData.isCityHospital||npc.userData.isCityTavern||npc.userData.isCityPotionShop||npc.userData.isCityWizardShop||npc.userData.isCityCookieShop||npc.userData.isFoodShop||(npc.userData.npcName==='Blacksmith'));
+  const isShopNPC=!!(npc.userData.isCityWeaponShop||npc.userData.isCityArmorShop||npc.userData.isCityHospital||npc.userData.isCityTavern||npc.userData.isCityPotionShop||npc.userData.isCityWizardShop||npc.userData.isCityCookieShop||npc.userData.isCityLibrary||npc.userData.isCityWizardBook||npc.userData.isFoodShop||(npc.userData.npcName==='Blacksmith'));
   const dialogEl=document.getElementById('dialog');
   dialogEl.classList.toggle('shop-mode',isShopNPC);
   document.getElementById('dialog-name').textContent=npc.userData.npcName;
@@ -5000,7 +5147,8 @@ function openDialog(npc){
   else if(npc.userData.isCityHospital||npc.userData.isCityPotionShop){shelf.appendChild(mkItem('💊','HEAL'));shelf.appendChild(mkItem('🧪','POTION'));}
   else if(npc.userData.isCityTavern||npc.userData.isFoodShop){shelf.appendChild(mkItem('🍖','FOOD'));shelf.appendChild(mkItem('🍺','DRINK'));}
   else if(npc.userData.isCityWizardShop){shelf.appendChild(mkItem('🔮','MAGIC'));shelf.appendChild(mkItem('⚡','SPELL'));}
-  else if(npc.userData.isCityCookieShop){shelf.appendChild(mkItem('🍪','COOKIE'));shelf.appendChild(mkItem('✨','POWER'));}}
+  else if(npc.userData.isCityCookieShop){shelf.appendChild(mkItem('🍪','COOKIE'));shelf.appendChild(mkItem('✨','POWER'));}
+  else if(npc.userData.isCityLibrary||npc.userData.isCityWizardBook){shelf.appendChild(mkItem('📖','LORE'));shelf.appendChild(mkItem('📜','TOME'));shelf.appendChild(mkItem('🔮','MAGIC'));}}
   // Render conversation choices
   const choicesEl=document.getElementById('dialog-choices');
   choicesEl.innerHTML='';
@@ -5040,6 +5188,9 @@ function openDialog(npc){
   const isCityPotionShop=!!npc.userData.isCityPotionShop;
   const isCityWizardShop=!!npc.userData.isCityWizardShop;
   const isCityCookieShop=!!npc.userData.isCityCookieShop;
+  const isCityLibrary=!!npc.userData.isCityLibrary;
+  const isCityWizardBook=!!npc.userData.isCityWizardBook;
+  const isAnyBookShop=isCityLibrary||isCityWizardBook;
   // Build shop text for city shops
   if(isCityWeaponShop){
     const avail=CITY_WEAPONS.filter((_,i)=>i>=cityWeaponBought);
@@ -5056,6 +5207,13 @@ function openDialog(npc){
   if(isCityPotionShop)document.getElementById('dialog-text').textContent+='\n\n[ B ] Minor Heal (80pts +30HP) | [N] Greater Heal (200pts +80HP) | [M] Full Restore (500pts)';
   if(isCityWizardShop){const sp=WIZARD_SPELLS[wizardSpellIdx];document.getElementById('dialog-text').textContent+='\n\nSelected: '+sp.name+' ('+sp.cost+'pts) — '+sp.desc+'\n[B] Buy & Equip  [N] Next Spell  [M] Cast Now'+(wizardMagicT>0?' | Active: '+WIZARD_SPELLS.find(s=>s.id===wizardMagicType)?.name+' ('+~~wizardMagicT+'s)':'');}
   if(isCityCookieShop)document.getElementById('dialog-text').textContent+='\n\n🍪 Cookie — 200pts — 20s IMMORTALITY + HEAL + 3× SPEED\n[ B ] Buy & Eat'+(cookieT>0?' | 🍪 Active: '+~~cookieT+'s remaining':'');
+  function bookShopText(){
+    const pool=isCityWizardBook?CITY_BOOKS.filter(b=>b.id==='wizards_tome'||b.id==='shadow_history'):CITY_BOOKS;
+    const bk=pool[libraryBookIdx%pool.length];
+    const owned=playerBooks.includes(bk.id);
+    return '\n\n📚 Selected: '+bk.name+' — '+bk.cost+'pts\n'+(owned?'[R] Read  (owned)':'[B] Buy  [R] Preview')+'\n[N] Next Book\nOwned: '+playerBooks.length+'/'+pool.length+' books';
+  }
+  if(isAnyBookShop)document.getElementById('dialog-text').textContent+=bookShopText();
   const onKey=e=>{
     if(e.code==='KeyB'&&dialogOpen&&isBlane){
       if(blaneQuest==='inactive'){
@@ -5147,6 +5305,30 @@ function openDialog(npc){
         else{floatWorld(npc.position,'No spell equipped — press [B] to buy one','#aaaaaa');}
       }
     }
+    // Library / Wizard Book shop: N=Next Book, B=Buy, R=Read
+    if(dialogOpen&&isAnyBookShop){
+      const pool=isCityWizardBook?CITY_BOOKS.filter(b=>b.id==='wizards_tome'||b.id==='shadow_history'):CITY_BOOKS;
+      const bk=pool[libraryBookIdx%pool.length];
+      const owned=playerBooks.includes(bk.id);
+      if(e.code==='KeyN'){libraryBookIdx=(libraryBookIdx+1)%pool.length;document.getElementById('dialog-text').textContent=txt+bookShopText();}
+      if(e.code==='KeyB'&&!owned){
+        if(score>=bk.cost){score-=bk.cost;playerBooks.push(bk.id);floatWorld(npc.position,'📖 '+bk.name+' purchased!','#aaddff');document.getElementById('dialog-text').textContent=txt+bookShopText();}
+        else{floatWorld(npc.position,'❌ Need '+bk.cost+' pts','#ff4444');}
+      }
+      if(e.code==='KeyR'){
+        // Open book reading overlay
+        let bookOv=document.getElementById('book-overlay');
+        if(!bookOv){bookOv=document.createElement('div');bookOv.id='book-overlay';bookOv.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.88);z-index:9999;display:flex;align-items:center;justify-content:center;';
+          const inner=document.createElement('div');inner.style.cssText='max-width:420px;max-height:80vh;overflow-y:auto;background:#221a0a;border:2px solid #885522;padding:18px;border-radius:6px;font-size:.28rem;color:#f0d8a0;line-height:1.7;white-space:pre-wrap;font-family:monospace;';
+          inner.id='book-inner';bookOv.appendChild(inner);
+          const closeBtn=document.createElement('div');closeBtn.textContent='[ E ] Close Book';closeBtn.style.cssText='position:absolute;top:12px;right:16px;color:#ffaa44;font-size:.28rem;cursor:pointer;';
+          closeBtn.onclick=()=>{bookOv.style.display='none';readingBook=null;};bookOv.appendChild(closeBtn);
+          document.body.appendChild(bookOv);}
+        document.getElementById('book-inner').textContent=bk.lore;
+        bookOv.style.display='flex';
+        readingBook=bk.id;
+      }
+    }
     if(e.code==='KeyB'&&dialogOpen&&isSmith&&armorLevel<3){
       const tier=ARMOR_TIERS[armorLevel];
       if(score>=tier.cost&&mageOrbs>=tier.orbs&&shadowDust>=tier.dust){
@@ -5170,6 +5352,9 @@ function closeDialog(){
   dialogEl.style.display='none';
   dialogEl.classList.remove('shop-mode');
   document.getElementById('dialog-choices').innerHTML='';
+  const bookOv=document.getElementById('book-overlay');
+  if(bookOv)bookOv.style.display='none';
+  readingBook=null;
   if(isHuman&&canvas.requestPointerLock)canvas.requestPointerLock();
 }
 function isMob(){return'ontouchstart'in window||navigator.maxTouchPoints>0;}
@@ -5402,6 +5587,20 @@ function update(ts){
       }
     }
 
+    // ── CITY GATE — dragon cannot enter city walls; human can ──
+    if(greatCitySpawned&&!isHuman){
+      const cx=dragonMesh.position.x-CITY_X,cz=dragonMesh.position.z-CITY_Z;
+      const WALL_R2=630;
+      // Push dragon out if inside the wall rectangle (not from above — must stay below wall height)
+      if(Math.abs(cx)<WALL_R2&&Math.abs(cz)<WALL_R2&&dragonMesh.position.y<60){
+        // find nearest wall face to push to
+        const pushX=cx>=0?WALL_R2-cx:-(WALL_R2+cx);
+        const pushZ=cz>=0?WALL_R2-cz:-(WALL_R2+cz);
+        if(Math.abs(pushX)<Math.abs(pushZ)){dragonMesh.position.x+=pushX;}
+        else{dragonMesh.position.z+=pushZ;}
+        floatWorld(dragonMesh.position.clone().add(new THREE.Vector3(0,8,0)),'⛩ Dragon Form Forbidden — DISMOUNT [T]','#ff8844');
+      }
+    }
     // ── KING ISLAND TRAP — cannot leave while boss is alive ──
     for(const e of activeEnemies){
       if(!e.userData.isKingDragon||!e.userData.alive)continue;

@@ -5376,7 +5376,7 @@ function update(ts){
     if(mk.human){mk.human=false;if(!dialogOpen&&!mapOpen)toggleHumanMode();}
     if(mk.map){mk.map=false;if(!dialogOpen)toggleWorldMap();}
     if(mk.jump){mk.jump=false;if(isHuman&&humanMesh){keys['KeyJ']=true;setTimeout(()=>{delete keys['KeyJ'];},120);}}
-    if(mk.elemCloud){mk.elemCloud=false;if(!isHuman&&!isLanded){keys['KeyF']=true;setTimeout(()=>{delete keys['KeyF'];},120);}}
+    if(mk.elemCloud){mk.elemCloud=false;if(!isHuman){keys['KeyF']=true;setTimeout(()=>{delete keys['KeyF'];},120);}}
     if(mk.elemBite){mk.elemBite=false;if(!isHuman&&!isLanded){keys['KeyX']=true;setTimeout(()=>{delete keys['KeyX'];},120);}}
     if(mk.heal){mk.heal=false;if(!isHuman&&dtype.id==='nature'){keys['KeyH']=true;setTimeout(()=>{delete keys['KeyH'];},120);}}
     if(mk.freeze){mk.freeze=false;if(!isHuman&&dtype.id==='ice'){keys['KeyV']=true;setTimeout(()=>{delete keys['KeyV'];},120);}}

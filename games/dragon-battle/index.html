@@ -5434,6 +5434,8 @@ function update(ts){
         activeEnemies.forEach(en=>{if(en.mesh&&en.userData){hitEnemy(en,90+Math.random()*50,wPos);spawnAbilityCloud(en.mesh.position.clone(),0xff2200,16,0.6);}});
       }
     }
+    // Army dragon passive regen: 80% maxHp per 5s = 16% per second
+    for(const ga of dragonArmy){if(!ga.mesh||!ga.mesh.userData.alive)continue;const mhp=ga.mesh.userData.maxHp||200;ga.mesh.userData.hp=Math.min(mhp,ga.mesh.userData.hp+mhp*0.16*dt);}
     // Ghost dragon lifetime
     for(let gi=dragonArmy.length-1;gi>=0;gi--){const ga=dragonArmy[gi];if(!ga.isGhost)continue;if(ga.mesh.userData.ghostLife!==undefined)ga.mesh.userData.ghostLife-=dt;if((ga.mesh.userData.ghostLife||0)<=0){scene.remove(ga.mesh);dragonArmy.splice(gi,1);}}
     // Burn DoT
@@ -5570,7 +5572,8 @@ function update(ts){
           if(!a.mesh||!a.mesh.userData.alive)continue;
           if(e.userData.attackT<=0&&e.position.distanceTo(a.mesh.position)<18){
             e.userData.attackT=1.2;
-            a.mesh.userData.hp=Math.max(1,a.mesh.userData.hp-e.userData.dmg);
+            a.mesh.userData.hp-=e.userData.dmg;
+            if(a.mesh.userData.hp<=0)a.mesh.userData.alive=false;
           }
         }
         // Bite the King Dragon too if close (serpents don't respect royalty)
@@ -5631,7 +5634,7 @@ function update(ts){
           // Knockback + damage every enemy and player within 120u
           const rPos=e.position;
           activeEnemies.forEach(ae=>{if(!ae.userData.alive||ae===e)return;if(rPos.distanceTo(ae.position)<120){hitEnemy(ae,e.userData.dmg*0.5);}});
-          dragonArmy.forEach(a=>{if(!a.mesh.userData.alive)return;if(rPos.distanceTo(a.mesh.position)<120){a.mesh.userData.hp=Math.max(1,a.mesh.userData.hp-e.userData.dmg*0.5);}});
+          dragonArmy.forEach(a=>{if(!a.mesh.userData.alive)return;if(rPos.distanceTo(a.mesh.position)<120){a.mesh.userData.hp-=e.userData.dmg*0.5;if(a.mesh.userData.hp<=0)a.mesh.userData.alive=false;}});
           if(dist<120){
             // knock player back
             const away=new THREE.Vector3().subVectors(ref,rPos).normalize().multiplyScalar(40);
@@ -5682,7 +5685,7 @@ function update(ts){
           else{const dmg=humanShielding?e.userData.dmg*0.15*2.5:e.userData.dmg*2.5;dhp-=dmg;if(dhp<=0&&!ddead){ddead=true;dhp=0;}}
           dinvT=0.6;
           // Also injure nearby army
-          dragonArmy.forEach(a=>{if(!a.mesh.userData.alive)return;if(e.position.distanceTo(a.mesh.position)<50){a.mesh.userData.hp=Math.max(1,a.mesh.userData.hp-e.userData.dmg*1.5);}});
+          dragonArmy.forEach(a=>{if(!a.mesh.userData.alive)return;if(e.position.distanceTo(a.mesh.position)<50){a.mesh.userData.hp-=e.userData.dmg*1.5;if(a.mesh.userData.hp<=0)a.mesh.userData.alive=false;}});
         }
 
         // ── TAIL SWEEP — 180° arc behind/beside king, hits army + player ──
@@ -5715,7 +5718,7 @@ function update(ts){
           // Sweep nearby army
           dragonArmy.forEach(a=>{
             if(!a.mesh.userData.alive)return;
-            if(e.position.distanceTo(a.mesh.position)<55){a.mesh.userData.hp=Math.max(1,a.mesh.userData.hp-e.userData.dmg*1.5);floatWorld(a.mesh.position,'💥','#ff8800');}
+            if(e.position.distanceTo(a.mesh.position)<55){a.mesh.userData.hp-=e.userData.dmg*1.5;if(a.mesh.userData.hp<=0)a.mesh.userData.alive=false;floatWorld(a.mesh.position,'💥','#ff8800');}
           });
         }
 
@@ -5740,7 +5743,7 @@ function update(ts){
             floatWorld(e.position.clone().add(new THREE.Vector3(0,14,0)),'☣ SPORE BURST!','#44ff44');
             spawnAbilityCloud(ref.clone(),0x44ff44,100,2.5);
             activeEnemies.forEach(ae=>{if(!ae.userData.alive||ae===e)return;if(e.position.distanceTo(ae.position)<150){poisonMap.set(ae,8);}});
-            dragonArmy.forEach(a=>{if(!a.mesh.userData.alive)return;if(e.position.distanceTo(a.mesh.position)<150){a.mesh.userData.hp=Math.max(1,a.mesh.userData.hp-e.userData.dmg*2);}});
+            dragonArmy.forEach(a=>{if(!a.mesh.userData.alive)return;if(e.position.distanceTo(a.mesh.position)<150){a.mesh.userData.hp-=e.userData.dmg*2;if(a.mesh.userData.hp<=0)a.mesh.userData.alive=false;}});
             if(dist<150){poisonMap&&poisonMap.set&&(()=>{})(); dhp-=e.userData.dmg*2;floatWorld(ref.clone().add(new THREE.Vector3(0,6,0)),'☣','#44ff44');}
           } else if(eid==='air_smoke'){
             // Tornado pull — sucks player in then blasts outward
@@ -5846,7 +5849,7 @@ function update(ts){
         if(e.userData.eTailT<=0&&edist<60){
           e.userData.eTailT=5+Math.random()*3;
           for(let ti=0;ti<8;ti++){const ta=ti/8*Math.PI*2;spawnAbilityCloud(e.position.clone().add(new THREE.Vector3(Math.cos(ta)*15,0,Math.sin(ta)*15)),0xff4400,12,0.4);}
-          dragonArmy.forEach(a=>{if(!a.mesh.userData.alive)return;if(e.position.distanceTo(a.mesh.position)<45){a.mesh.userData.hp=Math.max(1,a.mesh.userData.hp-e.userData.dmg);}});
+          dragonArmy.forEach(a=>{if(!a.mesh.userData.alive)return;if(e.position.distanceTo(a.mesh.position)<45){a.mesh.userData.hp-=e.userData.dmg;if(a.mesh.userData.hp<=0)a.mesh.userData.alive=false;}});
           if(edist<45){if(isHuman){humanHP-=e.userData.dmg*1.5;if(humanHP<=0&&!ddead){ddead=true;humanHP=0;endGame();}}else{dhp-=e.userData.dmg*1.5;}dinvT=0.4;floatWorld(ref2.clone().add(new THREE.Vector3(0,6,0)),'💥','#ff8800');}
         }
         e.userData.eRoarT-=dt;
@@ -5854,7 +5857,7 @@ function update(ts){
           e.userData.eRoarT=8+Math.random()*4;
           spawnAbilityCloud(e.position.clone(),0xff4400,45,1.0);
           floatWorld(e.position.clone().add(new THREE.Vector3(0,8,0)),'🔥','#ff4400');
-          dragonArmy.forEach(a=>{if(!a.mesh.userData.alive)return;if(e.position.distanceTo(a.mesh.position)<80){a.mesh.userData.hp=Math.max(1,a.mesh.userData.hp-e.userData.dmg*0.5);}});
+          dragonArmy.forEach(a=>{if(!a.mesh.userData.alive)return;if(e.position.distanceTo(a.mesh.position)<80){a.mesh.userData.hp-=e.userData.dmg*0.5;if(a.mesh.userData.hp<=0)a.mesh.userData.alive=false;}});
           if(edist<80){if(isHuman){humanHP-=e.userData.dmg;if(humanHP<=0&&!ddead){ddead=true;humanHP=0;endGame();}}else{dhp-=e.userData.dmg;}dinvT=0.3;}
         }
       }
@@ -5871,7 +5874,7 @@ function update(ts){
           floatWorld(e.position.clone().add(new THREE.Vector3(0,18,0)),'💀 DEATH ROAR!','#880000');
           spawnAbilityCloud(e.position.clone(),0x880000,100,2.0);spawnAbilityCloud(e.position.clone(),0xff0000,70,1.4);
           activeEnemies.forEach(ae=>{if(!ae.userData.alive||ae===e)return;if(e.position.distanceTo(ae.position)<150)hitEnemy(ae,e.userData.dmg);});
-          dragonArmy.forEach(a=>{if(!a.mesh.userData.alive)return;if(e.position.distanceTo(a.mesh.position)<150){a.mesh.userData.hp=Math.max(1,a.mesh.userData.hp-e.userData.dmg);floatWorld(a.mesh.position,'💀','#ff0000');}});
+          dragonArmy.forEach(a=>{if(!a.mesh.userData.alive)return;if(e.position.distanceTo(a.mesh.position)<150){a.mesh.userData.hp-=e.userData.dmg;if(a.mesh.userData.hp<=0)a.mesh.userData.alive=false;floatWorld(a.mesh.position,'💀','#ff0000');}});
           if(dist<150){const away=new THREE.Vector3().subVectors(ref,e.position).normalize().multiplyScalar(55);ref.add(away);if(isHuman){humanHP-=e.userData.dmg*9;if(humanHP<=0&&!ddead){ddead=true;humanHP=0;endGame();}}else{dhp-=e.userData.dmg*9;}dinvT=0.5;}
         }
         // ── Bite ──
@@ -5882,7 +5885,7 @@ function update(ts){
           spawnBeamFX(e.position.clone().add(new THREE.Vector3(0,4,0)),ref.clone(),0xff0000);
           spawnAbilityCloud(ref.clone(),0xff0000,30,0.8);
           if(isHuman){humanHP-=e.userData.dmg*10;if(humanHP<=0&&!ddead){ddead=true;humanHP=0;endGame();}}else{const dmg=humanShielding?e.userData.dmg*0.15*10:e.userData.dmg*10;dhp-=dmg;if(dhp<=0&&!ddead){ddead=true;dhp=0;}}
-          dragonArmy.forEach(a=>{if(!a.mesh.userData.alive)return;if(e.position.distanceTo(a.mesh.position)<60)a.mesh.userData.hp=Math.max(1,a.mesh.userData.hp-e.userData.dmg*2);});
+          dragonArmy.forEach(a=>{if(!a.mesh.userData.alive)return;if(e.position.distanceTo(a.mesh.position)<60){a.mesh.userData.hp-=e.userData.dmg*2;if(a.mesh.userData.hp<=0)a.mesh.userData.alive=false;}});
           dinvT=0.7;
         }
         // ── Tail sweep ──

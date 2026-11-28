@@ -2754,6 +2754,9 @@ function spawnGreatCity(){
   const wall=mat(0xaabb99,{flatShading:true});
   const gold=mat(0xddaa33,{flatShading:true});
 
+  // City floor / ground plane
+  cb(1400,2,1400,mat(0x778866,{flatShading:true}),0,-1,0);
+
   // City wall perimeter
   for(let i=0;i<36;i++){
     const a=i/36*Math.PI*2;const r=600;
@@ -2864,39 +2867,39 @@ function spawnGreatCity(){
   }
 
   // Weapon shop keeper
-  spawnCityNPC(CITY_X,cy+1,CITY_Z-250,'Welcome to my forge! I sell the finest blades.\n\n[B] Browse weapons','shopkeeper',{isCityWeaponShop:true,choices:[
+  spawnCityNPC(CITY_X,CITY_Z-250,'Blacksmith','Welcome to my forge! I sell the finest blades.\n\n[B] Browse weapons','shopkeeper',{isCityWeaponShop:true,choices:[
     {q:'What do you sell?',a:'Iron Sword (150pts), Steel Blade (400pts), Dragon Lance (900pts). Each upgrades your melee damage. Press [B] in this dialog to browse!'},
     {q:'Are these for dragon riders?',a:'Any warrior with coin! But dragon riders tell me the blades help even when mounted.'},
   ]});
   // Armor shop keeper
-  spawnCityNPC(CITY_X,cy+1,CITY_Z+250,'Strong armor for brave souls!\n\n[B] Browse armor','shopkeeper',{isCityArmorShop:true,choices:[
+  spawnCityNPC(CITY_X,CITY_Z+250,'Armorer','Strong armor for brave souls!\n\n[B] Browse armor','shopkeeper',{isCityArmorShop:true,choices:[
     {q:'What armor do you have?',a:'Leather Vest (120pts +30HP), Chain Mail (350pts +70HP), Plate Armor (800pts +140HP). Press [B] to buy.'},
   ]});
   // Doctor / hospital
-  spawnCityNPC(CITY_X+250,cy+1,CITY_Z,'The city hospital — we heal all wounds.\n\n[B] Buy healing','shopkeeper',{isCityHospital:true,choices:[
+  spawnCityNPC(CITY_X+250,CITY_Z,'Healer','The city hospital — we heal all wounds.\n\n[B] Buy healing','shopkeeper',{isCityHospital:true,choices:[
     {q:'How do I heal?',a:'Press [B] here to buy healing items. We have Minor Heal (80pts), Greater Heal (200pts), or Full Restore (500pts).'},
     {q:'Can you heal my dragon?',a:'Your bond with your dragon means your healing transfers to them too. Buy the Full Restore if your dragon is low!'},
   ]});
   // Tavern keeper
-  spawnCityNPC(CITY_X-250,cy+1,CITY_Z,'Welcome to the Golden Flagon! Food, drink, tales!\n\n[B] Buy food','shopkeeper',{isCityTavern:true,choices:[
+  spawnCityNPC(CITY_X-250,CITY_Z,'Tavern Keeper','Welcome to the Golden Flagon! Food, drink, tales!\n\n[B] Buy food','shopkeeper',{isCityTavern:true,choices:[
     {q:'What news?',a:'Strange dark shapes were seen flying south — giant black dragons with glowing eyes. The Princes of Death, some say. The city guard doubled the hunters on the walls.'},
     {q:'Do you know of Blane?',a:'The legendary rider Blane? Of course! He trained half the riders in this city. If you find him, tell him the Flagon still has his favourite table.'},
     {q:'What food do you serve?',a:'Bread (30pts, +15HP), Hearty Stew (60pts, +35HP), or the full Feast (150pts, +100HP). Press [B] to order!'},
   ]});
   // Potion seller
-  spawnCityNPC(CITY_X+200,cy+1,CITY_Z-200,'Potions, elixirs, and rare draughts!\n\n[B] Browse potions','shopkeeper',{isCityPotionShop:true,choices:[
+  spawnCityNPC(CITY_X+200,CITY_Z-200,'Alchemist','Potions, elixirs, and rare draughts!\n\n[B] Browse potions','shopkeeper',{isCityPotionShop:true,choices:[
     {q:'What potions do you have?',a:'Minor Heal (80pts +30HP), Greater Heal (200pts +80HP), and the legendary Full Restore (500pts — full HP). Press [B] to buy.'},
     {q:'Do potions work on dragons?',a:'Yes! When you are bonded to your dragon, whatever heals you heals it.'},
   ]});
 
   // Wizard Shop keeper
-  spawnCityNPC(CITY_X-200,cy+1,CITY_Z-200,'I am Zephyrus, arcane master of the city! I sell forbidden magic.\n\n[B] Browse spells  [N] Next spell  [M] Cast active spell','shopkeeper',{isCityWizardShop:true,choices:[
+  spawnCityNPC(CITY_X-200,CITY_Z-200,'Zephyrus','I am Zephyrus, arcane master of the city! I sell forbidden magic.\n\n[B] Browse spells  [N] Next spell  [M] Cast active spell','shopkeeper',{isCityWizardShop:true,choices:[
     {q:'What magic do you sell?',a:'Seven schools of arcane power: Meteor Storm, Time Freeze, God Lightning, Soul Vortex, Mega Quake, Ice Age, and Fire God. Each costs 250-400 pts. Press [N] to cycle spells, [B] to buy & equip, [M] to cast!'},
     {q:'How do I cast spells?',a:'First buy a spell here with [B]. Then press [M] from anywhere in the world to unleash it! Spells last 6-10 seconds of devastating power. You can only have one spell equipped at a time.'},
     {q:'Are these safe to use near the city?',a:'...Probably. I would aim away from the cookie shop.'},
   ]});
   // Cookie shop keeper
-  spawnCityNPC(CITY_X+200,cy+1,CITY_Z+200,'Welcome to Madame Crumble\'s Cookie Emporium! 🍪\nOur legendary cookies grant 20 seconds of immortality, healing, and speed!\n\n[B] Buy a Cookie (200pts)','shopkeeper',{isCityCookieShop:true,choices:[
+  spawnCityNPC(CITY_X+200,CITY_Z+200,'Madame Crumble','Welcome to Madame Crumble\'s Cookie Emporium! 🍪\nOur legendary cookies grant 20 seconds of immortality, healing, and speed!\n\n[B] Buy a Cookie (200pts)','shopkeeper',{isCityCookieShop:true,choices:[
     {q:'What do cookies do?',a:'For 20 glorious seconds: you cannot die (complete immortality!), your HP heals 5 per second, and your dragon flies at triple speed. That\'s the Crumble Guarantee!'},
     {q:'Are these really magic cookies?',a:'Ancient recipe, passed down from the Dragon Witches of the Eastern Peaks. Each cookie contains crystallised starlight and three drops of phoenix tears. Completely delicious.'},
     {q:'Can I eat more than one?',a:'You can! But the effects don\'t stack — eating a second cookie simply refreshes the 20-second timer. So eat wisely, or eat immediately!'},
@@ -2918,7 +2921,7 @@ function spawnGreatCity(){
   for(let i=0;i<30;i++){
     const cx2=CITY_X+(Math.random()-0.5)*1000;
     const cz2=CITY_Z+(Math.random()-0.5)*1000;
-    spawnCityNPC(cx2,groundY(cx2,cz2)+1,cz2,'Citizen '+(i+1),citizenLines[i%citizenLines.length],'citizen',{
+    spawnCityNPC(cx2,cz2,'Citizen '+(i+1),citizenLines[i%citizenLines.length],'citizen',{
       isCitizen:true,wanderX:cx2,wanderZ:cz2,wanderR:60+Math.random()*80,wanderA:Math.random()*Math.PI*2,
       choices:[{q:'Any news?',a:citizenLines[(i+3)%citizenLines.length]}],
     });
@@ -2928,7 +2931,7 @@ function spawnGreatCity(){
   for(let i=0;i<40;i++){
     const ha=(i/40)*Math.PI*2;const hr=500+Math.random()*80;
     const hx=CITY_X+Math.cos(ha)*hr,hz=CITY_Z+Math.sin(ha)*hr;
-    const h=spawnCityNPC(hx,groundY(hx,hz)+1,hz,'City Hunter','I keep the city safe from rogue dragon raids!','hunter',{
+    const h=spawnCityNPC(hx,hz,'City Hunter','I keep the city safe from rogue dragon raids!','hunter',{
       isCityHunter:true,shootT:0,shootRange:600,dmg:18,
     });
     h.userData.baseX=hx;h.userData.baseZ=hz;
@@ -4125,6 +4128,12 @@ document.addEventListener('keydown',e=>{
       }
     }
     if(e.code==='KeyQ'&&!dialogOpen)useKingWeapon();
+    // ! = Teleport to city
+    if(e.key==='!'&&!dialogOpen){
+      const ref=isHuman&&humanMesh?humanMesh:dragonMesh;
+      ref.position.set(CITY_X,isHuman?2:30,CITY_Z);
+      floatWorld(new THREE.Vector3(CITY_X,isHuman?10:40,CITY_Z),'🏙 GREAT CITY','#ffdd44');
+    }
     // ? = Help overlay
     if((e.key==='?'||e.code==='Slash'&&e.shiftKey)){
       const ho=document.getElementById('help-overlay');

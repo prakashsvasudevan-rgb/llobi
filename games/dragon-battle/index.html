@@ -1809,6 +1809,8 @@ function buildingFloorY(x,z){
   if(Math.abs(x-(CITY_X-150))<20&&Math.abs(z-(CITY_Z-5300))<18)return BFY; // guard barracks
   if(Math.abs(x-(CITY_X+160))<20&&Math.abs(z-(CITY_Z-5400))<18)return BFY; // scholar's house
   if(Math.abs(x-(CITY_X-160))<20&&Math.abs(z-(CITY_Z-5500))<18)return BFY; // merchant's house
+  // 20 random house pockets at CITY_Z-5600 to CITY_Z-7120 step 80
+  for(let _i=0;_i<20;_i++){if(Math.abs(z-(CITY_Z-5600-_i*80))<20)return BFY;}
   return null;
 }
 
@@ -2966,22 +2968,34 @@ function spawnGreatCity(){
     wg.position.set(CITY_X+200+(wi<2?-18:18),cy+12,CITY_Z+200+(wi%2===0?-24:24));scene.add(wg);
   }
 
-  // ── Houses: 50 scattered houses with visible doors ──
+  // ── Houses: 50 scattered houses with visible doors, first 20 enterable ──
+  // Seeded random so pocket Z indices match positions every load
+  let _hs=42;function _sr(){_hs=(_hs*1664525+1013904223)&0xffffffff;return((_hs>>>0)/0xffffffff);}
+  const housePositions=[];
   for(let i=0;i<50;i++){
-    const hx=(Math.random()-0.5)*1100,hz=(Math.random()-0.5)*1100;
-    if(Math.abs(hx)<130&&Math.abs(hz)<130)continue;
-    if(Math.abs(hx+200)<90&&Math.abs(hz+340)<70)continue; // clear library space
+    const hx=(_sr()-0.5)*1100,hz=(_sr()-0.5)*1100;
+    if(Math.abs(hx)<130&&Math.abs(hz)<130){i--;continue;}
+    if(Math.abs(hx+200)<90&&Math.abs(hz+340)<70){i--;continue;}
+    housePositions.push({hx,hz});
+  }
+  housePositions.forEach(({hx,hz},i)=>{
     const hFloors=1+(i%3===0?1:0);
     cb(32,18,26,mat([0x886644,0x776655,0x998877,0x667788,0x775544][i%5],{flatShading:true}),hx,0,hz);
     if(hFloors>1) cb(30,14,24,mat([0x775533,0x665544,0x887766][i%3],{flatShading:true}),hx,18,hz);
     cb(34,5,28,mat([0x993322,0x772211,0xaa4433,0x883322][i%4],{flatShading:true}),hx,hFloors*16+2,hz);
     // Door on south face of every house
-    cb(7,10,1,mat(0x553311,{flatShading:true}),hx,0,hz+13);  // door frame
-    cb(5,9,0.5,mat(0x7a4a1e,{flatShading:true}),hx,0,hz+13.5); // door panel
+    cb(7,10,1,mat(0x553311,{flatShading:true}),hx,0,hz+13);
+    cb(5,9,0.5,mat(0x7a4a1e,{flatShading:true}),hx,0,hz+13.5);
     // Window glow
     const wgH=new THREE.Mesh(new THREE.BoxGeometry(5,4,0.4),new THREE.MeshBasicMaterial({color:0xffee88,transparent:true,opacity:0.45,blending:THREE.AdditiveBlending}));
     wgH.position.set(CITY_X+hx+8,cy+10,CITY_Z+hz+13);scene.add(wgH);
-  }
+    // First 20 houses are enterable — pocket at CITY_Z-5600 to CITY_Z-5600-19*80
+    if(i<20){
+      const pz=CITY_Z-5600-i*80;
+      cityDoors.push({name:'House',enterPos:{x:CITY_X+hx,y:BFY+1.5,z:pz},exitPos:{x:CITY_X+hx,y:cy+1.5,z:CITY_Z+hz+18},checkX:CITY_X+hx,checkZ:CITY_Z+hz+13.5,checkR:10,hintText:'[ B ] Enter House'});
+      cityDoors.push({name:'EXIT House',isExit:true,exitPos:{x:CITY_X+hx,y:cy+1.5,z:CITY_Z+hz+18},checkX:CITY_X+hx,checkZ:pz+10,checkR:10,hintText:'[ B ] Exit House'});
+    }
+  });
 
   // ── 3 named enterable houses at fixed positions ──
   const namedHouses=[
@@ -3426,6 +3440,36 @@ function spawnGreatCity(){
     'Come in! I\'m taking stock. The shadow raids have disrupted the trade routes terribly.',
     [{q:'How is trade these days?',a:'Dreadful. The northern roads have been closed for three months — shadow creatures attack caravans. I\'ve switched to ocean routes but the sea dragons make that risky too. Business is... challenging.'},
      {q:'What do you sell?',a:'Rare goods from across the realm — spices, dyes, instruments. If you need anything specific, tell me. I still have contacts even when the roads are shut. It costs extra, but it gets done.'}]);
+
+  // ── Generic interiors for the 20 enterable random houses ──
+  {
+    const resNames=['Anna','Bren','Corin','Dara','Edric','Fyla','Gorn','Hesta','Ivar','Jola','Keld','Lysa','Mira','Nort','Olda','Pera','Rand','Syla','Tova','Urso'];
+    const resLines=['Just a simple home. Make yourself welcome.','Mind the step — it\'s been loose for years.','Come in, come in. Tea?','I wasn\'t expecting visitors!','Good to see a friendly face.','Careful — my cat sleeps right there.','Don\'t mind the mess.','Welcome, traveller.','Sit, sit! You look tired.','The city\'s busy lately, yes?'];
+    housePositions.forEach(({hx,hz},i)=>{
+      if(i>=20)return;
+      const pz=CITY_Z-5600-i*80;
+      const wx=CITY_X+hx,wz=pz;
+      // Simple room: floor, 4 walls, ceiling
+      function hb(w,h,d,c,ox,oy,oz){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(c,{flatShading:true}));m.position.set(wx+ox,BFY+oy,wz+oz);scene.add(m);}
+      hb(32,0.4,26,0x887755,0,0,0);   // floor
+      hb(32,0.4,26,0x665544,0,12,0);  // ceiling
+      hb(0.4,12,26,0x776655,-16,6,0); // west wall
+      hb(0.4,12,26,0x776655,16,6,0);  // east wall
+      hb(32,12,0.4,0x665544,0,6,-13); // north wall
+      hb(32,12,0.4,0x665544,0,6,13);  // south wall (door gap)
+      // Fireplace
+      hb(5,6,2,0x554433,10,3,-11);hb(3,0.5,1.5,0xdd5500,10,6.3,-11);
+      // Table + chairs
+      hb(8,0.5,5,0x886644,0,4,2);hb(1.5,3,1.5,0x775533,-3,1.5,2);hb(1.5,3,1.5,0x775533,3,1.5,2);
+      // Bed
+      hb(8,1,5,0x885544,-6,0.5,-6);hb(8,1,4,0xddccbb,-6,1.5,-5.5);
+      // Resident NPC
+      const rn=makeVillagerMesh();
+      rn.position.set(wx+3,BFY+1.5,wz-4);
+      rn.userData={npcName:resNames[i],npcText:resLines[i%resLines.length],isCitizen:true,isInsideBuilding:true};
+      scene.add(rn);friendlyNPCs.push(rn);
+    });
+  }
 
   // ── Door triggers array (used by game loop + keydown E handler) ──
   // Outside door entries (wizard tower uses stair system already set up above)

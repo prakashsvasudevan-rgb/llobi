@@ -78,9 +78,8 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
 .d-choice{display:block;width:100%;font-size:.35rem;color:#88ddff;background:rgba(0,80,120,.35);border:1px solid #446688;padding:6px 10px;cursor:pointer;text-align:left;margin-bottom:3px;font-family:'Press Start 2P',monospace}
 .d-choice:hover,.d-choice:active{background:rgba(0,120,180,.5);color:#fff}
 #dialog-choices{max-height:120px;overflow-y:auto}
-/* Normal dialog shows text area, hides shop elements */
-#dialog-mid{display:block}
-#dialog-keeper,#dialog-items,#dialog-counter-shelf,#dialog-scene{display:none}
+/* Normal dialog shows text, hides shop elements */
+#dialog-keeper,#dialog-mid,#dialog-items,#dialog-counter-shelf,#dialog-scene{display:none}
 /* ── Shop dialog mode ── */
 #dialog.shop-mode{bottom:0;left:0;right:0;width:100%;max-width:none;max-height:none;overflow:visible;background:none;border:none;padding:0;transform:none}
 #dialog.shop-mode #dialog-name{font-size:.34rem;color:#FFD700;text-align:center;margin-top:4px;letter-spacing:.05em;margin-bottom:0}
@@ -187,6 +186,9 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
   <!-- Dialog -->
   <div id="dialog">
     <div id="dialog-name"></div>
+    <div id="dialog-text"></div>
+    <div id="dialog-choices"></div>
+    <div id="dialog-close">[ E / TAP ] CLOSE</div>
     <div id="dialog-scene">
       <!-- Shopkeeper left -->
       <div id="dialog-keeper">
@@ -221,12 +223,8 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
           <rect x="11" y="31" width="5" height="2" fill="#1a0a00"/>
         </svg>
       </div>
-      <!-- Center text -->
-      <div id="dialog-mid">
-        <div id="dialog-text"></div>
-        <div id="dialog-choices"></div>
-        <div id="dialog-close">[ E / TAP ] CLOSE</div>
-      </div>
+      <!-- Center text (shop mode only) -->
+      <div id="dialog-mid"></div>
       <!-- Right side: shop item shelf -->
       <div id="dialog-items"></div>
       <!-- Counter/shelf -->

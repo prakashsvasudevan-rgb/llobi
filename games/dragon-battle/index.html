@@ -103,7 +103,7 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
 #human-badge{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) translateZ(0);display:none;font-size:.38rem;color:#88ff44;background:rgba(0,0,0,.7);padding:6px 12px;border:1px solid #88ff44;z-index:4;pointer-events:none}
 
 /* Interact hint */
-#interact-hint{position:absolute;bottom:20px;left:50%;transform:translateX(-50%) translateZ(0);font-size:.35rem;color:#FFD700;display:none;z-index:4;pointer-events:none;text-align:center}
+#interact-hint{position:absolute;bottom:20px;left:50%;transform:translateX(-50%) translateZ(0);font-size:1rem;color:#FFD700;display:none;z-index:4;pointer-events:none;text-align:center;font-weight:bold;text-shadow:0 0 6px #000,0 0 3px #000}
 
 /* Full-screen world map */
 #worldmap{position:absolute;inset:0;background:rgba(0,0,0,.92);display:none;z-index:12;transform:translateZ(0);flex-direction:column;align-items:center;justify-content:center}
@@ -3007,13 +3007,13 @@ function spawnGreatCity(){
       enterPos:{x:CITY_X+nh.ox,y:BFY+1.5,z:nh.pocketZ},
       exitPos:{x:CITY_X+nh.ox,y:cy+1.5,z:CITY_Z+nh.oz+18},
       checkX:CITY_X+nh.ox, checkZ:CITY_Z+nh.oz+13.5, checkR:10,
-      hintText:'[ E ] Enter '+nh.name
+      hintText:'[ B ] Enter '+nh.name
     });
     cityDoors.push({
       name:'EXIT '+nh.name, isExit:true,
       exitPos:{x:CITY_X+nh.ox,y:cy+1.5,z:CITY_Z+nh.oz+18},
       checkX:CITY_X+nh.ox, checkZ:nh.pocketZ+12, checkR:10,
-      hintText:'[ E ] Exit '+nh.name
+      hintText:'[ B ] Exit '+nh.name
     });
   });
 
@@ -3269,20 +3269,20 @@ function spawnGreatCity(){
       cityDoors.push({name:'Floor '+(fi+2),isExit:false,isStair:true,
         exitPos:{x:WIX,y:WFY+1.5,z:wizFloorZ[fi+1]},
         checkX:WIX+18,checkZ:fz-18,checkR:8,
-        hintText:'[ E ] Climb to '+wizFloorNames[fi+1]});
+        hintText:'[ B ] Climb to '+wizFloorNames[fi+1]});
     }
     if(fi>0){ // down stairs (all floors except ground)
       iBox(8,1,8,0x334488,WIX-18,WFY+1,fz+18); // stair DOWN marker (SE corner)
       cityDoors.push({name:'Floor '+(fi),isExit:false,isStair:true,
         exitPos:{x:WIX,y:WFY+1.5,z:wizFloorZ[fi-1]},
         checkX:WIX-18,checkZ:fz+18,checkR:8,
-        hintText:'[ E ] Descend to '+wizFloorNames[fi-1]});
+        hintText:'[ B ] Descend to '+wizFloorNames[fi-1]});
     }
     // Exit on ground floor
     if(fi===0){
       cityDoors.push({name:'EXIT Wizard Tower',isExit:true,
         exitPos:{x:CITY_X-200,y:cy+1.5,z:CITY_Z-170},
-        checkX:WIX,checkZ:fz+22,checkR:10,hintText:'[ E ] Exit Wizard Tower'});
+        checkX:WIX,checkZ:fz+22,checkR:10,hintText:'[ B ] Exit Wizard Tower'});
     }
   });
   // Bookshelf interactive NPCs in wizard tower floors 2 & 3
@@ -3430,14 +3430,14 @@ function spawnGreatCity(){
   // ── Door triggers array (used by game loop + keydown E handler) ──
   // Outside door entries (wizard tower uses stair system already set up above)
   cityDoors.push(
-    {name:'Wizard Tower',  enterPos:{x:CITY_X-200,y:BFY+1.5,z:CITY_Z-5000}, exitPos:{x:CITY_X-200,y:cy+1.5,z:CITY_Z-170}, checkX:CITY_X-200, checkZ:CITY_Z-170, checkR:12, hintText:'[ E ] Enter Wizard Tower'},
-    {name:'Grand Library', enterPos:{x:CITY_X-200,y:BFY+1.5,z:CITY_Z-5100}, exitPos:{x:CITY_X-200,y:cy+1.5,z:CITY_Z-240}, checkX:CITY_X-200, checkZ:CITY_Z-240, checkR:12, hintText:'[ E ] Enter Grand Library'},
-    {name:'City Inn',      enterPos:{x:CITY_X-50, y:BFY+1.5,z:CITY_Z-5200}, exitPos:{x:CITY_X-50, y:cy+1.5,z:CITY_Z+71},  checkX:CITY_X-50,  checkZ:CITY_Z+71,  checkR:12, hintText:'[ E ] Enter City Inn'}
+    {name:'Wizard Tower',  enterPos:{x:CITY_X-200,y:BFY+1.5,z:CITY_Z-5000}, exitPos:{x:CITY_X-200,y:cy+1.5,z:CITY_Z-170}, checkX:CITY_X-200, checkZ:CITY_Z-170, checkR:12, hintText:'[ B ] Enter Wizard Tower'},
+    {name:'Grand Library', enterPos:{x:CITY_X-200,y:BFY+1.5,z:CITY_Z-5100}, exitPos:{x:CITY_X-200,y:cy+1.5,z:CITY_Z-240}, checkX:CITY_X-200, checkZ:CITY_Z-240, checkR:12, hintText:'[ B ] Enter Grand Library'},
+    {name:'City Inn',      enterPos:{x:CITY_X-50, y:BFY+1.5,z:CITY_Z-5200}, exitPos:{x:CITY_X-50, y:cy+1.5,z:CITY_Z+71},  checkX:CITY_X-50,  checkZ:CITY_Z+71,  checkR:12, hintText:'[ B ] Enter City Inn'}
   );
   // Inside-exit triggers for library and inn
   cityDoors.push(
-    {name:'EXIT Grand Library', isExit:true, exitPos:{x:CITY_X-200,y:cy+1.5,z:CITY_Z-235}, checkX:CITY_X-200, checkZ:CITY_Z-5100+28, checkR:10, hintText:'[ E ] Exit Library'},
-    {name:'EXIT City Inn',      isExit:true, exitPos:{x:CITY_X-50, y:cy+1.5,z:CITY_Z+76}, checkX:CITY_X-50,  checkZ:CITY_Z-5200+12, checkR:10, hintText:'[ E ] Exit City Inn'}
+    {name:'EXIT Grand Library', isExit:true, exitPos:{x:CITY_X-200,y:cy+1.5,z:CITY_Z-235}, checkX:CITY_X-200, checkZ:CITY_Z-5100+28, checkR:10, hintText:'[ B ] Exit Library'},
+    {name:'EXIT City Inn',      isExit:true, exitPos:{x:CITY_X-50, y:cy+1.5,z:CITY_Z+76}, checkX:CITY_X-50,  checkZ:CITY_Z-5200+12, checkR:10, hintText:'[ B ] Exit City Inn'}
   );
 
   floatWorld(new THREE.Vector3(CITY_X,cy+40,CITY_Z),'🏙 GREAT CITY — WELCOME!','#ffdd44');
@@ -6369,17 +6369,17 @@ document.addEventListener('keydown',e=>{
         } else {openDialog(nearNPC);}
       }
       else if(!isHuman){/* sky dialog — nearNPC set in sky dialog block above */}
-      // Building entry/exit/stairs
-      else if(nearDoor&&isHuman&&humanMesh){
-        let dest,label,col;
-        if(nearDoor.isStair){dest=nearDoor.exitPos;label='📶 '+nearDoor.name;col='#cc88ff';}
-        else if(nearDoor.isExit){dest=nearDoor.exitPos;label='🚪 Exited';col='#aaddff';insideBuilding=null;}
-        else {dest=nearDoor.enterPos;label='🏛 '+nearDoor.name;col='#ffdd88';insideBuilding={name:nearDoor.name};}
-        humanMesh.position.set(dest.x,dest.y,dest.z);
-        humanVY=0;
-        floatWorld(humanMesh.position.clone().add(new THREE.Vector3(0,6,0)),label,col);
-        nearDoor=null;
-      }
+    }
+    // Building entry/exit/stairs — B key
+    if(e.code==='KeyB'&&!dialogOpen&&nearDoor&&isHuman&&humanMesh){
+      let dest,label,col;
+      if(nearDoor.isStair){dest=nearDoor.exitPos;label='📶 '+nearDoor.name;col='#cc88ff';}
+      else if(nearDoor.isExit){dest=nearDoor.exitPos;label='🚪 Exited';col='#aaddff';insideBuilding=null;}
+      else {dest=nearDoor.enterPos;label='🏛 '+nearDoor.name;col='#ffdd88';insideBuilding={name:nearDoor.name};}
+      humanMesh.position.set(dest.x,dest.y,dest.z);
+      humanVY=0;
+      floatWorld(humanMesh.position.clone().add(new THREE.Vector3(0,6,0)),label,col);
+      nearDoor=null;
     }
     if(e.code==='KeyJ'&&isHuman&&!dialogOpen){
       if(humanVY<=1)humanVY=18; // easier jump: higher, tolerant of slight VY
@@ -8402,7 +8402,7 @@ function update(ts){
         hint.textContent='[ E ] Talk to '+nearNPC.userData.npcName;
         hint.style.display='block';
       } else if(nearDoor){
-        hint.textContent=nearDoor.hintText||(nearDoor.isExit?'[ E ] Exit '+nearDoor.name.replace('EXIT ',''):'[ E ] Enter '+nearDoor.name);
+        hint.textContent=nearDoor.hintText||(nearDoor.isExit?'[ B ] Exit '+nearDoor.name.replace('EXIT ',''):'[ B ] Enter '+nearDoor.name);
         hint.style.display='block';
       } else if(nearWild&&dragonArmy.length<MAX_ARMY){
         hint.textContent='[ F ] TAME WILD DRAGON';hint.style.display='block';

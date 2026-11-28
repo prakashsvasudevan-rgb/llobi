@@ -2755,7 +2755,54 @@ function spawnGreatCity(){
   const wall=mat(0xaabb99,{flatShading:true});
   const gold=mat(0xddaa33,{flatShading:true});
 
-  // City floor / ground plane
+  // ── OCEAN surrounding city island ──────────────────────────────────────────
+  const waterMat=new THREE.MeshBasicMaterial({color:0x1155aa,transparent:true,opacity:0.72,blending:THREE.AdditiveBlending,side:THREE.DoubleSide});
+  const waterGeo=new THREE.PlaneGeometry(8000,8000);waterGeo.rotateX(-Math.PI/2);
+  const waterMesh=new THREE.Mesh(waterGeo,waterMat);waterMesh.position.set(0,-5,0);g.add(waterMesh);
+  // Animated-looking foam ring at shore (using concentric rings for depth)
+  const foamMat=new THREE.MeshBasicMaterial({color:0x88ccff,transparent:true,opacity:0.3,side:THREE.DoubleSide});
+  [1600,1660,1720].forEach((r,i)=>{
+    const fg2=new THREE.RingGeometry(r-14,r+14,64);fg2.rotateX(-Math.PI/2);
+    const fm=new THREE.Mesh(fg2,foamMat);fm.position.set(0,-4+i*0.3,0);g.add(fm);
+  });
+  // Dark water depth ring
+  const deepMat=new THREE.MeshBasicMaterial({color:0x002244,transparent:true,opacity:0.5,blending:THREE.AdditiveBlending,side:THREE.DoubleSide});
+  const deepGeo=new THREE.RingGeometry(1800,4000,48);deepGeo.rotateX(-Math.PI/2);
+  g.add(Object.assign(new THREE.Mesh(deepGeo,deepMat),{position:{set(x,y,z){this.x=x;this.y=y;this.z=z;}}}));
+  const deepM=new THREE.Mesh(deepGeo,deepMat);deepM.position.set(0,-5.5,0);g.add(deepM);
+
+  // ── FOREST RING between city wall and shore ─────────────────────────────────
+  const treeTrunkMat=new THREE.MeshBasicMaterial({color:0x553311});
+  const treeLeavesColors=[0x226633,0x1a5522,0x337744,0x2a4422,0x1e4d2b];
+  const rng=(seed)=>{let s=seed;return()=>{s=(s*1664525+1013904223)&0xffffffff;return(s>>>0)/0xffffffff;};};
+  const rand=rng(42);
+  const FOREST_INNER=750, FOREST_OUTER=1550;
+  for(let i=0;i<280;i++){
+    const angle=rand()*Math.PI*2;
+    const radius=FOREST_INNER+rand()*(FOREST_OUTER-FOREST_INNER);
+    const tx=Math.cos(angle)*radius,tz=Math.sin(angle)*radius;
+    const th=12+rand()*18; // tree height
+    const tr=4+rand()*5;  // crown radius
+    // Trunk
+    const trunkGeo=new THREE.CylinderGeometry(0.8,1.2,th*0.5,5);
+    const trunk=new THREE.Mesh(trunkGeo,treeTrunkMat);
+    trunk.position.set(tx,th*0.25,tz);g.add(trunk);
+    // Crown (1-3 cones stacked)
+    const leavesCol=treeLeavesColors[~~(rand()*treeLeavesColors.length)];
+    const leavesMat=new THREE.MeshBasicMaterial({color:leavesCol});
+    for(let c=0;c<2;c++){
+      const cr=tr*(1-c*0.3),ch=th*(0.6-c*0.1);
+      const coneGeo=new THREE.ConeGeometry(cr,ch,6);
+      const cone=new THREE.Mesh(coneGeo,leavesMat);
+      cone.position.set(tx,th*0.5+c*ch*0.4,tz);g.add(cone);
+    }
+  }
+  // Forest floor — dark grass ring
+  const forestGrass=new THREE.MeshBasicMaterial({color:0x1a3311,side:THREE.DoubleSide});
+  const forestRing=new THREE.RingGeometry(FOREST_INNER-20,FOREST_OUTER+20,64);forestRing.rotateX(-Math.PI/2);
+  const frMesh=new THREE.Mesh(forestRing,forestGrass);frMesh.position.set(0,-0.5,0);g.add(frMesh);
+
+  // City floor / ground plane (island — smaller than water)
   cb(1400,2,1400,mat(0x778866,{flatShading:true}),0,-1,0);
 
   // City wall — 4 solid sides with a gate on south wall (facing approach)
@@ -5924,7 +5971,7 @@ document.addEventListener('keydown',e=>{
         else floatWorld(ref.clone().add(new THREE.Vector3(0,8,0)),'No target!','#ff4444');
       }else floatWorld(dragonMesh.position.clone().add(new THREE.Vector3(0,8,0)),'⏳ '+~~abilityCooldown.pBite+'s','#ff4444');
     }
-    if(e.code==='KeyC'&&!dialogOpen&&!isHuman&&gs==='playing'){
+    if(e.code==='KeyC'&&!dialogOpen&&!isHuman&&!isLanded&&gs==='playing'){
       if(!abilityCooldown.pTail||abilityCooldown.pTail<=0){abilityCooldown.pTail=3;
         if(dragonMesh.userData.tailGroup)dragonMesh.userData.tailSwingT=0.9;
         dragonMesh.userData.bodyRollT=0.6;
@@ -7937,7 +7984,7 @@ function update(ts){
       if(hRT)humanYaw-=1.2*dt;
       const gfwd=new THREE.Vector3(0,0,1).applyEuler(new THREE.Euler(0,humanYaw,0));
       const gright=new THREE.Vector3(1,0,0).applyEuler(new THREE.Euler(0,humanYaw,0));
-      const hSpd=6;
+      const hSpd=14;
       if(hFW)humanMesh.position.addScaledVector(gfwd, hSpd*dt);
       if(hBK)humanMesh.position.addScaledVector(gfwd,-hSpd*dt);
       {const _cf=caveFloorY(humanMesh.position.x,humanMesh.position.z);

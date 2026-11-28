@@ -1796,6 +1796,18 @@ function caveFloorY(x,z){
   }
   return null;
 }
+// Returns floor Y inside a city building interior pocket, or null if outside
+// Pockets are placed far south in the ocean (CITY_Z - 5000+) so players can't stumble in
+const BFY=5; // interior floor Y (above ocean -20)
+function buildingFloorY(x,z){
+  if(typeof CITY_X==='undefined')return null;
+  // Wizard tower: 5 floors, each at different Z (WIZ, WIZ-120, ..., WIZ-480)
+  const WIZ_BASE=CITY_Z-5000;
+  for(let fi=0;fi<5;fi++){if(Math.abs(x-(CITY_X-200))<32&&Math.abs(z-(WIZ_BASE-fi*120))<32)return BFY;}
+  if(Math.abs(x-(CITY_X+100))<42&&Math.abs(z-(CITY_Z-5100))<32)return BFY; // library
+  if(Math.abs(x-(CITY_X-50))<18&&Math.abs(z-(CITY_Z-5200))<16)return BFY;  // city inn
+  return null;
+}
 
 function makeKingDeathDragonMesh(){
   const g=new THREE.Group();
@@ -2921,18 +2933,18 @@ function spawnGreatCity(){
     wgw.position.set(CITY_X-200+Math.cos(wfAngle)*24,cy+32+((wf%2)*22),CITY_Z-200+Math.sin(wfAngle)*24);scene.add(wgw);
   }
 
-  // ── Library (SE, opposite wizard) — grand stone hall ──
-  cb(80,22,60,mat(0x998877,{flatShading:true}),350,0,350);  // main hall
-  cb(78,20,58,mat(0x887766,{flatShading:true}),350,22,350); // 2nd floor
-  cb(82,4,62,mat(0x776655,{flatShading:true}),350,42,350);  // parapet
-  cb(82,3,62,mat(0x554433,{flatShading:true}),350,44,350);  // roof
-  // Pillars at entrance
+  // ── Library (near centre, matches Librarian Eldris position) — grand stone hall ──
+  cb(80,22,60,mat(0x998877,{flatShading:true}),100,0,100);  // main hall
+  cb(78,20,58,mat(0x887766,{flatShading:true}),100,22,100); // 2nd floor
+  cb(82,4,62,mat(0x776655,{flatShading:true}),100,42,100);  // parapet
+  cb(82,3,62,mat(0x554433,{flatShading:true}),100,44,100);  // roof
+  // Pillars at entrance (south face)
   [-28,-10,10,28].forEach(px=>{
-    cb(5,28,5,mat(0xaabb99,{flatShading:true}),350+px,0,322);
+    cb(5,28,5,mat(0xaabb99,{flatShading:true}),100+px,0,70);
   });
   // Book sign (blue banner)
   const libSign=new THREE.Mesh(new THREE.BoxGeometry(36,10,1),mat(0x336699,{flatShading:true}));
-  libSign.position.set(CITY_X+350,cy+30,CITY_Z+321);scene.add(libSign);
+  libSign.position.set(CITY_X+100,cy+30,CITY_Z+71);scene.add(libSign);
 
   // ── Cookie Shop (SE near centre) — cozy pink bakery ──
   cb(48,22,48,mat(0xffaabb,{flatShading:true}),200,0,200); // main building
@@ -2955,7 +2967,7 @@ function spawnGreatCity(){
   for(let i=0;i<50;i++){
     const hx=(Math.random()-0.5)*1100,hz=(Math.random()-0.5)*1100;
     if(Math.abs(hx)<130&&Math.abs(hz)<130)continue;
-    if(Math.abs(hx-350)<90&&Math.abs(hz-350)<70)continue; // clear library space
+    if(Math.abs(hx-100)<90&&Math.abs(hz-100)<70)continue; // clear library space
     const hFloors=1+(i%3===0?1:0); // every 3rd house is 2-storey
     cb(32,18,26,mat([0x886644,0x776655,0x998877,0x667788,0x775544][i%5],{flatShading:true}),hx,0,hz);
     if(hFloors>1) cb(30,14,24,mat([0x775533,0x665544,0x887766][i%3],{flatShading:true}),hx,18,hz);
@@ -3116,6 +3128,234 @@ function spawnGreatCity(){
     });
     h.userData.baseX=gx;h.userData.baseZ=gz;
   });
+
+  floatWorld(new THREE.Vector3(CITY_X,cy+40,CITY_Z),'🏙 GREAT CITY — WELCOME!','#ffdd44');
+
+  // ── Building door markers (visible door frames) ──
+  function mkDoor(wx,wy,wz,col){
+    const dm=new THREE.Mesh(new THREE.BoxGeometry(8,12,1),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.7}));
+    dm.position.set(wx,wy,wz);scene.add(dm);
+    return dm;
+  }
+  mkDoor(CITY_X-200,cy+7,CITY_Z-175,0x8844ff); // wizard tower door
+  mkDoor(CITY_X+100,cy+7,CITY_Z+70,0x336699);  // library door
+  mkDoor(CITY_X-50,cy+7,CITY_Z+66,0xdd8844);   // city inn door
+
+  // ── Building interiors (pocket rooms far south in ocean, unreachable normally) ──
+  // All at floor Y = BFY = 5
+  const iMat=(c,o)=>new THREE.MeshBasicMaterial({color:c,opacity:o??1,transparent:o!=null});
+  const iBox=(w,h,d,c,wx,wy,wz)=>{
+    const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),iMat(c));
+    m.position.set(wx,wy,wz);scene.add(m);return m;
+  };
+
+  // ── Wizard Tower Interior — 5 FLOORS, each at different Z offset ──
+  // Floors: WIZ, WIZ-120, WIZ-240, WIZ-360, WIZ-480
+  const WIX=CITY_X-200,WIZ=CITY_Z-5000,WFY=BFY;
+  const wizFloorZ=[WIZ,WIZ-120,WIZ-240,WIZ-360,WIZ-480];
+  const wizFloorNames=['Ground Floor — Entrance Hall','Floor 2 — Apprentice Studies','Floor 3 — Spell Forge','Floor 4 — Research Vault','Floor 5 — Morthex\'s Sanctum'];
+  const wizFloorColors=[0x1a0a2e,0x150828,0x120620,0x0f0416,0x0a0210];
+  wizFloorZ.forEach((fz,fi)=>{
+    const fc=wizFloorColors[fi];
+    iBox(60,1,60,fc,WIX,WFY,fz);           // floor
+    iBox(60,1,60,0x0d0518,WIX,WFY+32,fz); // ceiling
+    iBox(60,32,2,fc,WIX,WFY+16,fz-30);    // north wall
+    iBox(60,32,2,fc,WIX,WFY+16,fz+30);    // south wall
+    iBox(2,32,60,fc,WIX-30,WFY+16,fz);    // west wall
+    iBox(2,32,60,fc,WIX+30,WFY+16,fz);    // east wall
+    // Floor number label (glowing rune block on floor)
+    iBox(6,0.5,6,0x8844ff,WIX,WFY+0.5,fz+22);
+    // Floor-specific content:
+    if(fi===0){
+      // Ground: entrance table, welcome mat, decorative sword
+      iBox(16,2,8,0x442211,WIX,WFY+1,fz-12);  // welcome table
+      iBox(2,10,1,0x888888,WIX-5,WFY+5,fz-20);// sword on wall
+      iBox(6,0.3,10,0x334455,WIX,WFY+0.5,fz+5);// carpet
+    }
+    if(fi===1||fi===2){
+      // Floors 2 & 3: bookshelves with readable books
+      [-20,20].forEach(ox=>{
+        [-18,0,18].forEach(oz=>{
+          iBox(4,22,10,0x442211,WIX+ox,WFY+11,fz+oz); // shelf body
+          // Coloured book spines
+          for(let bk=0;bk<5;bk++){
+            iBox(1.5,2.5,8,[[0x336699,0xaa2211,0x228833,0xcc8800,0x662299][bk]],WIX+ox+(bk-2)*1.4,WFY+5+bk*4,fz+oz);
+          }
+        });
+      });
+    }
+    if(fi===3){
+      // Floor 4: potions, scroll racks, experiment table
+      iBox(20,2,8,0x334455,WIX,WFY+1,fz-15);     // experiment table
+      for(let pi=0;pi<6;pi++){
+        const pOrb=new THREE.Mesh(new THREE.SphereGeometry(1.5,6,5),new THREE.MeshBasicMaterial({color:[0xaa44ff,0x44aaff,0x44ff88,0xff4444,0xffaa00,0xff44aa][pi],transparent:true,opacity:0.85,blending:THREE.AdditiveBlending}));
+        pOrb.position.set(WIX-10+pi*4,WFY+5,fz-15);scene.add(pOrb);
+      }
+      // Scroll rack on wall
+      for(let sr2=0;sr2<5;sr2++) iBox(3,8,3,0x885533,WIX-20+sr2*10,WFY+5,fz-28);
+    }
+    if(fi===4){
+      // Floor 5 — Morthex's sanctum: central orb, rune circle
+      iBox(8,10,8,0x2a0a44,WIX,WFY+5,fz);  // orb pedestal
+      const wizOrbI=new THREE.Mesh(new THREE.SphereGeometry(6,10,8),new THREE.MeshBasicMaterial({color:0xdd88ff,transparent:true,opacity:0.9,blending:THREE.AdditiveBlending}));
+      wizOrbI.position.set(WIX,WFY+17,fz);scene.add(wizOrbI);
+      for(let ri=0;ri<2;ri++){
+        const wr=new THREE.Mesh(new THREE.TorusGeometry(14+ri*4,0.5,5,14),new THREE.MeshBasicMaterial({color:[0xaa44ff,0x4488ff][ri],transparent:true,opacity:0.7,blending:THREE.AdditiveBlending}));
+        wr.position.set(WIX,WFY+14+ri*8,fz);wr.userData.wizRingInterior=ri;scene.add(wr);
+      }
+      for(let ri=0;ri<8;ri++){
+        const ra=ri/8*Math.PI*2;
+        iBox(2,0.2,2,0x8844ff,WIX+Math.cos(ra)*18,WFY+0.5,fz+Math.sin(ra)*18);
+      }
+      // Morthex NPC on floor 5
+      {const wm=makeVillagerMesh();wm.scale.set(1.5,1.5,1.5);
+      wm.position.set(WIX+6,WFY+1.1,fz-12);
+      wm.userData={npcName:'Grand Wizard Morthex',npcText:'You have climbed all five floors! Welcome to my sanctum. The Soul Nexus behind me holds the secrets of the shadow realm.\n\n[B] Browse  [N] Next Book  [R] Read',isCityWizardBook:true,isInsideBuilding:true,choices:[
+        {q:'Tell me about the orb.',a:'The Soul Nexus — a conduit between our world and the realm of shadows. I watch the Princes of Death through it. They grow stronger with each passing moon.'},
+        {q:'What can I learn here?',a:'Press [B] to browse my forbidden tomes. The Codex of Shadows and the Wizard\'s Secret Tome — both essential for understanding the Emperor\'s power. Knowledge is your greatest weapon.'},
+        {q:'Why five floors?',a:'Each floor guards a secret. The ground welcomes visitors. Floor two and three hold the histories. Floor four — my experiments. And floor five — this sanctum — is for those who have earned it.'},
+      ]};
+      scene.add(wm);friendlyNPCs.push(wm);}
+    }
+  });
+  // ── Staircase between floors: pressing E at marked spot sends you up/down ──
+  // Each staircase trigger is a glowing platform in the NE corner of each floor
+  wizFloorZ.forEach((fz,fi)=>{
+    if(fi<4){ // up stairs (all floors except top)
+      iBox(8,1,8,0x6633cc,WIX+18,WFY+1,fz-18); // stair UP marker (NW corner)
+      cityDoors.push({name:'Floor '+(fi+2),isExit:false,isStair:true,
+        exitPos:{x:WIX,y:WFY+1.5,z:wizFloorZ[fi+1]},
+        checkX:WIX+18,checkZ:fz-18,checkR:8,
+        hintText:'[ E ] Climb to '+wizFloorNames[fi+1]});
+    }
+    if(fi>0){ // down stairs (all floors except ground)
+      iBox(8,1,8,0x334488,WIX-18,WFY+1,fz+18); // stair DOWN marker (SE corner)
+      cityDoors.push({name:'Floor '+(fi),isExit:false,isStair:true,
+        exitPos:{x:WIX,y:WFY+1.5,z:wizFloorZ[fi-1]},
+        checkX:WIX-18,checkZ:fz+18,checkR:8,
+        hintText:'[ E ] Descend to '+wizFloorNames[fi-1]});
+    }
+    // Exit on ground floor
+    if(fi===0){
+      cityDoors.push({name:'EXIT Wizard Tower',isExit:true,
+        exitPos:{x:CITY_X-200,y:cy+1.5,z:CITY_Z-170},
+        checkX:WIX,checkZ:fz+22,checkR:10,hintText:'[ E ] Exit Wizard Tower'});
+    }
+  });
+  // Bookshelf interactive NPCs in wizard tower floors 2 & 3
+  [[1,0,'Spellcraft & Theory','These shelves hold advanced spell theory from the last three centuries. Floor 2 is dedicated to elemental studies.'],
+   [1,18,'Shadow Lore','Shadow magic theory — dangerous reading. Some pages are written in a script that moves on its own.'],
+   [2,0,'Ley Line Atlas','Maps of every ley line on the continent. Dragon Mountain sits where seven major lines converge — no wonder it is so powerful.'],
+   [2,-18,'The Emperor\'s History','Accounts of the Emperor\'s rise — how he captured the King of Death Dragon, how he raised his shadow army. Required reading.']
+  ].forEach(([fi,oz,title,desc])=>{
+    const bNPC=makeVillagerMesh();bNPC.visible=false; // invisible trigger
+    bNPC.position.set(WIX+20,WFY+1.1,wizFloorZ[fi]+oz);
+    bNPC.userData={npcName:'📖 '+title,npcText:desc+'\n\n[B] Browse  [N] Next  [R] Read',isCityWizardBook:true,isInsideBuilding:true,choices:[
+      {q:'Tell me more.',a:desc+' — press [B] to browse the full collection.'}
+    ]};
+    scene.add(bNPC);friendlyNPCs.push(bNPC);
+  });
+
+  // ── Library Interior ──
+  const LIX=CITY_X+100,LIZ=CITY_Z-5100,LFY=BFY;
+  iBox(90,1,66,0x887766,LIX,LFY,LIZ);           // floor
+  iBox(90,1,66,0x665544,LIX,LFY+42,LIZ);        // ceiling
+  iBox(90,42,2,0x776655,LIX,LFY+21,LIZ-33);     // north wall
+  iBox(90,42,2,0x776655,LIX,LFY+21,LIZ+33);     // south wall (door gap in center)
+  iBox(2,42,66,0x776655,LIX-45,LFY+21,LIZ);     // west wall
+  iBox(2,42,66,0x776655,LIX+45,LFY+21,LIZ);     // east wall
+  // Pillars
+  [[-30,-20],[-30,20],[30,-20],[30,20]].forEach(([px,pz])=>{iBox(5,42,5,0xaabb99,LIX+px,LFY+21,LIZ+pz);});
+  // Bookshelf rows (4 rows of shelves)
+  [-30,-15,15,30].forEach(rx=>{
+    for(let bi=0;bi<3;bi++){iBox(5,28,15,0x552211,LIX+rx,LFY+14,LIZ-18+bi*18);}
+  });
+  // Reading tables
+  iBox(18,2,8,0x885533,LIX,LFY+6,LIZ-10);
+  iBox(18,2,8,0x885533,LIX,LFY+6,LIZ+10);
+  iBox(4,6,4,0x663311,LIX-6,LFY+3,LIZ-10);iBox(4,6,4,0x663311,LIX+6,LFY+3,LIZ-10);
+  iBox(4,6,4,0x663311,LIX-6,LFY+3,LIZ+10);iBox(4,6,4,0x663311,LIX+6,LFY+3,LIZ+10);
+  // Book glow on shelves
+  for(let bg=0;bg<8;bg++){
+    const bx=[-30,-15,15,30][bg%4];
+    const bz=LIZ-18+(bg>3?18:0);
+    iBox(4,4,4,0x336699,LIX+bx,LFY+8+bg*2.5%14,bz);
+  }
+  // Interior librarian
+  {const le=makeVillagerMesh();le.scale.set(1.5,1.5,1.5);
+  le.position.set(LIX-5,LFY+1.1,LIZ+8);
+  le.userData={npcName:'Librarian Eldris',npcText:'Welcome to the Grand Library interior! Browse our ancient collection.\n\n[B] Browse books  [N] Next  [R] Read',isCityLibrary:true,isInsideBuilding:true,choices:[
+    {q:'What is the rarest book here?',a:'The Codex of Shadows. It describes the original pact between the Shadow Mage and the first death dragon, three thousand years ago. It is behind the iron door — only I may grant access.'},
+    {q:'Are these all the books?',a:'These are just the public shelves! The restricted archive beyond has three times as many volumes. The oldest dates to before this city existed — written in a language only Morthex can fully read.'},
+    {q:'Can I take books home?',a:'You may purchase copies. Press [B] to browse the catalogue. The originals remain here, of course — they would crumble if removed from the controlled air of the library.'},
+  ]};
+  scene.add(le);friendlyNPCs.push(le);}
+  // Interactive bookshelves — walk up and press E to browse/read
+  [
+    {x:LIX-30,z:LIZ-18,title:'📚 Dragon Lore',       text:'A vast collection of dragon knowledge — types, habitats, and battle weaknesses.\n\n[B] Browse  [N] Next  [R] Read',flag:{isCityLibrary:true}},
+    {x:LIX-30,z:LIZ,   title:'📚 History of the Realm',text:'Chronicles of the realm\'s kingdoms, wars, and the original dragon riders.\n\n[B] Browse  [N] Next  [R] Read',flag:{isCityLibrary:true}},
+    {x:LIX-30,z:LIZ+18,title:'📚 Rider\'s Handbook',  text:'Everything a dragon rider must know: bonding, feeding, battle commands, and healing.\n\n[B] Browse  [N] Next  [R] Read',flag:{isCityLibrary:true}},
+    {x:LIX-15,z:LIZ-18,title:'📚 Battle Tactics',     text:'Military strategies used by the great rider armies against the Shadow Dragons.\n\n[B] Browse  [N] Next  [R] Read',flag:{isCityLibrary:true}},
+    {x:LIX+15,z:LIZ,   title:'📚 Codex of Shadows',   text:'The most dangerous book in the library. Details the pacts, powers, and weaknesses of every Shade and Shadow Dragon known.\n\n[B] Browse  [N] Next  [R] Read',flag:{isCityLibrary:true}},
+    {x:LIX+30,z:LIZ+18,title:'📚 Wizard\'s Secret Tome',text:'Morthex\'s personal volume, left in the library for safekeeping. Contains spells, notes, and warnings about the Soul Nexus.\n\n[B] Browse  [N] Next  [R] Read',flag:{isCityWizardBook:true}},
+  ].forEach(bs=>{
+    const bNPC=makeVillagerMesh();bNPC.visible=false;
+    bNPC.position.set(bs.x,LFY+1.1,bs.z);
+    bNPC.userData={npcName:bs.title,npcText:bs.text,...bs.flag,isInsideBuilding:true,choices:[
+      {q:'Can I read this?',a:'Press [B] to browse, [N] to flip through, [R] to read the full text. '+(bs.flag.isCityLibrary?'Eldris can help you purchase a copy.':'This is restricted — read carefully.')}
+    ]};
+    scene.add(bNPC);friendlyNPCs.push(bNPC);
+  });
+
+  // ── City Inn Interior ──
+  const IIX=CITY_X-50,IIZ=CITY_Z-5200,IFY=BFY;
+  iBox(38,1,32,0x886644,IIX,IFY,IIZ);           // floor (wooden planks)
+  iBox(38,1,32,0x553322,IIX,IFY+22,IIZ);        // ceiling
+  iBox(38,22,2,0x775533,IIX,IFY+11,IIZ-16);     // back wall
+  iBox(38,22,2,0x775533,IIX,IFY+11,IIZ+16);     // front wall
+  iBox(2,22,32,0x775533,IIX-19,IFY+11,IIZ);     // left wall
+  iBox(2,22,32,0x775533,IIX+19,IFY+11,IIZ);     // right wall
+  // Fireplace on back wall
+  iBox(10,14,3,0x443322,IIX-10,IFY+7,IIZ-15);
+  const fireGlow=new THREE.Mesh(new THREE.BoxGeometry(6,8,1),new THREE.MeshBasicMaterial({color:0xff6600,transparent:true,opacity:0.8,blending:THREE.AdditiveBlending}));
+  fireGlow.position.set(IIX-10,IFY+8,IIZ-14.5);scene.add(fireGlow);
+  // Warm fire light shimmer
+  for(let fi=0;fi<3;fi++){
+    const fl=new THREE.Mesh(new THREE.SphereGeometry(1,4,3),new THREE.MeshBasicMaterial({color:0xffaa00,transparent:true,opacity:0.5,blending:THREE.AdditiveBlending}));
+    fl.position.set(IIX-10+(fi-1)*2,IFY+10+fi*2,IIZ-13);scene.add(fl);
+  }
+  // Inn table + stools
+  iBox(14,2,8,0x665533,IIX+3,IFY+5,IIZ-5);
+  iBox(14,2,8,0x665533,IIX+3,IFY+5,IIZ+5);
+  [[-4,-5],[4,-5],[-4,5],[4,5]].forEach(([sx,sz])=>{iBox(4,5,4,0x553322,IIX+3+sx,IFY+2.5,IIZ+sz);});
+  // Bed in corner
+  iBox(10,3,16,0x557799,IIX+12,IFY+1.5,IIZ-7);  // mattress
+  iBox(10,5,2,0x334466,IIX+12,IFY+3,IIZ-15);    // headboard
+  iBox(10,1,16,0xeeddcc,IIX+12,IFY+3.1,IIZ-7);  // sheets
+  // Barrel
+  iBox(5,8,5,0x885533,IIX-14,IFY+4,IIZ+10);
+  // Inn keeper
+  {const ik=makeVillagerMesh();ik.scale.set(1.5,1.5,1.5);
+  ik.position.set(IIX-5,IFY+1.1,IIZ-10);
+  ik.userData={npcName:'Innkeeper Rolf',npcText:'Welcome to the Amber Hearth Inn! Rest your weary bones. I have rooms, food, and the finest ale in the city.',isCityTavern:false,isInsideBuilding:true,choices:[
+    {q:'Can I rest here?',a:'Of course! A night\'s rest fully restores your HP. The rooms are upstairs — take the ladder in the corner. Mind the low ceiling on the second floor.'},
+    {q:'What do you know of the Princes of Death?',a:'Three came through here last winter. Great dark shapes in the sky, blotting out the moon. The city wall held — barely. The captain says they\'ll come again, and in greater numbers.'},
+    {q:'Any gossip?',a:'A dragon rider came in last week — wouldn\'t say their name, wore a red scarf. Left at dawn heading toward Dragon Mountain. Seemed... purposeful. I wonder if it was Blane.'},
+  ]};
+  scene.add(ik);friendlyNPCs.push(ik);}
+
+  // ── Door triggers array (used by game loop + keydown E handler) ──
+  // Outside door entries (wizard tower uses stair system already set up above)
+  cityDoors.push(
+    {name:'Wizard Tower',  enterPos:{x:CITY_X-200,y:BFY+1.5,z:CITY_Z-5000}, exitPos:{x:CITY_X-200,y:cy+1.5,z:CITY_Z-170}, checkX:CITY_X-200, checkZ:CITY_Z-170, checkR:12, hintText:'[ E ] Enter Wizard Tower'},
+    {name:'Grand Library', enterPos:{x:CITY_X+100,y:BFY+1.5,z:CITY_Z-5100}, exitPos:{x:CITY_X+100,y:cy+1.5,z:CITY_Z+75},  checkX:CITY_X+100, checkZ:CITY_Z+75,  checkR:12, hintText:'[ E ] Enter Grand Library'},
+    {name:'City Inn',      enterPos:{x:CITY_X-50, y:BFY+1.5,z:CITY_Z-5200}, exitPos:{x:CITY_X-50, y:cy+1.5,z:CITY_Z+71},  checkX:CITY_X-50,  checkZ:CITY_Z+71,  checkR:12, hintText:'[ E ] Enter City Inn'}
+  );
+  // Inside-exit triggers for library and inn
+  cityDoors.push(
+    {name:'EXIT Grand Library', isExit:true, exitPos:{x:CITY_X+100,y:cy+1.5,z:CITY_Z+80}, checkX:CITY_X+100, checkZ:CITY_Z-5100+28, checkR:10, hintText:'[ E ] Exit Library'},
+    {name:'EXIT City Inn',      isExit:true, exitPos:{x:CITY_X-50, y:cy+1.5,z:CITY_Z+76}, checkX:CITY_X-50,  checkZ:CITY_Z-5200+12, checkR:10, hintText:'[ E ] Exit City Inn'}
+  );
 
   floatWorld(new THREE.Vector3(CITY_X,cy+40,CITY_Z),'🏙 GREAT CITY — WELCOME!','#ffdd44');
 }
@@ -5373,6 +5613,9 @@ let armorLevel=0; // 0=none 1=iron 2=steel 3=dragon scale
 let mouseDX=0,mouseDY=0;
 let pointerLocked=false;
 let nearNPC=null;
+let nearDoor=null;      // {name, enterPos, exitPos} when player is near a building door
+let insideBuilding=null; // null or {name, exitPos} when inside a building interior
+const cityDoors=[];     // populated by spawnGreatCity
 let dialogOpen=false;
 let mapOpen=false;
 let friendlyNPCs=[];
@@ -6002,6 +6245,17 @@ document.addEventListener('keydown',e=>{
         } else {openDialog(nearNPC);}
       }
       else if(!isHuman){/* sky dialog — nearNPC set in sky dialog block above */}
+      // Building entry/exit/stairs
+      else if(nearDoor&&isHuman&&humanMesh){
+        let dest,label,col;
+        if(nearDoor.isStair){dest=nearDoor.exitPos;label='📶 '+nearDoor.name;col='#cc88ff';}
+        else if(nearDoor.isExit){dest=nearDoor.exitPos;label='🚪 Exited';col='#aaddff';insideBuilding=null;}
+        else {dest=nearDoor.enterPos;label='🏛 '+nearDoor.name;col='#ffdd88';insideBuilding={name:nearDoor.name};}
+        humanMesh.position.set(dest.x,dest.y,dest.z);
+        humanVY=0;
+        floatWorld(humanMesh.position.clone().add(new THREE.Vector3(0,6,0)),label,col);
+        nearDoor=null;
+      }
     }
     if(e.code==='KeyJ'&&isHuman&&!dialogOpen){
       if(humanVY<=1)humanVY=18; // easier jump: higher, tolerant of slight VY
@@ -7980,7 +8234,7 @@ function update(ts){
       const hSpd=14;
       if(hFW)humanMesh.position.addScaledVector(gfwd, hSpd*dt);
       if(hBK)humanMesh.position.addScaledVector(gfwd,-hSpd*dt);
-      {const _cf=caveFloorY(humanMesh.position.x,humanMesh.position.z);
+      {const _cf=caveFloorY(humanMesh.position.x,humanMesh.position.z)??buildingFloorY(humanMesh.position.x,humanMesh.position.z);
       humanMesh.position.y=(_cf!==null?_cf:groundY(humanMesh.position.x,humanMesh.position.z))+1.5;}
       humanMesh.rotation.set(0,humanYaw,0);
       // Walk animation (bob legs/arms)
@@ -7991,9 +8245,12 @@ function update(ts){
       const lookDir=new THREE.Vector3(0,0,1).applyEuler(new THREE.Euler(humanPitch,humanYaw,0));
       camera.position.copy(eyePos);
       camera.lookAt(eyePos.clone().add(lookDir));
-      // NPC proximity check
+      // NPC proximity check (filter interior NPCs by insideBuilding state)
       let closest=null,closestD=60;
       for(const npc of friendlyNPCs){
+        const isInterior=!!npc.userData.isInsideBuilding;
+        if(isInterior&&!insideBuilding)continue; // skip interior NPCs when outside
+        if(!isInterior&&insideBuilding)continue; // skip exterior NPCs when inside
         const d=humanMesh.position.distanceTo(npc.position);
         if(d<closestD){closest=npc;closestD=d;}
       }
@@ -8003,8 +8260,25 @@ function update(ts){
       const ref3=humanMesh.position;
       let nearWild=null,nearWildD=18;
       for(const wd of wildDragons){if(wd.userData.tameable){const d=ref3.distanceTo(wd.position);if(d<nearWildD){nearWildD=d;nearWild=wd;}}}
+      // Check for nearby building doors / stairs
+      nearDoor=null;
+      if(cityDoors.length&&!nearNPC){
+        const hp=humanMesh.position;
+        for(const d of cityDoors){
+          const cr=d.checkR||12;
+          const cx=d.checkX!=null?d.checkX:d.exitPos.x;
+          const cz=d.checkZ!=null?d.checkZ:d.exitPos.z;
+          const isEntry=!d.isExit&&!d.isStair&&!insideBuilding;
+          const isExit2=d.isExit&&!!insideBuilding;
+          const isStair2=d.isStair&&!!insideBuilding;
+          if((isEntry||isExit2||isStair2)&&Math.abs(hp.x-cx)<cr&&Math.abs(hp.z-cz)<cr){nearDoor=d;break;}
+        }
+      }
       if(nearNPC){
         hint.textContent='[ E ] Talk to '+nearNPC.userData.npcName;
+        hint.style.display='block';
+      } else if(nearDoor){
+        hint.textContent=nearDoor.hintText||(nearDoor.isExit?'[ E ] Exit '+nearDoor.name.replace('EXIT ',''):'[ E ] Enter '+nearDoor.name);
         hint.style.display='block';
       } else if(nearWild&&dragonArmy.length<MAX_ARMY){
         hint.textContent='[ F ] TAME WILD DRAGON';hint.style.display='block';
@@ -8014,7 +8288,7 @@ function update(ts){
       // Jump (J key / movementY handled above, VY applied to position)
       humanVY-=18*dt; // gravity (floatier)
       humanMesh.position.y+=humanVY*dt;
-      {const _cf2=caveFloorY(humanMesh.position.x,humanMesh.position.z);
+      {const _cf2=caveFloorY(humanMesh.position.x,humanMesh.position.z)??buildingFloorY(humanMesh.position.x,humanMesh.position.z);
       const groundH=(_cf2!==null?_cf2:groundY(humanMesh.position.x,humanMesh.position.z))+1.5;
       if(humanMesh.position.y<=groundH){humanMesh.position.y=groundH;humanVY=0;}}
 

@@ -165,6 +165,7 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
       <div id="orb-counter" style="display:none;font-size:.33rem;color:#ff88ff;margin-top:4px;line-height:1.8"></div>
       <div id="shield-badge" style="display:none;font-size:.38rem;color:#8888ff;margin-top:3px">🔮 SOUL SHIELD ACTIVE</div>
       <div id="earth-badge" style="display:none;font-size:.38rem;color:#88cc44;margin-top:3px">🌍 INVINCIBLE</div>
+      <div id="book-spell-badge" style="display:none;font-size:.33rem;color:#cc88ff;margin-top:3px"></div>
     </div>
   </div>
 
@@ -3086,6 +3087,54 @@ const WIZARD_SPELLS=[
   {id:'fire_god',     name:'🔥 Fire God',       cost:400, desc:'Endless fire walls engulf all foes for 8s',color:'#ff2200'},
 ];
 let wizardSpellIdx=0; // which spell player currently has selected
+let playerSpells=[]; // spell ids unlocked from spell books
+let bookSpellIdx=0;  // which book spell is selected
+let bookSpellType='';// active book spell id
+let bookSpellT=0;    // seconds remaining on active book spell
+const BOOK_SPELLS=[
+  // FIRE MAGIC
+  {id:'fire_nova',      book:'fire_magic',   name:'🔥 Fire Nova',       dur:8,  color:'#ff4400', desc:'Blast of flame damages all nearby enemies'},
+  {id:'inferno_wave',   book:'fire_magic',   name:'🔥 Inferno Wave',    dur:10, color:'#ff2200', desc:'Rolling fire wave scorches all enemies'},
+  {id:'volcanic_burst', book:'fire_magic',   name:'🌋 Volcanic Burst',  dur:6,  color:'#ff6600', desc:'Eruption of lava shards shreds close enemies'},
+  {id:'ember_shield',   book:'fire_magic',   name:'🔥 Ember Shield',    dur:12, color:'#ffaa00', desc:'Shield of fire damages attackers and heals you'},
+  {id:'dragon_flame',   book:'fire_magic',   name:'🐉 Dragon Flame',    dur:8,  color:'#ff0000', desc:'True dragon flame — maximum fire damage'},
+  // ICE MAGIC
+  {id:'frost_bolt',     book:'ice_magic',    name:'🧊 Frost Bolt',      dur:8,  color:'#88ccff', desc:'Piercing ice bolts freeze and damage enemies'},
+  {id:'blizzard',       book:'ice_magic',    name:'❄ Blizzard',         dur:10, color:'#aaddff', desc:'Raging blizzard slows and damages all enemies'},
+  {id:'ice_lance',      book:'ice_magic',    name:'🧊 Ice Lance',       dur:6,  color:'#66bbff', desc:'Giant lance of ice impales nearby enemies'},
+  {id:'cryo_field',     book:'ice_magic',    name:'❄ Cryo Field',       dur:12, color:'#ccf0ff', desc:'Frozen field massively slows all enemies'},
+  {id:'absolute_zero',  book:'ice_magic',    name:'🌨 Absolute Zero',   dur:8,  color:'#ffffff', desc:'Flash-freeze all enemies — total stop'},
+  // LIGHT MAGIC
+  {id:'holy_blast',     book:'light_magic',  name:'✨ Holy Blast',      dur:8,  color:'#ffffaa', desc:'Blinding holy light burns shadow creatures'},
+  {id:'radiance',       book:'light_magic',  name:'🌟 Radiance',        dur:10, color:'#ffff66', desc:'Aura of pure light damages all enemies around you'},
+  {id:'sunbeam',        book:'light_magic',  name:'☀ Sunbeam',          dur:6,  color:'#ffdd00', desc:'Focused beam of sunlight destroys a single enemy'},
+  {id:'divine_aegis',   book:'light_magic',  name:'🛡 Divine Aegis',    dur:15, color:'#ffeeaa', desc:'Holy shield absorbs all damage for 15s'},
+  {id:'supernova',      book:'light_magic',  name:'💥 Supernova',       dur:8,  color:'#ffffff', desc:'Explosive burst of light obliterates all enemies'},
+  // HEALING MAGIC
+  {id:'mend',           book:'healing_magic',name:'💚 Mend',            dur:8,  color:'#44ff88', desc:'Constant healing restores your HP over 8s'},
+  {id:'regenerate',     book:'healing_magic',name:'💚 Regenerate',      dur:15, color:'#88ff44', desc:'Powerful regeneration for 15s'},
+  {id:'life_surge',     book:'healing_magic',name:'💚 Life Surge',      dur:6,  color:'#00ff44', desc:'Surge of life energy heals you massively'},
+  {id:'aura_of_life',   book:'healing_magic',name:'💚 Aura of Life',    dur:12, color:'#aaffcc', desc:'Life aura heals you and damages nearby enemies'},
+  {id:'full_restore',   book:'healing_magic',name:'💚 Full Restore',    dur:1,  color:'#ffffff', desc:'Instantly restore all HP'},
+  // NATURE MAGIC
+  {id:'thorn_whip',     book:'nature_magic', name:'🌿 Thorn Whip',     dur:8,  color:'#44ff44', desc:'Lashing thorns tear into nearby enemies'},
+  {id:'entangle',       book:'nature_magic', name:'🌿 Entangle',        dur:10, color:'#228833', desc:'Roots hold enemies in place while you strike'},
+  {id:'spore_cloud',    book:'nature_magic', name:'🌿 Spore Cloud',     dur:8,  color:'#88ff66', desc:'Toxic spores poison all enemies around you'},
+  {id:'ancient_growth', book:'nature_magic', name:'🌳 Ancient Growth',  dur:12, color:'#006600', desc:'Ancient forest power crushes enemies with roots'},
+  {id:'gaia_wrath',     book:'nature_magic', name:'🌍 Gaia\'s Wrath',  dur:8,  color:'#44cc44', desc:'Earth itself rises against your enemies'},
+  // WING MAGIC
+  {id:'gale_force',     book:'wing_magic',   name:'🌪 Gale Force',      dur:8,  color:'#99eeff', desc:'Howling wind blasts enemies away from you'},
+  {id:'storm_dive',     book:'wing_magic',   name:'⚡ Storm Dive',      dur:6,  color:'#66aaff', desc:'Dive strike with wind shockwave hits all enemies'},
+  {id:'cyclone',        book:'wing_magic',   name:'🌀 Cyclone',         dur:10, color:'#88bbff', desc:'Spinning cyclone pulls in and shreds all enemies'},
+  {id:'updraft',        book:'wing_magic',   name:'🌪 Updraft',         dur:12, color:'#aaccff', desc:'Powerful updraft knocks back all enemies + 2x speed'},
+  {id:'thunder_wings',  book:'wing_magic',   name:'⚡ Thunder Wings',   dur:8,  color:'#ffff44', desc:'Wings of pure thunder discharge into all enemies'},
+  // STAR MAGIC
+  {id:'star_fall',      book:'star_magic',   name:'⭐ Star Fall',      dur:8,  color:'#ffccff', desc:'Stars rain down from the heavens onto enemies'},
+  {id:'void_pulse',     book:'star_magic',   name:'🌌 Void Pulse',     dur:8,  color:'#8800ff', desc:'Pulse of void energy tears through all enemies'},
+  {id:'celestial_beam', book:'star_magic',   name:'✨ Celestial Beam', dur:6,  color:'#cc88ff', desc:'Beam from the sky smites your target'},
+  {id:'astral_storm',   book:'star_magic',   name:'🌠 Astral Storm',   dur:10, color:'#ffaaff', desc:'Storm of starfire devastates all enemies'},
+  {id:'cosmos_crush',   book:'star_magic',   name:'💫 Cosmos Crush',   dur:8,  color:'#ffffff', desc:'Gravity of a star crushes everything nearby'},
+];
 const CITY_BOOKS=[
   {id:'dragon_encyclopedia', name:'🐉 Encyclopedia of Dragon Species', cost:220, bonus:'none',
    lore:`ENCYCLOPEDIA OF DRAGON SPECIES — COMPLETE LISTING
@@ -4179,6 +4228,159 @@ This response has been received by three separate scholars attempting to chemica
 The recipe is not in this book. Madame Crumble considered it and declined. "Some things," she said, "are better experienced than explained."
 
 This is also a good principle for cooking in general.`},
+
+  // ── MORTHEX SPELL BOOKS ──────────────────────────────────────────────────
+  {id:'fire_magic', name:'🔥 Book of Fire Magic', cost:400, bonus:'spell_book', isMorthexBook:true,
+   lore:`BOOK OF FIRE MAGIC — MORTHEX PERSONAL COLLECTION
+Grand Arch-Wizard's Notes. Handle with fireproof gloves.
+
+THE FIVE ARTS OF FIRE
+
+FIRE NOVA [cast: Z key]
+Draw the heat inward — a sharp inbreath, a half-second of stillness — then release it outward in all directions at once. The radius is roughly your wingspan. Everything inside it burns. The technique is not subtle. This is intentional.
+
+INFERNO WAVE
+Push the heat forward rather than outward. The wave rolls across the ground at walking speed, burning everything in its path. The advantage over Nova: range. The disadvantage: enemies behind you survive. Rotate to fix this.
+
+VOLCANIC BURST
+Call the deep heat — the kind that lives below stone, below the water table, in the place where the world's core presses outward. It surfaces as shards of lava. Close range. Extremely destructive. Very warm afterward.
+
+EMBER SHIELD
+Instead of projecting fire outward, hold it close — a skin of living flame. Attackers take burn damage on contact. The fire reads your intent and heals you while it burns. This is the most useful fire spell for combat situations that have become personal.
+
+DRAGON FLAME
+The original. Not a technique — a remembering. Every rider who bonds a fire dragon has access to this, in theory. In practice, it requires surrender: stop thinking about fire as something you produce and remember that you are, temporarily, made of it. Maximum damage. No ceiling. Morthex has never explained this one further. The instructions are "stop stopping yourself."`},
+
+  {id:'ice_magic', name:'🧊 Book of Ice Magic', cost:380, bonus:'spell_book', isMorthexBook:true,
+   lore:`BOOK OF ICE MAGIC — MORTHEX PERSONAL COLLECTION
+Found in the northern archives. Several pages are literally frozen.
+
+THE FIVE ARTS OF ICE
+
+FROST BOLT [cast: Z key]
+Compress moisture from the air into crystalline bolts. Fire them in a spread from your position. The bolts pierce. They do not bounce, which is a limitation, and they freeze whatever they hit, which is not.
+
+BLIZZARD
+Expand the cold rather than focusing it. The blizzard extends to roughly three times your wingspan, moves with you, and accumulates. After six seconds of blizzard, most enemies are significantly slower. After ten, most enemies are significantly stopped.
+
+ICE LANCE
+One bolt, much larger. The lance draws from water in the ground rather than the air, which makes it slower to form and dramatically more destructive when it arrives. Best against single large targets.
+
+CRYO FIELD
+Do not project — establish. The Cryo Field sets the ambient temperature around you to significantly below lethal and maintains it. Enemies entering the field slow immediately and begin to take continuous cold damage. You are unaffected because you established it. This is the distinction between cold and cold magic.
+
+ABSOLUTE ZERO
+The endpoint of cold magic. All thermal motion stops. All enemies in range stop. This lasts less time than other spells because maintaining absolute zero requires constant attention, and the moment you relax even slightly the temperature begins to rise. Use it, then follow up. The window is small. Use the window.`},
+
+  {id:'light_magic', name:'✨ Book of Light Magic', cost:420, bonus:'spell_book', isMorthexBook:true,
+   lore:`BOOK OF LIGHT MAGIC — MORTHEX PERSONAL COLLECTION
+Self-illuminating. The pages glow. This was not intentional but is considered a feature.
+
+THE FIVE ARTS OF LIGHT
+
+HOLY BLAST [cast: Z key]
+Light, concentrated and released as a shockwave. The blast is effective against everything but particularly devastating to shadow creatures and the undead, which is relevant because shadow creatures and the undead are what you are likely fighting. The light does not discriminate between shadow and substance — it burns through both.
+
+RADIANCE
+Instead of a blast, become the source. Radiance turns you into a point of intense, continuous light. Enemies near you take constant burn damage from the radiation. Shadow creatures dissolve much faster. The side effect is that you are, briefly, very visible. This is usually not a problem because all nearby enemies are busy being burned.
+
+SUNBEAM
+One target. One beam. Focused to the exclusion of everything else. The sunbeam delivers the full power of the spell to a single point rather than distributing it. Use this when there is one very specific thing you need to stop.
+
+DIVINE AEGIS
+Not offensive — entirely defensive. The Aegis forms a shell of solidified light that absorbs damage that would otherwise reach you. Everything bounces off it. The shield is not infinite; it dissolves when enough force has been applied. But it lasts fifteen seconds, and fifteen seconds is a long time in a fight.
+
+SUPERNOVA
+Every light spell ends at Supernova. It is not a technique — it is a decision. You release all contained light energy at once, in every direction, at full power. The radius is very large. The damage is not graduated. Everything in range receives the full amount.
+Morthex's note: "I have cast this once. I was in an open field, well away from anything I cared about. I still found pieces of rock several hundred metres away afterward. You have been told."`},
+
+  {id:'healing_magic', name:'💚 Book of Healing Magic', cost:350, bonus:'spell_book', isMorthexBook:true,
+   lore:`BOOK OF HEALING MAGIC — MORTHEX PERSONAL COLLECTION
+Morthex acquired this reluctantly. "Healing is important," he admits. "I simply find it less interesting than the other categories."
+
+THE FIVE ARTS OF HEALING
+
+MEND [cast: Z key]
+The foundation. Mend draws life energy from the ley lines and channels it through you. For eight seconds, your body repairs damage faster than it is being dealt. Bone knits. Blood stills. Scales re-form. Use this during fights rather than after them — the ongoing repair changes the arithmetic of a battle significantly.
+
+REGENERATE
+Mend, sustained. The power is lower per second but it lasts longer — fifteen seconds of continuous repair. For long fights, against enemies that deal steady rather than spike damage, Regenerate outlasts Mend. Choose based on what you are fighting.
+
+LIFE SURGE
+Instant rather than continuous. The Surge delivers a large amount of healing in one moment — not over time, but all at once. Use it when you have been reduced suddenly and need to stabilise immediately. It does not prevent damage. It reverses it.
+
+AURA OF LIFE
+Healing magic turned inside out. The Aura radiates life energy outward. This heals you at the rate of Mend and simultaneously harms anything dark or dead that comes near you. Shadow creatures are specifically vulnerable to concentrated life energy. The Aura is effective combat magic that happens to also be healing magic.
+
+FULL RESTORE
+Not subtle. Not elegant. Full. Everything that was damaged is not damaged anymore. Every scar from the current fight, gone. This is the emergency spell — the one you hold until you are low enough that the arithmetic requires it. It costs more than the others and does more than the others and is entirely worth it.`},
+
+  {id:'nature_magic', name:'🌿 Book of Nature Magic', cost:360, bonus:'spell_book', isMorthexBook:true,
+   lore:`BOOK OF NATURE MAGIC — MORTHEX PERSONAL COLLECTION
+Found in the lower library, in a section that had apparently grown its own moss. The moss remains. It seems content.
+
+THE FIVE ARTS OF NATURE
+
+THORN WHIP [cast: Z key]
+Draw thorned vines from the ground at your feet and lash them outward. The range is short, the damage is high, and the thorns attach — enemies hit by the whip continue taking damage for several seconds as the thorns work inward. Effective at close range. The vines are real. This is real plant matter being accelerated significantly. The thorns are very real.
+
+ENTANGLE
+Instead of attacking, root. Roots emerge from the ground in a wide radius and grip whatever they contact. Entangled enemies cannot move. They can still attack if they can reach you, so this works best in combination with something else. What that something else is, is left to your judgment.
+
+SPORE CLOUD
+Release a cloud of toxic spores — microscopic, airborne, continuous. The cloud spreads to your wingspan and drifts with you. Everything inside takes constant poison damage. The spores do not distinguish between targets — keep allies out of the cloud, if applicable. The smell is organic and not pleasant.
+
+ANCIENT GROWTH
+Not vines or thorns — trees. Ancient Growth draws from the memory the earth holds of forests that stood here before anything else did. These are not modern trees. They emerge suddenly, fully formed, and they are large enough to cause significant structural damage to enemies. The technique is slow to cast and powerful when it arrives.
+
+GAIA'S WRATH
+Nature magic at its full extension. The earth itself participates. Fissures open. Roots emerge. Stones rise. Everything alive in the soil — which is more than you think, and older than you can estimate — acts as your ally for the duration. This is the spell the earth dragons know instinctively. Learning it in human or dragon form requires convincing the earth that you are worth listening to. The book's author offers no advice on how to do this. "It knows," is all it says.`},
+
+  {id:'wing_magic', name:'🌪 Book of Wing Magic', cost:370, bonus:'spell_book', isMorthexBook:true,
+   lore:`BOOK OF WING MAGIC — MORTHEX PERSONAL COLLECTION
+Also called Wind Magic, Sky Magic, or Air Magic, depending on which tradition you learned from. Morthex prefers Wing Magic because "wings are the point."
+
+THE FIVE ARTS OF WING
+
+GALE FORCE [cast: Z key]
+Create a directed wind from your position outward. The gale does direct damage — it is moving air at high speed, which carries kinetic force — and it pushes enemies back. Very useful for creating distance. Also useful for cliff-related solutions, if you happen to be near a cliff. Morthex does not specifically recommend this.
+
+STORM DIVE
+Not a sustained spell — a single strike. Gather wind and speed, then release it on impact. The shockwave extends outward from your landing point and strikes everything in a wide radius. Used in dragon form from altitude, this is very effective. Used in human form from a standing start, it is medium effective and looks impressive.
+
+CYCLONE
+Create a persistent cyclone centered on your position. The cyclone draws enemies inward and grinds them continuously. Unlike most wind spells, the Cyclone is a trap — enemies that move toward you are captured, enemies that move away are pursued. The range extends gradually over the duration.
+
+UPDRAFT
+Push all enemies upward and back. The updraft clears a radius and also grants you significantly increased movement speed, as the air currents you've created carry you with them. Combined with another spell, updraft followed by impact is a standard air-mage opening.
+
+THUNDER WINGS
+Wing magic meets storm magic at the boundary. Thunder Wings charges the air around you until the static discharge becomes a continuous effect — anything near you is struck by lightning approximately once per second. The wings in this case are literal: a pair of electric-blue wing-shapes visible in the air around you, drawing in charge and releasing it. It is, Morthex says, the most dramatic-looking spell in this book.`},
+
+  {id:'star_magic', name:'⭐ Book of Star Magic', cost:450, bonus:'spell_book', isMorthexBook:true,
+   lore:`BOOK OF STAR MAGIC — MORTHEX PERSONAL COLLECTION
+This is the last book. Star magic is the hardest to learn, the most powerful when learned, and the most difficult to explain.
+
+THE FIVE ARTS OF THE STARS
+
+STAR FALL [cast: Z key]
+Stars, technically, are always falling — toward other masses, toward each other, in paths that look like stillness from this distance. Star Fall borrows from that motion. Actual stellar material (a very small amount; we are not being reckless) is directed through a brief opening toward your enemies. It arrives as points of extreme heat and light. This is the scaled-down version. The full-scale version would destroy the planet. We are using the scaled-down version.
+
+VOID PULSE
+Between the stars is not empty. The void between stars has texture and pressure and an enormous amount of dark energy that presses in all directions constantly. The Void Pulse borrows some of that pressure and releases it at your location. Everything within range is pushed outward by the expansion and takes void damage — a kind of damage that affects both physical and magical defences equally.
+
+CELESTIAL BEAM
+One star, one beam. Focus all star magic on the brightest point and direct it. The beam moves at something close to light speed and delivers its entire energy budget to the first thing it contacts. Single target. No second shot. Very effective for the first shot.
+
+ASTRAL STORM
+Instead of one focus, many. The Astral Storm calls starfire from multiple points in the sky simultaneously, directing them into a wide area. It lasts ten seconds. During those ten seconds, the sky over your enemies is not a safe sky.
+
+COSMOS CRUSH
+The last spell. The furthest edge of star magic.
+Cosmos Crush bends local gravity — not dramatically, not to the point of anything astronomical — but enough. For eight seconds, everything within your range experiences significantly increased gravitational pull toward a point you designate. What "significantly increased" means in practice: enemies cannot move, cannot fly, cannot charge.
+They experience, briefly, what a star feels.
+Then it ends and they are still there, and you are still there, and the fight continues.
+But for eight seconds, you are the heaviest thing in the world.`},
 
   {id:'magic_spellbooks', name:'✨ The Grand Compendium of Magic', cost:300, bonus:'wizard_boost',
    lore:`THE GRAND COMPENDIUM OF MAGIC
@@ -5560,6 +5762,21 @@ document.addEventListener('keydown',e=>{
       const ref=dragonMesh?dragonMesh.position:humanMesh?.position;
       if(ref)floatWorld(ref.clone().add(new THREE.Vector3(0,20,0)),'✨ '+sp.name+' CAST!',sp.color||'#cc88ff');
     }
+    // Book spells: P=cycle, O=cast
+    if(e.code==='KeyP'&&!dialogOpen&&playerSpells.length>0){
+      bookSpellIdx=(bookSpellIdx+1)%playerSpells.length;
+      bookSpellType=playerSpells[bookSpellIdx];
+      const bsp=BOOK_SPELLS.find(s=>s.id===bookSpellType);
+      const ref=dragonMesh?dragonMesh.position:humanMesh?.position;
+      if(ref&&bsp)floatWorld(ref.clone().add(new THREE.Vector3(0,20,0)),'📖 Spell: '+bsp.name,bsp.color||'#cc88ff');
+    }
+    if(e.code==='KeyO'&&!dialogOpen&&playerSpells.length>0){
+      if(!bookSpellType)bookSpellType=playerSpells[0];
+      const bsp=BOOK_SPELLS.find(s=>s.id===bookSpellType);
+      bookSpellT=bsp?bsp.dur:8;
+      const ref=dragonMesh?dragonMesh.position:humanMesh?.position;
+      if(ref&&bsp)floatWorld(ref.clone().add(new THREE.Vector3(0,20,0)),'✨ '+bsp.name+' CAST!',bsp.color||'#cc88ff');
+    }
     if(e.code==='Backquote'&&!dialogOpen){
       // Teleport to Blane
       if(blaneNPC){
@@ -6511,10 +6728,11 @@ function openDialog(npc){
   if(isCityWizardShop){const sp=WIZARD_SPELLS[wizardSpellIdx];document.getElementById('dialog-text').textContent+='\n\nSelected: '+sp.name+' ('+sp.cost+'pts) — '+sp.desc+'\n[B] Buy & Equip  [N] Next Spell  [M] Cast Now'+(wizardMagicT>0?' | Active: '+WIZARD_SPELLS.find(s=>s.id===wizardMagicType)?.name+' ('+~~wizardMagicT+'s)':'');}
   if(isCityCookieShop)document.getElementById('dialog-text').textContent+='\n\n🍪 Cookie — 200pts — 20s IMMORTALITY + HEAL + 3× SPEED\n[ B ] Buy & Eat'+(cookieT>0?' | 🍪 Active: '+~~cookieT+'s remaining':'');
   function bookShopText(){
-    const pool=isCityWizardBook?CITY_BOOKS.filter(b=>b.id==='dragon_mountain_magic'||b.id==='magic_spellbooks'||b.id==='shadow_history'):CITY_BOOKS;
+    const pool=isCityWizardBook?CITY_BOOKS.filter(b=>b.isMorthexBook):CITY_BOOKS;
     const bk=pool[libraryBookIdx%pool.length];
     const owned=playerBooks.includes(bk.id);
-    return '\n\n📚 Selected: '+bk.name+' — '+bk.cost+'pts\n'+(owned?'[R] Read  (owned)':'[B] Buy  [R] Preview')+'\n[N] Next Book\nOwned: '+playerBooks.length+'/'+pool.length+' books';
+    const spellCount=owned?BOOK_SPELLS.filter(s=>s.book===bk.id).length:0;
+    return '\n\n📚 Selected: '+bk.name+' — '+bk.cost+'pts\n'+(owned?'[R] Read  ✅ Owned ('+spellCount+' spells unlocked)':'[B] Buy  [R] Preview\nUnlocks 5 usable spells!')+'\n[N] Next Book\nOwned: '+playerBooks.filter(id=>CITY_BOOKS.find(b=>b.id===id&&b.isMorthexBook)).length+'/'+pool.length+' spell books';
   }
   if(isAnyBookShop)document.getElementById('dialog-text').textContent+=bookShopText();
   const onKey=e=>{
@@ -6610,13 +6828,23 @@ function openDialog(npc){
     }
     // Library / Wizard Book shop: N=Next Book, B=Buy, R=Read
     if(dialogOpen&&isAnyBookShop){
-      const pool=isCityWizardBook?CITY_BOOKS.filter(b=>b.id==='dragon_mountain_magic'||b.id==='magic_spellbooks'||b.id==='shadow_history'):CITY_BOOKS;
+      const pool=isCityWizardBook?CITY_BOOKS.filter(b=>b.isMorthexBook):CITY_BOOKS;
       const bk=pool[libraryBookIdx%pool.length];
       const owned=playerBooks.includes(bk.id);
       if(e.code==='KeyN'){libraryBookIdx=(libraryBookIdx+1)%pool.length;document.getElementById('dialog-text').textContent=txt+bookShopText();}
       if(e.code==='KeyB'&&!owned){
-        if(score>=bk.cost){score-=bk.cost;playerBooks.push(bk.id);floatWorld(npc.position,'📖 '+bk.name+' purchased!','#aaddff');document.getElementById('dialog-text').textContent=txt+bookShopText();}
-        else{floatWorld(npc.position,'❌ Need '+bk.cost+' pts','#ff4444');}
+        if(score>=bk.cost){
+          score-=bk.cost;playerBooks.push(bk.id);
+          // Unlock spells from spell books
+          if(bk.isMorthexBook){
+            const newSpells=BOOK_SPELLS.filter(s=>s.book===bk.id&&!playerSpells.includes(s.id));
+            newSpells.forEach(s=>playerSpells.push(s.id));
+            floatWorld(npc.position,'📖 '+bk.name+' — '+newSpells.length+' spells unlocked! [Z] to cast','#cc88ff');
+          } else {
+            floatWorld(npc.position,'📖 '+bk.name+' purchased!','#aaddff');
+          }
+          document.getElementById('dialog-text').textContent=txt+bookShopText();
+        } else {floatWorld(npc.position,'❌ Need '+bk.cost+' pts','#ff4444');}
       }
       if(e.code==='KeyR'){
         // Open book reading overlay
@@ -6757,7 +6985,7 @@ function startGame(){
   blaneQuest='inactive';shadowKills=0;wildDragons=[];
   princeMeshes=[];princesSpawned=false;princeAttackPhase=false;princeAttackT=0;blaneEastLeadActive=false;blaneEastLeadT=0;blaneEastDone=false;
   greatCitySpawned=false;cityHunters=[];cityFriendlyNPCs=[];cityWeaponBought=0;cityArmorBought=0;
-  cookieT=0;wizardMagicT=0;wizardMagicType='';wizardSpellIdx=0;
+  cookieT=0;wizardMagicT=0;wizardMagicType='';wizardSpellIdx=0;playerSpells=[];bookSpellIdx=0;bookSpellType='';bookSpellT=0;
   mapOpen=false;wmEl.classList.remove('show');
   // Spawn Dragon Mountain (always at world north, zone 0,5)
   setTimeout(()=>{if(gs==='playing')spawnDragonMountain();},100);
@@ -7047,6 +7275,54 @@ function update(ts){
       if(wizardMagicType==='fire_god'&&Math.random()<0.45){
         activeEnemies.forEach(en=>{if(en.mesh&&en.userData){hitEnemy(en,90+Math.random()*50,wPos);spawnAbilityCloud(en.mesh.position.clone(),0xff2200,16,0.6);}});
       }
+    }
+    // Book spell effects
+    if(bookSpellT>0){
+      bookSpellT-=dt;
+      const bPos=dragonMesh?dragonMesh.position:humanMesh?.position||new THREE.Vector3();
+      const bs=bookSpellType;
+      // FIRE
+      if(bs==='fire_nova'&&Math.random()<0.4)activeEnemies.forEach(en=>{if(en.mesh&&en.mesh.position.distanceTo(bPos)<400){hitEnemy(en,70+Math.random()*35,bPos);spawnAbilityCloud(en.mesh.position.clone(),0xff4400,14,0.5);}});
+      if(bs==='inferno_wave'&&Math.random()<0.35)activeEnemies.forEach(en=>{if(en.mesh){hitEnemy(en,80+Math.random()*40,bPos);spawnAbilityCloud(en.mesh.position.clone(),0xff2200,16,0.5);}});
+      if(bs==='volcanic_burst'&&Math.random()<0.5)activeEnemies.forEach(en=>{if(en.mesh&&en.mesh.position.distanceTo(bPos)<300){hitEnemy(en,100+Math.random()*50,bPos);spawnAbilityCloud(en.mesh.position.clone(),0xff6600,18,0.6);}});
+      if(bs==='ember_shield'){if(Math.random()<0.3)activeEnemies.forEach(en=>{if(en.mesh&&en.mesh.position.distanceTo(bPos)<250){hitEnemy(en,50+Math.random()*25,bPos);}});dhp=Math.min(dmaxHp,dhp+20*dt);humanHP=Math.min(humanMaxHP,humanHP+10*dt);}
+      if(bs==='dragon_flame'&&Math.random()<0.5)activeEnemies.forEach(en=>{if(en.mesh){hitEnemy(en,120+Math.random()*60,bPos);spawnAbilityCloud(en.mesh.position.clone(),0xff0000,20,0.7);}});
+      // ICE
+      if(bs==='frost_bolt'&&Math.random()<0.4)activeEnemies.forEach(en=>{if(en.mesh){en.userData.frozen=(en.userData.frozen||0)+dt*2;hitEnemy(en,60+Math.random()*30,bPos);spawnAbilityCloud(en.mesh.position.clone(),0x88ccff,14,0.4);}});
+      if(bs==='blizzard'&&Math.random()<0.35)activeEnemies.forEach(en=>{if(en.mesh){en.userData.frozen=(en.userData.frozen||0)+dt*1.5;hitEnemy(en,50+Math.random()*25,bPos);spawnAbilityCloud(en.mesh.position.clone(),0xaaddff,12,0.3);}});
+      if(bs==='ice_lance'&&Math.random()<0.5)activeEnemies.forEach(en=>{if(en.mesh&&en.mesh.position.distanceTo(bPos)<500){en.userData.frozen=(en.userData.frozen||0)+dt*4;hitEnemy(en,90+Math.random()*45,bPos);spawnAbilityCloud(en.mesh.position.clone(),0x66bbff,16,0.5);}});
+      if(bs==='cryo_field')activeEnemies.forEach(en=>{if(en.mesh){en.userData.frozen=(en.userData.frozen||0)+dt*5;if(Math.random()<0.2)hitEnemy(en,30+Math.random()*15,bPos);}});
+      if(bs==='absolute_zero')activeEnemies.forEach(en=>{if(en.mesh){en.userData.frozen=(en.userData.frozen||0)+dt*10;if(Math.random()<0.3)hitEnemy(en,70+Math.random()*35,bPos);spawnAbilityCloud(en.mesh.position.clone(),0xffffff,14,0.4);}});
+      // LIGHT
+      if(bs==='holy_blast'&&Math.random()<0.4)activeEnemies.forEach(en=>{if(en.mesh){const dmg=(en.userData?.isShadow||en.userData?.isDead)?160:80;hitEnemy(en,dmg+Math.random()*40,bPos);spawnAbilityCloud(en.mesh.position.clone(),0xffffaa,14,0.5);}});
+      if(bs==='radiance'&&Math.random()<0.35)activeEnemies.forEach(en=>{if(en.mesh&&en.mesh.position.distanceTo(bPos)<350){const dmg=(en.userData?.isShadow||en.userData?.isDead)?140:65;hitEnemy(en,dmg+Math.random()*30,bPos);spawnAbilityCloud(en.mesh.position.clone(),0xffff66,12,0.4);}});
+      if(bs==='sunbeam'&&Math.random()<0.5){const tgt=activeEnemies.find(en=>en.mesh);if(tgt){hitEnemy(tgt,200+Math.random()*100,bPos);spawnBeamFX(bPos,tgt.mesh.position,0xffdd00,0.8);}}
+      if(bs==='divine_aegis'){dinvT=Math.max(dinvT,dt+0.1);}
+      if(bs==='supernova'&&Math.random()<0.5)activeEnemies.forEach(en=>{if(en.mesh){hitEnemy(en,150+Math.random()*75,bPos);spawnAbilityCloud(en.mesh.position.clone(),0xffffff,22,0.8);}});
+      // HEALING
+      if(bs==='mend'){dhp=Math.min(dmaxHp,dhp+30*dt);humanHP=Math.min(humanMaxHP,humanHP+20*dt);}
+      if(bs==='regenerate'){dhp=Math.min(dmaxHp,dhp+20*dt);humanHP=Math.min(humanMaxHP,humanHP+15*dt);}
+      if(bs==='life_surge'){dhp=Math.min(dmaxHp,dhp+80*dt);humanHP=Math.min(humanMaxHP,humanHP+50*dt);}
+      if(bs==='aura_of_life'){dhp=Math.min(dmaxHp,dhp+25*dt);humanHP=Math.min(humanMaxHP,humanHP+15*dt);if(Math.random()<0.3)activeEnemies.forEach(en=>{if(en.mesh&&en.mesh.position.distanceTo(bPos)<300){hitEnemy(en,40+Math.random()*20,bPos);}});}
+      if(bs==='full_restore'&&bookSpellT>0){dhp=dmaxHp;humanHP=humanMaxHP;bookSpellT=0;floatWorld(bPos.clone().add(new THREE.Vector3(0,20,0)),'💚 FULLY RESTORED!','#44ff88');}
+      // NATURE
+      if(bs==='thorn_whip'&&Math.random()<0.4)activeEnemies.forEach(en=>{if(en.mesh&&en.mesh.position.distanceTo(bPos)<350){hitEnemy(en,75+Math.random()*35,bPos);spawnAbilityCloud(en.mesh.position.clone(),0x44ff44,12,0.4);}});
+      if(bs==='entangle')activeEnemies.forEach(en=>{if(en.mesh){en.userData.frozen=(en.userData.frozen||0)+dt*3;if(Math.random()<0.2)hitEnemy(en,40+Math.random()*20,bPos);}});
+      if(bs==='spore_cloud'&&Math.random()<0.35)activeEnemies.forEach(en=>{if(en.mesh&&en.mesh.position.distanceTo(bPos)<400){hitEnemy(en,45+Math.random()*22,bPos);spawnAbilityCloud(en.mesh.position.clone(),0x88ff66,12,0.35);}});
+      if(bs==='ancient_growth'&&Math.random()<0.3)activeEnemies.forEach(en=>{if(en.mesh){hitEnemy(en,85+Math.random()*40,bPos);spawnAbilityCloud(en.mesh.position.clone(),0x006600,18,0.5);}});
+      if(bs==='gaia_wrath'&&Math.random()<0.45)activeEnemies.forEach(en=>{if(en.mesh){hitEnemy(en,95+Math.random()*45,bPos);spawnAbilityCloud(en.mesh.position.clone(),0x44cc44,16,0.55);}});
+      // WING
+      if(bs==='gale_force'&&Math.random()<0.4)activeEnemies.forEach(en=>{if(en.mesh&&en.mesh.position.distanceTo(bPos)<500){hitEnemy(en,55+Math.random()*25,bPos);const push=en.mesh.position.clone().sub(bPos).normalize().multiplyScalar(80);en.mesh.position.add(push);}});
+      if(bs==='storm_dive'&&Math.random()<0.5)activeEnemies.forEach(en=>{if(en.mesh&&en.mesh.position.distanceTo(bPos)<600){hitEnemy(en,80+Math.random()*40,bPos);spawnAbilityCloud(en.mesh.position.clone(),0x66aaff,14,0.4);}});
+      if(bs==='cyclone'&&Math.random()<0.35){activeEnemies.forEach(en=>{if(en.mesh){const pull=bPos.clone().sub(en.mesh.position).normalize().multiplyScalar(60*dt);en.mesh.position.add(pull);hitEnemy(en,60+Math.random()*30,bPos);}});}
+      if(bs==='updraft'){if(dragonMesh)dragonMesh.position.y+=30*dt;if(Math.random()<0.3)activeEnemies.forEach(en=>{if(en.mesh&&en.mesh.position.distanceTo(bPos)<500){hitEnemy(en,45+Math.random()*22,bPos);en.mesh.position.y+=50*dt;}});}
+      if(bs==='thunder_wings'&&Math.random()<0.4)activeEnemies.forEach(en=>{if(en.mesh&&en.mesh.position.distanceTo(bPos)<450){hitEnemy(en,70+Math.random()*35,bPos);spawnBeamFX(bPos,en.mesh.position,0xffff44,0.4);}});
+      // STAR
+      if(bs==='star_fall'&&Math.random()<0.4)activeEnemies.forEach(en=>{if(en.mesh){hitEnemy(en,85+Math.random()*40,bPos);spawnAbilityCloud(en.mesh.position.clone(),0xffccff,16,0.5);}});
+      if(bs==='void_pulse'&&Math.random()<0.4)activeEnemies.forEach(en=>{if(en.mesh){hitEnemy(en,90+Math.random()*45,bPos);spawnAbilityCloud(en.mesh.position.clone(),0x8800ff,14,0.5);}});
+      if(bs==='celestial_beam'&&Math.random()<0.5){const tgt=activeEnemies.find(en=>en.mesh);if(tgt){hitEnemy(tgt,250+Math.random()*125,bPos);spawnBeamFX(bPos,tgt.mesh.position,0xcc88ff,1.0);}}
+      if(bs==='astral_storm'&&Math.random()<0.4)activeEnemies.forEach(en=>{if(en.mesh){hitEnemy(en,100+Math.random()*50,bPos);spawnAbilityCloud(en.mesh.position.clone(),0xffaaff,18,0.6);}});
+      if(bs==='cosmos_crush')activeEnemies.forEach(en=>{if(en.mesh){en.userData.frozen=(en.userData.frozen||0)+dt*8;if(Math.random()<0.3)hitEnemy(en,80+Math.random()*40,bPos);const pull=bPos.clone().sub(en.mesh.position).normalize().multiplyScalar(40*dt);en.mesh.position.add(pull);}});
     }
     // Army dragon passive regen: 80% maxHp per 5s = 16%/s; soul: +10 HP/s extra
     for(const ga of dragonArmy){
@@ -8667,6 +8943,12 @@ function updateHUD(){
     if(earthInvT>0)eb.textContent='🌍 INVINCIBLE '+~~earthInvT+'s';
     if(soulShieldHP>0)sb.textContent='🔮 SHIELD '+~~soulShieldHP+'HP';
   } else {ab.style.display='none';sb.style.display='none';eb.style.display='none';}
+  // Book spell badge
+  const bsb=document.getElementById('book-spell-badge');
+  if(playerSpells.length>0){
+    const bsp=BOOK_SPELLS.find(s=>s.id===bookSpellType)||BOOK_SPELLS.find(s=>s.id===playerSpells[0]);
+    if(bsp){bsb.style.display='block';bsb.style.color=bsp.color||'#cc88ff';bsb.textContent=(bookSpellT>0?'✨ '+bsp.name+' '+~~bookSpellT+'s ACTIVE':'📖 '+bsp.name+' [O]=Cast [P]=Cycle');}
+  } else {bsb.style.display='none';}
   // Orb / weapon counter in corner
   const orbEl=document.getElementById('orb-counter');
   const up=upgrades;

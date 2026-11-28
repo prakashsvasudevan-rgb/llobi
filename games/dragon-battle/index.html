@@ -440,11 +440,47 @@ const DT=[
    body:0xffaa00,bodyL:0xffdd44,bodyD:0xdd7700,belly:0xffffcc,
    wingD:0xdd8800,wingL:0xffcc44,horn:0xffffff,eye:0xffee00,eyeC:'#ffee00',
    breath:[0xffff88,0xffdd00,0xff8800],speed:26,hp:465,fuel:100,rfuel:1.8,dmg:27,pts:1},
+  {id:'crystal',name:'CRYSTAL',emoji:'💎',desc:'Refracts magic beams',
+   body:0x88ddee,bodyL:0xccffff,bodyD:0x44aacc,belly:0xeeffff,
+   wingD:0x55bbcc,wingL:0x99eeff,horn:0xffffff,eye:0x00eeff,eyeC:'#00eeff',
+   breath:[0xeeffff,0x88ffee,0x00ddcc],speed:22,hp:450,fuel:90,rfuel:1.6,dmg:20,pts:1},
+  {id:'void',name:'VOID',emoji:'🌑',desc:'Erases matter on contact',
+   body:0x0a000f,bodyL:0x220033,bodyD:0x000005,belly:0x440055,
+   wingD:0x000005,wingL:0x110022,horn:0x8800aa,eye:0xdd00ff,eyeC:'#dd00ff',
+   breath:[0xcc00ff,0x880099,0x220033],speed:21,hp:510,fuel:95,rfuel:1.4,dmg:28,pts:1},
+  {id:'plague',name:'PLAGUE',emoji:'☠️',desc:'Poison cloud spreads',
+   body:0x1a3310,bodyL:0x336622,bodyD:0x0a1a08,belly:0x66aa22,
+   wingD:0x0d1a08,wingL:0x224411,horn:0x55aa00,eye:0xaaff00,eyeC:'#aaff00',
+   breath:[0x88ff22,0x55aa00,0x224400],speed:16,hp:555,fuel:80,rfuel:1.2,dmg:18,pts:1},
+  {id:'storm',name:'STORM',emoji:'🌪️',desc:'Wind + lightning combo',
+   body:0x334455,bodyL:0x6688aa,bodyD:0x1a2233,belly:0xaaccee,
+   wingD:0x1a2233,wingL:0x445566,horn:0xddeeee,eye:0x44ddff,eyeC:'#44ddff',
+   breath:[0xeeeeff,0x88ccff,0x4488ff],speed:27,hp:420,fuel:100,rfuel:1.9,dmg:22,pts:1},
+  {id:'sand',name:'SAND',emoji:'🏜️',desc:'Desert heat & blinding dust',
+   body:0xcc9944,bodyL:0xeebb66,bodyD:0xaa7722,belly:0xffeebb,
+   wingD:0xaa8833,wingL:0xddaa55,horn:0xffee99,eye:0xff8800,eyeC:'#ff8800',
+   breath:[0xffdd88,0xffaa44,0xdd8800],speed:20,hp:480,fuel:85,rfuel:1.5,dmg:16,pts:1},
+  {id:'magma',name:'MAGMA',emoji:'🫧',desc:'Slow & devastating eruption',
+   body:0x2a0a00,bodyL:0xaa2200,bodyD:0x150500,belly:0xff5500,
+   wingD:0x1a0800,wingL:0x661100,horn:0xff2200,eye:0xff6600,eyeC:'#ff6600',
+   breath:[0xff4400,0xff8800,0xffbb00],speed:13,hp:720,fuel:70,rfuel:0.9,dmg:30,pts:1},
+  {id:'tide',name:'TIDE',emoji:'🌊',desc:'Pushes foes with wave force',
+   body:0x003355,bodyL:0x006699,bodyD:0x001122,belly:0x33aacc,
+   wingD:0x001a33,wingL:0x003366,horn:0x00ccff,eye:0x00ffcc,eyeC:'#00ffcc',
+   breath:[0x00ccff,0x0088cc,0x004466],speed:19,hp:555,fuel:95,rfuel:1.7,dmg:14,pts:1},
+  {id:'prism',name:'PRISM',emoji:'🌈',desc:'Beam splits into 7 colours',
+   body:0xdd44aa,bodyL:0xff88cc,bodyD:0xaa1177,belly:0xffccee,
+   wingD:0x991166,wingL:0xcc44aa,horn:0xffffff,eye:0xff44cc,eyeC:'#ff44cc',
+   breath:[0xff4488,0xffaa00,0x44aaff],speed:23,hp:435,fuel:90,rfuel:1.6,dmg:20,pts:1},
+  {id:'chaos',name:'CHAOS',emoji:'🌀',desc:'Unpredictable raw power',
+   body:0x551133,bodyL:0xaa2244,bodyD:0x220a1a,belly:0xff4466,
+   wingD:0x330a22,wingL:0x771133,horn:0xff0044,eye:0xff0022,eyeC:'#ff0022',
+   breath:[0xff2244,0xff8800,0x8800ff],speed:24,hp:490,fuel:88,rfuel:1.5,dmg:25,pts:1},
 ];
 // Player-selectable dragon ids (shown on select screen)
-const PLAYER_DT_IDS=['fire','ice','earth','air','nature','soul'];
+const PLAYER_DT_IDS=['fire','ice','earth','air','nature','soul','crystal','void','storm','sand','prism','chaos'];
 // Rider army dragon pool (broader selection)
-const RIDER_DT_IDS=['fire','soul','nature','air','lava','water','ice','smoke','bone','metal','earth','glass','thunder','sun'];
+const RIDER_DT_IDS=['fire','soul','nature','air','lava','water','ice','smoke','bone','metal','earth','glass','thunder','sun','crystal','void','plague','storm','sand','magma','tide','prism','chaos'];
 
 // ── Three.js setup ────────────────────────────────────────────────────────────
 const canvas=document.getElementById('c3d');

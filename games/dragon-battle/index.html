@@ -7159,8 +7159,8 @@ function update(ts){
       if(cookieT>0){cookieT-=dt;earthInvT=Math.max(earthInvT,0.1);dhp=Math.min(dmaxHp,dhp+5*dt);if(Math.random()<0.1)spawnAbilityCloud(dragonMesh.position.clone(),0xff88ff,10,0.4);}
       const speedMult=playerSlowT>0?0.4:cookieT>0?3.0:1.0;
       dragonMesh.position.addScaledVector(fwd,dtype.speed*2.2*dt*speedMult);
-      // Land if descend to ground
-      if(dragonMesh.position.y<=landThreshold&&dPitch>=0.1){
+      // Land if descend to ground (or touch city floor while descending)
+      if(dragonMesh.position.y<=landThreshold&&(dPitch>=0.1||dragonMesh.position.y<=landThreshold+0.5)){
         isLanded=true;landedY=landThreshold;
         dragonMesh.position.y=landedY;dPitchVel=0;dYawVel*=0.3;
       } else if(dragonMesh.position.y<landThreshold){
@@ -7172,18 +7172,17 @@ function update(ts){
       }
     }
 
-    // ── CITY GATE — dragon cannot enter city walls; human can ──
-    if(greatCitySpawned&&!isHuman){
+    // ── CITY GATE — flying dragon cannot enter city walls; walking dragon and human can ──
+    if(greatCitySpawned&&!isHuman&&!isLanded){
       const cx=dragonMesh.position.x-CITY_X,cz=dragonMesh.position.z-CITY_Z;
       const WALL_R2=630;
-      // Push dragon out if inside the wall rectangle (not from above — must stay below wall height)
+      // Push flying dragon out if inside the wall rectangle
       if(Math.abs(cx)<WALL_R2&&Math.abs(cz)<WALL_R2&&dragonMesh.position.y<60){
-        // find nearest wall face to push to
         const pushX=cx>=0?WALL_R2-cx:-(WALL_R2+cx);
         const pushZ=cz>=0?WALL_R2-cz:-(WALL_R2+cz);
         if(Math.abs(pushX)<Math.abs(pushZ)){dragonMesh.position.x+=pushX;}
         else{dragonMesh.position.z+=pushZ;}
-        floatWorld(dragonMesh.position.clone().add(new THREE.Vector3(0,8,0)),'⛩ Dragon Form Forbidden — DISMOUNT [T]','#ff8844');
+        floatWorld(dragonMesh.position.clone().add(new THREE.Vector3(0,8,0)),'⛩ Land first to enter city — [ArrowDown] to descend','#ff8844');
       }
     }
     // ── KING ISLAND TRAP — cannot leave while boss is alive ──

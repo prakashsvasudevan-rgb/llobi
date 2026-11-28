@@ -2002,6 +2002,24 @@ function spawnPrincesAtDragonMtn(){
   princeAttackT=5.0;
   princeAttackPhase=true;
   screenFlash('#440000',0.7);
+  // Princes destroy Dragon Mountain — remove DM zone objects after a dramatic delay
+  setTimeout(()=>{
+    if(gs!=='playing')return;
+    const dmKey=DM_ZONE_KEY;
+    const dmObjs=zoneMap.get(dmKey)||[];
+    dmObjs.forEach(o=>{
+      if(dragonArmy.some(a=>a.mesh===o))return; // keep army
+      if(o===blaneNPC)return; // keep Blane
+      // Explosion effect before remove
+      spawnAbilityCloud(o.position.clone(),0xff3300,30,1.2);
+      scene.remove(o);
+      friendlyNPCs=friendlyNPCs.filter(n=>n!==o);
+    });
+    zoneMap.delete(dmKey);
+    dragonMtnSpawned=false; // allow re-check but DM is gone
+    floatWorld(new THREE.Vector3(DM_X,100,DM_Z),'💥 DRAGON MOUNTAIN DESTROYED!','#ff3300');
+    screenFlash('#ff0000',0.9);
+  },8000);
 }
 
 function makePrinceBlackDeathMeshUpgraded(){
@@ -3412,12 +3430,15 @@ function spawnVolcano(){
   else zoneMap.get(key).push(...objects);
 }
 
+const DM_ZONE_KEY=zoneKey(~~(DM_X/ZONE),~~(DM_Z/ZONE));
 function despawnFarZones(){
   const ref=isHuman&&humanMesh?humanMesh.position:dragonMesh.position;
   const pcx=~~(ref.x/ZONE),pcz=~~(ref.z/ZONE);
   for(const[key,objs] of zoneMap){
     const[cx,cz]=key.split(',').map(Number);
     if(Math.abs(cx-pcx)>RD+2||Math.abs(cz-pcz)>RD+2){
+      // Never despawn Dragon Mountain zone
+      if(key===DM_ZONE_KEY)continue;
       objs.forEach(o=>{
         // Never despawn recruited army members or Blane
         if(dragonArmy.some(a=>a.mesh===o))return;
@@ -3548,11 +3569,19 @@ function hitEnemy(e,dmgAmt){
     }
     if(e.userData.type==='shadowDragon'){
       shadowKills++;
-      if(shadowKills>=3&&shadowDust>=5&&mageOrbs>=6&&playerKingWeapons.length>=1&&blaneQuest==='inactive'){
+      if(shadowKills>=3&&shadowDust>=10&&playerKingWeapons.length>=KING_RUINS_CFG.length&&blaneQuest==='inactive'){
         blaneQuest='unlocked';
-        floatWorld(e.position,'💬 TALK TO BLANE — QUEST READY!','#ffdd44');
+        // Auto-teleport player to Blane
+        const bp=blaneNPC?blaneNPC.position:new THREE.Vector3(DM_X,30,DM_Z-200);
+        if(isHuman&&humanMesh)humanMesh.position.set(bp.x+10,bp.y,bp.z+10);
+        else dragonMesh.position.set(bp.x+10,bp.y+30,bp.z+10);
+        floatWorld(bp,'💬 QUEST READY — TELEPORTED TO BLANE!','#ffdd44');
+        screenFlash('#ffdd00',0.5);
       } else if(shadowKills>=3&&blaneQuest==='inactive'){
-        floatWorld(e.position,'Need: 5 shadow dust, 6 mage orbs, 1 King Weapon','#ffaa44');
+        const need=[];
+        if(shadowDust<10)need.push('10 shadow dust ('+shadowDust+'/10)');
+        if(playerKingWeapons.length<KING_RUINS_CFG.length)need.push('all '+KING_RUINS_CFG.length+' king weapons ('+playerKingWeapons.length+'/'+KING_RUINS_CFG.length+')');
+        floatWorld(e.position,'Need: '+need.join(', '),'#ffaa44');
       }
       floatWorld(e.position,'☠ SHADOW SLAIN','#aa44ff');
       // Drop shadow dust orb
@@ -4938,7 +4967,7 @@ function openDialog(npc){
   let txt=npc.userData.npcText||'';
   // Update Blane's text based on quest state
   if(npc.userData.isBlane){
-    if(blaneQuest==='inactive')txt='I train dragon riders. Defeat 3 shadow dragons, gather 5 shadow dust & 6 mage orbs, and claim a King Weapon — then I will give you the quest.';
+    if(blaneQuest==='inactive')txt='I train dragon riders. Defeat 3 shadow dragons, gather 10 shadow dust, and claim ALL 8 King Weapons from the islands that ring Dragon Mountain — then you will be teleported back to me for the quest.';
     else if(blaneQuest==='unlocked')txt='You have proven yourself! The Princes of Death stole the five elements and hold Dragon Mountain under siege. I need your help. Press [B] to call them here and begin.';
     else if(blaneQuest==='active')txt='The Princes are coming. When they attack, I will lead you 50,000 east — the people fled there. Wild dragons found riders. All will join us against the King of Death! Press [B] to ready your team.';
     else txt='YOU DID IT! The King of Death is slain. The stolen elements are free. You are a legend, dragonrider. Peace has come to Dragon Mountain.';
@@ -5023,9 +5052,8 @@ function openDialog(npc){
       if(blaneQuest==='inactive'){
         const missing=[];
         if(shadowKills<3)missing.push('3 shadow kills ('+shadowKills+'/3)');
-        if(shadowDust<5)missing.push('5 shadow dust ('+shadowDust+'/5)');
-        if(mageOrbs<6)missing.push('6 mage orbs ('+mageOrbs+'/6)');
-        if(playerKingWeapons.length<1)missing.push('1 King Weapon');
+        if(shadowDust<10)missing.push('10 shadow dust ('+shadowDust+'/10)');
+        if(playerKingWeapons.length<KING_RUINS_CFG.length)missing.push('all '+KING_RUINS_CFG.length+' king weapons ('+playerKingWeapons.length+'/'+KING_RUINS_CFG.length+')');
         floatWorld(npc.position,'NEED: '+missing.join(', '),'#ff8844');
       } else if(blaneQuest==='unlocked'){
         // Accept the quest — spawn princes, then lead east
@@ -7131,12 +7159,11 @@ function updateHUD(){
   // Orb / weapon counter in corner
   const orbEl=document.getElementById('orb-counter');
   const up=upgrades;
-  const hasOrbData=mageOrbs>0||shadowDust>0||playerKingWeapons.length>0;
+  const hasOrbData=shadowDust>0||playerKingWeapons.length>0;
   if(hasOrbData){
     let orbLines='';
-    if(mageOrbs>0)orbLines+='✨ Mage Orbs: '+mageOrbs+'/6\n';
-    if(shadowDust>0)orbLines+='💜 Shadow Dust: '+shadowDust+'/5\n';
-    if(playerKingWeapons.length>0)orbLines+='👑 King Weapons: '+playerKingWeapons.length;
+    if(shadowDust>0||blaneQuest==='inactive')orbLines+='💜 Shadow Dust: '+shadowDust+'/10\n';
+    if(playerKingWeapons.length>0||blaneQuest==='inactive')orbLines+='👑 King Weapons: '+playerKingWeapons.length+'/'+KING_RUINS_CFG.length;
     orbEl.style.display='block';
     orbEl.style.whiteSpace='pre';
     orbEl.textContent=orbLines.trimEnd();

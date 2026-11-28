@@ -2119,11 +2119,21 @@ const DM_X=100,DM_Z=1000; // Dragon Mountain world position
 const VOL_X=3000,VOL_Z=3000; // Volcano world position
 const MTN_DRAGON_TYPES=['fire','ice','earth','air','nature','soul','lava','water','smoke','lightning','glass','thunder','sun'];
 const RECRUIT_LINES=[
-  ['Rider Kael','My storm-blue dragon and I are ready to fight for you! [R] RECRUIT'],
-  ['Rider Yara','I ride the earth dragon — slow but unstoppable. [R] RECRUIT'],
-  ['Rider Finn','Fire and fury — my dragon breathes both! [R] RECRUIT'],
-  ['Rider Sola','Nature heals all wounds. My green dragon is at your service. [R] RECRUIT'],
-  ['Rider Vex', 'Speed is survival. My air dragon outflies anything. [R] RECRUIT'],
+  ['Rider Kael', 'My storm-blue dragon and I are ready to fight for you! [R] RECRUIT'],
+  ['Rider Yara', 'I ride the earth dragon — slow but unstoppable. [R] RECRUIT'],
+  ['Rider Finn', 'Fire and fury — my dragon breathes both! [R] RECRUIT'],
+  ['Rider Sola', 'Nature heals all wounds. My green dragon is at your service. [R] RECRUIT'],
+  ['Rider Vex',  'Speed is survival. My air dragon outflies anything. [R] RECRUIT'],
+  ['Rider Dusk', 'My shadow dragon knows every dark corner of the sky. [R] RECRUIT'],
+  ['Rider Oryn', 'Ice and silence — my dragon strikes before enemies hear us. [R] RECRUIT'],
+  ['Rider Cass', 'Lava heat, iron will. We burn through anything. [R] RECRUIT'],
+  ['Rider Nela', 'Water flows around every obstacle. So do we. [R] RECRUIT'],
+  ['Rider Brax', 'Thunder shakes mountains. My dragon shakes armies. [R] RECRUIT'],
+  ['Rider Lysa', 'Soul dragons see through every illusion. We see you, Emperor. [R] RECRUIT'],
+  ['Rider Torm', 'Smoke and confusion — my dragon is the fog of war. [R] RECRUIT'],
+  ['Rider Aira', 'Glass scales, diamond focus. We cut through any defence. [R] RECRUIT'],
+  ['Rider Gron', 'Old fighter, old dragon. We have won a hundred battles. [R] RECRUIT'],
+  ['Rider Sevi', 'Sun rider in training. Corona\'s fire will light the way. [R] RECRUIT'],
 ];
 function spawnDragonMountain(){
   if(dragonMtnSpawned)return;
@@ -2337,11 +2347,18 @@ function spawnDragonMountain(){
   stableKeeper.position.set(DM_X,peakY+1.5,DM_Z-5);
   scene.add(stableKeeper);objects.push(stableKeeper);friendlyNPCs.push(stableKeeper);
 
-  // 5 recruitable dragon riders waiting at the peak stables
+  // 15 recruitable dragon riders waiting at the peak stables
   const stableSlots=[
     [DM_X-20,DM_Z-12],[DM_X-20,DM_Z-6],
     [DM_X,   DM_Z-12],[DM_X,   DM_Z-6],
     [DM_X+20,DM_Z-12],
+    // second row
+    [DM_X-30,DM_Z-20],[DM_X-10,DM_Z-20],
+    [DM_X+10,DM_Z-20],[DM_X+30,DM_Z-20],
+    // third row
+    [DM_X-25,DM_Z-28],[DM_X,   DM_Z-28],[DM_X+25,DM_Z-28],
+    // outer ring
+    [DM_X-35,DM_Z-10],[DM_X+35,DM_Z-10],[DM_X,   DM_Z-35],
   ];
   const riderChoices=[
     [{q:'What is it like riding a dragon?',a:'There is nothing like it. The wind, the speed, the bond. You will feel it when you bond with yours.'},
@@ -2359,8 +2376,38 @@ function spawnDragonMountain(){
     [{q:'How do I get a stronger dragon?',a:'Tame a wild one on the mountain or earn a bond in the Hatchery. The stronger the bond, the more powerful you both become.'},
      {q:'What is the Hatchery like?',a:'Ancient and warm. The eggs glow with the kind of magic you can feel in your chest. Unforgettable.'},
      {q:'What makes air dragons so fast?',a:'They feel every shift in the wind before it happens. My dragon rides thermal currents that are invisible to the eye. We outrun everything.'}],
+    [{q:'What is a shadow dragon?',a:'Rare and misunderstood. They look terrifying but mine is gentle. It is the Emperor\'s corruption of them that makes shadow creatures dangerous — bonded shadow dragons are loyal and fierce.'},
+     {q:'What can your dragon do?',a:'Shadow step — vanish from one spot and reappear behind an enemy. The hunters never know where we will strike from next.'},
+     {q:'Are you afraid of the Emperor?',a:'I was. Then I trained for three years on this mountain. Fear is just fuel now.'}],
+    [{q:'How do ice dragons fight?',a:'Freeze. Shatter. Freeze again. The cold slows enemies down and makes them brittle. One good charge and they crumble.'},
+     {q:'Is it cold riding an ice dragon?',a:'Surprisingly no. The bond warms you. It is the enemies who feel the cold.'},
+     {q:'What is special about your dragon?',a:'She can hold a freeze blast for twelve seconds. That is a wall of ice ten metres tall. I have used it to stop entire cavalry charges.'}],
+    [{q:'What is lava like to ride through?',a:'You do not ride through lava, you ride above it. My dragon breathes it though — which is both terrifying and very useful.'},
+     {q:'What do you do between battles?',a:'Forge. The heat around a lava dragon is perfect for metalwork. Half the blades at this mountain came off my dragon\'s back.'},
+     {q:'Any advice for new riders?',a:'Do not be gentle. Dragons respect confidence. Show them who leads, then follow where they want to take you.'}],
+    [{q:'What can water dragons do?',a:'Drown fire attacks, heal minor wounds with mist, and swim through rain storms that would blind other dragons. Incredibly versatile.'},
+     {q:'Are water dragons rare?',a:'Not on the coast, but rare here in the mountains. I came inland specifically to train with the riders. The Emperor\'s forces have never seen one before.'},
+     {q:'What is the ocean like on dragonback?',a:'The only thing better than flying is flying low over open water. My dragon grazes the surface and the spray catches the light. I wish you could see it.'}],
+    [{q:'What is a thunder dragon?',a:'Like lightning but heavier. The shockwaves crack stone. In an enclosed canyon, one roar can collapse a hillside.'},
+     {q:'How do you survive the thunder?',a:'Ear guards enchanted by Morthex himself. Without them I would have gone deaf in the first training week.'},
+     {q:'What is your biggest battle?',a:'Held the northern pass alone for six hours while the rest of the riders regrouped. My dragon was bleeding but kept going. Strongest creature I have ever met.'}],
+    [{q:'What do soul dragons see?',a:'Everything. The life force of every creature within range glows to them like lanterns. The Emperor\'s undead show as cold dark voids. Easy to spot.'},
+     {q:'Can soul dragons heal?',a:'Partially. The resonance pulse can close shallow wounds. It is not a healer\'s magic, but after a battle it keeps riders alive long enough to reach one.'},
+     {q:'What is the Emperor\'s weakness?',a:'He is afraid of real bonds. His monsters are controlled, not bonded. A truly bonded pair fights with love, and that is something he cannot understand or replicate.'}],
+    [{q:'What do smoke dragons do?',a:'Blind, confuse, divide. A smoke screen from my dragon cuts an enemy formation in half. Then we pick them off while they cannot see each other.'},
+     {q:'Is smoke dangerous to you?',a:'Not to me — the bond filters it. Enemies, though, breathe it in and lose their sense of direction entirely. Some walk straight off cliffs.'},
+     {q:'Any tricks for new riders?',a:'Learn your dragon\'s favourite weather. Mine loves fog. Put him in fog and his speed doubles. Every dragon has a home environment that makes them shine.'}],
+    [{q:'What makes glass dragons special?',a:'The scales refract light. In direct sun they are nearly invisible — just a shimmer. We fly reconnaissance missions that no other dragon could manage.'},
+     {q:'Are glass dragons fragile?',a:'The name is misleading. The scales are hard as crystal and sharp as blades. Touch one wrong and lose a finger.'},
+     {q:'What is your scouting range?',a:'At altitude my dragon can see thirty miles in clear air. We spotted the Emperor\'s last advance three days before it arrived. That warning saved the mountain.'}],
+    [{q:'How long have you been riding?',a:'Forty years. I have outlasted six Emperors and three mountain lords. This mountain endures. So do I.'},
+     {q:'What has changed over the years?',a:'The dragons grow bolder. When I started, wild dragons fled from humans. Now they seek us out. The bond is spreading across bloodlines. Something is shifting.'},
+     {q:'Any wisdom for a new rider?',a:'Do not rush the bond. I have seen riders push too hard and lose their dragon\'s trust entirely. Slow patience earns loyalty that lasts a lifetime.'}],
+    [{q:'What is it like training under Lumen?',a:'Demanding. Lumen expects perfection. But she is also the first to celebrate your wins. I have learned more in one month here than in two years on my own.'},
+     {q:'What dragon do you have?',a:'A young sun dragon — born this season. We are still learning each other. The fire is there but the aim needs work. We are getting there.'},
+     {q:'Are you ready for battle?',a:'Almost. I would rather fight alongside an experienced rider like you than go in alone. That is why I am still here, waiting for the right person to follow.'}],
   ];
-  for(let i=0;i<5;i++){
+  for(let i=0;i<15;i++){
     const dr=new THREE.Group();
     const dtDef=selectableDT[~~(Math.random()*selectableDT.length)];
     const riderDragon=buildDragonMesh(dtDef);

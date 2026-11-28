@@ -5438,22 +5438,42 @@ function update(ts){
     }
     // Army dragon passive regen: 80% maxHp per 5s = 16%/s; soul: +10 HP/s extra
     for(const ga of dragonArmy){
-      if(!ga.mesh||!ga.mesh.userData.alive)continue;
+      if(!ga.mesh||!ga.mesh.userData.alive){if(ga.shieldRing){ga.shieldRing.visible=false;ga.shieldRing2.visible=false;}continue;}
       const dtd=ga.mesh.userData.dtDef;const eid=dtd?dtd.id:'fire';
       const isSoul=eid==='soul'||eid==='sun';
       const mhp=isSoul?2044:3411;
       if(ga.mesh.userData.maxHp!==mhp)ga.mesh.userData.maxHp=mhp;
       ga.mesh.userData.hp=Math.min(mhp,ga.mesh.userData.hp+mhp*0.16*dt+(isSoul?10*dt:0));
-      // Elemental shield glow — visible pulsing aura every ~0.5s per dragon
-      if(frame%30===~~(ga.slot||0)%30){
+      // Elemental shield — persistent ring mesh always visible on army dragons
+      if(ga.shieldRing){ga.shieldRing.visible=true;ga.shieldRing2.visible=true;}
+      if(!ga.shieldRing){
         const shieldCol=dtd?dtd.color:0x44aaff;
-        spawnAbilityCloud(ga.mesh.position.clone(),shieldCol,22,0.55);
-        // Inner bright pulse
-        spawnAbilityCloud(ga.mesh.position.clone().add(new THREE.Vector3(0,4,0)),shieldCol,10,0.35);
+        const rg=new THREE.TorusGeometry(12,1.5,8,32);
+        const rm=new THREE.MeshBasicMaterial({color:shieldCol,transparent:true,opacity:0.65,blending:THREE.AdditiveBlending,depthWrite:false});
+        ga.shieldRing=new THREE.Mesh(rg,rm);
+        ga.shieldRing2=new THREE.Mesh(new THREE.TorusGeometry(10,1,6,32),new THREE.MeshBasicMaterial({color:shieldCol,transparent:true,opacity:0.45,blending:THREE.AdditiveBlending,depthWrite:false}));
+        ga.shieldRing2.rotation.x=Math.PI/2;
+        scene.add(ga.shieldRing);scene.add(ga.shieldRing2);
+      }
+      // Keep rings on dragon + pulse opacity + rotate
+      {
+        const shieldCol=dtd?dtd.color:0x44aaff;
+        ga.shieldRing.position.copy(ga.mesh.position).add(new THREE.Vector3(0,4,0));
+        ga.shieldRing2.position.copy(ga.mesh.position).add(new THREE.Vector3(0,4,0));
+        ga.shieldRing.rotation.y+=dt*1.8;ga.shieldRing.rotation.x=Math.PI/3+Math.sin(frame*0.05)*0.3;
+        ga.shieldRing2.rotation.z+=dt*2.2;
+        const pulse=0.5+Math.sin(frame*0.07+~~(ga.slot||0))*0.25;
+        ga.shieldRing.material.opacity=pulse*0.7;ga.shieldRing2.material.opacity=pulse*0.5;
+        ga.shieldRing.material.color.setHex(shieldCol);ga.shieldRing2.material.color.setHex(shieldCol);
+      }
+      // Extra aura cloud burst every ~1s
+      if(frame%60===~~(ga.slot||0)%60){
+        const shieldCol=dtd?dtd.color:0x44aaff;
+        spawnAbilityCloud(ga.mesh.position.clone(),shieldCol,20,0.8);
       }
     }
     // Ghost dragon lifetime
-    for(let gi=dragonArmy.length-1;gi>=0;gi--){const ga=dragonArmy[gi];if(!ga.isGhost)continue;if(ga.mesh.userData.ghostLife!==undefined)ga.mesh.userData.ghostLife-=dt;if((ga.mesh.userData.ghostLife||0)<=0){scene.remove(ga.mesh);dragonArmy.splice(gi,1);}}
+    for(let gi=dragonArmy.length-1;gi>=0;gi--){const ga=dragonArmy[gi];if(!ga.isGhost)continue;if(ga.mesh.userData.ghostLife!==undefined)ga.mesh.userData.ghostLife-=dt;if((ga.mesh.userData.ghostLife||0)<=0){scene.remove(ga.mesh);if(ga.shieldRing){scene.remove(ga.shieldRing);scene.remove(ga.shieldRing2);}dragonArmy.splice(gi,1);}}
     // Burn DoT
     for(const[en,t] of burnMap){
       if(!en.userData.alive){burnMap.delete(en);continue;}
@@ -6249,7 +6269,7 @@ function update(ts){
       }
       // Army dragon: bite / tail / roar + element special
       if(a.mesh.userData.aBiteT===undefined){a.mesh.userData.aBiteT=3+Math.random()*3;a.mesh.userData.aTailT=5+Math.random()*3;a.mesh.userData.aRoarT=8+Math.random()*4;a.mesh.userData.aAtk1T=8+Math.random()*4;a.mesh.userData.aAtk2T=14+Math.random()*6;a.mesh.userData.aAtk3T=20+Math.random()*8;}
-      let aNearest=null,aNearD=300;
+      let aNearest=null,aNearD=600;
       for(const ae of activeEnemies){if(!ae.userData.alive)continue;const d=a.mesh.position.distanceTo(ae.position);if(d<aNearD){aNearD=d;aNearest=ae;}}
       // Bite
       a.mesh.userData.aBiteT-=dt;
@@ -6281,7 +6301,7 @@ function update(ts){
         const col=dtd?dtd.color:0xff4400;const fp=a.mesh.position.clone().add(new THREE.Vector3(0,3,0));
         // Attack 1
         a.mesh.userData.aAtk1T-=dt;
-        if(a.mesh.userData.aAtk1T<=0&&aNearest&&aNearD<180){
+        if(a.mesh.userData.aAtk1T<=0&&aNearest&&aNearD<400){
           a.mesh.userData.aAtk1T=8+Math.random()*4;
           if(eid==='fire'||eid==='lava'){
             // Flame Beam
@@ -6325,7 +6345,7 @@ function update(ts){
         }
         // Attack 2
         a.mesh.userData.aAtk2T-=dt;
-        if(a.mesh.userData.aAtk2T<=0&&aNearest&&aNearD<200){
+        if(a.mesh.userData.aAtk2T<=0&&aNearest&&aNearD<450){
           a.mesh.userData.aAtk2T=14+Math.random()*6;
           if(eid==='fire'||eid==='lava'){
             // Fire Ball
@@ -6371,7 +6391,7 @@ function update(ts){
         }
         // Attack 3
         a.mesh.userData.aAtk3T-=dt;
-        if(a.mesh.userData.aAtk3T<=0&&aNearest&&aNearD<220){
+        if(a.mesh.userData.aAtk3T<=0&&aNearest&&aNearD<500){
           a.mesh.userData.aAtk3T=20+Math.random()*8;
           if(eid==='fire'||eid==='lava'){
             // Fire Bomb — AoE explosion ring

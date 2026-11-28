@@ -1804,7 +1804,7 @@ function buildingFloorY(x,z){
   // Wizard tower: 5 floors, each at different Z (WIZ, WIZ-120, ..., WIZ-480)
   const WIZ_BASE=CITY_Z-5000;
   for(let fi=0;fi<5;fi++){if(Math.abs(x-(CITY_X-200))<32&&Math.abs(z-(WIZ_BASE-fi*120))<32)return BFY;}
-  if(Math.abs(x-(CITY_X+100))<42&&Math.abs(z-(CITY_Z-5100))<32)return BFY; // library
+  if(Math.abs(x-(CITY_X-200))<42&&Math.abs(z-(CITY_Z-5100))<32)return BFY; // library
   if(Math.abs(x-(CITY_X-50))<18&&Math.abs(z-(CITY_Z-5200))<16)return BFY;  // city inn
   if(Math.abs(x-(CITY_X-150))<20&&Math.abs(z-(CITY_Z-5300))<18)return BFY; // guard barracks
   if(Math.abs(x-(CITY_X+160))<20&&Math.abs(z-(CITY_Z-5400))<18)return BFY; // scholar's house
@@ -2936,18 +2936,18 @@ function spawnGreatCity(){
     wgw.position.set(CITY_X-200+Math.cos(wfAngle)*24,cy+32+((wf%2)*22),CITY_Z-200+Math.sin(wfAngle)*24);scene.add(wgw);
   }
 
-  // ── Library (near centre, matches Librarian Eldris position) — grand stone hall ──
-  cb(80,22,60,mat(0x998877,{flatShading:true}),100,0,100);  // main hall
-  cb(78,20,58,mat(0x887766,{flatShading:true}),100,22,100); // 2nd floor
-  cb(82,4,62,mat(0x776655,{flatShading:true}),100,42,100);  // parapet
-  cb(82,3,62,mat(0x554433,{flatShading:true}),100,44,100);  // roof
-  // Pillars at entrance (south face)
+  // ── Library (right next to Wizard Tower — tower south face z=-225, library south face z=-240) ──
+  cb(80,22,60,mat(0x998877,{flatShading:true}),-200,0,-270);  // main hall (south face at -270+30=-240)
+  cb(78,20,58,mat(0x887766,{flatShading:true}),-200,22,-270); // 2nd floor
+  cb(82,4,62,mat(0x776655,{flatShading:true}),-200,42,-270);  // parapet
+  cb(82,3,62,mat(0x554433,{flatShading:true}),-200,44,-270);  // roof
+  // Pillars at entrance (south face z=-240)
   [-28,-10,10,28].forEach(px=>{
-    cb(5,28,5,mat(0xaabb99,{flatShading:true}),100+px,0,70);
+    cb(5,28,5,mat(0xaabb99,{flatShading:true}),-200+px,0,-240);
   });
   // Book sign (blue banner)
   const libSign=new THREE.Mesh(new THREE.BoxGeometry(36,10,1),mat(0x336699,{flatShading:true}));
-  libSign.position.set(CITY_X+100,cy+30,CITY_Z+71);scene.add(libSign);
+  libSign.position.set(CITY_X-200,cy+30,CITY_Z-239);scene.add(libSign);
 
   // ── Cookie Shop (SE near centre) — cozy pink bakery ──
   cb(48,22,48,mat(0xffaabb,{flatShading:true}),200,0,200); // main building
@@ -2970,7 +2970,7 @@ function spawnGreatCity(){
   for(let i=0;i<50;i++){
     const hx=(Math.random()-0.5)*1100,hz=(Math.random()-0.5)*1100;
     if(Math.abs(hx)<130&&Math.abs(hz)<130)continue;
-    if(Math.abs(hx-100)<90&&Math.abs(hz-100)<70)continue; // clear library space
+    if(Math.abs(hx+200)<90&&Math.abs(hz+340)<70)continue; // clear library space
     const hFloors=1+(i%3===0?1:0);
     cb(32,18,26,mat([0x886644,0x776655,0x998877,0x667788,0x775544][i%5],{flatShading:true}),hx,0,hz);
     if(hFloors>1) cb(30,14,24,mat([0x775533,0x665544,0x887766][i%3],{flatShading:true}),hx,18,hz);
@@ -3082,7 +3082,7 @@ function spawnGreatCity(){
     {q:'Why are you at the top of the tower?',a:'The view. Also the ley lines converge at this altitude. Also I lost the stairs in a spell mishap and I refuse to admit it.'},
   ]});
   // ── Library keeper (SE, at library) ──
-  spawnCityNPC(CITY_X+100,CITY_Z+100,'Librarian Eldris','Welcome to the Grand Library! Ancient tomes, lore, and dragon knowledge.\n\n[B] Browse books','shopkeeper',{isCityLibrary:true,choices:[
+  spawnCityNPC(CITY_X-200,CITY_Z-243,'Librarian Eldris','Welcome to the Grand Library, beside the Wizard Tower! Ancient tomes, lore, and dragon knowledge.\n\n[B] Browse books','shopkeeper',{isCityLibrary:true,choices:[
     {q:'What books do you have?',a:'Dragon Lore (200pts — reveals all dragon types), Battle Tactics (150pts — +10% melee dmg), Rider\'s Handbook (100pts), History of the Realm (80pts). Press [B] to browse!'},
     {q:'What is the oldest book here?',a:'The Codex of Shadows — written by the first dragon riders 1,000 years ago. It speaks of the Princes of Death and their ancient pact with Shadow Dragons.'},
     {q:'Do you know of Blane?',a:'Blane the Rider? Yes! He returned a rare volume on Shadow Dragons to us last winter. A serious man, but kind. He resides near Dragon Mountain, they say.'},
@@ -3101,8 +3101,8 @@ function spawnGreatCity(){
     {q:'Can you teach me magic?',a:'See Zephyrus for that. My role is research, not instruction. Though I could point you toward the library — Eldris has texts on elemental theory.'},
   ]});
 
-  // ── Library mage scholar ──
-  spawnCityNPC(CITY_X+110,CITY_Z+90,'Scholar Maren','The pursuit of knowledge is the highest calling. What brings you to the library?','citizen',{choices:[
+  // ── Library mage scholar (by library, next to wizard tower) ──
+  spawnCityNPC(CITY_X-185,CITY_Z-245,'Scholar Maren','The pursuit of knowledge is the highest calling. What brings you to the library?','citizen',{choices:[
     {q:'What are you studying?',a:'The migration patterns of Shadow Dragons. They follow ley lines — invisible channels of dark energy in the earth. Dragon Mountain sits at their convergence.'},
     {q:'Can I read the books freely?',a:'The public shelves are free to browse. The restricted section — behind the iron door — requires Eldris\'s approval. The Codex of Shadows is kept there.'},
     {q:'Do you know any spells?',a:'A few defensive wards, nothing offensive. For battle magic, speak to Zephyrus. I prefer the quiet of the page to the chaos of combat.'},
@@ -3300,7 +3300,7 @@ function spawnGreatCity(){
   });
 
   // ── Library Interior ──
-  const LIX=CITY_X+100,LIZ=CITY_Z-5100,LFY=BFY;
+  const LIX=CITY_X-200,LIZ=CITY_Z-5100,LFY=BFY;
   iBox(90,1,66,0x887766,LIX,LFY,LIZ);           // floor
   iBox(90,1,66,0x665544,LIX,LFY+42,LIZ);        // ceiling
   iBox(90,42,2,0x776655,LIX,LFY+21,LIZ-33);     // north wall
@@ -3431,12 +3431,12 @@ function spawnGreatCity(){
   // Outside door entries (wizard tower uses stair system already set up above)
   cityDoors.push(
     {name:'Wizard Tower',  enterPos:{x:CITY_X-200,y:BFY+1.5,z:CITY_Z-5000}, exitPos:{x:CITY_X-200,y:cy+1.5,z:CITY_Z-170}, checkX:CITY_X-200, checkZ:CITY_Z-170, checkR:12, hintText:'[ E ] Enter Wizard Tower'},
-    {name:'Grand Library', enterPos:{x:CITY_X+100,y:BFY+1.5,z:CITY_Z-5100}, exitPos:{x:CITY_X+100,y:cy+1.5,z:CITY_Z+75},  checkX:CITY_X+100, checkZ:CITY_Z+75,  checkR:12, hintText:'[ E ] Enter Grand Library'},
+    {name:'Grand Library', enterPos:{x:CITY_X-200,y:BFY+1.5,z:CITY_Z-5100}, exitPos:{x:CITY_X-200,y:cy+1.5,z:CITY_Z-240}, checkX:CITY_X-200, checkZ:CITY_Z-240, checkR:12, hintText:'[ E ] Enter Grand Library'},
     {name:'City Inn',      enterPos:{x:CITY_X-50, y:BFY+1.5,z:CITY_Z-5200}, exitPos:{x:CITY_X-50, y:cy+1.5,z:CITY_Z+71},  checkX:CITY_X-50,  checkZ:CITY_Z+71,  checkR:12, hintText:'[ E ] Enter City Inn'}
   );
   // Inside-exit triggers for library and inn
   cityDoors.push(
-    {name:'EXIT Grand Library', isExit:true, exitPos:{x:CITY_X+100,y:cy+1.5,z:CITY_Z+80}, checkX:CITY_X+100, checkZ:CITY_Z-5100+28, checkR:10, hintText:'[ E ] Exit Library'},
+    {name:'EXIT Grand Library', isExit:true, exitPos:{x:CITY_X-200,y:cy+1.5,z:CITY_Z-235}, checkX:CITY_X-200, checkZ:CITY_Z-5100+28, checkR:10, hintText:'[ E ] Exit Library'},
     {name:'EXIT City Inn',      isExit:true, exitPos:{x:CITY_X-50, y:cy+1.5,z:CITY_Z+76}, checkX:CITY_X-50,  checkZ:CITY_Z-5200+12, checkR:10, hintText:'[ E ] Exit City Inn'}
   );
 

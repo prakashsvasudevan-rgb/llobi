@@ -5256,15 +5256,15 @@ function update(ts){
 
     // ── MOBILE ONE-SHOT ACTIONS ──
     if(mk.bite){mk.bite=false;
-      if(!abilityCooldown.pBite||abilityCooldown.pBite<=0){abilityCooldown.pBite=2;
+      if(!isHuman&&dragonMesh&&(!abilityCooldown.pBite||abilityCooldown.pBite<=0)){abilityCooldown.pBite=2;
         const ref=dragonMesh.position;let be=null,bd=60;for(const ae of activeEnemies){if(!ae.userData.alive)continue;const d=ref.distanceTo(ae.position);if(d<bd){bd=d;be=ae;}}
         if(dragonMesh.userData.jawGroup){dragonMesh.userData.jawT=1.0;dragonMesh.userData.jawDur=1.0;}
-        if(dragonMesh){dragonMesh.userData.bodyPitchT=0.5;dragonMesh.userData.bodyPitchDir=-1;}
+        dragonMesh.userData.bodyPitchT=0.5;dragonMesh.userData.bodyPitchDir=-1;
         if(be){spawnBeamFX(ref.clone().add(new THREE.Vector3(0,2,0)),be.position.clone(),0xff2200);hitEnemy(be,upgradedDmg()*6);floatWorld(ref.clone().add(new THREE.Vector3(0,8,0)),'🦷 BITE!','#ff4400');}
       }
     }
     if(mk.tail){mk.tail=false;
-      if(!abilityCooldown.pTail||abilityCooldown.pTail<=0){abilityCooldown.pTail=3;
+      if(!isHuman&&dragonMesh&&(!abilityCooldown.pTail||abilityCooldown.pTail<=0)){abilityCooldown.pTail=3;
         const ref=dragonMesh.position;
         if(dragonMesh.userData.tailGroup)dragonMesh.userData.tailSwingT=0.9;
         dragonMesh.userData.bodyRollT=0.6;
@@ -5273,7 +5273,7 @@ function update(ts){
       }
     }
     if(mk.roar){mk.roar=false;
-      if(!abilityCooldown.pRoar||abilityCooldown.pRoar<=0){abilityCooldown.pRoar=5;
+      if(!isHuman&&dragonMesh&&(!abilityCooldown.pRoar||abilityCooldown.pRoar<=0)){abilityCooldown.pRoar=5;
         const ref=dragonMesh.position;
         if(dragonMesh.userData.jawGroup){dragonMesh.userData.jawT=1.4;dragonMesh.userData.jawDur=1.4;}
         dragonMesh.userData.bodyPitchT=0.7;dragonMesh.userData.bodyPitchDir=1;
@@ -5525,6 +5525,9 @@ function update(ts){
         const moveDir=dist>80?toP.clone().normalize():toOrbit.normalize();
         e.position.addScaledVector(moveDir,chaseSpd*dt);
         e.lookAt(ref);
+        // Apply attack pitch/roll offsets on top of lookAt
+        e.rotation.x+=(e.userData.atkPitch||0);
+        e.rotation.z+=(e.userData.atkRoll||0);
         // Wing flap
         e.userData.wingAngle=(e.userData.wingAngle||0)+dt*5;
         const wa=Math.sin(e.userData.wingAngle)*0.7;

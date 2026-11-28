@@ -3087,7 +3087,164 @@ const WIZARD_SPELLS=[
 ];
 let wizardSpellIdx=0; // which spell player currently has selected
 const CITY_BOOKS=[
-  {id:'dragon_lore', name:'📖 Dragon Lore', cost:200, bonus:'reveals_dragons',
+  {id:'dragon_encyclopedia', name:'🐉 Encyclopedia of Dragon Species', cost:220, bonus:'none',
+   lore:`ENCYCLOPEDIA OF DRAGON SPECIES — COMPLETE LISTING
+Grand Library Reference Edition. Do not remove from reading room.
+
+════════════════════════════════════
+THE EIGHT KING DRAGON CLANS
+════════════════════════════════════
+
+FIRE DRAGON (Ignis Draconis)
+Colour: Deep crimson, orange underbelly. Eyes: molten gold.
+Breath: Superheated fire columns reaching 3,000°C. Sustained burn radius: 40 metres.
+Size: Large — adult wingspan 28m. Weight: 14 tonnes.
+Temperament: Aggressive on approach, loyal once bonded. Never forgets an insult or a kindness.
+Habitat: Volcanic peaks, lava fields. Nests in hollowed-out magma chambers.
+King: IGNARETH THE FLAME THRONE. Ruled Inferno Tide island for 800 years. Breathed alternating fire and cold sea-spray — the contrast caused explosive steam detonations. His roar melted sandstone at 200 paces.
+Note: Fire dragons are the most commonly bonded clan. Hot-tempered but responsive to calm riders.
+
+WATER DRAGON (Aqua Draconis)
+Colour: Deep teal, silver underbelly. Scales refract light in rainbow patterns.
+Breath: High-pressure saltwater jets capable of cutting stone. Also: steam clouds when angry.
+Size: Medium-large — wingspan 24m. Surprisingly buoyant.
+Temperament: Calm, curious, emotionally complex. Prone to melancholy during dry seasons.
+Habitat: Ocean cliffs, sea caves, deep island lagoons.
+Note: Rare in bonded form — Water dragons require riders who can sit quietly for extended periods.
+
+EARTH DRAGON (Terra Draconis)
+Colour: Brown and grey stone-textured scales. Near-invisible when still on rocky ground.
+Breath: Compressed earth and stone — essentially a boulder cannon.
+Size: Largest of all clans — wingspan 35m. Moves slowly on land; faster than expected in air.
+Temperament: Patient to the point of geological. Extremely difficult to provoke.
+Habitat: Mountain ranges, deep valleys, underground cave systems.
+King: VERDAUN THE SLOW. Spent 700 years on one mountain before choosing to fly somewhere else. Scholars believe he is still thinking about whether to come back.
+
+NATURE DRAGON (Silva Draconis)
+Colour: Green, shifting with seasons — bright spring green to dark autumn bronze.
+Breath: Spore clouds that cause rapid plant growth. Enemy soldiers have been found three days later, rooted.
+Size: Medium. Extremely agile between trees.
+Temperament: Gentle. Fierce when forests are threatened.
+Habitat: Ancient forests, deep jungle, old-growth woodlands.
+Note: Nature dragons communicate with plant life. They know everything that roots know, which is more than you think.
+
+AIR DRAGON (Ventus Draconis)
+Colour: Pale grey-white, nearly translucent at altitude.
+Breath: Compressed air vortex — creates localised tornadoes on exhale.
+Size: Lightest of all clans despite large wingspan (30m). Hollow bones.
+Temperament: Aloof, independent, deeply uncomfortable indoors.
+Habitat: High altitude cloud-layer. Rarely lands.
+King: VORTHEX THE HORIZON. Flew so high his shadow touched two kingdoms at once. Never landed in his entire documented lifetime. It is unknown how he slept.
+
+SMOKE DRAGON (Fumus Draconis)
+Colour: Dark charcoal, indistinct edges. Difficult to see clearly even when looking directly at one.
+Breath: Dense black smoke so thick it has physical weight. Causes blindness and suffocation.
+Size: Medium. Appears larger than it is — the smoke creates a false silhouette.
+Temperament: Secretive. Communicates through smoke signals. Bonded riders must learn to read them.
+Habitat: Volcanic ash fields, industrial ruins, old battlefields.
+
+LAVA DRAGON (Magma Draconis)
+Colour: Black crust over glowing orange veins. Visibly hot at all times.
+Breath: Semi-liquid magma projectiles that cool mid-air to sharp obsidian shards.
+Size: Large. Heavy. Lands like a small earthquake.
+Temperament: Slow to anger, catastrophic when angry. Very warm to sleep near.
+Habitat: Active volcanoes, deep rift valleys.
+
+ICE DRAGON (Glacies Draconis)
+Colour: Blue-white, crystalline. Leaves frost wherever it walks.
+Breath: Supercooled air reaching -180°C. Freezes targets solid in under two seconds.
+Size: Medium-large. Surprisingly fast — ice coats surfaces ahead of it, reducing friction.
+Temperament: Cold (literally and figuratively). Warms slowly to riders. Extremely loyal once trust is established.
+Habitat: Arctic peaks, glaciers, frozen sea coasts.
+King: FROSTBOURNE. Ruled Glacial Caldera island. His frozen breath and his partner's lava created obsidian glass sculptures still standing today.
+
+THUNDER DRAGON (Tonitrus Draconis)
+Colour: Dark blue-grey, with visible static charge running across scales at all times.
+Breath: Ball lightning — slow-moving spheres that explode on contact.
+Size: Medium. Fast. The fastest large dragon in level flight.
+Temperament: Hyperactive, easily bored, requires constant stimulation. Excellent in battle.
+Habitat: Thunderstorm zones, mountain peaks above cloud level.
+King: STORMCREST. Circled the world in one day. Arrived home slightly before he left, which no scholar has successfully explained.
+
+LIGHTNING DRAGON (Fulgur Draconis)
+Colour: Electric white with blue-gold streaks. Eyes are solid light.
+Breath: Pure lightning — chains between multiple targets.
+Size: Smallest of the elite clans. Compensates with speed.
+Temperament: Brilliant, impatient, occasionally incomprehensible.
+Habitat: Electrical storm fronts. Extremely rare anywhere calm.
+
+SUN DRAGON (Sol Draconis)
+Colour: Blinding gold-white. Requires darkened glass to view directly.
+Breath: Concentrated sunlight — dissolves matter at the atomic level.
+Size: Large. Visibly radiates heat at distance of 50m.
+Temperament: Regal. Treats everything as worthy of their light. Surprisingly humble.
+Habitat: High altitude. Equatorial mountain peaks. Anywhere with reliable sun.
+King: AURELIUS THE ETERNAL. Never seen in darkness. His island, the Celestial Altar, still glows at noon.
+
+SOUL DRAGON (Anima Draconis)
+Colour: Translucent. Can be partly or fully invisible. Visible outline appears as shimmering air.
+Breath: Soul beams — strips the will from living things temporarily. Targets forget why they were fighting.
+Size: Unknown. Reports vary wildly.
+Temperament: Ancient, deliberate, speaking rarely and always meaning something specific.
+Habitat: Places of significance — old battlefields, sacred sites, Dragon Mountain.
+Note: Soul dragons may be the rarest of all clans. Some scholars believe there is only one, appearing in different forms.
+
+BONE DRAGON (Os Draconis)
+Colour: Pale white to yellowish. Scales have a calcium lustre.
+Breath: Bone-dissolving acid mist. Skeletonises prey in minutes.
+Size: Large. Extremely light despite bulk — hollow bones.
+Temperament: Calm. Philosophical. Unbothered by death in any form.
+Habitat: Death Marshes, ancient graveyards, ruins.
+King: MORTIVEX. His territory smelled of old copper and endings. His roar sounded like every lament ever spoken at once.
+
+ACID DRAGON (Acidum Draconis)
+Colour: Sickly yellow-green. Scales slightly corroded in appearance.
+Breath: Corrosive acid spray — dissolves metal, stone, organic matter.
+Size: Medium. Deceptively fast.
+Temperament: Irritable. Leaves marks wherever it goes. Usually unwelcome at social events.
+Habitat: Toxic bogs, chemical springs, ruined industrial sites.
+
+METAL DRAGON (Ferrum Draconis)
+Colour: Silver-grey. Scales are literally metallic — magnetic, reflective, and razor-edged.
+Breath: Superheated metal shards at high velocity. Effectively a shotgun the size of a house.
+Size: Large. Very heavy. Requires extremely strong landing zones.
+Temperament: Precise. Methodical. Finds chaos aesthetically offensive.
+Habitat: Mountain mines, ore veins, the ruins of metalworking civilisations.
+King: CRUCIBLE. Built a palace from his own shed scales. It is still standing. It is still sharp. The building permit was never revoked.
+
+GLASS DRAGON (Vitrum Draconis)
+Colour: Clear and refractive — impossible to see against bright sky. Ground observers see only a lens-shaped light distortion.
+Breath: Superheated sand fused mid-flight into glass spears. The resulting projectiles are beautiful and lethal.
+Size: Medium. The lightest physical dragon per wingspan ratio.
+Temperament: Vain. Fascinated by their own reflections. Easily distracted by mirrors.
+Habitat: Desert glass fields, sandy coastlines, anywhere with bright light.
+
+════════════════════════════════════
+SHADOW DRAGONS (Non-clan — classified separately)
+════════════════════════════════════
+
+Shadow Dragons are not a natural species. They are manifestations of the Shadow — darkness shaped into dragon-form by the same forces that created the Princes of Death.
+
+Colour: Black, with no reflective properties. Light bends around them.
+Breath: Shadow vapour — causes disorientation and will-suppression.
+Size: Variable. Largest observed: 40m wingspan. Smallest: 8m.
+Temperament: They have no temperament. They have intent.
+Habitat: Anywhere the Shadow presses through. Dragon Mountain surroundings at present.
+Note: Shadow Dragons cannot be bonded. They dissolve at death, leaving Shadow Dust — crystallised essence that retains a residue of dark energy and can be used in certain rites.
+
+════════════════════════════════════
+SEA DRAGONS (Oceanus Draconis — ninth clan, non-affiliated)
+════════════════════════════════════
+
+The sea dragons predate the eight clans. They were there before the Starfall Dragon. They will be there after everything else.
+
+They live in the deepest ocean trenches, in pressures that would crush stone. They are enormous — the smallest reported specimen was 80m in length. The largest has not been measured because the measuring party did not return.
+
+They have never attacked a surface ship. They have surfaced three times in recorded history, each time during a world-ending event, observed the situation, and submerged again.
+
+No one has ever bonded with a Sea Dragon. No one has tried twice.`},
+
+  {id:'dragon_lore', name:'📖 Dragon Lore: Origins', cost:200, bonus:'reveals_dragons',
    lore:`DRAGON LORE — THE ANCIENT COMPENDIUM
 
 THE EIGHT CLANS
@@ -3151,9 +3308,7 @@ ALDRA THE FIRST: The woman who tamed the first dragon.
 
 She did not set out to be a hero. She was a shepherd, seventeen years old, living on the eastern cliffs. A storm-dragon crashed onto her land — wounded, enormous, furious. Every trained warrior in the province refused to approach it. Aldra walked up to it alone, with a bucket of water and a piece of salted bread.
 
-Three days later, she rode it into the city. No saddle. No reins. Just her hands on its scales and something unspoken between them. That understanding became the basis for every dragon-rider bond that followed.
-
-She never trained formally. She wrote nothing down. When asked how she did it, she said: "I just listened."
+Three days later, she rode it into the city. No saddle. No reins. Just her hands on its scales and something unspoken between them. That understanding became the basis for every dragon-rider bond that followed. She never trained formally. She wrote nothing down. When asked how she did it, she said: "I just listened."
 
 ─────────────────────────
 
@@ -3169,19 +3324,27 @@ Fourteen years later, Brightfall's scales washed up on the northern shore, clean
 
 VOSS THE MOUNTAIN: The first rider of a Bone-Acid dragon.
 
-Everyone told him it was impossible. Bone-Acid dragons dissolved anything they touched over time. Three previous riders had lost fingers, then hands, then — in one case — their enthusiasm.
-
-Voss wore glass armour, ground himself, and simply endured. After a year, the dragon — named Dissolution — stopped dissolving him. It had decided he was more interesting alive.
-
-They fought together for forty years. When Voss finally died, of old age, in his bed — Dissolution lay beside the bed and refused food until the funeral was complete. After that, it flew into the Death Marshes and was never seen again.
+Everyone told him it was impossible. Bone-Acid dragons dissolved anything they touched over time. Three previous riders had lost fingers, then hands, then — in one case — their enthusiasm. Voss wore glass armour, ground himself, and simply endured. After a year, the dragon named Dissolution decided he was more interesting alive. They fought together for forty years. When Voss died of old age, Dissolution lay beside his bed and refused food until the funeral was complete. Then it flew into the Death Marshes and was never seen again.
 
 ─────────────────────────
 
-BLANE THE RIDER: Living legend. Current whereabouts: Dragon Mountain.
+YSOLDE THE TWIN-RIDER: First and only rider of two dragons simultaneously.
 
-The only rider to survive a direct encounter with a Prince of Death and walk away. He will not say what happened. He returned to Dragon Mountain the following year and has not left since. The city still sends his favourite meal — roasted fish with northern peppers — by carrier dragon every month.
+Ysolde rode a Fire and a Water dragon together — one on each side — at the Battle of the Iron Pass. The two dragons disliked each other intensely, which Ysolde said was fine: the energy of their mutual irritation was more useful than calm.
 
-He always sends the plate back clean.`},
+She won the battle. The dragons never forgave each other. Ysolde mediated their arguments for forty years and described it as the hardest thing she ever did.
+
+─────────────────────────
+
+DRAVEN COLDHAND: The rider who spoke to a Prince of Death.
+
+He did not fight. He walked out alone, unarmed, in front of the advancing Prince, and spoke.
+
+No one heard what was said. The Prince halted for seven minutes — an eternity, by the account of the soldiers watching from the walls. Then it turned and left.
+
+Draven returned to the city, sat down, and refused to describe the conversation for the rest of his life. When pressed in his final years, he said only: "I reminded it of something it had forgotten. It remembered. That was enough."
+
+He died peacefully. His sword was given to the Library. It is in the restricted section.`},
 
   {id:'atlas_world', name:'🗺 Atlas of the Known World', cost:160, bonus:'none',
    lore:`ATLAS OF THE KNOWN WORLD — THIRD EDITION
@@ -3273,159 +3436,966 @@ The Shadow said: "I know." And it sounded, the child later reported, almost sad.
 
 The child found their way home. No one believed them. They became a scholar.`},
 
-  {id:'tale_of_blane', name:'📘 The Tale of Blane', cost:250, bonus:'none',
-   lore:`THE TALE OF BLANE THE RIDER — AN ACCOUNT
+  {id:'emperor_saga', name:'👑 The Emperor\'s Saga', cost:280, bonus:'none',
+   lore:`THE EMPEROR'S SAGA — A COMPLETE HISTORY
+Compiled by the Imperial Historians. Edited for public reading. Several pages removed by Imperial Decree.
 
-He was not remarkable as a child. Quiet. Good at listening. Bad at sitting still.
+THE RISE OF EMPEROR VALDRIS THE IRON
 
-He bonded with his first dragon at thirteen — a small Fire dragon, bad-tempered and brilliant, named Cinder. They trained for five years before anyone took them seriously. By the time they were ready, Cinder was enormous and Blane could read a dragon's intent before the dragon had decided on it.
+He was not born to rule. He was born in a fishing village on the coast, the third son of a boat-maker, and his only distinguishing feature as a child was that he refused to lose arguments — even arguments with people who were clearly correct.
 
-The years before the Shadow Siege of Year 487 were calm. Deceptively calm. Blane spent them at Dragon Mountain, training with the sky riders — men and women who had turned the mountain peaks into an academy. He learned the Fire arts, the Thunder arts, the Earth arts. He cross-trained until no single dragon type felt foreign.
+He left home at sixteen with a fishing knife, a stolen horse, and what his mother called "an unreasonable amount of confidence." By twenty he commanded a mercenary company. By thirty he had absorbed four minor kingdoms into his territory without a single battle, by simply talking at their rulers until they gave up.
 
-Then the Siege came.
+By forty, he ruled the Southern Reaches.
 
-The Shadow moved on the city without warning on the night of the winter solstice. No moon. Cold that bent metal. The Shadow poured through the northern pass like smoke through a keyhole — not an army, but a pressure. A silencing weight.
+His relationship with dragons began as pure hostility. Three of his earliest campaigns were against dragon riders who refused to pay his taxes. He lost all three engagements but won the subsequent negotiations through what his generals described as "talking so long that the dragons eventually left out of boredom."
 
-Three battalions broke before it without a sword being drawn. The shadow wasn't attacking. It was simply being there, and that was enough.
+THE DRAGON WARS OF THE SOUTH
 
-Blane rode into it alone.
+Valdris's decree in Year 521 — "All dragons operating within Imperial territory are subject to Imperial taxation, registration, and oversight" — caused what historians call the Southern Dragon Wars and what the dragons called "an extraordinary misunderstanding about the nature of sovereignty."
 
-What happened inside the Shadow is not fully known. His own account, given once to a historian and never repeated, contained the following:
+The wars lasted twelve years. Neither side won. The dragons could destroy his armies; Valdris could rebuild them and was personally impossible to kill (three assassination attempts, four assassination enthusiasms, all unsuccessful). Eventually both parties agreed to a border: the Volcano and south belonged to the Emperor. The sky belonged to the dragons. The arrangement holds today, technically.
 
-"I didn't fight it. You can't fight it. I just... reminded it that I was there. That I existed. That I had a name and a dragon and something to go back to. I held on to that so hard that the shadow couldn't find a gap to come through."
+THE VOLCANO FORTRESS
 
-He emerged after six hours. Cinder's scales were grey for a month. The Shadow pulled back from the city.
+Valdris built his fortress into the eastern face of the great Volcano — a structure of black stone and iron, constructed over twenty years by an army of workers and one very reluctant earth dragon who was persuaded to excavate tunnels in exchange for not being taxed.
 
-Blane never claimed a victory. He said, quietly, that he had bought time.
+The fortress is impregnable. This is not boasting — it has been tested. The Shadow's advance in Year 487 stopped at the Volcano's caldera. It is unclear whether the Shadow was repelled by the fortress or simply found it distasteful.
 
-He has been buying time at Dragon Mountain ever since. He believes the final reckoning is approaching — that the Princes will ride, and that the only rider capable of stopping them is the one who has faced all eight King Dragons and carries their weapons.
+THE CURRENT EMPEROR
 
-He is waiting to meet that rider.
+Emperor Valdris VIII — great-great-great-grandson of the original — rules today. He has his ancestor's refusal to lose arguments and his ancestor's complicated relationship with dragons.
 
-He hopes it is you.`},
+His official policy: dragons in Imperial airspace are to be driven off or destroyed.
 
-  {id:'rider_handbook', name:'📗 Rider\'s Handbook', cost:100, bonus:'none',
-   lore:`THE RIDER'S HANDBOOK — STANDARD ISSUE, 14TH EDITION
-Printed by the Dragon Rider's Guild. Some advice may be outdated. See errata on back page. There is no back page.
+His unofficial policy, known only to his senior advisors: he is very aware that the Shadow is coming, and he has quietly instructed the Imperial cavalry to leave dragon riders alone if they appear to be flying north with purpose.
 
-CHAPTER 1: YOUR DRAGON
+He will not admit this publicly.
 
-Your dragon is not a mount. Your dragon is a partner who happens to be very large and on fire. Treat them accordingly. The riders who last longest are the ones who understood this first.
+He is, in his own way, also trying to buy time.
 
-A dragon's mood affects its breath. A frustrated dragon breathes hotter. A calm dragon breathes more accurately. A dragon that trusts you breathes exactly where you point.
+THE EMPEROR'S DRAGON
 
-CHAPTER 2: CONTROLS
+This is the section that was removed by Imperial Decree.
 
-[T] — Toggle between Dragon and Human form. In human form you can enter cities, speak to people, buy things, and briefly pretend you live a normal life.
-[E] — Talk to anyone friendly. This includes NPCs, stable hands, Blane, and occasionally confused goats.
-[B] — Browse or Buy at shops.
-[N] — Next option in certain shops.
-[M] — Use active wizard spell (must be purchased from Zephyrus first).
-[1][2][3] — Your dragon's special attacks. These vary by clan.
-[J] — Jump (human form only). Useful. Underused.
+(The handwritten note that replaced it reads: "He kept one. A small fire dragon. He calls it nothing. It lives in the highest tower of the Volcano Fortress. He feeds it fish. We are all pretending not to notice. — Senior Historian Vellus")`},
 
-CHAPTER 3: SHADOW DUST
+  {id:'first_riders', name:'🌅 The First Riders', cost:200, bonus:'none',
+   lore:`THE FIRST RIDERS — AN ORAL HISTORY
 
-When you defeat a Shadow Dragon, it leaves behind Shadow Dust — a crystallised residue of its essence. Collect it. It has uses. What uses, specifically, Blane will tell you. He is very particular about who knows.
+Transcribed from the spoken traditions of the Dragon Mountain communities. These stories predate writing. Treat them as truth told sideways.
 
-CHAPTER 4: THE KING DRAGONS
+THE FIRST BOND
 
-There are eight. They are large. Each has three attack phases: Patrol (mostly harmless), Aggression (quite dangerous), and Frenzy (extremely dangerous). Survive Frenzy. This is the whole of the advice.
+Before there were riders, there were observers.
 
-Their weapons appear at the centre of their island when they fall. Collect all eight.
+For generations, the people who lived near Dragon Mountain watched the dragons. They did not approach them. The dragons watched back. Neither side knew what to do with the other.
 
-CHAPTER 5: THE CITY
+The first bond happened by accident. A young woman named Aldra — a shepherd, seventeen, unremarkable by her own account — found a storm-dragon on her hillside. Wounded. Enormous. Furious.
 
-The Great City is safe — mostly. Enter in human form through the south gate. Dragons are not permitted inside the walls. The city hunters will enforce this policy with enthusiasm and crossbows.
+She did not run. She was afraid, but she was more curious than afraid. She approached slowly, with water and food, and she sat down nearby and waited.
 
-The Library has books. Read them. The world is large and mostly unexplained. Reading helps.
+The dragon did not attack. It was used to being approached by people who wanted things from it. This one seemed to want nothing. After three days of this, the dragon did something no dragon had done before: it lowered its head to the ground and held still.
 
-CHAPTER 6: FINAL ADVICE
+Aldra understood. She climbed on.
 
-The world is trying to end. It has been trying for some time. It has not succeeded yet. You are partly why. Keep going.`},
+They flew for the first time on a morning in early spring. The wind was cold. The ground was very far below. Aldra held on with both hands and laughed all the way to the top of Dragon Mountain and all the way back down.
+
+She never trained formally. She wrote nothing down. When asked how she had done it, she said: "I just listened."
+
+THE FIRST SCHOOL
+
+After Aldra, others tried. Many fell. Some succeeded. Within a generation there was a loose community of riders on Dragon Mountain — people who had formed bonds, training together, sharing what worked and what didn't.
+
+They called themselves nothing, at first. Names came later. The Dragon Mountain Academy is what history calls them. At the time they called themselves "people who hadn't fallen yet."
+
+Their rules, as recorded:
+
+1. Your dragon is not yours. You are bonded, not owned.
+2. Never approach an unbonded dragon for combat. Only for conversation.
+3. If a dragon tells you to leave, leave.
+4. If a dragon follows you, it has chosen. Do not second-guess a dragon's choice.
+5. The bond goes both ways. You feel what it feels. This is the gift and the cost.
+
+THE FIRST RIDERS' NAMES (those remembered):
+
+ALDRA — the first. Fire dragon. Bond formed Year 112.
+KASSEL — second. Earth dragon. The bond took seven years.
+NIRA OF THE CLIFFS — third. Water dragon. She could not swim; the dragon taught her.
+BRAM IRONFOOT — fourth. Thunder dragon. Neither of them was calm for a single day of their lives together and they both preferred it that way.
+SILENT YEVA — fifth. Soul dragon. She stopped speaking after the bond. Not from sadness — she said the dragon's way of communicating made words feel imprecise. She communicated entirely in gesture and expression for the rest of her life and was considered excellent company.
+
+THE FIRST LOSS
+
+The first rider to die in dragon form was Kassel. He and his Earth dragon were caught in a Shadow storm in Year 189. Witnesses on the mountain said the Earth dragon came down from the cloud alone and landed at the Academy.
+
+It did not fly again for two years. When it finally did, it flew north and did not return for a decade. When it came back, it accepted a new rider — something Earth dragons had never done before. This was understood as a gift and treated accordingly.
+
+THE LEGACY
+
+The first riders built no monuments. They left no laws. What they left was the understanding — passed person to person, rider to rider, down through the centuries — that the bond between a dragon and a rider is the realest thing in the world.
+
+Everything else is negotiable. The bond is not.`},
+
+  {id:'dragon_mountain_magic', name:'🏔 Dragon Mountain: Book of Spells', cost:320, bonus:'wizard_boost',
+   lore:`DRAGON MOUNTAIN — COMPLETE GUIDE TO ITS MAGIC
+By the Scholars of the High Academy. Classified: Rider Access Only.
+
+THE MOUNTAIN'S POWER
+
+Dragon Mountain is not simply a mountain. It is a convergence — a point where the ley lines of the world intersect, where the boundary between the physical and the shadow plane grows thin, and where the residual energy of a thousand years of dragon habitation has saturated the stone itself.
+
+Walk on its slopes long enough and you will feel it. A warmth from below. A clarity in thought. A sense that the world is paying attention.
+
+The first riders called this the Mountain's Breath. Modern scholars call it ley-resonance. Both are correct.
+
+THE EIGHT ELEMENTAL SPELL-FORMS
+
+The mountain's magic reflects the eight dragon clans. A scholar or rider attuned to the mountain can learn to channel these forms:
+
+FIRE FORM (Ignis Invocation)
+Incantation: "Ignareth sol veth" (Draconic: "King of fire, lend your heat")
+Effect: Channels the residual fire of the Fire-Water clan into a sustained flame aura. Useful for warmth, light, and burning things. Mostly burning things.
+Duration: Until concentration breaks or the caster gets distracted by something interesting.
+Warning: Do not cast near the Library. Eldris will find out.
+
+EARTH FORM (Terra Binding)
+Incantation: "Verdaun keth ora" (Draconic: "Patient stone, hold")
+Effect: Binds the caster's feet to the earth below. Immovable for the duration. Useful for resisting being pushed off mountains.
+Warning: You cannot walk while bound. Plan accordingly.
+
+STORM FORM (Tonitrus Call)
+Incantation: "Stormcrest vel aran" (Draconic: "King of speed, lend your wind")
+Effect: Calls a localised lightning strike on a marked target. Requires the caster to have visited the Storm Throne island at least once.
+Warning: If you have metal armour, stand well back from the target. Well back.
+
+SHADOW SIGHT (Umbra Veil — RESTRICTED)
+Incantation: Classified. Available to senior Academy scholars only.
+Effect: Allows the caster to see into the Shadow Plane briefly. What is seen cannot be unseen.
+Warning: This form is listed here as documentation only. Do not attempt it. We mean this.
+
+ICE FORM (Glacies Breath)
+Incantation: "Frostbourne an'vel" (Draconic: "Cold king, slow the world")
+Effect: Lowers ambient temperature significantly in a 10m radius. Useful for preservation, cooling, and making enemies very uncomfortable.
+Warning: Affects the caster equally. Bring a coat.
+
+LIGHT FORM (Sol Radiance)
+Incantation: "Aurelius sola ven" (Draconic: "Sun king, let there be light")
+Effect: Creates a point of intense light equivalent to full noon sunlight. Effective against Shadow creatures, which dissolve in strong light.
+Note: This is the most practical combat form. It costs nothing, harms nothing natural, and Shadow Dragons hate it.
+
+THE MOUNTAIN'S GIFT
+
+Riders who train extensively at Dragon Mountain sometimes develop a passive attunement — an ability to sense shadow presence, predict weather, or understand dragon emotions without direct bond. This is not magic in the learned sense. It is simply what happens when a person spends enough time in a place where the world is paying attention.
+
+The Mountain notices who is trying. It has always noticed. It will always notice.
+
+APPENDIX: RUNES FOUND ON THE MOUNTAIN'S LOWER SLOPES
+
+The runes predate the first riders by an estimated three thousand years. They have been partially translated:
+
+Row 1: "Before the word, the fire."
+Row 2: "Before the fire, the dark."
+Row 3: "Before the dark [untranslatable]"
+Row 4: "What fell from the sky taught the mountain to remember."
+Row 5: [Heavily worn. Best guess: "It will return. Be ready."]
+
+Apprentice Vorak of the Wizard Tower has been studying these for two years. He has not shared his conclusions. His colleagues report he looks pale.`},
+
+  {id:'ocean_story', name:'🌊 Songs of the Deep Ocean', cost:150, bonus:'none',
+   lore:`SONGS OF THE DEEP OCEAN
+
+Collected from coastal fishing communities, sailor traditions, and three accounts from people who went under and came back different.
+
+WHAT THE OCEAN IS
+
+The ocean is older than the dragons, older than the mountains, older than whatever the mountains were before they were mountains. It was here when the world was cooling. It watched the Starfall Dragon arrive. It watched the eight clans form.
+
+It has opinions about all of this. It expresses them through weather.
+
+THE SEA DRAGONS
+
+They are real. This requires saying plainly, because every generation decides they are legend and every generation is eventually corrected.
+
+The sea dragons live in the deep trenches — places so deep that light from the surface has never reached them, where pressure would collapse a warship like wet paper. They are enormous. The smallest confirmed specimen, seen briefly from the cliffs during the Great Storm of Year 412, was estimated at 80 metres. The observers did not want to estimate the larger ones visible behind it.
+
+They breathe bioluminescence — a cold light from somewhere in the biology that no one has studied at sufficient proximity to understand. When they breach the surface (which happens perhaps once a century), the ocean glows for three days afterward.
+
+They have never attacked a surface ship. This is not passivity. It is a considered decision.
+
+THE THREE TIMES THE SEA DRAGONS ROSE
+
+In all of recorded history, the sea dragons have surfaced three times and three times only. Each time was during a world-ending event.
+
+THE FIRST RISING: Year 203, during the First Dragon Wars. A sea dragon surfaced off the eastern coast and watched the battle from the sea for two days. Then it submerged. The war ended the following month. Coincidence is the official position.
+
+THE SECOND RISING: Year 487, during the Shadow Siege. At the same hour that Blane rode into the Shadow Cloud in the north, a great luminescence was reported in the southern ocean — a brightness from below that sailors said turned the sea to glass. It lasted six hours. The Shadow retreated. The connection is officially unconfirmed.
+
+THE THIRD RISING: Year 594 — four years ago. A single sea dragon surfaced at dawn thirty kilometres from the southern coast, turned to face the direction of Dragon Mountain, held still for three hours, and then descended. It left behind a circle of bioluminescent water that persisted for two weeks.
+
+The scholars believe this was a warning. They are not sure to whom.
+
+WHAT THE FISHERMEN KNOW
+
+The coastal fishing communities have traditions about the sea dragons that predate the written record. The core belief, consistent across all communities:
+
+— The sea dragons protect the ocean the way riders protect the sky.
+— They make no bargains and need no allies.
+— When the world is very wrong, they rise to witness it. This witnessing is itself a form of action.
+— The sea they swim in is not entirely water. It is partly time. They move through both.
+
+THE GREAT DEEP
+
+There is a place in the ocean — location known only to the coastal elder-navigators and kept deliberately unwritten — where the water is black in full daylight, where no current moves, and where the seafloor has never been found by any line.
+
+The navigators call it the Throat.
+
+They navigate around it. They do not discuss what has been seen near it. They do not approach it.
+
+The sea dragons nest there.
+
+A SONG FROM THE EASTERN COAST (traditional)
+
+Deep below the grey of the wave
+Where the cold has weight and the dark is a wall,
+The old ones swim, unhurried, unsaved,
+Remembering things before the first fall.
+
+They breathe the light that no sun sent,
+They dream of ages we cannot name.
+They need no blessing, no dragon-bond's gift —
+They were here before. They'll be here again.
+
+Do not call to the depths, young one.
+The depths already know your name.
+If they rise to look, it is not at you.
+You are the witness, not the game.`},
+
+  {id:'dragon_legends', name:'🌟 Legends of Dragons', cost:140, bonus:'none',
+   lore:`LEGENDS OF DRAGONS — COLLECTED MYTHS AND STORIES
+
+THE DRAGON WHO SWALLOWED THE SUN
+
+Before the Sun Dragon clan took their name, there was one dragon who flew too high.
+
+The old stories differ on its type. Some say fire, some say light, some say it had no clan because it predated the clans. All agree on what happened: it flew upward, past the cloud layer, past the high winds, past the place where the air grows thin, and kept going.
+
+It reached the sun.
+
+It did not burn. It is a dragon. It opened its mouth.
+
+What it was trying to do, no one knows. The sun was not interested in being swallowed and said so by shining very brightly for three days straight — bright enough to see at noon, to read by at midnight, bright enough that the crops grew in winter and the shadows retreated.
+
+The dragon came back down eventually. It never spoke of what happened. Its scales were gold for the rest of its life.
+
+─────────────────────────
+
+THE LEGEND OF THE SINGING MOUNTAIN
+
+Dragon Mountain sings.
+
+Not in a way you can hear with your ears — in a way you can feel in your chest on still mornings when the wind is from the north. Riders who have lived on the mountain for years describe it as a frequency: a hum just below hearing that makes the bones feel aware.
+
+The mountain has been this way since before the first rider.
+
+The old stories say it is the resonance of a thousand years of dragon wings — that the stone absorbed the vibration of flight over centuries until the vibration became permanent, until the mountain itself learned the motion of wings.
+
+Others say it is the Starfall Dragon, still present in the stone, still breathing.
+
+The mountain does not clarify.
+
+─────────────────────────
+
+THE BONE DRAGON'S GARDEN
+
+There is a legend, among the people who live near the Death Marshes, of a garden.
+
+The Bone-Acid clan dragons, in between hunting, build things. Not nests — actual constructions: arrangements of bone and crystal and coral that have no survival function and serve no territorial purpose. Scholars who have approached the Death Marshes carefully report finding formations of extraordinary complexity — spires of bone held together with solidified acid, crystal structures that catch and refract what little light reaches the marsh floor, passages that wind through the structure in patterns that suggest architecture.
+
+One scholar, who survived the approach, reported a central chamber. In it was a single flower. Living. Perfectly preserved, somehow, in the acidic environment.
+
+No one has gone back to study it further. The scholar who survived was entirely polite about why.
+
+─────────────────────────
+
+THE GLASS DRAGON AND THE MIRROR MAKER
+
+A glass dragon once flew over a city where a mirror maker lived. The mirror maker looked up and saw the dragon — just barely, the glass scales refracting rather than reflecting — and thought: I could make something that shows that.
+
+She spent ten years making a mirror that could capture the image of a glass dragon. When she finally succeeded, she went to the highest tower in the city and held it up.
+
+The dragon landed beside her. It looked at the mirror for a very long time. Then it looked at her.
+
+"Is that what I look like?" it asked. It was the first time it had spoken to a human.
+
+"More or less," she said.
+
+"More or less," it repeated. It seemed to find this acceptable.
+
+They talked for the rest of the afternoon. She gave it the mirror. It still has it. When glass dragons gather, they pass it among themselves and argue about whether the reflection is accurate.
+
+It is not. But they don't know that, and the mirror maker felt it was not her place to say so.
+
+─────────────────────────
+
+THE UNNAMED DRAGON (again)
+
+Some stories deserve to be told twice.
+
+There is a dragon with no name, no clan, no colour. It appears to riders on the night before a great and difficult thing — a battle, a loss, a choice that cannot be unmade.
+
+It lands beside them, looks at them for exactly as long as it takes, and leaves.
+
+The riders always describe the same feeling afterward: not comfort, not certainty, but clarity. A sense that everything unnecessary has been removed. That what remains is exactly what matters.
+
+No one knows who or what the dragon is. No one has named it. By common agreement, to name it would change it into something lesser.
+
+The unnamed dragon is the only dragon that is not a dragon. It is something the world invented for the purpose of that one moment, again and again, across time.
+
+It has never appeared twice to the same rider. It has never been wrong about which night to come.`},
 
   {id:'realm_history', name:'🏛 History of the Realm', cost:80, bonus:'none',
    lore:`HISTORY OF THE REALM — POPULAR EDITION, REVISED
 
 YEAR 0: The world is as it always was. Dragons in the sky. People on the ground. An arrangement that mostly works.
 
-YEAR 112: First recorded dragon rider. Her name was Aldra. She was a shepherd. The dragon was named later — she just called it "you." It seemed to prefer that.
+YEAR 112: First recorded dragon rider. A shepherd named Aldra. The dragon was named later — she just called it "you." It seemed to prefer that.
 
-YEAR 203–218: The First Dragon Wars. Not between humans and dragons — between two human factions, each with dragons. The war was complicated, expensive, and resolved by a dragon who refused to fight and sat down in the middle of the battlefield until everyone agreed it was absurd.
+YEAR 203–218: The First Dragon Wars. Not between humans and dragons — between two human factions, each with dragons. The war ended when a dragon refused to fight and sat in the middle of the battlefield until everyone agreed it was absurd.
 
-YEAR 301: Founding of the Great City. Built at the crossroads of the three main trade routes, at the site of an ancient dragon nesting ground. The dragons had already left. The eggshells were used as building material. The Library was the second building completed, after the tavern.
+YEAR 301: Founding of the Great City. Built at the crossroads of three trade routes, on an ancient dragon nesting ground. The dragons had already left. Their eggshells went into the foundations. The Library was the second building completed, after the tavern.
 
-YEAR 487: The Shadow Siege. The Shadow's first major incursion in centuries. Stopped by Blane and his fire dragon Cinder. The city doubled its walls the following year.
+YEAR 487: The Shadow Siege. Stopped at great cost. The city doubled its walls the following year.
 
 YEAR 489–510: The Age of Riders. The Dragon Mountain Academy flourished. Riders trained. Dragons multiplied. The world was, briefly, optimistic.
 
-YEAR 511: The King Dragons began to change. Scholars noted aggression increasing, territories expanding. In retrospect, the Shadow was pressing against them from below.
+YEAR 521: The Emperor's Dragon Decree. All dragons in Imperial territory subject to Imperial law. The dragons ignored this. The wars that followed were complicated.
 
-YEAR 517–523: The King Dragons fall, one by one, to forces unknown. Their islands become ruins. Their weapons remain unclaimed. The Shadow retreats, but does not leave.
+YEAR 517–523: The King Dragons fall one by one. Their islands become ruins. Their weapons remain unclaimed.
 
-YEAR 540: Blane returns to Dragon Mountain alone. He says he has work to do. He will not say what work.
-
-YEAR 598 (PRESENT DAY): The Shadow Dust grows more concentrated. The Princes of Death are reported in the northern passes. Blane waits. Someone collects the king weapons.
+YEAR 598 (TODAY): The Princes of Death have been reported in the northern passes. The Emperor watches from the Volcano. The Great City watches from its walls. Dragon Mountain waits.
 
 You are living through Year 598. Act accordingly.`},
 
   {id:'shadow_history', name:'📜 Codex of Shadows', cost:350, bonus:'reveals_shadow',
    lore:`CODEX OF SHADOWS — RESTRICTED VOLUME
+Librarian's note: Reading this in full has caused two scholars to change kingdoms and one to change species. The species change was voluntary but unexpected.
 
 THE NATURE OF THE SHADOW
 
-The Shadow is not evil in the way a person can be evil. A person chooses. The Shadow simply is — an anti-force, a pressure from outside the world's membrane, pressing inward.
+The Shadow is not evil the way a person can be evil. A person chooses. The Shadow simply is — an anti-force, pressing against the bubble of ordered energy that contains the world. It does not hate the world. It presses. That is enough.
 
-Scholars have proposed many theories. The most widely accepted: the world exists in a bubble of ordered energy. The Shadow is what presses against that bubble from outside. It does not hate the world any more than the ocean hates a boat. It simply pushes.
+Shadow exposure causes: first, silence (birds stop singing); then coldness; then a forgetting — not of facts, but of will. Settlements in its path do not fight. They simply stop.
 
-The problem is what it does to the living.
+THE PRINCES OF DEATH: THEIR NAMES
 
-Shadow exposure over time causes first silence (birds stop singing near its edges), then coldness, then a forgetting — not of facts, but of will. Settlements in the Shadow's path do not fight. They simply stop. The people stand where they are. Waiting. For something that never comes.
+Their names were removed from every stone that bore them. We have reconstructed them from oral record:
 
-THE PRINCES OF DEATH
+DREVAK THE UNBOWED — the strategist. Even in death, he plans.
+SILENE OF THE IRON SHORE — the fastest rider the world has ever produced.
+MORTHUS BLACKHAND — once a healer. The cruelty of what he became is not lost on him.
+YENNA THE LAST — she was the last to accept the bargain. She regrets it most.
+THE PRIOR — their leader. His true name was removed by the Shadow itself, not by humans. This is unprecedented. Scholars find it troubling.
 
-Five riders who made a pact with the Shadow in the century before the Great Shadow War. They bargained their humanity for power enough to protect those they loved. The Shadow gave them power. It also gave them an appetite. They now harvest what the Shadow needs — the warmth of living things — to sustain their immortality.
+THE WAY TO STOP THEM
 
-Their dragon-mounts are not true dragons. They are darkness shaped like dragons, sustained by the same pact. They cannot be wounded by ordinary weapons. They cannot be burned. They cannot be frozen. They move through spells the way water moves through a net.
+The eight King Weapons, forged from the essence of the eight dragon clans before the Shadow touched them, carry within them the original heat of the world. Only these can reach through shadow to the mortal soul beneath.
 
-The only weapons that work are the King Weapons — forged from the essential fires of the eight dragon clans, before the Shadow touched them. These weapons carry, within their cores, the original heat of the world before the Shadow came.
+Collect all eight. Find the one who waits. Face what comes.
 
-HOW TO FIND BLANE
+The Shadow is coming. The Princes ride ahead of it. This is what they were made to do. It was always going to be this way. The question is only: who is ready when it arrives.`},
 
-Go north. Find Dragon Mountain. Look for a campfire that has been burning for fourteen years without interruption. That is Blane's campfire. He is there.
+  {id:'dragon_taming', name:'🤝 How to Tame a Wild Dragon', cost:260, bonus:'none',
+   lore:`HOW TO TAME A WILD DRAGON
+A Practical Guide — 7th Edition
+Previous 6 editions recalled due to injuries. This edition includes the safety notes the previous editions omitted.
 
-He will ask if you have all eight King Weapons. If you do not, he will wait. He has waited before.`},
+BEFORE YOU BEGIN
 
-  {id:'wizards_tome', name:'🔮 Wizard\'s Secret Tome', cost:300, bonus:'wizard_boost',
-   lore:`WIZARD'S SECRET TOME — PERSONAL NOTES
-By Morthex, Grand Arch-Wizard, Keeper of the High Tower, Honorary Member of the Cloud Watchers Society (expelled 741 for causing a cloud)
+A wild dragon cannot be "tamed" in the way a horse is tamed. The word is used only because no better word exists. What you are attempting is a conversation, not a conquest. The dragon will decide the outcome. Your only job is to make a good case.
+
+If you approach a dragon thinking of it as an animal to be controlled, it will know. Dragons read intent. They are very good at this. The session will end badly.
+
+STEP 1: APPROACH WITHOUT WEAPONS
+
+Leave everything that could be used as a weapon. The dragon will see it. If you carry a sword, the dragon understands you are prepared for the possibility of fighting it. It will prepare accordingly. This is not the relationship you want.
+
+Walk toward it slowly. If it looks at you directly — stop. Wait. Let it look as long as it needs. When it looks away, continue.
+
+STEP 2: DO NOT MAKE EYE CONTACT IMMEDIATELY
+
+Sustained eye contact is a challenge in dragon communication. Approach at a slight angle, looking at the ground near its feet. When you are close enough to feel the heat from its scales, sit down.
+
+Sit on the ground, not on a rock or a log. Ground-level says: I am not positioning myself above you. I am not claiming height. I am here.
+
+STEP 3: WAIT
+
+This is the longest step and the one most people get wrong.
+
+Wait. Do not speak. Do not move unnecessarily. Do not display impatience, because the dragon will interpret impatience as disrespect of its time, which it has a great deal of.
+
+Waiting time by dragon type (approximate):
+— Fire Dragon: 1–3 hours if calm; 1–3 days if agitated
+— Earth Dragon: 3–7 days (bring provisions)
+— Water Dragon: variable; may require you to wait in rain (intentional)
+— Thunder Dragon: 20–40 minutes (they bore easily)
+— Bone-Acid Dragon: several weeks; wear acid-resistant clothing
+— Glass Dragon: approach from a direction where you are reflected; they notice you sooner
+
+STEP 4: SPEAK ONCE
+
+When the dragon has observed you long enough, it may turn to look at you directly. This is the signal.
+
+Say one sentence. Only one. Make it honest. What you say matters less than the honesty with which you say it.
+
+Recommended first sentences (collected from successful bonding accounts):
+— "I found you, and I wanted to say hello."
+— "I need help with something large and I think you might be the right kind of large."
+— "I'm not afraid of you." (Only say this if true. The dragon will know.)
+— "I've been watching you fly for three weeks and I wanted to know what it feels like."
+— [Silence, with eye contact, and a slow breath.] (This has worked four times in recorded history.)
+
+STEP 5: ACCEPT THE OUTCOME
+
+The dragon will respond: by leaving (the most common outcome), by staying, or by lowering its head to the ground.
+
+If it leaves: you were not ready, or it was not ready, or the moment was not right. This is not failure. Come back tomorrow.
+
+If it stays and watches: continue waiting. You are in extended evaluation.
+
+If it lowers its head: climb on. Slowly. Hold on. Try not to think about how far the ground is.
+
+A FINAL NOTE
+
+The bond does not begin at the moment of mounting. It begins at the moment of approach, when both the dragon and the rider decide — without negotiation, without guarantee — that this is worth the risk.
+
+That decision is the bond. Everything else follows from it.`},
+
+  {id:'strongholds', name:'🏰 Strongholds of the Realm', cost:170, bonus:'none',
+   lore:`STRONGHOLDS OF THE REALM — A MILITARY SURVEY
+Compiled by the Royal Defence Council. Some fortifications omitted for security. Those omissions are themselves a security measure.
+
+THE GREAT CITY WALLS
+Construction: Completed Year 302, expanded Year 488 (post-Shadow Siege).
+Material: Quarried northern granite reinforced with dragon-scale ash mortar.
+Height: 28 metres. Width at base: 14 metres.
+Defensive features: 36 wall towers, 4 corner fortresses, 8 ballistas (recently installed — see note), south gate with flanking towers.
+Note on ballistas: The ballistas were recommended by the city's Hunter-Captain after the Shadow Siege. They are designed to fire at dragons in flight. Riders and their dragons are advised to announce themselves at the gate rather than approaching from altitude.
+Weakness: None officially acknowledged. The north wall is slightly thinner than the south, but we are asking you to forget you read that.
+
+THE DRAGON MOUNTAIN ACADEMY
+Not a traditional fortress — a series of stone halls, training grounds, and landing platforms built into the mountain's upper slopes. No walls (unnecessary at altitude). Defended by resident dragon riders, whose presence constitutes a more effective deterrent than any wall.
+Current status: Active, reduced capacity. The main academy population has thinned since the King Dragons fell. A handful of riders remain.
+
+THE EMPEROR'S VOLCANO FORTRESS
+Location: Eastern face of the great Volcano, southern territories.
+Construction: 20 years, Years 540–560. Built partially into volcanic rock by conventional means and partially excavated by an earth dragon (see The Emperor's Saga for details).
+Height: Effectively the height of the volcano. Towers extend above the cloud layer.
+Defensive features: Imperial Guard (20,000 personnel), volcanic moat (the volcano), and the Emperor's personal conviction that the fortress is impregnable.
+Current status: Impregnable. This is verified, not claimed.
+
+THE SHADOW RUIN OUTPOSTS
+Along the northern passes, previous generations built a series of stone watch-towers to monitor Shadow activity. Most have been abandoned. The stones still stand. Travellers report finding them intact but cold — a cold that has nothing to do with the weather.
+Scholars advise against staying overnight in them.
+
+THE KING DRAGON RUINS (the Eight Islands)
+Not fortresses in the traditional sense — the ruins of royal dragon strongholds, each built into the geology of its floating island. What remains: stone halls, altar platforms, weapon-shrines. The weapons were placed there by the King Dragons themselves as a final act before they fell. Each ruin is now the King Dragon's territory in a different sense: the living dragon patrols it, regarding it as a prison as much as a home.
+Recommended approach: By air, with a bonded dragon, with significant combat preparation.
+
+THE LOST FORT OF KARREN
+A tower, built by the rider Karren Ironhoof somewhere in the borderlands between the city and Dragon Mountain. Its location is unknown. Travellers occasionally report finding a stone tower with an open door, a fire burning, and no one inside.
+The fire is always warm.
+No one has ever found it twice in the same place.`},
+
+  {id:'city_guide', name:'🏙 Guide to the Great City', cost:60, bonus:'none',
+   lore:`GUIDE TO THE GREAT CITY — OFFICIAL VISITORS' EDITION
+Welcome! You have arrived. This is a good sign.
+
+THE CITY AT A GLANCE
+Population: Approximately 12,000 (not counting dragons, who do not count themselves).
+Founded: Year 301.
+Walls: Never breached. We mention this frequently.
+Current status: Preparing for something. We are optimistic.
+
+ENTERING THE CITY
+The south gate is the main entrance. Human form required — the city hunters enforce a strict no-dragon policy inside the walls. This is not personal. It is structural. The buildings are not built for dragons.
+
+If you arrive on a dragon: dismount outside the gate ([T] to toggle). Your dragon will be fine. Dragons are good at waiting.
+
+DISTRICTS
+
+THE CENTRAL PLAZA
+The heart of the city. Home to twelve market stalls selling a variety of goods, a stone fountain (currently non-functional — the pipes are "being looked at"), and the memorial column commemorating the Shadow Siege of Year 487. The column's inscription reads: "We are still here." It is the most honest memorial ever built.
+
+THE NORTH DISTRICT — COMMERCE
+The Blacksmith's forge (weapons, upgrades, friendly conversation).
+The Armorer (plate, chain, and leather — always has strong opinions about your current protection level).
+The hospital (all wounds treated, no questions asked about the dragon).
+
+THE EAST DISTRICT — HEALTH & RECREATION
+The Golden Flagon Tavern (food, drink, rumour, and the best stew in the northern reaches).
+The hospital overflow building (less official; staffed by the doctor's apprentice).
+
+THE WEST DISTRICT — SPECIALTY SHOPS
+Alchemist's tower (potions, healing, the alchemist's opinions on everything).
+Madame Crumble's Cookie Emporium (do not ask how the cookies work; just eat them).
+
+THE WIZARD QUARTER (NORTHWEST)
+The Wizard Tower — home to Zephyrus, seller of arcane spells. His apprentices Lyra and Vorak guard the door. The tower has three floors. Grand Wizard Morthex occupies the top. He rarely comes down but will sell you his personal notes if the price is right.
+
+THE LIBRARY QUARTER (SOUTHEAST)
+The Grand Library — 200,000 volumes. The city's pride. Home to Librarian Eldris, Scholar Maren, and more knowledge than any single person can read in a lifetime. Try anyway.
+
+SAFETY NOTICE
+City Hunters patrol the wall perimeter and inner districts. They are armed with crossbows. They are very good with crossbows. They are specifically good at crossbows against dragons. In human form you will be greeted with professional courtesy. In dragon form you will be greeted with professional efficiency.
+
+RECOMMENDED ITINERARY (SHORT VISIT)
+1. Golden Flagon: stew and local news.
+2. Blacksmith: check if your blade is sharp enough.
+3. Library: read at least one book. The world makes more sense with context.
+4. Wizard Tower: consult Zephyrus about the state of magic in the northern reaches.
+5. Leave by south gate. The city will be here when you return.
+
+RECOMMENDED ITINERARY (EXTENDED VISIT)
+Everything above, plus: talk to everyone. This city is full of people who know things. The captain of the guard has met our most famous heroes. The tavern keeper has news no official source would print. The apprentice wizard has been reading runes that frighten him.
+
+The city is a library that you can walk around in.
+
+PARTING NOTE
+You came here for supplies, or shelter, or books, or spells, or food, or just the comfort of walls. All of these are good reasons. But the city's real purpose — the reason it was built here, at this crossroads, at this time — is simpler:
+
+So that people have somewhere to come back to.
+
+Safe travels. Fly well.`},
+
+  {id:'city_map', name:'🗺 Map of the Great City', cost:50, bonus:'none',
+   lore:`MAP OF THE GREAT CITY — ANNOTATED
+Hand-drawn by City Cartographer Hevra, Year 597. Updates pending.
+
+NOTE: This is a text map. A proper illustrated map is available in the cartography section of the Library, Room 4, Shelf C. It is very large. You cannot remove it from the building.
+
+═══════════════════════════════════════
+       NORTH WALL (28m high)
+       [Tower] [Tower] [Tower]
+═══════════════════════════════════════
+   WIZARD    │  BLACKSMITH  │  POTION
+   TOWER ◉   │  FORGE  ⚒   │  SHOP 🧪
+   (NW)      │  (N)         │  (NE)
+─────────────┼──────────────┼──────────
+   TAVERN    │  ** PLAZA ** │  HOSPITAL
+   GOLDEN    │   Market     │  🏥 (E)
+   FLAGON 🍺 │   Stalls 12x │
+   (W)       │  Fountain ♦  │
+─────────────┼──────────────┼──────────
+             │  ARMORER     │  LIBRARY
+   (homes)   │  SHOP 🛡     │  ◎ (SE)
+             │  (S)         │  350m SE
+═══════════════════════════════════════
+   [Gate]  [Gate Tower] [Gate Tower]
+   ===== SOUTH GATE (open to humans) =====
+═══════════════════════════════════════
+       SOUTH WALL (28m high)
+═══════════════════════════════════════
+
+KEY LOCATIONS AND DISTANCES FROM PLAZA CENTRE:
+  Blacksmith (Weapon Shop)   — 250m north
+  Armorer (Armor Shop)       — 250m south
+  Hospital                   — 250m east
+  Golden Flagon Tavern        — 250m west
+  Alchemist Potion Shop       — 280m northeast
+  Wizard Tower (Zephyrus)     — 280m northwest
+  Cookie Emporium             — 280m southeast (near centre)
+  Grand Library               — 480m southeast
+  South Gate                  — 620m south
+  North Wall                  — 620m north
+  East/West Walls             — 620m each direction
+
+POINTS OF INTEREST:
+  ◉ Wizard Tower: tallest building in city. 3 floors. Magic rings visible from city walls.
+  ◎ Grand Library: 200,000 volumes. 2 floors. Blue sign above entrance.
+  ♦ Plaza Fountain: non-functional. Historical.
+  ⚒ Blacksmith: golden sign above door. Listen for hammering.
+
+DISTRICTS (approximate, unofficial):
+  NW quadrant: Wizard Quarter (magic, mystery, apprentices)
+  NE quadrant: Merchant Quarter (shops, the market, the hospital)
+  SE quadrant: Library Quarter (scholarship, the cookie shop — both important)
+  SW quadrant: Old Town (oldest houses, the tavern, the memorial column)
+
+HUNTER PATROL ROUTES:
+  Outer: Perimeter of wall, 40 hunters, continuous rotation.
+  Inner: 8 posts at key intersections, reinforced near wizard tower and library.
+  Gate: 2 permanent guards, Captain Aldric commands.
+
+  Note: Hunters are armed with crossbows rated for dragon-sized targets.
+  Note: This is a friendly city. The crossbows are precautionary.
+  Note: They are very large crossbows.
+
+UNDERGROUND (not on most maps):
+  The city has a sewer network, an old well-system, and — according to the library's restricted section — a tunnel that predates the city by approximately 400 years, running north from the old town toward Dragon Mountain.
+
+  Its origin is unknown. It is sealed. The seal was checked last in Year 489.
+
+  The Library has a note to check it again. The note has been mislaid.`},
+
+  {id:'dragon_biology', name:'🔬 Dragon Biology', cost:230, bonus:'none',
+   lore:`DRAGON BIOLOGY — AN ACADEMIC SURVEY
+Third Edition. Significantly revised after the incident with the Earth Dragon.
+
+ANATOMY
+
+A dragon's skeleton is carbon-reinforced calcium — harder than stone, lighter than iron. The wings are membrane stretched between elongated finger-bones, identical in principle to a bat's wing but scaled up to 30 metres and reinforced with cartilage ridges.
+
+The breath sac — the organ responsible for each dragon's distinctive breath — sits at the base of the throat, connected to a secondary stomach used only for the chemical components of breath production. It is emphatically not food storage. Scholars who have hypothesised that it might be food storage have been wrong, and have been wrong in ways they found difficult to explain to doctors.
+
+BREATH PRODUCTION
+
+Each clan produces breath differently:
+— Fire dragons: a two-chamber organ produces fuel and oxidiser separately, mixing at the mouth. This is why you do not want to damage a fire dragon's lower jaw.
+— Ice dragons: a refrigeration system using blood chemistry so cold it should not, theoretically, be possible. It is possible. The ice dragons are as surprised as anyone.
+— Acid dragons: a highly concentrated chemical spray produced in a single sac. The sac is very robust. This is a mercy.
+— Glass dragons: superheated sand stored in a thermal chamber at the base of the neck. The grinding sound you sometimes hear from Glass Dragons is the sand being processed.
+
+SCALES
+
+Dragon scales are individually alive — they grow, shed, and regrow throughout the dragon's lifespan. Fresh shed scales retain their properties for approximately three months. Fire dragon scales are fire-resistant but not fireproof (they resist the fire of other species; the dragon's own fire is a different matter). Glass dragon scales are extremely sharp and do not dull. Metal dragon scales are magnetic.
+
+Collecting shed scales without permission is considered extremely rude. The dragon usually knows.
+
+DRAGON SENSES
+
+Dragons have:
+— Vision: 300° field of view, can perceive ultraviolet light, see clearly in near-total darkness.
+— Smell: approximately 400 times more sensitive than a human's.
+— Proprioception: awareness of position in three-dimensional space that makes them naturally gifted flyers with no training whatsoever.
+— A sense for which no human analogue exists: an awareness of large-scale energy fields — ley lines, shadow presence, storm fronts, the emotional state of bonded riders. This sense is the basis for the rider-bond. It is also why dragons know when you are lying.
+
+They always know.
+
+LIFESPAN
+
+Dragons do not die of age in the conventional sense. They die of entropy — a slow reduction in the energy that sustains them, most often caused by sustained exposure to the Shadow, by catastrophic injury, or by the loss of a bonded rider. A dragon that loses its rider in a bonded death typically survives the rider by between six months and three years.
+
+Unbonded wild dragons in undisturbed territories have been recorded as old as 1,200 years. The King Dragons are presumed older. It is unclear whether the Shadow's effect on them was age-related or separate.
+
+REPRODUCTION
+
+Dragons reproduce rarely — once every several decades. Clutches are small (one to three eggs). The eggs are buried deep in the terrain most suited to the clan and guarded for two to five years. Hatching is unassisted: the hatchling is expected to exit the egg by its own effort, which is considered the first test of viability.
+
+Hatchlings bond easily. This is why the Dragon Mountain community enforces a strict policy: do not interact with an unaccompanied hatchling unless you intend to bond. The bond cannot be undone.
+
+This is not a warning against bonding. It is a warning against bonding accidentally.
+
+DRAGON INTELLIGENCE
+
+The question of whether dragons are intelligent in the way humans are intelligent is answered definitively in this edition: yes. They use language (Draconic, supplemented by motion and tone). They have culture, tradition, and history. They make decisions based on values, not just instinct.
+
+The more interesting question — and the one this survey cannot fully answer — is whether they are intelligent in the way humans are. The evidence suggests the answer is no. They are intelligent in a different way, in directions that have no human equivalent, that operate on a different timescale and toward different goals.
+
+A dragon's decision-making operates on geological time. What looks like patience to a human is simply the dragon's natural processing speed. They are not slow. They are thorough.
+
+FINAL OBSERVATION
+
+The question asked most often by students of dragon biology is: do dragons feel?
+
+The answer, based on the evidence, is yes. They feel everything. They feel it longer and more completely than we do, because they have more time and because nothing about them is designed to suppress it.
+
+The bond works in both directions. The rider feels the dragon's emotions. The dragon feels the rider's.
+
+The riders who last longest are the ones who, when asked what it feels like to be bonded, say: "Like finally being heard by something large enough to understand the question."`},
+
+  {id:'cooking', name:'🍳 The Dragon Rider\'s Cookbook', cost:90, bonus:'none',
+   lore:`THE DRAGON RIDER'S COOKBOOK
+Practical Meals for Impractical Journeys
+By Chef Orenna of the Golden Flagon, City Edition
 
 FOREWORD
-If you are reading this, you either purchased it from me (acceptable), borrowed it without asking (I will find out), or found it in rubble (I am very sorry about the rubble).
 
-This volume contains my private notes on spell theory. They contradict the official curriculum in several places. The official curriculum is wrong in several places.
+Cooking on dragonback is not recommended. Cooking near a dragon is complicated. Cooking for a dragon is a commitment. This cookbook addresses all three situations.
 
 ─────────────────────────
 
-ON METEOR STORM
-The meteors are real. This is the most common misconception — students assume the spell conjures illusions of meteors. No. The spell opens a brief corridor between this world and an asteroid field I discovered in Year 503 and have kept professionally quiet about. The meteors pass through and continue on their way. We do not know where they go afterward. I have chosen not to investigate this.
+CHAPTER 1: WHAT TO EAT ON A LONG FLIGHT
 
-ON TIME FREEZE
-Time Freeze is the most philosophically uncomfortable spell. It does not freeze time. It freezes the perception of time for everything except the caster. The targets are fully conscious — perfectly aware of every second — they simply cannot move. I included this in the shop because it is very effective. I am sorry.
+IRON BREAD (3 days' provisions, one loaf)
+Ingredients: Rough flour, salt, water, one egg, iron shavings (do not substitute).
+Method: Mix until the dough fights back. Bake until it sounds like you are knocking on stone. This bread does not go stale because nothing about it was soft to begin with. It is not delicious. It is effective.
 
-ON GOD LIGHTNING
-I did not invent God Lightning. I found it written in a margin of a book about agricultural drainage, in a handwriting that was not mine and predated the book by three hundred years. I do not know who wrote it or why they put it there. The spell works exactly as described. I have added a warning label. The warning label is also written in that handwriting. I do not think about this.
+RIDER'S SALT BEEF
+Ingredients: Beef, salt, more salt, time.
+Method: Salt the beef. Wait two weeks. The salt does the cooking. What you have afterward is not quite beef and not quite preservation, but it is portable and your dragon will smell it and judge you, and you will eat it anyway.
 
-ON SOUL VORTEX
-The vortex does not actually steal souls. It disrupts the coherence field that holds consciousness together, causing temporary disorientation. It feels like soul-stealing. The distinction is important. Probably.
+SUMMIT STEW (requires fire dragon)
+Ingredients: Whatever you have. One fire dragon.
+Method: Hold the pot near the dragon's exhale. This requires trust, timing, and a fireproof pot. The stew will be uneven — charred at the edges, raw in the middle, perfectly cooked in a narrow ring. Eat the ring. Consider the metaphor.
 
-ON FIRE GOD
-I am serious about not reading the last section. I included it because I am legally required to disclose all spells I know to the Guild. I would not recommend casting it inside city limits. Or outside them, unless the weather is very specific.
+─────────────────────────
 
-FINAL NOTE
-The world is approaching a crisis. The Shadow presses closer each year. The Princes will ride. The only counterforce — the King Weapons wielded by a proven rider — requires someone willing to face all eight King Dragons.
+CHAPTER 2: WHAT TO FEED YOUR DRAGON
 
-If you are that rider: good luck. If you are not: enjoy the spells. They are very good spells.`},
+Short answer: Whatever it wants.
+
+Longer answer: Each clan has preferences. Fire dragons prefer prey that struggles (they find easy prey disrespectful). Water dragons eat fish, enormous quantities of fish, and have opinions about preparation (raw only; cooking is considered an insult to the fish). Earth dragons eat stone fruits and occasionally small boulders. No one knows what the boulders are for. Earth dragons decline to explain.
+
+A note on feeding bonded dragons: they know when you are low on food. They will not eat in front of you if you are hungry. This is both touching and inconvenient, because a hungry dragon is very bad at pretending to be not hungry.
+
+─────────────────────────
+
+CHAPTER 3: FEASTING AT THE GOLDEN FLAGON
+
+THE HOUSE STEW (60pts)
+Ingredients: Seven things. We do not list them. The stew has been made the same way since Year 310 and the recipe is in the owner's head, not in writing. What is known: it is thick, it is warm, it is correct.
+
+DRAGON-SPICED ROAST FOWL (90pts)
+A whole bird, rubbed with a spice blend developed in the southern territories near the Volcano. The spice is called Ember Dust. It is not literally from dragons but was developed by a cook who lived near a Fire Dragon nesting site and absorbed the heat's influence.
+
+NORTHERN FISH PIE (70pts)
+Pastry, fish, cream, something herbal. The northern fish is imported, expensive, and worth it.
+Note: This is what we send to — it is what the Library's most distinguished patrons request.
+
+THE FEAST (150pts)
+Everything. All of it. The whole menu, arriving in waves. For two, perhaps three people. For one person who has just survived something large.
+
+─────────────────────────
+
+CHAPTER 4: RECIPES FROM THE KING DRAGON ISLANDS (historical)
+
+These recipes are entirely theoretical. They were described by a scholar who visited the ruins and found, in what appeared to be a kitchen, partial inscriptions that suggested feast preparation at a scale suited to dragons.
+
+INFERNO TIDE LAVA CAKE (theoretical): An enormous stone vessel. Liquid fire. Things dropped in. The result was apparently a delicacy. The researcher noted that the vessel was 4 metres across and the ingredients were boulders. A human-scale adaptation seems impractical.
+
+ANCIENT GROVE FRUIT COLLECTION: Earth-Nature dragons apparently cultivated fruit orchards over centuries, selecting for specific qualities we cannot identify because the orchards no longer exist. The researcher found seeds. The seeds are in the Library's collection. No one has yet determined what to plant them in.
+
+─────────────────────────
+
+CHAPTER 5: MADAME CRUMBLE'S COOKIE — AN ANALYSIS
+
+The cookies sold at the Cookie Emporium grant 20 seconds of complete physical invulnerability, continuous healing, and tripled flight speed. These are not culinary effects. These are magical effects.
+
+Madame Crumble, when asked about the ingredients, provides the following: "Ancient recipe. Dragon Witches. Crystallised starlight. Phoenix tears. The usual."
+
+This response has been received by three separate scholars attempting to chemically analyse the cookies. The analysis has been inconclusive because the cookies are extremely good and the scholars kept eating the samples.
+
+The recipe is not in this book. Madame Crumble considered it and declined. "Some things," she said, "are better experienced than explained."
+
+This is also a good principle for cooking in general.`},
+
+  {id:'magic_spellbooks', name:'✨ The Grand Compendium of Magic', cost:300, bonus:'wizard_boost',
+   lore:`THE GRAND COMPENDIUM OF MAGIC
+Compiled by the Scholars of the Wizard Quarter, Great City
+Volume I: Theory and Practice. Volume II remains classified.
+
+FOREWORD
+
+Magic is not mysterious. It follows rules as strict as stone. The difference between a scholar and a victim is knowing the rules before the spell starts.
+
+This compendium covers the spells currently known, their theoretical basis, and their practical limits. It is not comprehensive — Zephyrus has notes he will not share, Morthex has a tome that presumably exists, and there is a third tradition associated with the Bone-Acid clan that no one has studied at sufficient proximity to write down.
+
+We work with what we have.
+
+─────────────────────────
+
+PART ONE: THE THEORY OF SPELLS
+
+HOW SPELLS WORK
+
+All magic draws from the same source: ley-line energy, the deep current that flows through the world's crust and converges at points like Dragon Mountain. A spell is a shaped request — a pattern that asks the energy to do something specific.
+
+The shaping is done by intention. Incantation helps — speaking the pattern aloud stabilises it — but the underlying mechanism is mental. This is why a distracted spellcaster is a dangerous spellcaster: the energy responds to the intent that is actually present, not the intent that was planned.
+
+This has caused several incidents. The incidents are not documented here, out of respect for the survivors.
+
+THE CATEGORIES OF MAGIC
+
+ELEMENTAL magic — the most common, most understood. Channels one of the eight elemental forces. Predictable, reliable, taxing. Leaves the caster tired but intact.
+
+SHADOW magic — draws from outside the world's membrane. Fast, powerful, catastrophically dangerous. The Shadow's energy does not distinguish between the caster and the target. Used rarely, by those who have no other option, in situations where being somewhat destroyed is acceptable.
+
+BINDING magic — creates links between things. The rider-bond is the most common example, though it is not cast like a spell: it forms organically when both parties consent without language. Formal binding spells exist for lesser uses: sealing doors, anchoring objects, the ice preservation used in cold stores.
+
+TIME magic — theoretical. Three scholars have attempted it. Two are still working on the problem. One aged backwards to sixteen and has opinions about this.
+
+─────────────────────────
+
+PART TWO: THE SPELLS OF ZEPHYRUS
+
+These spells are available for purchase at the Wizard Tower. Zephyrus is the most responsible seller of magic the city has. This is a low bar. He is nonetheless the right person for the job.
+
+METEOR STORM
+Category: Elemental (Void-summoning)
+Description: Opens a brief corridor to a distant asteroid field and directs falling stones through it. The meteors are real. This requires saying plainly.
+Tactical use: Area denial, structural demolition, expressions of significant displeasure.
+Side effects: Cordite smell, residual luminescence, severe regret among nearby creatures.
+Zephyrus's note: "I found the asteroid field in Year 503. I have kept it professionally quiet. The meteors continue on their way after passing through. I do not know where they go. I have chosen not to investigate."
+
+GOD LIGHTNING
+Category: Elemental (Storm) — advanced
+Description: Calls a singular bolt of lightning equivalent to a direct storm-strike from an altitude of several thousand metres. Not to be confused with ordinary lightning. Ordinary lightning is humble.
+Tactical use: Single-target elimination, things you need to stop immediately.
+Side effects: Localised glass formation, temporary deafness, the strong impression that something very large looked at you briefly.
+Zephyrus's note: "I found this in the margin of a drainage textbook. The handwriting predates the book. It works exactly as written. I added a warning label. The warning label was already there."
+
+TIME FREEZE
+Category: Time (applied, limited)
+Description: Freezes the perception of time for everything in range except the caster. Targets are fully conscious.
+Tactical use: Repositioning, escape, that moment when you realise the situation is worse than you thought.
+Side effects: Targets remember every second of the freeze. Some are understanding about this. Some are not.
+Zephyrus's note: "The targets are fully aware throughout. The distinction between freezing time and freezing people is philosophically important to me. I am not sure it matters to the targets."
+
+SOUL VORTEX
+Category: Shadow (mild)
+Description: Disrupts the coherence field that holds consciousness together. Causes disorientation and loss of coordination.
+Zephyrus's note: "It does not steal souls. The word 'soul' in the name refers to the coherence field, not the soul proper. I should rename it. I won't."
+
+FIRE GOD
+Category: Elemental (Fire) — extreme
+Description: Channels the residual essence of a Fire King Dragon through the caster. For thirty seconds, the caster is functionally a small sun.
+Zephyrus's note: "Do not cast this inside city limits. Do not cast it at all unless you are specifically fighting a Prince of Death and you understand what 'being briefly a sun' implies for your continued existence as a person."
+
+─────────────────────────
+
+PART THREE: THE MAGIC OF DRAGON MOUNTAIN
+
+The mountain's magic is different from bought spells. It cannot be purchased or transferred. It develops in a rider or scholar over years of proximity — an attunement to the ley-line confluence that changes how the person perceives the world.
+
+Signs of attunement:
+— Knowing when Shadow is near before seeing it.
+— Understanding dragon emotion directly, without signal.
+— Feeling weather change before it registers in the sky.
+— A warmth in the sternum when standing on ley convergences.
+
+None of this can be taught. All of it comes from time, from paying attention, and from the mountain deciding you are worth noticing.
+
+THE RUNES OF THE LOWER SLOPES
+
+Carved by no known civilisation, in a language that partially overlaps Draconic but is not Draconic. Best current translation:
+
+"Before the word, the fire.
+Before the fire, the dark.
+Before the dark [untranslatable: perhaps 'the listening', perhaps 'the choice'].
+What fell from the sky taught the mountain to remember.
+It will return. Be ready."
+
+Apprentice Vorak of the Wizard Tower has been working on the final line for two years. He has not shared his conclusions. He looks pale.
+
+─────────────────────────
+
+PART FOUR: MAGIC THAT IS NOT LISTED HERE
+
+There is magic that this compendium does not cover. Magic associated with the Princes of Death. Magic used by the Shadow itself. Magic that predates the first riders and was not invented by anyone living.
+
+The scholars are aware of it. The scholars are studying it carefully and from a significant distance.
+
+The best advice regarding magic that is not in this book:
+
+If you encounter it, leave. If you cannot leave, pay very close attention to what it does. If you survive, write it down.
+
+We are always updating this compendium. The updates increasingly concern things we did not expect to need to include.`},
+
+  {id:'riders_chronicle', name:'📖 The Dragon Riders Chronicle', cost:220, bonus:'none',
+   lore:`THE DRAGON RIDERS CHRONICLE
+A Complete Record of the Known Riders of History
+Compiled by Librarian Eldris, Grand Library, Great City
+Updated to Year 597.
+
+NOTE: This chronicle is incomplete by necessity. Many riders were never recorded. Some asked not to be. One specifically threatened the original compiler, which was noted and respected. The riders listed here are the ones history managed to catch.
+
+─────────────────────────
+
+ALDRA — THE FIRST
+Dragon: Unnamed fire dragon (she called it "you"; it answered to that)
+Active: Year 112–Year 164
+Bond formed: By accident, on a hillside, with a wounded storm dragon. She was seventeen. She had water and food and no plan.
+Accomplishments: First rider. Everything that follows, follows from her.
+Death: Year 164, age 69. She died in her sleep at Dragon Mountain. Her dragon was with her. It flew north the following morning and was not seen again for a generation.
+Still cited for: The rule she never wrote but everyone follows: "Listen first. The dragon knows more than you."
+
+KASSEL THE PATIENT
+Dragon: Ashrock (Earth dragon)
+Active: Year 119–Year 189
+Bond formed: After seven years of daily approach, in the fourth winter.
+Accomplishments: First to demonstrate that Earth dragons could be bonded. Developed the extended-approach method now standard for slow-bonding clans. Mapped three major ley-line paths from dragonback.
+Death: Year 189 in a Shadow storm over the northern peaks. His dragon Ashrock survived, spent two years on the ground, then accepted a new rider — unprecedented for an Earth dragon. The gift it gave was understood accordingly.
+
+NIRA OF THE CLIFFS
+Dragon: Deepcurrent (Water dragon)
+Active: Year 134–Year 201
+Bond formed: At the edge of the sea cliffs. The dragon approached her. She had not been approaching it.
+Accomplishments: First water-dragon rider. Charted the eastern sea lanes from dragonback. Could not swim before the bond; the dragon taught her. First person to report the sea dragon sighting of Year 158 (initially disbelieved; now recorded as the First Rising).
+Still cited for: The observation that some dragons choose the rider, not the other way.
+
+BRAM IRONFOOT
+Dragon: Crackle (Thunder dragon)
+Active: Year 141–Year 198
+Bond formed: After twenty minutes (record for fastest bond formation, Thunder clan). They were both moving very fast during the process and neither was calm.
+Accomplishments: Thunder-clan combat development. Seventeen recorded battles against Shadow-adjacent creatures. Survived all seventeen, though "survived" is a generous characterisation of Year 183.
+Still cited for: "The bond does not require peace. It requires honesty. Calm helps but it is optional."
+
+SILENT YEVA
+Dragon: Whisper (Soul dragon)
+Active: Year 147–Year 231
+Bond formed: Without words. She approached the Soul dragon in complete silence and sat with it for eleven days.
+Accomplishments: First Soul-dragon rider. Developed the non-verbal communication methods now used by Soul-dragon handlers. Stopped speaking after the bond — "words felt imprecise" — communicated entirely in gesture for 84 years. Was considered excellent company.
+Death: Year 231. She and Whisper died the same hour. The Soul dragon clan still regards this as the ideal ending.
+
+KARREN IRONHOOF
+Dragon: Stonewall (Earth dragon, second bond for Stonewall)
+Active: Year 312–Year 389
+Accomplishments: The great fortress-builder. Established seven strongholds across the northern territories. Her tower, built somewhere in the borderlands, has never been permanently located. Travellers find it occasionally. It always has a fire burning inside.
+Still cited for: "Build where you are needed. Not where it is safe."
+
+YSOLDE TWIN-RIDER
+Dragon: Two dragons simultaneously (Thunder + Water) — the only rider in history to maintain a double bond
+Active: Year 401–Year 448
+Accomplishments: The impossibility of a double bond is widely documented. Ysolde managed it for 47 years. She described it as "loud." The dragons, when asked, described it as "a decision we made together."
+Still cited for: Proof that the rules of bonding are starting conditions, not final conditions.
+
+DRAVEN COLDHAND
+Dragon: Ashfall (Air dragon)
+Active: Year 467–Year 491
+Accomplishments: Pre-Siege military coordination. Developed the northern patrol routes still used today. Retired to the city after the Shadow Siege of Year 487, citing "completion."
+Still cited for: The post-Siege debrief note: "The Shadow is not an enemy in the conventional sense. Fighting it is not the right frame. Persisting through it is the right frame."
+
+VOSS THE ENDURING
+Dragon: Granite (Earth dragon)
+Active: Year 512–present (Year 597)
+Bond formed: During the King Dragon crisis, Year 512. Voss was a scholar, not a fighter. Granite chose him anyway.
+Accomplishments: Survived the death of three King Dragons (witness, not participant). Sole academic rider currently active. His account of the King Dragon fall of Year 517 is the most detailed primary source available.
+Currently: At Dragon Mountain, writing. He has been writing for eight years. He will not say what.
+
+BLANE
+Dragon: Cinder (Fire dragon)
+Active: Year 480–present (Year 597)
+Bond formed: Year 480, at Dragon Mountain, during basic training. Cinder was bad-tempered and brilliant. Blane was thirteen, quiet, and refused to lose arguments.
+Accomplishments: The Shadow Incursion of Year 487 — rode alone into the Shadow Cloud at the height of the Shadow Siege and remained for six hours. The Shadow pulled back from the city. His account, given once and never repeated: "I didn't fight it. I just reminded it that I existed. That I had a name and a dragon and something to go back to. I held on so hard the shadow couldn't find a gap."
+
+He never claimed a victory. He called it buying time.
+
+Since Year 490: At Dragon Mountain, waiting. He believes the final confrontation is approaching — that the Princes of Death will ride in force, and that the only rider capable of stopping them is one who has faced all eight King Dragons and carries their weapons. He is waiting to meet that rider.
+
+He feeds Cinder fish in the mornings. He keeps a campfire going that has not been extinguished in fourteen years. He is very good at waiting.
+
+Cinder's scales were grey for a month after the Siege. They have been fire-orange since.
+
+Blane, when asked if he is afraid: "Of course. Fear is just the shape care takes when the stakes get high. I'm very careful."
+
+─────────────────────────
+
+UNNAMED RIDERS (partial list)
+
+Dozens of other bonds have been recorded, broken, lost to history, or deliberately omitted at the rider's request. The chronicle notes their existence without names:
+
+— A rider in Year 334 who bonded with a Glass dragon and spent forty years invisible in every official record. Intentional.
+— A rider in Year 445 who bonded with a Bone-Acid dragon. The bond was verified. The scholar who verified it did not elaborate.
+— A rider in Year 570 who bonded with an Ice dragon on the summit of Dragon Mountain in a blizzard. They flew south and have not been seen. The bond is confirmed as ongoing.
+
+THE CURRENT AGE
+
+The bond is not dead. It has thinned — the number of active riders is at its lowest in four centuries — but it persists. The dragons persist. The ley lines persist. The conditions for bonding persist.
+
+What is needed: someone willing to approach. Someone with water and food and no plan. Someone who listens first.
+
+It has always worked before.`},
 ];
 let libraryBookIdx=0; // currently selected book at library
 // King Dragon islands orbit Dragon Mountain at r=1200, evenly spaced (min dist ~918u)
@@ -5541,7 +6511,7 @@ function openDialog(npc){
   if(isCityWizardShop){const sp=WIZARD_SPELLS[wizardSpellIdx];document.getElementById('dialog-text').textContent+='\n\nSelected: '+sp.name+' ('+sp.cost+'pts) — '+sp.desc+'\n[B] Buy & Equip  [N] Next Spell  [M] Cast Now'+(wizardMagicT>0?' | Active: '+WIZARD_SPELLS.find(s=>s.id===wizardMagicType)?.name+' ('+~~wizardMagicT+'s)':'');}
   if(isCityCookieShop)document.getElementById('dialog-text').textContent+='\n\n🍪 Cookie — 200pts — 20s IMMORTALITY + HEAL + 3× SPEED\n[ B ] Buy & Eat'+(cookieT>0?' | 🍪 Active: '+~~cookieT+'s remaining':'');
   function bookShopText(){
-    const pool=isCityWizardBook?CITY_BOOKS.filter(b=>b.id==='wizards_tome'||b.id==='shadow_history'):CITY_BOOKS;
+    const pool=isCityWizardBook?CITY_BOOKS.filter(b=>b.id==='dragon_mountain_magic'||b.id==='magic_spellbooks'||b.id==='shadow_history'):CITY_BOOKS;
     const bk=pool[libraryBookIdx%pool.length];
     const owned=playerBooks.includes(bk.id);
     return '\n\n📚 Selected: '+bk.name+' — '+bk.cost+'pts\n'+(owned?'[R] Read  (owned)':'[B] Buy  [R] Preview')+'\n[N] Next Book\nOwned: '+playerBooks.length+'/'+pool.length+' books';
@@ -5640,7 +6610,7 @@ function openDialog(npc){
     }
     // Library / Wizard Book shop: N=Next Book, B=Buy, R=Read
     if(dialogOpen&&isAnyBookShop){
-      const pool=isCityWizardBook?CITY_BOOKS.filter(b=>b.id==='wizards_tome'||b.id==='shadow_history'):CITY_BOOKS;
+      const pool=isCityWizardBook?CITY_BOOKS.filter(b=>b.id==='dragon_mountain_magic'||b.id==='magic_spellbooks'||b.id==='shadow_history'):CITY_BOOKS;
       const bk=pool[libraryBookIdx%pool.length];
       const owned=playerBooks.includes(bk.id);
       if(e.code==='KeyN'){libraryBookIdx=(libraryBookIdx+1)%pool.length;document.getElementById('dialog-text').textContent=txt+bookShopText();}

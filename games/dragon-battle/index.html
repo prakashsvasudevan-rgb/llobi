@@ -5444,10 +5444,12 @@ function update(ts){
       const mhp=isSoul?2044:3411;
       if(ga.mesh.userData.maxHp!==mhp)ga.mesh.userData.maxHp=mhp;
       ga.mesh.userData.hp=Math.min(mhp,ga.mesh.userData.hp+mhp*0.16*dt+(isSoul?10*dt:0));
-      // Elemental shield glow (spawn aura cloud occasionally)
-      if(frame%90===~~(ga.slot||0)%90){
+      // Elemental shield glow — visible pulsing aura every ~0.5s per dragon
+      if(frame%30===~~(ga.slot||0)%30){
         const shieldCol=dtd?dtd.color:0x44aaff;
-        spawnAbilityCloud(ga.mesh.position.clone(),shieldCol,8,0.3);
+        spawnAbilityCloud(ga.mesh.position.clone(),shieldCol,22,0.55);
+        // Inner bright pulse
+        spawnAbilityCloud(ga.mesh.position.clone().add(new THREE.Vector3(0,4,0)),shieldCol,10,0.35);
       }
     }
     // Ghost dragon lifetime
@@ -6246,7 +6248,7 @@ function update(ts){
         }
       }
       // Army dragon: bite / tail / roar + element special
-      if(a.mesh.userData.aBiteT===undefined){a.mesh.userData.aBiteT=3+Math.random()*3;a.mesh.userData.aTailT=5+Math.random()*3;a.mesh.userData.aRoarT=8+Math.random()*4;a.mesh.userData.aSpecT=12+Math.random()*6;}
+      if(a.mesh.userData.aBiteT===undefined){a.mesh.userData.aBiteT=3+Math.random()*3;a.mesh.userData.aTailT=5+Math.random()*3;a.mesh.userData.aRoarT=8+Math.random()*4;a.mesh.userData.aAtk1T=8+Math.random()*4;a.mesh.userData.aAtk2T=14+Math.random()*6;a.mesh.userData.aAtk3T=20+Math.random()*8;}
       let aNearest=null,aNearD=300;
       for(const ae of activeEnemies){if(!ae.userData.alive)continue;const d=a.mesh.position.distanceTo(ae.position);if(d<aNearD){aNearD=d;aNearest=ae;}}
       // Bite
@@ -6273,47 +6275,147 @@ function update(ts){
         for(const ae of activeEnemies){if(!ae.userData.alive)continue;if(a.mesh.position.distanceTo(ae.position)<80)hitEnemy(ae,upgradedDmg()*1);}
         floatWorld(a.mesh.position.clone().add(new THREE.Vector3(0,8,0)),'🔊','#ffee44');
       }
-      // Element special
-      a.mesh.userData.aSpecT-=dt;
-      if(a.mesh.userData.aSpecT<=0&&aNearest&&aNearD<200){
-        a.mesh.userData.aSpecT=12+Math.random()*6;
+      // 3 Elemental attacks per dragon type
+      {
         const dtd=a.mesh.userData.dtDef;const eid=dtd?dtd.id:'fire';
         const col=dtd?dtd.color:0xff4400;const fp=a.mesh.position.clone().add(new THREE.Vector3(0,3,0));
-        if(eid==='fire'||eid==='lava'){
-          spawnAbilityCloud(aNearest.position.clone(),col,60,1.8);
-          for(const ae of activeEnemies){if(!ae.userData.alive)continue;if(a.mesh.position.distanceTo(ae.position)<100){hitEnemy(ae,upgradedDmg()*8);burnMap.set(ae,(burnMap.get(ae)||0)+8);}}
-          // Extra: fire nova ring
-          for(let ni=0;ni<8;ni++){const na=ni/8*Math.PI*2;const nm=new THREE.Mesh(new THREE.SphereGeometry(1.2,5,4),new THREE.MeshBasicMaterial({color:0xff4400,transparent:true,opacity:0.9,blending:THREE.AdditiveBlending}));nm.position.copy(fp);nm.userData={vel:new THREE.Vector3(Math.sin(na),0,Math.cos(na)).multiplyScalar(45),dmg:upgradedDmg()*4,life:2.5,projType:'fire',friendly:true};scene.add(nm);projectiles.push(nm);}
-          floatWorld(fp,'🔥 INFERNO!','#ff4400');
-        } else if(eid==='ice'||eid==='water'){
-          for(let ii=0;ii<16;ii++){const ia=ii/16*Math.PI*2;const im=new THREE.Mesh(new THREE.ConeGeometry(1.2,5,4),new THREE.MeshBasicMaterial({color:0x88ffff,transparent:true,opacity:0.85,blending:THREE.AdditiveBlending}));im.position.copy(fp);const iv=new THREE.Vector3(Math.sin(ia),0.2,Math.cos(ia)).normalize().multiplyScalar(50);im.userData={vel:iv,dmg:upgradedDmg()*4,life:2.5,projType:'ice',friendly:true};scene.add(im);projectiles.push(im);}
-          for(const ae of activeEnemies){if(!ae.userData.alive)continue;if(a.mesh.position.distanceTo(ae.position)<100){freezeMap.set(ae,(freezeMap.get(ae)||0)+8);hitEnemy(ae,upgradedDmg()*4);}}
-          floatWorld(fp,'❄ BLIZZARD!','#88ffff');
-        } else if(eid==='nature'){
-          spawnAbilityCloud(aNearest.position.clone(),0x44ff44,70,2.0);
-          for(const ae of activeEnemies){if(!ae.userData.alive)continue;if(a.mesh.position.distanceTo(ae.position)<120){hitEnemy(ae,upgradedDmg()*4);poisonMap.set(ae,12);}}
-          // Heal all army members
-          for(const a2 of dragonArmy){if(a2.mesh&&a2.mesh.userData.alive)a2.mesh.userData.hp=Math.min(a2.mesh.userData.maxHp||3411,(a2.mesh.userData.hp||0)+upgradedDmg()*8);}
-          floatWorld(fp,'🌿 LIFE BLOOM!','#44ff44');
-        } else if(eid==='earth'){
-          spawnAbilityCloud(aNearest.position.clone(),0xaa8844,80,2.2);
-          for(let ei=0;ei<16;ei++){const ea=ei/16*Math.PI*2;spawnAbilityCloud(fp.clone().add(new THREE.Vector3(Math.cos(ea)*60,0,Math.sin(ea)*60)),0xaa8844,18,0.7);}
-          for(const ae of activeEnemies){if(!ae.userData.alive)continue;if(a.mesh.position.distanceTo(ae.position)<130){hitEnemy(ae,upgradedDmg()*8);ae.userData.stunT=Math.max(ae.userData.stunT||0,2);}}
-          floatWorld(fp,'🌍 QUAKE!','#aa8844');
-        } else if(eid==='lightning'||eid==='thunder'){
-          for(let li=0;li<8;li++){setTimeout(()=>{const le=activeEnemies.filter(ae=>ae.userData.alive&&a.mesh.position.distanceTo(ae.position)<200);if(le.length){const lt=le[Math.floor(Math.random()*le.length)];spawnBeamFX(fp.clone(),lt.position.clone(),0xffff44);hitEnemy(lt,upgradedDmg()*6);}},li*100);}
-          floatWorld(fp,'⚡ STORM!','#ffff44');
-        } else if(eid==='soul'||eid==='sun'){
-          for(const ae of activeEnemies){if(!ae.userData.alive)continue;if(a.mesh.position.distanceTo(ae.position)<180){spawnBeamFX(fp.clone(),ae.position.clone(),0xffffff);hitEnemy(ae,upgradedDmg()*10);}}
-          // Soul drain — heal self
-          a.mesh.userData.hp=Math.min(a.mesh.userData.maxHp||2044,(a.mesh.userData.hp||0)+upgradedDmg()*5);
-          floatWorld(fp,'✨ SOUL BURST!','#ffffff');
-        } else if(eid==='smoke'||eid==='air'){
-          let at=0;const aInt=setInterval(()=>{at+=0.12;if(at>3||gs!=='playing'){clearInterval(aInt);return;}for(const ae of activeEnemies){if(!ae.userData.alive)continue;if(a.mesh.position.distanceTo(ae.position)<110){hitEnemy(ae,upgradedDmg()*1);ae.position.addScaledVector(new THREE.Vector3().subVectors(a.mesh.position,ae.position).normalize(),18*0.12);}}spawnAbilityCloud(aNearest.position.clone(),0xaaddff,35,0.6);},120);
-          floatWorld(fp,'🌪 CYCLONE!','#aaddff');
-        } else {
-          spawnAbilityCloud(aNearest.position.clone(),col,60,1.8);
-          for(const ae of activeEnemies){if(!ae.userData.alive)continue;if(a.mesh.position.distanceTo(ae.position)<100)hitEnemy(ae,upgradedDmg()*6);}
+        // Attack 1
+        a.mesh.userData.aAtk1T-=dt;
+        if(a.mesh.userData.aAtk1T<=0&&aNearest&&aNearD<180){
+          a.mesh.userData.aAtk1T=8+Math.random()*4;
+          if(eid==='fire'||eid==='lava'){
+            // Flame Beam
+            spawnBeamFX(fp.clone(),aNearest.position.clone(),0xff6600);
+            hitEnemy(aNearest,upgradedDmg()*10);burnMap.set(aNearest,(burnMap.get(aNearest)||0)+6);
+            floatWorld(fp,'🔥 FLAME BEAM!','#ff6600');
+          } else if(eid==='ice'){
+            // Ice Shard
+            for(let ii=0;ii<6;ii++){const ia=ii/6*Math.PI*2;const im=new THREE.Mesh(new THREE.ConeGeometry(1.0,4,4),new THREE.MeshBasicMaterial({color:0x88ffff,transparent:true,opacity:0.9,blending:THREE.AdditiveBlending}));im.position.copy(fp);im.userData={vel:new THREE.Vector3(Math.sin(ia),0.1,Math.cos(ia)).normalize().multiplyScalar(55),dmg:upgradedDmg()*5,life:2,projType:'ice',friendly:true};scene.add(im);projectiles.push(im);}
+            floatWorld(fp,'❄ ICE SHARDS!','#88ffff');
+          } else if(eid==='water'){
+            // Ice Shard (water variant)
+            for(let ii=0;ii<6;ii++){const ia=ii/6*Math.PI*2;const im=new THREE.Mesh(new THREE.ConeGeometry(1.0,4,4),new THREE.MeshBasicMaterial({color:0x44aaff,transparent:true,opacity:0.9,blending:THREE.AdditiveBlending}));im.position.copy(fp);im.userData={vel:new THREE.Vector3(Math.sin(ia),0.1,Math.cos(ia)).normalize().multiplyScalar(55),dmg:upgradedDmg()*5,life:2,projType:'ice',friendly:true};scene.add(im);projectiles.push(im);}
+            floatWorld(fp,'💧 WATER BOLTS!','#44aaff');
+          } else if(eid==='nature'){
+            // Poison Blast
+            spawnAbilityCloud(aNearest.position.clone(),0x44ff44,50,1.5);
+            hitEnemy(aNearest,upgradedDmg()*6);poisonMap.set(aNearest,10);
+            floatWorld(fp,'☠ POISON BLAST!','#44ff44');
+          } else if(eid==='earth'){
+            // Boulder — big slow projectile
+            const bm=new THREE.Mesh(new THREE.SphereGeometry(2.5,6,4),new THREE.MeshBasicMaterial({color:0xaa8844,transparent:true,opacity:0.9}));
+            bm.position.copy(fp);const bd=new THREE.Vector3().subVectors(aNearest.position,fp).normalize().multiplyScalar(28);
+            bm.userData={vel:bd,dmg:upgradedDmg()*12,life:3,projType:'earth',friendly:true};scene.add(bm);projectiles.push(bm);
+            floatWorld(fp,'🪨 BOULDER!','#aa8844');
+          } else if(eid==='lightning'||eid==='thunder'){
+            // Chain bolt
+            for(let li=0;li<5;li++){setTimeout(()=>{const le=activeEnemies.filter(ae=>ae.userData.alive&&a.mesh.position.distanceTo(ae.position)<200);if(le.length){const lt=le[Math.floor(Math.random()*le.length)];spawnBeamFX(fp.clone(),lt.position.clone(),0xffff44);hitEnemy(lt,upgradedDmg()*7);}},li*80);}
+            floatWorld(fp,'⚡ CHAIN BOLT!','#ffff44');
+          } else if(eid==='soul'||eid==='sun'){
+            // Soul Beam
+            for(const ae of activeEnemies){if(!ae.userData.alive)continue;if(a.mesh.position.distanceTo(ae.position)<160){spawnBeamFX(fp.clone(),ae.position.clone(),0xffffff);hitEnemy(ae,upgradedDmg()*8);}}
+            floatWorld(fp,'✨ SOUL BEAM!','#ffffff');
+          } else if(eid==='smoke'||eid==='air'){
+            // Cyclone push
+            for(const ae of activeEnemies){if(!ae.userData.alive)continue;if(a.mesh.position.distanceTo(ae.position)<100){hitEnemy(ae,upgradedDmg()*3);ae.position.addScaledVector(new THREE.Vector3().subVectors(ae.position,a.mesh.position).normalize(),25);}}
+            spawnAbilityCloud(fp.clone(),0xaaddff,45,1.0);floatWorld(fp,'🌪 CYCLONE!','#aaddff');
+          } else {
+            spawnBeamFX(fp.clone(),aNearest.position.clone(),col);hitEnemy(aNearest,upgradedDmg()*8);floatWorld(fp,'💥 BEAM!','#ffffff');
+          }
+        }
+        // Attack 2
+        a.mesh.userData.aAtk2T-=dt;
+        if(a.mesh.userData.aAtk2T<=0&&aNearest&&aNearD<200){
+          a.mesh.userData.aAtk2T=14+Math.random()*6;
+          if(eid==='fire'||eid==='lava'){
+            // Fire Ball
+            const fbm=new THREE.Mesh(new THREE.SphereGeometry(2,6,4),new THREE.MeshBasicMaterial({color:0xff4400,transparent:true,opacity:0.95,blending:THREE.AdditiveBlending}));
+            fbm.position.copy(fp);const fbd=new THREE.Vector3().subVectors(aNearest.position,fp).normalize().multiplyScalar(40);
+            fbm.userData={vel:fbd,dmg:upgradedDmg()*14,life:3,projType:'fire',friendly:true,aoe:true};scene.add(fbm);projectiles.push(fbm);
+            floatWorld(fp,'🔥 FIRE BALL!','#ff8800');
+          } else if(eid==='ice'){
+            // Ice Glacier — freeze ring
+            for(let ii=0;ii<12;ii++){const ia=ii/12*Math.PI*2;const im=new THREE.Mesh(new THREE.BoxGeometry(2,5,2),new THREE.MeshBasicMaterial({color:0x88ffff,transparent:true,opacity:0.8,blending:THREE.AdditiveBlending}));im.position.copy(fp).add(new THREE.Vector3(Math.sin(ia)*40,0,Math.cos(ia)*40));im.userData={vel:new THREE.Vector3(Math.sin(ia),0,Math.cos(ia)).multiplyScalar(30),dmg:upgradedDmg()*6,life:2,projType:'ice',friendly:true};scene.add(im);projectiles.push(im);}
+            for(const ae of activeEnemies){if(!ae.userData.alive)continue;if(a.mesh.position.distanceTo(ae.position)<110)freezeMap.set(ae,(freezeMap.get(ae)||0)+6);}
+            floatWorld(fp,'❄ ICE GLACIER!','#44ffff');
+          } else if(eid==='water'){
+            // Water burst — push + freeze
+            for(const ae of activeEnemies){if(!ae.userData.alive)continue;if(a.mesh.position.distanceTo(ae.position)<120){hitEnemy(ae,upgradedDmg()*5);freezeMap.set(ae,(freezeMap.get(ae)||0)+4);ae.position.addScaledVector(new THREE.Vector3().subVectors(ae.position,a.mesh.position).normalize(),20);}}
+            spawnAbilityCloud(fp.clone(),0x44aaff,70,1.5);floatWorld(fp,'💧 TIDAL WAVE!','#44aaff');
+          } else if(eid==='nature'){
+            // Venom Spike — single high damage + long poison
+            const vm=new THREE.Mesh(new THREE.ConeGeometry(1.5,8,4),new THREE.MeshBasicMaterial({color:0x00ff44,transparent:true,opacity:0.9,blending:THREE.AdditiveBlending}));
+            vm.position.copy(fp);const vd=new THREE.Vector3().subVectors(aNearest.position,fp).normalize().multiplyScalar(50);
+            vm.userData={vel:vd,dmg:upgradedDmg()*10,life:3,projType:'nature',friendly:true,onHit:(ae)=>{poisonMap.set(ae,20);}};scene.add(vm);projectiles.push(vm);
+            floatWorld(fp,'🌿 VENOM SPIKE!','#00ff44');
+          } else if(eid==='earth'){
+            // Earth Shield — army defense buff + quake ring
+            for(const a2 of dragonArmy){if(a2.mesh&&a2.mesh.userData.alive){a2.mesh.userData.shieldBuff=(a2.mesh.userData.shieldBuff||0)+5;spawnAbilityCloud(a2.mesh.position.clone(),0xaa8844,18,0.5);}}
+            for(const ae of activeEnemies){if(!ae.userData.alive)continue;if(a.mesh.position.distanceTo(ae.position)<120){hitEnemy(ae,upgradedDmg()*6);ae.userData.stunT=Math.max(ae.userData.stunT||0,1.5);}}
+            floatWorld(fp,'🛡 EARTH SHIELD!','#aa8844');
+          } else if(eid==='lightning'||eid==='thunder'){
+            // Lightning storm — 10 chain hits
+            for(let li=0;li<10;li++){setTimeout(()=>{const le=activeEnemies.filter(ae=>ae.userData.alive&&a.mesh.position.distanceTo(ae.position)<200);if(le.length){const lt=le[Math.floor(Math.random()*le.length)];spawnBeamFX(fp.clone(),lt.position.clone(),0xffff44);hitEnemy(lt,upgradedDmg()*5);}},li*80);}
+            floatWorld(fp,'⚡ LIGHTNING STORM!','#ffff44');
+          } else if(eid==='soul'||eid==='sun'){
+            // Soul Heal — restore all army
+            for(const a2 of dragonArmy){if(a2.mesh&&a2.mesh.userData.alive){const mhp2=a2.mesh.userData.maxHp||2044;a2.mesh.userData.hp=Math.min(mhp2,(a2.mesh.userData.hp||0)+upgradedDmg()*8);spawnAbilityCloud(a2.mesh.position.clone(),0xffffff,18,0.5);}}
+            floatWorld(fp,'💖 SOUL HEAL!','#ffaaff');
+          } else if(eid==='smoke'||eid==='air'){
+            // Wind slash volley
+            for(let wi=0;wi<6;wi++){const wa=wi/6*Math.PI*2;const wm=new THREE.Mesh(new THREE.BoxGeometry(1,1,4),new THREE.MeshBasicMaterial({color:0xaaddff,transparent:true,opacity:0.8,blending:THREE.AdditiveBlending}));wm.position.copy(fp);wm.userData={vel:new THREE.Vector3(Math.sin(wa),0,Math.cos(wa)).multiplyScalar(60),dmg:upgradedDmg()*4,life:2,projType:'air',friendly:true};scene.add(wm);projectiles.push(wm);}
+            floatWorld(fp,'💨 WIND SLASH!','#aaddff');
+          } else {
+            spawnAbilityCloud(aNearest.position.clone(),col,60,1.8);for(const ae of activeEnemies){if(!ae.userData.alive)continue;if(a.mesh.position.distanceTo(ae.position)<100)hitEnemy(ae,upgradedDmg()*8);}
+          }
+        }
+        // Attack 3
+        a.mesh.userData.aAtk3T-=dt;
+        if(a.mesh.userData.aAtk3T<=0&&aNearest&&aNearD<220){
+          a.mesh.userData.aAtk3T=20+Math.random()*8;
+          if(eid==='fire'||eid==='lava'){
+            // Fire Bomb — AoE explosion ring
+            spawnAbilityCloud(aNearest.position.clone(),0xff4400,80,2.5);
+            for(let ni=0;ni<12;ni++){const na=ni/12*Math.PI*2;const nm=new THREE.Mesh(new THREE.SphereGeometry(1.5,5,4),new THREE.MeshBasicMaterial({color:0xff6600,transparent:true,opacity:0.9,blending:THREE.AdditiveBlending}));nm.position.copy(aNearest.position);nm.userData={vel:new THREE.Vector3(Math.sin(na),0.2,Math.cos(na)).multiplyScalar(50),dmg:upgradedDmg()*6,life:2,projType:'fire',friendly:true};scene.add(nm);projectiles.push(nm);}
+            for(const ae of activeEnemies){if(!ae.userData.alive)continue;if(aNearest.position.distanceTo(ae.position)<80){hitEnemy(ae,upgradedDmg()*12);burnMap.set(ae,(burnMap.get(ae)||0)+10);}}
+            floatWorld(aNearest.position.clone().add(new THREE.Vector3(0,8,0)),'💣 FIRE BOMB!','#ff4400');
+          } else if(eid==='ice'){
+            // Ice Beam — continuous freeze beam
+            spawnBeamFX(fp.clone(),aNearest.position.clone(),0x88ffff);
+            for(const ae of activeEnemies){if(!ae.userData.alive)continue;if(a.mesh.position.distanceTo(ae.position)<150){hitEnemy(ae,upgradedDmg()*8);freezeMap.set(ae,(freezeMap.get(ae)||0)+10);}}
+            floatWorld(fp,'❄ ICE BEAM!','#88ffff');
+          } else if(eid==='water'){
+            // Ice Beam (water)
+            spawnBeamFX(fp.clone(),aNearest.position.clone(),0x44aaff);
+            for(const ae of activeEnemies){if(!ae.userData.alive)continue;if(a.mesh.position.distanceTo(ae.position)<150){hitEnemy(ae,upgradedDmg()*8);freezeMap.set(ae,(freezeMap.get(ae)||0)+10);}}
+            floatWorld(fp,'💧 HYDRO BEAM!','#44aaff');
+          } else if(eid==='nature'){
+            // Poison Cloud — wide area DoT
+            spawnAbilityCloud(aNearest.position.clone(),0x00ff44,120,3.0);
+            for(const ae of activeEnemies){if(!ae.userData.alive)continue;if(aNearest.position.distanceTo(ae.position)<150){hitEnemy(ae,upgradedDmg()*5);poisonMap.set(ae,18);poisonDoTMap.set(ae,(poisonDoTMap.get(ae)||0)+upgradedDmg()*0.5);}}
+            floatWorld(aNearest.position.clone().add(new THREE.Vector3(0,8,0)),'☠ POISON CLOUD!','#00ff44');
+          } else if(eid==='earth'){
+            // Meteor — massive slow projectile
+            const mm=new THREE.Mesh(new THREE.SphereGeometry(4,6,4),new THREE.MeshBasicMaterial({color:0xff6600,transparent:true,opacity:0.9,blending:THREE.AdditiveBlending}));
+            const mstart=fp.clone().add(new THREE.Vector3(0,80,0));mm.position.copy(mstart);
+            const md=new THREE.Vector3().subVectors(aNearest.position,mstart).normalize().multiplyScalar(60);
+            mm.userData={vel:md,dmg:upgradedDmg()*20,life:4,projType:'earth',friendly:true,aoe:true};scene.add(mm);projectiles.push(mm);
+            floatWorld(fp,'☄ METEOR!','#ff6600');
+          } else if(eid==='lightning'||eid==='thunder'){
+            // Mega storm — all enemies in range
+            for(const ae of activeEnemies){if(!ae.userData.alive)continue;if(a.mesh.position.distanceTo(ae.position)<220){spawnBeamFX(fp.clone(),ae.position.clone(),0xffff44);hitEnemy(ae,upgradedDmg()*9);}}
+            spawnAbilityCloud(fp.clone(),0xffff44,100,2.5);floatWorld(fp,'⛈ MEGA STORM!','#ffff44');
+          } else if(eid==='soul'||eid==='sun'){
+            // Spirit Ghost — spawn ghost projectile copies
+            for(let si=0;si<5;si++){const sm=new THREE.Mesh(new THREE.SphereGeometry(1.5,5,4),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.7,blending:THREE.AdditiveBlending}));sm.position.copy(fp).add(new THREE.Vector3((Math.random()-0.5)*20,Math.random()*10,(Math.random()-0.5)*20));const tgt=activeEnemies.filter(ae=>ae.userData.alive)[Math.floor(Math.random()*activeEnemies.length)];if(tgt){const sd=new THREE.Vector3().subVectors(tgt.position,sm.position).normalize().multiplyScalar(50);sm.userData={vel:sd,dmg:upgradedDmg()*8,life:3,projType:'soul',friendly:true};scene.add(sm);projectiles.push(sm);}}
+            floatWorld(fp,'👻 SPIRIT GHOST!','#aaffff');
+          } else if(eid==='smoke'||eid==='air'){
+            // Tornado — spinning push+damage aoe
+            let tt=0;const tInt=setInterval(()=>{tt+=0.15;if(tt>4||gs!=='playing'){clearInterval(tInt);return;}for(const ae of activeEnemies){if(!ae.userData.alive)continue;if(a.mesh.position.distanceTo(ae.position)<140){hitEnemy(ae,upgradedDmg()*1.5);const ang=tt*4;ae.position.add(new THREE.Vector3(Math.cos(ang),0,Math.sin(ang)).multiplyScalar(12*0.15));}}spawnAbilityCloud(a.mesh.position.clone(),0xaaddff,50,0.8);},150);
+            floatWorld(fp,'🌪 TORNADO!','#aaddff');
+          } else {
+            spawnAbilityCloud(aNearest.position.clone(),col,80,2.5);for(const ae of activeEnemies){if(!ae.userData.alive)continue;if(a.mesh.position.distanceTo(ae.position)<150)hitEnemy(ae,upgradedDmg()*10);}
+          }
         }
       }
     }

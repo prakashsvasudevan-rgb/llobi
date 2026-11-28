@@ -5444,6 +5444,7 @@ function update(ts){
       const mhp=isSoul?2044:3411;
       if(ga.mesh.userData.maxHp!==mhp)ga.mesh.userData.maxHp=mhp;
       ga.mesh.userData.hp=Math.min(mhp,ga.mesh.userData.hp+mhp*0.16*dt+(isSoul?10*dt:0));
+      if(ga.mesh.userData.hp>0)ga.mesh.userData.alive=true;
       // Elemental shield — persistent ring mesh always visible on army dragons
       if(ga.shieldRing){ga.shieldRing.visible=true;ga.shieldRing2.visible=true;}
       if(!ga.shieldRing){

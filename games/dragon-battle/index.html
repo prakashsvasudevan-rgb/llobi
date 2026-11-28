@@ -4123,7 +4123,7 @@ document.addEventListener('keydown',e=>{
         spawnAbilityCloud(ref.clone(),0xaa8844,100,2.5);spawnAbilityCloud(ref.clone(),0x886622,70,1.8);
         for(let ei=0;ei<32;ei++){const ea=ei/32*Math.PI*2;const ep=ref.clone().add(new THREE.Vector3(Math.cos(ea)*180,0,Math.sin(ea)*180));spawnAbilityCloud(ep,0xaa8844,22,0.8);}
         for(const ae of activeEnemies){if(!ae.userData.alive)continue;if(ref.distanceTo(ae.position)<200){hitEnemy(ae,upgradedDmg()*20);floatWorld(ae.position,'🌍','#aa8844');}}
-        for(const a of dragonArmy){if(!a.mesh.userData.alive)return;}// army is safe
+        for(const a of dragonArmy){if(!a.mesh.userData.alive)continue;}// army is safe
       } else {
         // Default for other types — element blast
         abilityCooldown.power=5;
@@ -5144,7 +5144,7 @@ function startGame(){
   dtype=DT[selectedType];
   gs='playing';score=0;kills=0;frame=0;
   ddead=false;ddeathT=0;dinvT=0;fireArr=[];projectiles.forEach(p=>scene.remove(p));projectiles=[];
-  abilityCooldown={attack:0,heal:0,ice:0,fire:0,soul:0,earth:0,bite:0,power:0,pBite:0,pTail:0,pRoar:0};soulShieldHP=0;earthInvT=0;burnMap=new Map();freezeMap=new Map();poisonMap=new Map();
+  abilityCooldown={attack:0,heal:0,ice:0,fire:0,soul:0,earth:0,bite:0,power:0,pBite:0,pTail:0,pRoar:0};soulShieldHP=0;earthInvT=0;playerSlowT=0;burnMap=new Map();freezeMap=new Map();poisonMap=new Map();poisonDoTMap=new Map();
   abilityFX.forEach(fx=>scene.remove(fx.group));abilityFX=[];
   activeEnemies=[];activeBuildings=[];friendlyNPCs=[];roamDragons=[];
   orbDrops.forEach(o=>scene.remove(o.mesh));orbDrops=[];

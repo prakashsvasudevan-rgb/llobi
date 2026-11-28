@@ -2768,7 +2768,6 @@ function spawnGreatCity(){
   // Dark water depth ring
   const deepMat=new THREE.MeshBasicMaterial({color:0x002244,transparent:true,opacity:0.5,blending:THREE.AdditiveBlending,side:THREE.DoubleSide});
   const deepGeo=new THREE.RingGeometry(1800,4000,48);deepGeo.rotateX(-Math.PI/2);
-  g.add(Object.assign(new THREE.Mesh(deepGeo,deepMat),{position:{set(x,y,z){this.x=x;this.y=y;this.z=z;}}}));
   const deepM=new THREE.Mesh(deepGeo,deepMat);deepM.position.set(0,-5.5,0);g.add(deepM);
 
   // ── FOREST RING between city wall and shore ─────────────────────────────────

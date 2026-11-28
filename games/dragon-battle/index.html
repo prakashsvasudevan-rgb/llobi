@@ -3087,18 +3087,345 @@ const WIZARD_SPELLS=[
 ];
 let wizardSpellIdx=0; // which spell player currently has selected
 const CITY_BOOKS=[
-  {id:'dragon_lore',    name:'📖 Dragon Lore',       cost:200, bonus:'reveals_dragons',
-   lore:'DRAGON LORE — THE ANCIENT COMPENDIUM\n\nIn the age before memory, when the world was young and fire ran through the veins of the earth, the first dragons descended from the storms. Eight great clans were formed — Fire and Water, Earth and Nature, Air and Smoke, Lava and Ice, Thunder and Lightning, Sun and Soul, Bone and Acid, Metal and Glass.\n\nEach clan carved a mountain kingdom. Their kings ruled for centuries. Then the Shadow came — a darkness beyond the world — and the King Dragons fell one by one, their islands becoming ruin-shrines. Only their weapons remain, waiting for a rider strong enough to wield them.\n\nThe Shadow Dragons serve no king. They are shards of the darkness itself, hunters without end.'},
-  {id:'shadow_history', name:'📜 Codex of Shadows',  cost:350, bonus:'reveals_shadow',
-   lore:'CODEX OF SHADOWS — RESTRICTED VOLUME\n\nThe Princes of Death were once mortal riders — the greatest warriors of the old age. They made a pact with the Shadow: in exchange for eternal life, they would ride the shadow winds forever and harvest the life-force of the living.\n\nThey ride on dragon-shaped darkness. No arrow, sword, or spell can harm them. Only the one who holds all eight King Weapons — forged from the essence of the eight dragon clans — can challenge them.\n\nBlane knew this. He trained for a decade. He believes it is the only way. Find him at Dragon Mountain if you wish to follow this path.'},
-  {id:'battle_tactics', name:'⚔ Battle Tactics',     cost:150, bonus:'melee_boost',
-   lore:'BATTLE TACTICS — A WARRIOR\'S GUIDE\n\nChapter 1: The Dragon Rider\'s Advantage\nA rider mounted on a dragon is worth fifty soldiers on foot. Use speed and height — attack from above, never let your enemy dictate the angle of engagement.\n\nChapter 3: Shadow Creatures\nShadow creatures dissolve in strong light. Drive them toward open ground. Their dust — Shadow Dust — crystallises at death. It has powerful alchemical properties and can enhance weapons of legend.\n\nChapter 7: The King Dragons\nDo not engage a King Dragon alone the first time. Study its attacks. King Dragons have three phases — Patrol, Aggression, and Frenzy. Survive Frenzy and the battle is nearly won.'},
-  {id:'rider_handbook', name:'📗 Rider\'s Handbook',  cost:100, bonus:'none',
-   lore:'THE RIDER\'S HANDBOOK — STANDARD ISSUE\n\nCongratulations on your dragon bond. This handbook covers the basics.\n\n[T] — Toggle between dragon and human form. As a human, you may enter cities, speak to NPCs, and use shops.\n\n[E] — Interact with any friendly NPC in human form. This opens dialogue and shop menus.\n\n[B] — Browse/Buy when inside a shop dialogue. Some shops use [N] and [M] for additional options.\n\n[1][2][3] — Use your dragon\'s special attacks. Each attack type differs by dragon clan.\n\nStay alert. The world is vast and full of danger. Trust your dragon. Fly well.'},
-  {id:'realm_history',  name:'🏛 History of the Realm',cost:80, bonus:'none',
-   lore:'HISTORY OF THE REALM — POPULAR EDITION\n\nThe Great City was founded 600 years ago by refugees fleeing the Shadow War. Its walls have never been breached. Three kings, two queens, and one very surprised court jester have ruled from this seat.\n\nThe Dragon Mountain range to the north has always been sacred — a place where riders trained, dragons nested, and the boundary between our world and the Shadow Plane grew thin.\n\nBlane the Rider is the most celebrated hero of this generation. He single-handedly drove back the Shadow Siege of Year 487, using techniques only he understood. He retired to Dragon Mountain to continue his research. Some say he found something there. Something old. Something that cannot be undone.'},
-  {id:'wizards_tome',   name:'🔮 Wizard\'s Secret Tome',cost:300, bonus:'wizard_boost',
-   lore:'WIZARD\'S SECRET TOME — TOWER EDITION\n\nWritten by Zephyrus himself for his advanced students.\n\nOn Spell Theory: Magic is simply the universe correcting an imbalance you created. When you cast a Meteor Storm, you are not summoning meteors — you are persuading gravity to be enthusiastic in one specific location.\n\nOn Time Freeze: Time Freeze does not stop time. It makes everything else very, very convinced that it already has. The difference matters for the exam.\n\nOn Fire God: I should not have included this one. If you are reading this, please close the book. Put it back on the shelf. Walk away slowly. Do not look at the pages at the back.'},
+  {id:'dragon_lore', name:'📖 Dragon Lore', cost:200, bonus:'reveals_dragons',
+   lore:`DRAGON LORE — THE ANCIENT COMPENDIUM
+
+THE EIGHT CLANS
+
+Before kingdoms, before cities, before the first campfire, there were dragons.
+
+They came from the storms — not born, but precipitated, the way salt forms from an evaporating sea. Eight great clans crystallised from eight forces of the world:
+
+INFERNO TIDE: Born of volcano and ocean, the Fire-Water dragons breathe alternating walls of fire and cold salt spray. Their King, Ignareth, ruled from a floating caldera above the sea. He could melt a warship at three hundred paces and cool the slag before it hit the water.
+
+ANCIENT GROVE: The Earth-Nature dragons are the slowest and most patient. Their King, Verdaun, is said to have waited seven hundred years for a single fruit tree to bloom before eating it. Witnesses reported it was worth the wait.
+
+ASHEN SKY: Air-Smoke dragons ride thermal columns and breathe a fog so thick it crushes the lungs. Their King, Vorthex, flew so high that his shadow crossed two kingdoms at once.
+
+GLACIAL CALDERA: Born from the collision of lava and polar ice, these dragons breathe in two streams that only mix in the target. The resulting explosion is beautiful and brief.
+
+STORM THRONE: The Thunder-Lightning dragons are the fastest and most temperamental. Their King, Stormcrest, once circled the world in a single day, arriving home slightly before he left.
+
+CELESTIAL ALTAR: Sun-Soul dragons glow from within. They do not eat prey — they dissolve it. Their light is the last thing many things have ever seen, and reportedly one of the more pleasant last things.
+
+DEATH MARSHES: Bone-Acid dragons smell of old copper and dissolution. They are the undertakers of the dragon world. Where they nest, nothing remains.
+
+SHATTERED FORGE: Metal-Glass dragons shed scales that cut like razors. Their breath fuses sand into glass spears mid-flight. Their King, Crucible, once built a palace from his own shed scales. It is still standing. It is still sharp.
+
+Each King ruled their island kingdom for centuries in equilibrium. Then the Shadow came — a darkness without origin, without negotiation — and they fell. Their islands became shrines. Their weapons remain.`},
+
+  {id:'shadow_history', name:'📜 Codex of Shadows', cost:350, bonus:'reveals_shadow',
+   lore:`CODEX OF SHADOWS — RESTRICTED VOLUME
+Librarian's note: This book may not leave the building. Reading it in full has caused three scholars to change careers, two to change kingdoms, and one to change species (ask Eldris).
+
+THE PRINCES OF DEATH: A TRUE ACCOUNT
+
+They were not born evil. That is the cruelest part.
+
+Five of them. Five riders, each the greatest warrior of their age. Their names are known — Drevak the Unbowed, Silene of the Iron Shore, Morthus Blackhand, Yenna the Last, and their leader, the one called simply The Prior, whose true name was removed from every stone that ever bore it.
+
+They lived in the century before the Great Shadow War. They watched kingdoms fall. They watched dragons die. They watched the people they swore to protect reduced to ash and ruin by forces no sword could wound.
+
+So they made a bargain.
+
+The Shadow offered them power beyond death — the ability to fight forever, to never tire, never fall, never leave their people unprotected. The price was their humanity. Their warmth. Their names, eventually.
+
+They accepted.
+
+They became the Princes of Death: riders of shadow-shaped dragons, hunters of the living, the very force they once swore to oppose. The Shadow does not keep bargains. It simply completes them, in the worst possible interpretation.
+
+No weapon of the old world can harm them. No spell touches them. No army stops them.
+
+But there is a way.
+
+The eight King Weapons, forged from the essence of the eight dragon clans, carry within them the opposing force to shadow. Only someone who holds all eight — who has faced every King Dragon and prevailed — can strike through the shadow and reach what remains of the mortal soul beneath.
+
+Blane knows this. He has prepared for this. If you are reading this book, perhaps you are preparing too.
+
+The Shadow is coming. The Princes ride ahead of it, as they always have. As they were made to.`},
+
+  {id:'heroes_of_old', name:'🦸 Heroes of Old', cost:180, bonus:'none',
+   lore:`HEROES OF OLD — TALES OF THE GREAT RIDERS
+
+ALDRA THE FIRST: The woman who tamed the first dragon.
+
+She did not set out to be a hero. She was a shepherd, seventeen years old, living on the eastern cliffs. A storm-dragon crashed onto her land — wounded, enormous, furious. Every trained warrior in the province refused to approach it. Aldra walked up to it alone, with a bucket of water and a piece of salted bread.
+
+Three days later, she rode it into the city. No saddle. No reins. Just her hands on its scales and something unspoken between them. That understanding became the basis for every dragon-rider bond that followed.
+
+She never trained formally. She wrote nothing down. When asked how she did it, she said: "I just listened."
+
+─────────────────────────
+
+KARREN IRONHOOF: The rider who ended the First Shadow Siege.
+
+The Shadow came in waves — not armies, but weather. A darkness that corroded metal, curdled water, and silenced birds. Karren rode into the Shadow Cloud alone on a Sun Dragon named Brightfall. The light Brightfall produced inside the Shadow was visible from three kingdoms away.
+
+They did not emerge. The Shadow receded.
+
+Fourteen years later, Brightfall's scales washed up on the northern shore, clean and whole. Karren's sword was with them. Some say both still glow faintly on moonless nights.
+
+─────────────────────────
+
+VOSS THE MOUNTAIN: The first rider of a Bone-Acid dragon.
+
+Everyone told him it was impossible. Bone-Acid dragons dissolved anything they touched over time. Three previous riders had lost fingers, then hands, then — in one case — their enthusiasm.
+
+Voss wore glass armour, ground himself, and simply endured. After a year, the dragon — named Dissolution — stopped dissolving him. It had decided he was more interesting alive.
+
+They fought together for forty years. When Voss finally died, of old age, in his bed — Dissolution lay beside the bed and refused food until the funeral was complete. After that, it flew into the Death Marshes and was never seen again.
+
+─────────────────────────
+
+BLANE THE RIDER: Living legend. Current whereabouts: Dragon Mountain.
+
+The only rider to survive a direct encounter with a Prince of Death and walk away. He will not say what happened. He returned to Dragon Mountain the following year and has not left since. The city still sends his favourite meal — roasted fish with northern peppers — by carrier dragon every month.
+
+He always sends the plate back clean.`},
+
+  {id:'atlas_world', name:'🗺 Atlas of the Known World', cost:160, bonus:'none',
+   lore:`ATLAS OF THE KNOWN WORLD — THIRD EDITION
+
+Surveyed by the Royal Cartographers Guild. Some borders approximate.
+
+THE GREAT CITY
+Population: ~12,000. Founded approximately 600 years ago at the intersection of three trade roads and one river that has since moved. The city has never been successfully besieged, though it has been successfully embarrassed on several occasions. Home to the Grand Library, the Wizard Tower of Zephyrus, the Golden Flagon tavern, and the best blacksmith in the northern reaches.
+
+DRAGON MOUNTAIN
+A range of peaks visible on clear days from the city's north wall. Home to Blane, to wild dragon riders who train on the peaks, and to the approaches to the King Dragon islands. The mountain pass is not recommended for travellers on foot. For travellers on dragon, it is simply a matter of altitude.
+
+THE KING DRAGON ISLANDS — THE EIGHT RUINS
+Eight floating islands orbit Dragon Mountain at high altitude, each the ruin-throne of a fallen King Dragon. They are:
+  → INFERNO TIDE (north) — volcanic rock, constant flame-geysers, smell of brimstone
+  → ANCIENT GROVE (northeast) — overgrown stone, enormous trees, silence
+  → ASHEN SKY (east) — perpetual grey cloud, ash rain, no visibility beyond 20m
+  → GLACIAL CALDERA (southeast) — half-frozen lava, steam vents, unstable ground
+  → STORM THRONE (south) — constant lightning storms, no metal on approach
+  → CELESTIAL ALTAR (southwest) — blindingly bright, the ruins glow at noon
+  → DEATH MARSHES (west) — black water, bone formations, acid pools
+  → SHATTERED FORGE (northwest) — glass shards everywhere, metallic vegetation
+
+THE SHADOW PLANE
+Not on any map made by a sane cartographer. It exists adjacent to the world, separated by what scholars call the Membrane. Dragon Mountain thins the Membrane. The King Dragon islands thin it further. The Princes of Death pass through it freely.
+
+The Volcano (south)
+A vast volcano that has not erupted in recorded history. The Emperor's fortress is built into its eastern face. Relationship between Emperor and dragons: hostile. Approach with caution.
+
+THE OCEAN
+Large. Wet. Contains things. The sea dragons — a ninth clan, unaffiliated — live in the deep trenches and have never bothered anyone. We prefer not to bother them.`},
+
+  {id:'myths_legends', name:'📕 Myths & Legends', cost:120, bonus:'none',
+   lore:`MYTHS AND LEGENDS OF THE DRAGON WORLD
+
+THE LEGEND OF THE STARFALL DRAGON
+
+Before the eight clans, before even the word "dragon," the old stories speak of a single creature — the Starfall Dragon — who descended from the highest sky in the age when the world was still cooling.
+
+It had no element. It breathed pure sound. Where it roared, mountains shook; where it whispered, rivers changed course; where it was silent, nothing dared move.
+
+The Starfall Dragon circled the world once, surveying everything. Then it landed on the highest peak — the same peak that would later become Dragon Mountain — and exhaled.
+
+That exhalation, over a thousand years, became the eight dragon clans. Each clan inherited one aspect of the original: its fire, its patience, its speed, its light, its hunger, its electricity, its cold, its metallic dreams.
+
+The Starfall Dragon itself dissolved when it was done. Some say you can still hear it, if you stand at the summit of Dragon Mountain at dawn and the wind is exactly right. What you hear sounds like every kind of dragon at once.
+
+─────────────────────────
+
+THE MYTH OF THE SHADOW MIRROR
+
+In the time of the Shadow War, there was a wizard — name lost, sanity questionable — who tried to create a mirror that reflected not light, but shadow. His reasoning: if you could see shadow, you could fight it.
+
+The mirror worked. It showed not what was in front of you, but what was behind the world — the Shadow Plane and everything in it.
+
+The wizard looked into it for a week. He came out different. Not evil. Just very quiet and very certain. He destroyed the mirror immediately.
+
+Before he destroyed it, he wrote one sentence on the wall: "They know we are watching."
+
+The wall was demolished. The sentence was remembered.
+
+─────────────────────────
+
+THE TALE OF THE UNNAMED DRAGON
+
+There is a dragon — has always been a dragon — that appears to riders on the night before a great battle. It has no colour. It makes no sound. It simply lands beside the rider, looks at them for a long moment, and leaves.
+
+Riders who see it universally report the same feeling: not fear, but clarity. As if everything unnecessary had been removed from their thoughts, leaving only what matters.
+
+They all win their battles. Every one, without exception.
+
+No rider has ever named it. By unspoken agreement, to name it would ruin it.
+
+─────────────────────────
+
+THE SHADOW KING'S PROMISE
+
+The Shadow — whatever the Shadow truly is — once made a promise to a child who wandered into its plane and demanded to know why it was destroying everything.
+
+The child asked: "What do you want?"
+
+The Shadow considered this for what felt like a lifetime.
+
+Then it said: "To be what I am, without consequence."
+
+The child said: "Nothing gets that."
+
+The Shadow said: "I know." And it sounded, the child later reported, almost sad.
+
+The child found their way home. No one believed them. They became a scholar.`},
+
+  {id:'tale_of_blane', name:'📘 The Tale of Blane', cost:250, bonus:'none',
+   lore:`THE TALE OF BLANE THE RIDER — AN ACCOUNT
+
+He was not remarkable as a child. Quiet. Good at listening. Bad at sitting still.
+
+He bonded with his first dragon at thirteen — a small Fire dragon, bad-tempered and brilliant, named Cinder. They trained for five years before anyone took them seriously. By the time they were ready, Cinder was enormous and Blane could read a dragon's intent before the dragon had decided on it.
+
+The years before the Shadow Siege of Year 487 were calm. Deceptively calm. Blane spent them at Dragon Mountain, training with the sky riders — men and women who had turned the mountain peaks into an academy. He learned the Fire arts, the Thunder arts, the Earth arts. He cross-trained until no single dragon type felt foreign.
+
+Then the Siege came.
+
+The Shadow moved on the city without warning on the night of the winter solstice. No moon. Cold that bent metal. The Shadow poured through the northern pass like smoke through a keyhole — not an army, but a pressure. A silencing weight.
+
+Three battalions broke before it without a sword being drawn. The shadow wasn't attacking. It was simply being there, and that was enough.
+
+Blane rode into it alone.
+
+What happened inside the Shadow is not fully known. His own account, given once to a historian and never repeated, contained the following:
+
+"I didn't fight it. You can't fight it. I just... reminded it that I was there. That I existed. That I had a name and a dragon and something to go back to. I held on to that so hard that the shadow couldn't find a gap to come through."
+
+He emerged after six hours. Cinder's scales were grey for a month. The Shadow pulled back from the city.
+
+Blane never claimed a victory. He said, quietly, that he had bought time.
+
+He has been buying time at Dragon Mountain ever since. He believes the final reckoning is approaching — that the Princes will ride, and that the only rider capable of stopping them is the one who has faced all eight King Dragons and carries their weapons.
+
+He is waiting to meet that rider.
+
+He hopes it is you.`},
+
+  {id:'rider_handbook', name:'📗 Rider\'s Handbook', cost:100, bonus:'none',
+   lore:`THE RIDER'S HANDBOOK — STANDARD ISSUE, 14TH EDITION
+Printed by the Dragon Rider's Guild. Some advice may be outdated. See errata on back page. There is no back page.
+
+CHAPTER 1: YOUR DRAGON
+
+Your dragon is not a mount. Your dragon is a partner who happens to be very large and on fire. Treat them accordingly. The riders who last longest are the ones who understood this first.
+
+A dragon's mood affects its breath. A frustrated dragon breathes hotter. A calm dragon breathes more accurately. A dragon that trusts you breathes exactly where you point.
+
+CHAPTER 2: CONTROLS
+
+[T] — Toggle between Dragon and Human form. In human form you can enter cities, speak to people, buy things, and briefly pretend you live a normal life.
+[E] — Talk to anyone friendly. This includes NPCs, stable hands, Blane, and occasionally confused goats.
+[B] — Browse or Buy at shops.
+[N] — Next option in certain shops.
+[M] — Use active wizard spell (must be purchased from Zephyrus first).
+[1][2][3] — Your dragon's special attacks. These vary by clan.
+[J] — Jump (human form only). Useful. Underused.
+
+CHAPTER 3: SHADOW DUST
+
+When you defeat a Shadow Dragon, it leaves behind Shadow Dust — a crystallised residue of its essence. Collect it. It has uses. What uses, specifically, Blane will tell you. He is very particular about who knows.
+
+CHAPTER 4: THE KING DRAGONS
+
+There are eight. They are large. Each has three attack phases: Patrol (mostly harmless), Aggression (quite dangerous), and Frenzy (extremely dangerous). Survive Frenzy. This is the whole of the advice.
+
+Their weapons appear at the centre of their island when they fall. Collect all eight.
+
+CHAPTER 5: THE CITY
+
+The Great City is safe — mostly. Enter in human form through the south gate. Dragons are not permitted inside the walls. The city hunters will enforce this policy with enthusiasm and crossbows.
+
+The Library has books. Read them. The world is large and mostly unexplained. Reading helps.
+
+CHAPTER 6: FINAL ADVICE
+
+The world is trying to end. It has been trying for some time. It has not succeeded yet. You are partly why. Keep going.`},
+
+  {id:'realm_history', name:'🏛 History of the Realm', cost:80, bonus:'none',
+   lore:`HISTORY OF THE REALM — POPULAR EDITION, REVISED
+
+YEAR 0: The world is as it always was. Dragons in the sky. People on the ground. An arrangement that mostly works.
+
+YEAR 112: First recorded dragon rider. Her name was Aldra. She was a shepherd. The dragon was named later — she just called it "you." It seemed to prefer that.
+
+YEAR 203–218: The First Dragon Wars. Not between humans and dragons — between two human factions, each with dragons. The war was complicated, expensive, and resolved by a dragon who refused to fight and sat down in the middle of the battlefield until everyone agreed it was absurd.
+
+YEAR 301: Founding of the Great City. Built at the crossroads of the three main trade routes, at the site of an ancient dragon nesting ground. The dragons had already left. The eggshells were used as building material. The Library was the second building completed, after the tavern.
+
+YEAR 487: The Shadow Siege. The Shadow's first major incursion in centuries. Stopped by Blane and his fire dragon Cinder. The city doubled its walls the following year.
+
+YEAR 489–510: The Age of Riders. The Dragon Mountain Academy flourished. Riders trained. Dragons multiplied. The world was, briefly, optimistic.
+
+YEAR 511: The King Dragons began to change. Scholars noted aggression increasing, territories expanding. In retrospect, the Shadow was pressing against them from below.
+
+YEAR 517–523: The King Dragons fall, one by one, to forces unknown. Their islands become ruins. Their weapons remain unclaimed. The Shadow retreats, but does not leave.
+
+YEAR 540: Blane returns to Dragon Mountain alone. He says he has work to do. He will not say what work.
+
+YEAR 598 (PRESENT DAY): The Shadow Dust grows more concentrated. The Princes of Death are reported in the northern passes. Blane waits. Someone collects the king weapons.
+
+You are living through Year 598. Act accordingly.`},
+
+  {id:'shadow_history', name:'📜 Codex of Shadows', cost:350, bonus:'reveals_shadow',
+   lore:`CODEX OF SHADOWS — RESTRICTED VOLUME
+
+THE NATURE OF THE SHADOW
+
+The Shadow is not evil in the way a person can be evil. A person chooses. The Shadow simply is — an anti-force, a pressure from outside the world's membrane, pressing inward.
+
+Scholars have proposed many theories. The most widely accepted: the world exists in a bubble of ordered energy. The Shadow is what presses against that bubble from outside. It does not hate the world any more than the ocean hates a boat. It simply pushes.
+
+The problem is what it does to the living.
+
+Shadow exposure over time causes first silence (birds stop singing near its edges), then coldness, then a forgetting — not of facts, but of will. Settlements in the Shadow's path do not fight. They simply stop. The people stand where they are. Waiting. For something that never comes.
+
+THE PRINCES OF DEATH
+
+Five riders who made a pact with the Shadow in the century before the Great Shadow War. They bargained their humanity for power enough to protect those they loved. The Shadow gave them power. It also gave them an appetite. They now harvest what the Shadow needs — the warmth of living things — to sustain their immortality.
+
+Their dragon-mounts are not true dragons. They are darkness shaped like dragons, sustained by the same pact. They cannot be wounded by ordinary weapons. They cannot be burned. They cannot be frozen. They move through spells the way water moves through a net.
+
+The only weapons that work are the King Weapons — forged from the essential fires of the eight dragon clans, before the Shadow touched them. These weapons carry, within their cores, the original heat of the world before the Shadow came.
+
+HOW TO FIND BLANE
+
+Go north. Find Dragon Mountain. Look for a campfire that has been burning for fourteen years without interruption. That is Blane's campfire. He is there.
+
+He will ask if you have all eight King Weapons. If you do not, he will wait. He has waited before.`},
+
+  {id:'wizards_tome', name:'🔮 Wizard\'s Secret Tome', cost:300, bonus:'wizard_boost',
+   lore:`WIZARD'S SECRET TOME — PERSONAL NOTES
+By Morthex, Grand Arch-Wizard, Keeper of the High Tower, Honorary Member of the Cloud Watchers Society (expelled 741 for causing a cloud)
+
+FOREWORD
+If you are reading this, you either purchased it from me (acceptable), borrowed it without asking (I will find out), or found it in rubble (I am very sorry about the rubble).
+
+This volume contains my private notes on spell theory. They contradict the official curriculum in several places. The official curriculum is wrong in several places.
+
+─────────────────────────
+
+ON METEOR STORM
+The meteors are real. This is the most common misconception — students assume the spell conjures illusions of meteors. No. The spell opens a brief corridor between this world and an asteroid field I discovered in Year 503 and have kept professionally quiet about. The meteors pass through and continue on their way. We do not know where they go afterward. I have chosen not to investigate this.
+
+ON TIME FREEZE
+Time Freeze is the most philosophically uncomfortable spell. It does not freeze time. It freezes the perception of time for everything except the caster. The targets are fully conscious — perfectly aware of every second — they simply cannot move. I included this in the shop because it is very effective. I am sorry.
+
+ON GOD LIGHTNING
+I did not invent God Lightning. I found it written in a margin of a book about agricultural drainage, in a handwriting that was not mine and predated the book by three hundred years. I do not know who wrote it or why they put it there. The spell works exactly as described. I have added a warning label. The warning label is also written in that handwriting. I do not think about this.
+
+ON SOUL VORTEX
+The vortex does not actually steal souls. It disrupts the coherence field that holds consciousness together, causing temporary disorientation. It feels like soul-stealing. The distinction is important. Probably.
+
+ON FIRE GOD
+I am serious about not reading the last section. I included it because I am legally required to disclose all spells I know to the Guild. I would not recommend casting it inside city limits. Or outside them, unless the weather is very specific.
+
+FINAL NOTE
+The world is approaching a crisis. The Shadow presses closer each year. The Princes will ride. The only counterforce — the King Weapons wielded by a proven rider — requires someone willing to face all eight King Dragons.
+
+If you are that rider: good luck. If you are not: enjoy the spells. They are very good spells.`},
 ];
 let libraryBookIdx=0; // currently selected book at library
 // King Dragon islands orbit Dragon Mountain at r=1200, evenly spaced (min dist ~918u)
@@ -4275,11 +4602,17 @@ document.addEventListener('keydown',e=>{
       }
     }
     if(e.code==='KeyQ'&&!dialogOpen)useKingWeapon();
-    // ! = Teleport to city
-    if(e.key==='!'&&!dialogOpen){
-      const ref=isHuman&&humanMesh?humanMesh:dragonMesh;
-      ref.position.set(CITY_X,isHuman?2:30,CITY_Z);
-      floatWorld(new THREE.Vector3(CITY_X,isHuman?10:40,CITY_Z),'🏙 GREAT CITY','#ffdd44');
+    // ! = Teleport to city  (also Shift+1 fires the same e.key on most keyboards)
+    if((e.key==='!'||(e.code==='Digit1'&&e.shiftKey))&&!dialogOpen){
+      if(!greatCitySpawned)spawnGreatCity();
+      if(isHuman&&humanMesh){
+        humanMesh.position.set(CITY_X,groundY(CITY_X,CITY_Z+650)+2,CITY_Z+650);
+        floatWorld(humanMesh.position.clone().add(new THREE.Vector3(0,8,0)),'🏙 GREAT CITY','#ffdd44');
+      } else {
+        // Drop dragon just outside south gate
+        dragonMesh.position.set(CITY_X,50,CITY_Z+700);
+        floatWorld(new THREE.Vector3(CITY_X,60,CITY_Z+700),'🏙 GREAT CITY — DISMOUNT [T] TO ENTER','#ffdd44');
+      }
     }
     // ? = Help overlay
     if((e.key==='?'||e.code==='Slash'&&e.shiftKey)){

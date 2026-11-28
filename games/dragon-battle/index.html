@@ -1732,8 +1732,20 @@ function spawnZone(cx,cz){
         dr.rotation.y=angle+Math.PI;
         const riderNames=['Mountain Rider','Peak Guard','Sky Scout','Ridge Warden','Summit Rider'];
         const riderLines=['This peak has a great view of the valley. Watch out for hunters!','I ride patrol here. The shadow hunters fear these heights.','The dragons found me up here. Now we watch the lands below together.','Dragon Mountain sent riders to every peak. We hold the skies.','Stay sharp, rider. Hunters strike from below when you least expect it.'];
+        const riderChoicesPool=[
+          [{q:'How long have you been up here?',a:'Long enough to know every cloud formation. The shadow hunters use the low fog to sneak up — never let your guard down in grey weather.'},
+           {q:'Is it lonely on the peaks?',a:'My dragon keeps me company. And riders signal each other with flame bursts across the mountains. We are never truly alone up here.'}],
+          [{q:'What do hunters want?',a:'They serve the Emperor at the Volcano. They want the dragons extinct, every last one. We will not let that happen.'},
+           {q:'How did you become a rider?',a:'A young dragon landed on my roof one morning. Fed it, sheltered it. By nightfall we were bonded. Some bonds just choose you.'}],
+          [{q:'What do you watch for from up here?',a:'Hunter scouts, shadow mages, anything moving toward Dragon Mountain. I signal Lumen\'s patrol if I spot a threat.'},
+           {q:'Any tips for a new rider?',a:'Trust your dragon\'s instincts. If they bank hard, something spooked them. Never override their instincts mid-flight.'}],
+          [{q:'Do other riders ever pass through?',a:'Sometimes. We share news — which valleys are safe, where hunters were last seen. The peaks are our watchtower network.'},
+           {q:'What is it like sleeping on a mountain peak?',a:'Cold. Windy. And the best stars you have ever seen. My dragon curls around me. Best nights of my life.'}],
+          [{q:'Have you fought hunters before?',a:'Many times. They hate heights — their mounts are ground creatures. Up here, dragons have every advantage.'},
+           {q:'What keeps you motivated?',a:'Every hunter I turn back is a dragon that lives another day. That is enough for me.'}],
+        ];
         const ri=Math.floor(Math.random()*riderNames.length);
-        dr.userData={npcName:riderNames[ri],npcText:riderLines[ri]};
+        dr.userData={npcName:riderNames[ri],npcText:riderLines[ri],choices:riderChoicesPool[ri]};
         scene.add(dr);objects.push(dr);
         friendlyNPCs.push(dr);
       }
@@ -2294,15 +2306,20 @@ function spawnDragonMountain(){
   ];
   const riderChoices=[
     [{q:'What is it like riding a dragon?',a:'There is nothing like it. The wind, the speed, the bond. You will feel it when you bond with yours.'},
-     {q:'How did you train your dragon?',a:'Patience and trust. A dragon senses fear. Stay calm and they will follow you anywhere.'}],
+     {q:'How did you train your dragon?',a:'Patience and trust. A dragon senses fear. Stay calm and they will follow you anywhere.'},
+     {q:'Tell me about yourself, Kael.',a:'I grew up near the northern cliffs. Lightning storms there are beautiful and terrifying. My dragon was born in one — that is why he is so wild and fast.'}],
     [{q:'Is Dragon Mountain safe?',a:'Safe as long as the Emperor stays at the Volcano. We patrol the skies every night to be sure.'},
-     {q:'What do you do at the stables?',a:'Care for our dragons. Brush scales, check wings, feed them. A healthy dragon is a fast dragon.'}],
+     {q:'What do you do at the stables?',a:'Care for our dragons. Brush scales, check wings, feed them. A healthy dragon is a fast dragon.'},
+     {q:'What is special about earth dragons?',a:'They are slower in the air but their hide is like stone. I have seen my dragon take a direct fire blast and barely flinch. Pure endurance.'}],
     [{q:'How long have you been a rider?',a:'Since I was twelve. Found a hatchling alone on the mountain. We grew up together.'},
-     {q:'What is the strongest dragon?',a:'Depends what you need. Earth for defence, Lightning for speed, Soul for magic. Mine is perfect for me.'}],
+     {q:'What is the strongest dragon?',a:'Depends what you need. Earth for defence, Lightning for speed, Soul for magic. Mine is perfect for me.'},
+     {q:'What makes fire dragons special?',a:'Their roar alone makes enemies flinch. And the heat — not just the flame, but the heat radiating off their scales mid-dive. Demoralising to face.'}],
     [{q:'Will you ride into battle with me?',a:'Recruit me and yes! I have been waiting for a leader worth following.'},
-     {q:'What do riders do between battles?',a:'Train, rest, care for our dragons. And a lot of waiting up here with a good view.'}],
+     {q:'What do riders do between battles?',a:'Train, rest, care for our dragons. And a lot of waiting up here with a good view.'},
+     {q:'What do you know about nature dragons?',a:'They feel every living thing around them. When my dragon is calm, the forest goes quiet too. When she is alarmed, every bird takes off at once.'}],
     [{q:'How do I get a stronger dragon?',a:'Tame a wild one on the mountain or earn a bond in the Hatchery. The stronger the bond, the more powerful you both become.'},
-     {q:'What is the Hatchery like?',a:'Ancient and warm. The eggs glow with the kind of magic you can feel in your chest. Unforgettable.'}],
+     {q:'What is the Hatchery like?',a:'Ancient and warm. The eggs glow with the kind of magic you can feel in your chest. Unforgettable.'},
+     {q:'What makes air dragons so fast?',a:'They feel every shift in the wind before it happens. My dragon rides thermal currents that are invisible to the eye. We outrun everything.'}],
   ];
   for(let i=0;i<5;i++){
     const dr=new THREE.Group();

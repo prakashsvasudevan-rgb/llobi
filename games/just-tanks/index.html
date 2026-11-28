@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Just Tanks</title>
+<title>Rocket Boom</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:100%;height:100%;background:#1a0a2e;display:flex;align-items:center;justify-content:center;overflow:hidden;font-family:'Segoe UI',sans-serif;cursor:none}
@@ -39,13 +39,13 @@ canvas{display:block;border-radius:6px;box-shadow:0 0 40px #0008}
   <div class="hud-box">🏁 <span id="hud-dist">—</span> away</div>
 </div>
 <div id="charge-bar-wrap">
-  <div id="charge-label">🔫 CHARGE</div>
+  <div id="charge-label">🚀 CHARGE</div>
   <div id="charge-bar"><div id="charge-fill"></div></div>
 </div>
 <div id="tip-warn">⚠️ TIPPING!</div>
 <div id="overlay">
-  <h1>🪖 JUST TANKS</h1>
-  <p>Shoot your cannon to propel forward!<br>Use recoil to climb hills and leap gaps.<br><b>Hold & release</b> mouse to charge your shot.</p>
+  <h1>🚀 ROCKET BOOM</h1>
+  <p>Fire rockets to propel your tank forward!<br>Use rocket recoil to climb hills and leap gaps.<br><b>Hold & release</b> mouse to charge your rocket.</p>
   <div id="tank-select">
     <div class="tank-card sel" data-tank="light">
       <div style="font-size:1.6rem">🚀</div>
@@ -64,7 +64,7 @@ canvas{display:block;border-radius:6px;box-shadow:0 0 40px #0008}
     </div>
   </div>
   <button class="btn btn-play" id="start-btn">▶ PLAY</button>
-  <div style="color:#888;font-size:.78rem;margin-top:4px">Hold mouse to charge · Release to fire (recoil moves you!) · Don't tip over!</div>
+  <div style="color:#888;font-size:.78rem;margin-top:4px">Hold mouse to charge · Release to launch rocket (recoil moves you!) · Don't tip over!</div>
 </div>
 
 <script>
@@ -452,13 +452,16 @@ function drawTankEntity(){
 
 function drawBullets(){
   bullets.forEach(b=>{
-    // trail
+    const angle=Math.atan2(b.vy,b.vx);
+    // flame trail
     if(b.trail.length>1){
       ctx.save();
       for(let i=1;i<b.trail.length;i++){
-        const alpha=(i/b.trail.length)*0.5;
-        ctx.globalAlpha=alpha;
-        ctx.strokeStyle=b.color;ctx.lineWidth=b.r*0.6*(i/b.trail.length);
+        const t=i/b.trail.length;
+        ctx.globalAlpha=t*0.55;
+        ctx.strokeStyle=t>0.5?'#ffaa00':'#ff4400';
+        ctx.lineWidth=b.r*1.1*t;
+        ctx.lineCap='round';
         ctx.beginPath();
         ctx.moveTo(b.trail[i-1].x-camX,b.trail[i-1].y);
         ctx.lineTo(b.trail[i].x-camX,b.trail[i].y);
@@ -466,11 +469,26 @@ function drawBullets(){
       }
       ctx.restore();
     }
-    // bullet
-    ctx.save();
-    ctx.shadowColor=b.color;ctx.shadowBlur=10;
-    ctx.fillStyle=b.color;ctx.beginPath();ctx.arc(b.x-camX,b.y,b.r,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#fff';ctx.globalAlpha=0.6;ctx.beginPath();ctx.arc(b.x-camX-b.r*0.3,b.y-b.r*0.3,b.r*0.35,0,Math.PI*2);ctx.fill();
+    // rocket body
+    ctx.save();ctx.translate(b.x-camX,b.y);ctx.rotate(angle);
+    ctx.shadowColor=b.color;ctx.shadowBlur=8;
+    // body
+    ctx.fillStyle=b.color;
+    ctx.beginPath();ctx.roundRect(-b.r*2.5,-b.r*0.5,b.r*5,b.r,b.r*0.4);ctx.fill();
+    // nose cone
+    ctx.fillStyle='#ffffff';
+    ctx.beginPath();ctx.moveTo(b.r*2.5,0);ctx.lineTo(b.r*4,0);ctx.lineTo(b.r*2.5,-b.r*0.5);ctx.closePath();ctx.fill();
+    ctx.beginPath();ctx.moveTo(b.r*2.5,0);ctx.lineTo(b.r*4,0);ctx.lineTo(b.r*2.5,b.r*0.5);ctx.closePath();ctx.fill();
+    // fins
+    ctx.fillStyle=darken(b.color,20);
+    ctx.beginPath();ctx.moveTo(-b.r*2.5,0);ctx.lineTo(-b.r*3.5,-b.r*1.2);ctx.lineTo(-b.r*1.5,-b.r*0.5);ctx.closePath();ctx.fill();
+    ctx.beginPath();ctx.moveTo(-b.r*2.5,0);ctx.lineTo(-b.r*3.5,b.r*1.2);ctx.lineTo(-b.r*1.5,b.r*0.5);ctx.closePath();ctx.fill();
+    // exhaust flame
+    ctx.globalAlpha=0.8+Math.random()*0.2;
+    const fg=ctx.createLinearGradient(-b.r*2.5,0,-b.r*5.5,0);
+    fg.addColorStop(0,'#ffffff');fg.addColorStop(0.3,'#ffee44');fg.addColorStop(0.7,'#ff6600');fg.addColorStop(1,'transparent');
+    ctx.fillStyle=fg;
+    ctx.beginPath();ctx.ellipse(-b.r*4,(Math.random()-.5)*b.r*0.4,b.r*2.5+Math.random()*b.r,b.r*0.55,0,0,Math.PI*2);ctx.fill();
     ctx.restore();
   });
 }

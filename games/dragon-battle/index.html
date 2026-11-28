@@ -2992,8 +2992,8 @@ function spawnGreatCity(){
     // First 20 houses are enterable — pocket at CITY_Z-5600 to CITY_Z-5600-19*80
     // All 50 houses are enterable — pockets at CITY_Z-5600 step 80
     const pz=CITY_Z-5600-i*80;
-    cityDoors.push({name:'House',enterPos:{x:CITY_X+hx,y:BFY+1.5,z:pz},exitPos:{x:CITY_X+hx,y:cy+1.5,z:CITY_Z+hz+18},checkX:CITY_X+hx,checkZ:CITY_Z+hz+13.5,checkR:10,hintText:'[ B ] Enter House'});
-    cityDoors.push({name:'EXIT House',isExit:true,exitPos:{x:CITY_X+hx,y:cy+1.5,z:CITY_Z+hz+18},checkX:CITY_X+hx,checkZ:pz+10,checkR:10,hintText:'[ B ] Exit House'});
+    cityDoors.push({name:'House',enterPos:{x:CITY_X+hx,y:BFY+1.5,z:pz},exitPos:{x:CITY_X+hx,y:cy+1.5,z:CITY_Z+hz+18},checkX:CITY_X+hx,checkZ:CITY_Z+hz+13.5,checkR:10,hintText:'[ B ] Open Door'});
+    cityDoors.push({name:'EXIT House',isExit:true,exitPos:{x:CITY_X+hx,y:cy+1.5,z:CITY_Z+hz+18},checkX:CITY_X+hx,checkZ:pz+10,checkR:10,hintText:'[ B ] Leave House'});
   });
 
   // ── 3 named enterable houses at fixed positions ──
@@ -3020,13 +3020,13 @@ function spawnGreatCity(){
       enterPos:{x:CITY_X+nh.ox,y:BFY+1.5,z:nh.pocketZ},
       exitPos:{x:CITY_X+nh.ox,y:cy+1.5,z:CITY_Z+nh.oz+18},
       checkX:CITY_X+nh.ox, checkZ:CITY_Z+nh.oz+13.5, checkR:10,
-      hintText:'[ B ] Enter '+nh.name
+      hintText:'[ B ] Open Door — '+nh.name
     });
     cityDoors.push({
       name:'EXIT '+nh.name, isExit:true,
       exitPos:{x:CITY_X+nh.ox,y:cy+1.5,z:CITY_Z+nh.oz+18},
       checkX:CITY_X+nh.ox, checkZ:nh.pocketZ+12, checkR:10,
-      hintText:'[ B ] Exit '+nh.name
+      hintText:'[ B ] Leave '+nh.name
     });
   });
 
@@ -3457,27 +3457,64 @@ function spawnGreatCity(){
     [{q:'How is trade these days?',a:'Dreadful. The northern roads have been closed for three months — shadow creatures attack caravans. I\'ve switched to ocean routes but the sea dragons make that risky too. Business is... challenging.'},
      {q:'What do you sell?',a:'Rare goods from across the realm — spices, dyes, instruments. If you need anything specific, tell me. I still have contacts even when the roads are shut. It costs extra, but it gets done.'}]);
 
-  // ── Generic interiors for the 20 enterable random houses ──
+  // ── Unique interiors for all 50 enterable random houses ──
   {
     const resNames=['Anna','Bren','Corin','Dara','Edric','Fyla','Gorn','Hesta','Ivar','Jola','Keld','Lysa','Mira','Nort','Olda','Pera','Rand','Syla','Tova','Urso','Aldric','Bessa','Cato','Delia','Emric','Fenn','Gala','Holt','Isla','Jorn','Kara','Lev','Mona','Nels','Orla','Piet','Reva','Sten','Thea','Ulric','Vana','Wren','Xan','Yori','Zell','Alva','Borin','Clea','Dusk','Eryn'];
     const resLines=['Just a simple home. Make yourself welcome.','Mind the step — it\'s been loose for years.','Come in, come in. Tea?','I wasn\'t expecting visitors!','Good to see a friendly face.','Careful — my cat sleeps right there.','Don\'t mind the mess.','Welcome, traveller.','Sit, sit! You look tired.','The city\'s busy lately, yes?','Quiet neighbourhood, mostly.','I heard a dragon flew over last night.','My neighbour saw a shadow creature near the wall.','The hunters keep us safe, mostly.','Strange times. Strange times indeed.','I used to live outside the walls. Not anymore.','My kids think dragons are exciting. They\'ve never been attacked by one.','The library has good books on dragon history if you\'re curious.','I saw the Grand Wizard looking troubled yesterday.','Have you been to the inn? Best stew in the city.'];
+    // Floor colour palettes
+    const floorCols=[0x887755,0x776644,0x998866,0x665533,0x886655,0x554422];
+    const wallCols =[0x776655,0x887766,0x665544,0x998877,0x554433,0x776644];
+    const ceilCols =[0x665544,0x554433,0x776655,0x443322,0x887766,0x665544];
     housePositions.forEach(({hx,hz},i)=>{
       const pz=CITY_Z-5600-i*80;
       const wx=CITY_X+hx,wz=pz;
-      // Simple room: floor, 4 walls, ceiling
+      const fc=floorCols[i%floorCols.length],wc=wallCols[i%wallCols.length],cc=ceilCols[i%ceilCols.length];
       function hb(w,h,d,c,ox,oy,oz){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(c,{flatShading:true}));m.position.set(wx+ox,BFY+oy,wz+oz);scene.add(m);}
-      hb(32,0.4,26,0x887755,0,0,0);   // floor
-      hb(32,0.4,26,0x665544,0,12,0);  // ceiling
-      hb(0.4,12,26,0x776655,-16,6,0); // west wall
-      hb(0.4,12,26,0x776655,16,6,0);  // east wall
-      hb(32,12,0.4,0x665544,0,6,-13); // north wall
-      hb(32,12,0.4,0x665544,0,6,13);  // south wall (door gap)
-      // Fireplace
-      hb(5,6,2,0x554433,10,3,-11);hb(3,0.5,1.5,0xdd5500,10,6.3,-11);
-      // Table + chairs
-      hb(8,0.5,5,0x886644,0,4,2);hb(1.5,3,1.5,0x775533,-3,1.5,2);hb(1.5,3,1.5,0x775533,3,1.5,2);
-      // Bed
-      hb(8,1,5,0x885544,-6,0.5,-6);hb(8,1,4,0xddccbb,-6,1.5,-5.5);
+      // Shell
+      hb(32,0.4,26,fc, 0, 0, 0); hb(32,0.4,26,cc,0,12,0);
+      hb(0.4,12,26,wc,-16,6,0); hb(0.4,12,26,wc,16,6,0);
+      hb(32,12,0.4,wc, 0,6,-13); hb(32,12,0.4,wc,0,6,13);
+      const style=i%5;
+      if(style===0){
+        // Cosy cottage — fireplace NW, big table centre, bed SE
+        hb(5,6,2,0x554433,-10,3,-11);hb(3,0.5,1.5,0xdd4400,-10,6.3,-11); // fireplace
+        hb(10,0.5,6,0x886644,0,4,2);hb(1.5,3,1.5,0x775533,-4,1.5,2);hb(1.5,3,1.5,0x775533,4,1.5,2);hb(1.5,3,1.5,0x775533,0,1.5,5); // table+chairs
+        hb(9,1,5,0x885544,8,0.5,-6);hb(9,1,4,0xddccbb,8,1.5,-5.5); // bed
+        hb(3,5,2,0x554422,-12,2.5,5); // bookshelf
+      } else if(style===1){
+        // Workshop — workbench north, tool rack, stool, cot
+        hb(14,0.5,4,0x776633,-2,5,-9);hb(14,2,0.4,0x665522,-2,4,-11); // workbench + backboard
+        hb(0.5,6,8,0x554422,14,3,0); // tool rack (east wall)
+        for(let ti=0;ti<4;ti++)hb(0.4,0.4,6,0x885533,14,5+ti*0.9,0); // tools on rack
+        hb(2,3,2,0x886644,4,1.5,6); // stool
+        hb(7,0.8,4,0x775533,-8,0.4,-5);hb(7,0.8,3,0xccbbaa,-8,1.2,-4.5); // cot
+        hb(5,6,2,0x554433,10,3,-11);hb(3,0.5,1.5,0xee5500,10,6.3,-11); // fireplace
+      } else if(style===2){
+        // Scholar's room — desk+books N, shelves W, single bed
+        hb(10,0.5,4,0x886644,-3,5,-9); // desk
+        for(let bi=0;bi<3;bi++)hb(2,2,1,0x334488+bi*0x112200,-8+bi*3,6.5,-9); // books on desk
+        hb(0.5,8,22,0x554422,-15,4,0); // bookshelf west
+        for(let ri=0;ri<4;ri++)hb(0.4,0.6,20,0x775533+(ri*0x110000),-14.6,2+ri*2,0); // shelf rows
+        hb(7,1,4,0x885544,8,0.5,-6);hb(7,1,3,0xddccbb,8,1.5,-5.5); // bed
+        hb(1.5,3,1.5,0x886644,-2,1.5,-6); // chair at desk
+      } else if(style===3){
+        // Family home — two beds, play area, kitchen corner
+        hb(7,1,4,0x885544,-7,0.5,-7);hb(7,1,3,0xddccbb,-7,1.5,-6.5); // bed 1
+        hb(5,0.8,3,0x997766, 7,0.5,-7);hb(5,0.8,3,0xffddaa, 7,1.3,-6.5); // small bed
+        hb(4,4,4,0x554433,-7,2,6); // kitchen block
+        hb(3,0.5,1.5,0xdd4400,-7,6.1,6); // pot on stove
+        hb(6,0.5,4,0x886644,4,3,5);hb(1.5,2,1.5,0x775533,2,1,5);hb(1.5,2,1.5,0x775533,6,1,5); // small table
+        hb(3,3,3,0x886688,0,1.5,8); // toy chest
+      } else {
+        // Merchant's stash — crates, barrels, counter, hammock
+        for(let ci=0;ci<3;ci++)hb(4,4,4,0x776644,-10+ci*5,2,-8); // crates
+        hb(3,5,3,0x665533,8,2.5,-9); // barrel
+        hb(3,5,3,0x665533,12,2.5,-6); // barrel 2
+        hb(10,0.5,3,0x886644,0,5,8); // counter
+        hb(10,4,0.4,0x665522,0,3,9); // counter back
+        hb(5,0.6,2,0x885544,-7,4,3);hb(5,0.6,2,0x885544,-7,5.5,3); // hammock straps
+        hb(5,6,2,0x554433,10,3,-11);hb(3,0.5,1.5,0xcc4400,10,6.3,-11); // fireplace
+      }
       // Resident NPC
       const rn=makeVillagerMesh();
       rn.position.set(wx+3,BFY+1.5,wz-4);
@@ -3489,14 +3526,14 @@ function spawnGreatCity(){
   // ── Door triggers array (used by game loop + keydown E handler) ──
   // Outside door entries (wizard tower uses stair system already set up above)
   cityDoors.push(
-    {name:'Wizard Tower',  enterPos:{x:CITY_X-200,y:BFY+1.5,z:CITY_Z-5000}, exitPos:{x:CITY_X-200,y:cy+1.5,z:CITY_Z-170}, checkX:CITY_X-200, checkZ:CITY_Z-170, checkR:12, hintText:'[ B ] Enter Wizard Tower'},
-    {name:'Grand Library', enterPos:{x:CITY_X-200,y:BFY+1.5,z:CITY_Z-5100}, exitPos:{x:CITY_X-200,y:cy+1.5,z:CITY_Z-240}, checkX:CITY_X-200, checkZ:CITY_Z-240, checkR:12, hintText:'[ B ] Enter Grand Library'},
-    {name:'City Inn',      enterPos:{x:CITY_X-50, y:BFY+1.5,z:CITY_Z-5200}, exitPos:{x:CITY_X-50, y:cy+1.5,z:CITY_Z+71},  checkX:CITY_X-50,  checkZ:CITY_Z+71,  checkR:12, hintText:'[ B ] Enter City Inn'}
+    {name:'Wizard Tower',  enterPos:{x:CITY_X-200,y:BFY+1.5,z:CITY_Z-5000}, exitPos:{x:CITY_X-200,y:cy+1.5,z:CITY_Z-170}, checkX:CITY_X-200, checkZ:CITY_Z-170, checkR:12, hintText:'[ B ] Open Door — Wizard Tower'},
+    {name:'Grand Library', enterPos:{x:CITY_X-200,y:BFY+1.5,z:CITY_Z-5100}, exitPos:{x:CITY_X-200,y:cy+1.5,z:CITY_Z-240}, checkX:CITY_X-200, checkZ:CITY_Z-240, checkR:12, hintText:'[ B ] Open Door — Grand Library'},
+    {name:'City Inn',      enterPos:{x:CITY_X-50, y:BFY+1.5,z:CITY_Z-5200}, exitPos:{x:CITY_X-50, y:cy+1.5,z:CITY_Z+71},  checkX:CITY_X-50,  checkZ:CITY_Z+71,  checkR:12, hintText:'[ B ] Open Door — City Inn'}
   );
   // Inside-exit triggers for library and inn
   cityDoors.push(
-    {name:'EXIT Grand Library', isExit:true, exitPos:{x:CITY_X-200,y:cy+1.5,z:CITY_Z-235}, checkX:CITY_X-200, checkZ:CITY_Z-5100+28, checkR:10, hintText:'[ B ] Exit Library'},
-    {name:'EXIT City Inn',      isExit:true, exitPos:{x:CITY_X-50, y:cy+1.5,z:CITY_Z+76}, checkX:CITY_X-50,  checkZ:CITY_Z-5200+12, checkR:10, hintText:'[ B ] Exit City Inn'}
+    {name:'EXIT Grand Library', isExit:true, exitPos:{x:CITY_X-200,y:cy+1.5,z:CITY_Z-235}, checkX:CITY_X-200, checkZ:CITY_Z-5100+28, checkR:10, hintText:'[ B ] Leave Library'},
+    {name:'EXIT City Inn',      isExit:true, exitPos:{x:CITY_X-50, y:cy+1.5,z:CITY_Z+76}, checkX:CITY_X-50,  checkZ:CITY_Z-5200+12, checkR:10, hintText:'[ B ] Leave City Inn'}
   );
 
   floatWorld(new THREE.Vector3(CITY_X,cy+40,CITY_Z),'🏙 GREAT CITY — WELCOME!','#ffdd44');
@@ -8465,7 +8502,7 @@ function update(ts){
         hint.textContent='[ E ] Talk to '+nearNPC.userData.npcName;
         hint.style.display='block';
       } else if(nearDoor){
-        hint.textContent=nearDoor.hintText||(nearDoor.isExit?'[ B ] Exit '+nearDoor.name.replace('EXIT ',''):'[ B ] Enter '+nearDoor.name);
+        hint.textContent=nearDoor.hintText||(nearDoor.isExit?'[ B ] Leave '+nearDoor.name.replace('EXIT ',''):'[ B ] Open Door — '+nearDoor.name);
         hint.style.display='block';
       } else if(nearWild&&dragonArmy.length<MAX_ARMY){
         hint.textContent='[ F ] TAME WILD DRAGON';hint.style.display='block';

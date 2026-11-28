@@ -5774,8 +5774,16 @@ document.addEventListener('keydown',e=>{
       if(!bookSpellType)bookSpellType=playerSpells[0];
       const bsp=BOOK_SPELLS.find(s=>s.id===bookSpellType);
       bookSpellT=bsp?bsp.dur:8;
-      const ref=dragonMesh?dragonMesh.position:humanMesh?.position;
-      if(ref&&bsp)floatWorld(ref.clone().add(new THREE.Vector3(0,20,0)),'✨ '+bsp.name+' CAST!',bsp.color||'#cc88ff');
+      const ref=(dragonMesh?dragonMesh.position:humanMesh?.position);
+      if(ref&&bsp){
+        floatWorld(ref.clone().add(new THREE.Vector3(0,20,0)),'✨ '+bsp.name+' CAST!',bsp.color||'#cc88ff');
+        screenFlash(bsp.color||'#cc88ff',0.35);
+        const c=parseInt((bsp.color||'#cc88ff').replace('#',''),16);
+        // Big burst on cast
+        for(let i=0;i<6;i++)spawnAbilityCloud(ref.clone().add(new THREE.Vector3((Math.random()-.5)*120,Math.random()*60,(Math.random()-.5)*120)),c,30+Math.random()*20,0.6);
+        // Beam up from caster
+        spawnBeamFX(ref.clone(),ref.clone().add(new THREE.Vector3(0,200,0)),c);
+      }
     }
     if(e.code==='Backquote'&&!dialogOpen){
       // Teleport to Blane
@@ -7279,8 +7287,17 @@ function update(ts){
     // Book spell effects
     if(bookSpellT>0){
       bookSpellT-=dt;
-      const bPos=dragonMesh?dragonMesh.position:humanMesh?.position||new THREE.Vector3();
+      const bPos=(dragonMesh?dragonMesh.position:humanMesh?.position)||new THREE.Vector3();
       const bs=bookSpellType;
+      // ── Big central visual on caster every frame ──
+      const bspDef=BOOK_SPELLS.find(s=>s.id===bs);
+      if(bspDef&&Math.random()<0.5){
+        const c=parseInt(bspDef.color.replace('#',''),16)||0xcc88ff;
+        spawnAbilityCloud(bPos.clone().add(new THREE.Vector3((Math.random()-.5)*60,Math.random()*40,(Math.random()-.5)*60)),c,22+Math.random()*18,0.4);
+      }
+      // ── All offensive spells also regen dragon HP ──
+      const isHealBook=bs==='mend'||bs==='regenerate'||bs==='life_surge'||bs==='aura_of_life'||bs==='full_restore'||bs==='ember_shield';
+      if(!isHealBook){dhp=Math.min(dmaxHp,dhp+8*dt);}  // passive regen during any active spell
       // FIRE
       if(bs==='fire_nova'&&Math.random()<0.4)activeEnemies.forEach(en=>{if(en.mesh&&en.mesh.position.distanceTo(bPos)<400){hitEnemy(en,70+Math.random()*35,bPos);spawnAbilityCloud(en.mesh.position.clone(),0xff4400,14,0.5);}});
       if(bs==='inferno_wave'&&Math.random()<0.35)activeEnemies.forEach(en=>{if(en.mesh){hitEnemy(en,80+Math.random()*40,bPos);spawnAbilityCloud(en.mesh.position.clone(),0xff2200,16,0.5);}});
@@ -7315,8 +7332,8 @@ function update(ts){
       if(bs==='gale_force'&&Math.random()<0.4)activeEnemies.forEach(en=>{if(en.mesh&&en.mesh.position.distanceTo(bPos)<500){hitEnemy(en,55+Math.random()*25,bPos);const push=en.mesh.position.clone().sub(bPos).normalize().multiplyScalar(80);en.mesh.position.add(push);}});
       if(bs==='storm_dive'&&Math.random()<0.5)activeEnemies.forEach(en=>{if(en.mesh&&en.mesh.position.distanceTo(bPos)<600){hitEnemy(en,80+Math.random()*40,bPos);spawnAbilityCloud(en.mesh.position.clone(),0x66aaff,14,0.4);}});
       if(bs==='cyclone'&&Math.random()<0.35){activeEnemies.forEach(en=>{if(en.mesh){const pull=bPos.clone().sub(en.mesh.position).normalize().multiplyScalar(60*dt);en.mesh.position.add(pull);hitEnemy(en,60+Math.random()*30,bPos);}});}
-      if(bs==='updraft'){if(dragonMesh)dragonMesh.position.y+=30*dt;if(Math.random()<0.3)activeEnemies.forEach(en=>{if(en.mesh&&en.mesh.position.distanceTo(bPos)<500){hitEnemy(en,45+Math.random()*22,bPos);en.mesh.position.y+=50*dt;}});}
-      if(bs==='thunder_wings'&&Math.random()<0.4)activeEnemies.forEach(en=>{if(en.mesh&&en.mesh.position.distanceTo(bPos)<450){hitEnemy(en,70+Math.random()*35,bPos);spawnBeamFX(bPos,en.mesh.position,0xffff44,0.4);}});
+      if(bs==='updraft'){dhp=Math.min(dmaxHp,dhp+15*dt);if(Math.random()<0.3)activeEnemies.forEach(en=>{if(en.mesh&&en.mesh.position.distanceTo(bPos)<500){hitEnemy(en,45+Math.random()*22,bPos);const push=en.mesh.position.clone().sub(bPos).normalize().multiplyScalar(100);en.mesh.position.add(push);}});}
+      if(bs==='thunder_wings'&&Math.random()<0.4)activeEnemies.forEach(en=>{if(en.mesh&&en.mesh.position.distanceTo(bPos)<450){hitEnemy(en,70+Math.random()*35,bPos);spawnBeamFX(bPos,en.mesh.position,0xffff44);}});
       // STAR
       if(bs==='star_fall'&&Math.random()<0.4)activeEnemies.forEach(en=>{if(en.mesh){hitEnemy(en,85+Math.random()*40,bPos);spawnAbilityCloud(en.mesh.position.clone(),0xffccff,16,0.5);}});
       if(bs==='void_pulse'&&Math.random()<0.4)activeEnemies.forEach(en=>{if(en.mesh){hitEnemy(en,90+Math.random()*45,bPos);spawnAbilityCloud(en.mesh.position.clone(),0x8800ff,14,0.5);}});

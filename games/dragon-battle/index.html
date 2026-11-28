@@ -1806,6 +1806,9 @@ function buildingFloorY(x,z){
   for(let fi=0;fi<5;fi++){if(Math.abs(x-(CITY_X-200))<32&&Math.abs(z-(WIZ_BASE-fi*120))<32)return BFY;}
   if(Math.abs(x-(CITY_X+100))<42&&Math.abs(z-(CITY_Z-5100))<32)return BFY; // library
   if(Math.abs(x-(CITY_X-50))<18&&Math.abs(z-(CITY_Z-5200))<16)return BFY;  // city inn
+  if(Math.abs(x-(CITY_X-150))<20&&Math.abs(z-(CITY_Z-5300))<18)return BFY; // guard barracks
+  if(Math.abs(x-(CITY_X+160))<20&&Math.abs(z-(CITY_Z-5400))<18)return BFY; // scholar's house
+  if(Math.abs(x-(CITY_X-160))<20&&Math.abs(z-(CITY_Z-5500))<18)return BFY; // merchant's house
   return null;
 }
 
@@ -2963,16 +2966,56 @@ function spawnGreatCity(){
     wg.position.set(CITY_X+200+(wi<2?-18:18),cy+12,CITY_Z+200+(wi%2===0?-24:24));scene.add(wg);
   }
 
-  // ── Houses: 50 scattered houses, bigger ──
+  // ── Houses: 50 scattered houses with visible doors ──
   for(let i=0;i<50;i++){
     const hx=(Math.random()-0.5)*1100,hz=(Math.random()-0.5)*1100;
     if(Math.abs(hx)<130&&Math.abs(hz)<130)continue;
     if(Math.abs(hx-100)<90&&Math.abs(hz-100)<70)continue; // clear library space
-    const hFloors=1+(i%3===0?1:0); // every 3rd house is 2-storey
+    const hFloors=1+(i%3===0?1:0);
     cb(32,18,26,mat([0x886644,0x776655,0x998877,0x667788,0x775544][i%5],{flatShading:true}),hx,0,hz);
     if(hFloors>1) cb(30,14,24,mat([0x775533,0x665544,0x887766][i%3],{flatShading:true}),hx,18,hz);
     cb(34,5,28,mat([0x993322,0x772211,0xaa4433,0x883322][i%4],{flatShading:true}),hx,hFloors*16+2,hz);
+    // Door on south face of every house
+    cb(7,10,1,mat(0x553311,{flatShading:true}),hx,0,hz+13);  // door frame
+    cb(5,9,0.5,mat(0x7a4a1e,{flatShading:true}),hx,0,hz+13.5); // door panel
+    // Window glow
+    const wgH=new THREE.Mesh(new THREE.BoxGeometry(5,4,0.4),new THREE.MeshBasicMaterial({color:0xffee88,transparent:true,opacity:0.45,blending:THREE.AdditiveBlending}));
+    wgH.position.set(CITY_X+hx+8,cy+10,CITY_Z+hz+13);scene.add(wgH);
   }
+
+  // ── 3 named enterable houses at fixed positions ──
+  const namedHouses=[
+    {ox:-150,oz:-150,col:0x886644,name:'Guard Barracks',   pocketZ:CITY_Z-5300},
+    {ox: 160,oz:-140,col:0x667788,name:'Scholar\'s House', pocketZ:CITY_Z-5400},
+    {ox:-160,oz: 140,col:0x775544,name:'Merchant\'s House',pocketZ:CITY_Z-5500},
+  ];
+  namedHouses.forEach(nh=>{
+    cb(32,18,26,mat(nh.col,{flatShading:true}),nh.ox,0,nh.oz);
+    cb(34,5,28,mat(0x993322,{flatShading:true}),nh.ox,20,nh.oz);
+    // Door frame (brown) + door panel (lighter)
+    cb(8,11,1,mat(0x553311,{flatShading:true}),nh.ox,0,nh.oz+13);
+    cb(6,10,0.5,mat(0x8b5a2b,{flatShading:true}),nh.ox,0,nh.oz+13.5);
+    // Door glow (warm light)
+    const dg=new THREE.Mesh(new THREE.BoxGeometry(6,10,1),new THREE.MeshBasicMaterial({color:0xffcc66,transparent:true,opacity:0.25,blending:THREE.AdditiveBlending}));
+    dg.position.set(CITY_X+nh.ox,cy+5.5,CITY_Z+nh.oz+13.5);scene.add(dg);
+    // Name sign above door
+    const nsign=new THREE.Mesh(new THREE.BoxGeometry(20,5,0.5),mat(0x443322,{flatShading:true}));
+    nsign.position.set(CITY_X+nh.ox,cy+15,CITY_Z+nh.oz+13.5);scene.add(nsign);
+    // Store door trigger data
+    cityDoors.push({
+      name:nh.name,
+      enterPos:{x:CITY_X+nh.ox,y:BFY+1.5,z:nh.pocketZ},
+      exitPos:{x:CITY_X+nh.ox,y:cy+1.5,z:CITY_Z+nh.oz+18},
+      checkX:CITY_X+nh.ox, checkZ:CITY_Z+nh.oz+13.5, checkR:10,
+      hintText:'[ E ] Enter '+nh.name
+    });
+    cityDoors.push({
+      name:'EXIT '+nh.name, isExit:true,
+      exitPos:{x:CITY_X+nh.ox,y:cy+1.5,z:CITY_Z+nh.oz+18},
+      checkX:CITY_X+nh.ox, checkZ:nh.pocketZ+12, checkR:10,
+      hintText:'[ E ] Exit '+nh.name
+    });
+  });
 
   g.userData={type:'city',isCity:true,safe:true,alive:true,hp:999999,maxHp:999999,radius:700};
   activeBuildings.push(g);
@@ -3343,6 +3386,46 @@ function spawnGreatCity(){
     {q:'Any gossip?',a:'A dragon rider came in last week — wouldn\'t say their name, wore a red scarf. Left at dawn heading toward Dragon Mountain. Seemed... purposeful. I wonder if it was Blane.'},
   ]};
   scene.add(ik);friendlyNPCs.push(ik);}
+
+  // ── 3 named house interiors ──
+  function mkHouseInterior(wx,wz,wfy,residentName,residentLine,choices){
+    iBox(36,1,32,0x886644,wx,wfy,wz);          // floor
+    iBox(36,1,32,0x553322,wx,wfy+20,wz);       // ceiling
+    iBox(36,20,2,0x775533,wx,wfy+10,wz-16);   // back wall
+    iBox(36,20,2,0x775533,wx,wfy+10,wz+16);   // front wall
+    iBox(2,20,32,0x775533,wx-18,wfy+10,wz);   // left wall
+    iBox(2,20,32,0x775533,wx+18,wfy+10,wz);   // right wall
+    // Fireplace
+    iBox(8,12,3,0x443322,wx-14,wfy+6,wz-14);
+    const fg=new THREE.Mesh(new THREE.BoxGeometry(5,7,1),new THREE.MeshBasicMaterial({color:0xff6600,transparent:true,opacity:0.75,blending:THREE.AdditiveBlending}));
+    fg.position.set(wx-14,wfy+8,wz-13.5);scene.add(fg);
+    // Table + chairs
+    iBox(12,2,6,0x885533,wx+4,wfy+5,wz-5);
+    [[-4,0],[4,0],[0,-4],[0,4]].forEach(([sx,sz])=>iBox(3,5,3,0x553322,wx+4+sx,wfy+2.5,wz-5+sz));
+    // Bed
+    iBox(10,3,14,0x446688,wx+12,wfy+1.5,wz-6);
+    iBox(10,4,2,0x334466,wx+12,wfy+3,wz-13);
+    iBox(10,1,14,0xeeddcc,wx+12,wfy+3.2,wz-6);
+    // Bookshelf / cabinet
+    iBox(4,14,8,0x552211,wx-14,wfy+7,wz+5);
+    // Resident NPC
+    const rNPC=makeVillagerMesh();rNPC.scale.set(1.5,1.5,1.5);
+    rNPC.position.set(wx-4,wfy+1.1,wz-8);
+    rNPC.userData={npcName:residentName,npcText:residentLine,isCitizen:true,isInsideBuilding:true,choices};
+    scene.add(rNPC);friendlyNPCs.push(rNPC);
+  }
+  mkHouseInterior(CITY_X-150,CITY_Z-5300,BFY,'Sergeant Dorn',
+    'Welcome to the guard barracks. We\'re off-duty, but never truly off-watch.',
+    [{q:'What do you guard?',a:'The inner district. We rotate every four hours. Twelve of us keep this quarter safe — more since the shadow sightings started.'},
+     {q:'What\'s the scariest thing you\'ve seen?',a:'A Prince of Death passed over the city last autumn. At midnight. Silently. It was looking for something. It didn\'t find it. I still can\'t sleep properly.'}]);
+  mkHouseInterior(CITY_X+160,CITY_Z-5400,BFY,'Scholar Tomas',
+    'Ah, a visitor! Come in. Mind the books on the floor — I\'ve been cross-referencing ley lines.',
+    [{q:'What are you studying?',a:'The relationship between dragon migration and the underground ley lines. I believe the shadow dragons use them as navigation channels. If we could disrupt the lines, we could redirect the invasions.'},
+     {q:'Any interesting findings?',a:'Dragon Mountain sits at the convergence of seven major ley lines. That\'s why the Emperor wants it. It\'s not just a base — it\'s a power node. Whoever controls it controls the shadow armies.'}]);
+  mkHouseInterior(CITY_X-160,CITY_Z-5500,BFY,'Merchant Elara',
+    'Come in! I\'m taking stock. The shadow raids have disrupted the trade routes terribly.',
+    [{q:'How is trade these days?',a:'Dreadful. The northern roads have been closed for three months — shadow creatures attack caravans. I\'ve switched to ocean routes but the sea dragons make that risky too. Business is... challenging.'},
+     {q:'What do you sell?',a:'Rare goods from across the realm — spices, dyes, instruments. If you need anything specific, tell me. I still have contacts even when the roads are shut. It costs extra, but it gets done.'}]);
 
   // ── Door triggers array (used by game loop + keydown E handler) ──
   // Outside door entries (wizard tower uses stair system already set up above)
@@ -7005,7 +7088,7 @@ function openDialog(npc){
   const dialogEl=document.getElementById('dialog');
   dialogEl.classList.toggle('shop-mode',isShopNPC);
   document.getElementById('dialog-name').textContent=npc.userData.npcName;
-  {const sub=npc.userData.npcSubtitle||(npc.userData.isCityWizardBook?'📖 Wizard — Books & Spells':npc.userData.isCityLibrary?'📚 Librarian — [ E ] Talk · [ B ] Browse · [ N ] Next · [ R ] Read':npc.userData.isCityWeaponShop?'⚔ City Blacksmith':npc.userData.isCityArmorShop?'🛡 City Armorer':npc.userData.isCityHospital?'⚕ City Healer':npc.userData.isCityTavern?'🍺 Tavern Keeper':npc.userData.isCityPotionShop?'🧪 Alchemist':npc.userData.isCityWizardShop?'🔮 Wizard Mage':npc.userData.isCityCookieShop?'🍪 Cookie Shop':npc.userData.isBlane?'🐉 Dragon Rider Master':npc.userData.isRecruitable?'🐉 Recruitable Rider — [ R ] Recruit':'');document.getElementById('dialog-subtitle').textContent=sub;}
+  {const sub=npc.userData.npcSubtitle||(npc.userData.isCityWizardBook?'📖 Wizard — Books & Spells':npc.userData.isCityLibrary?'📚 Librarian — [ E ] Talk · [ B ] Browse · [ N ] Next · [ R ] Read':npc.userData.isCityWeaponShop?'⚔ City Blacksmith':npc.userData.isCityArmorShop?'🛡 City Armorer':npc.userData.isCityHospital?'⚕ City Healer':npc.userData.isCityTavern?'🍺 Tavern Keeper':npc.userData.isCityPotionShop?'🧪 Alchemist':npc.userData.isCityWizardShop?'🔮 Wizard Mage':npc.userData.isCityCookieShop?'🍪 Cookie Shop':npc.userData.isBlane?'🐉 Dragon Rider Master':npc.userData.isRecruitable?'🐉 Recruitable Rider — [ R ] Recruit':npc.userData.isCitizen?'👤 City Resident':npc.userData.isCity?'🏙 City Folk':'');document.getElementById('dialog-subtitle').textContent=sub;}
   document.getElementById('dialog-text').textContent=txt;
   // Populate right-side item shelf (shop mode only)
   if(isShopNPC){const shelf=document.getElementById('dialog-items');shelf.innerHTML='';

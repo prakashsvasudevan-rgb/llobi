@@ -3043,7 +3043,7 @@ function spawnGreatCity(){
     mesh.position.set(wx,ny+1.1,wz);
     mesh.userData={npcName:name,npcText:text,isCity:true,...(extraData||{})};
     scene.add(mesh);
-    if(role==='hunter'){cityHunters.push(mesh);}
+    if(role==='hunter'){cityHunters.push(mesh);friendlyNPCs.push(mesh);}
     else{cityFriendlyNPCs.push(mesh);friendlyNPCs.push(mesh);}
     return mesh;
   }
@@ -3168,21 +3168,38 @@ function spawnGreatCity(){
   }
 
   // ── Hunters — wall patrol + inner city guards ──
+  const hunterNames=['Hunter Varn','Hunter Sela','Hunter Dax','Hunter Rook','Hunter Nira','Hunter Colt','Hunter Zara','Hunter Brix','Hunter Lyss','Hunter Orm','Hunter Tace','Hunter Weld','Hunter Frey','Hunter Koss','Hunter Pia','Hunter Dorn','Hunter Alec','Hunter Mav','Hunter Ren','Hunter Sable','Hunter Crux','Hunter Yula','Hunter Brex','Hunter Nod','Hunter Fisk','Hunter Tara','Hunter Vex','Hunter Lorn','Hunter Asha','Hunter Beck','Hunter Cray','Hunter Delf','Hunter Egal','Hunter Fawn','Hunter Grix','Hunter Hael','Hunter Irk','Hunter Jace','Hunter Keld','Hunter Lusk'];
+  const hunterLines=[
+    'Eyes on the sky. Always.',
+    'Three shadow dragons last week. We got two of them.',
+    'In human form you\'re safe. On a dragon — different story.',
+    'My crossbow\'s seen more action lately than I\'d like.',
+    'The wall keeps trouble out. We keep it from getting in.',
+    'Quiet tonight. I don\'t trust quiet.',
+    'Dragon Mountain\'s gotten dangerous. Good luck if you\'re heading there.',
+    'If you see anything suspicious, report to the barracks.',
+  ];
+  const hunterChoices=[
+    {q:'What do you hunt?',a:'Shadow dragons, rogue fire drakes, anything that threatens the city. We don\'t touch bonded dragons — the rider\'s responsible for keeping their beast in line.'},
+    {q:'How long have you been a hunter?',a:'Eight years on the wall. Seen three major shadow raids. Lost good people in the second one. I keep going because someone has to.'},
+    {q:'Is the city safe?',a:'Safer than outside, that\'s certain. The wards and the wall together keep most threats out. But shadow creatures have been probing the perimeter more than usual lately. Something\'s stirring.'},
+    {q:'What\'s the most dangerous dragon?',a:'Shadow dragons, without question. They come at night, they\'re nearly silent, and they\'re smart. Fire drakes are terrifying but predictable. Shadow dragons plan.'},
+  ];
   for(let i=0;i<40;i++){
     const ha=(i/40)*Math.PI*2;const hr=510+Math.random()*70;
     const hx=CITY_X+Math.cos(ha)*hr,hz=CITY_Z+Math.sin(ha)*hr;
-    const h=spawnCityNPC(hx,hz,'City Hunter','I keep the city safe from rogue dragon raids!','hunter',{
-      isCityHunter:true,shootT:0,shootRange:600,dmg:18,
+    const h=spawnCityNPC(hx,hz,hunterNames[i%hunterNames.length],hunterLines[i%hunterLines.length],'hunter',{
+      isCityHunter:true,shootT:0,shootRange:600,dmg:18,choices:hunterChoices,patrolR:30,
     });
-    h.userData.baseX=hx;h.userData.baseZ=hz;
+    h.userData.baseX=hx;h.userData.baseZ=hz;h.userData.patrolAngle=Math.random()*Math.PI*2;
   }
   // Inner guards posted at key buildings
   const innerGuardPosts=[[CITY_X-230,CITY_Z-230],[CITY_X+230,CITY_Z-230],[CITY_X+230,CITY_Z+230],[CITY_X-230,CITY_Z+230],[CITY_X,CITY_Z-430],[CITY_X,CITY_Z+430],[CITY_X+430,CITY_Z],[CITY_X-430,CITY_Z]];
-  innerGuardPosts.forEach(([gx,gz])=>{
-    const h=spawnCityNPC(gx,gz,'City Hunter','Stand down, dragon! This district is under guard.','hunter',{
-      isCityHunter:true,shootT:0,shootRange:500,dmg:16,
+  innerGuardPosts.forEach(([gx,gz],gi)=>{
+    const h=spawnCityNPC(gx,gz,hunterNames[(gi+20)%hunterNames.length],hunterLines[gi%hunterLines.length],'hunter',{
+      isCityHunter:true,shootT:0,shootRange:500,dmg:16,choices:hunterChoices,patrolR:50,
     });
-    h.userData.baseX=gx;h.userData.baseZ=gz;
+    h.userData.baseX=gx;h.userData.baseZ=gz;h.userData.patrolAngle=Math.random()*Math.PI*2;
   });
 
   floatWorld(new THREE.Vector3(CITY_X,cy+40,CITY_Z),'🏙 GREAT CITY — WELCOME!','#ffdd44');
@@ -7130,7 +7147,7 @@ function openDialog(npc){
   const dialogEl=document.getElementById('dialog');
   dialogEl.classList.toggle('shop-mode',isShopNPC);
   document.getElementById('dialog-name').textContent=npc.userData.npcName;
-  {const sub=npc.userData.npcSubtitle||(npc.userData.isCityWizardBook?'📖 Wizard — Books & Spells':npc.userData.isCityLibrary?'📚 Librarian — [ E ] Talk · [ B ] Browse · [ N ] Next · [ R ] Read':npc.userData.isCityWeaponShop?'⚔ City Blacksmith':npc.userData.isCityArmorShop?'🛡 City Armorer':npc.userData.isCityHospital?'⚕ City Healer':npc.userData.isCityTavern?'🍺 Tavern Keeper':npc.userData.isCityPotionShop?'🧪 Alchemist':npc.userData.isCityWizardShop?'🔮 Wizard Mage':npc.userData.isCityCookieShop?'🍪 Cookie Shop':npc.userData.isBlane?'🐉 Dragon Rider Master':npc.userData.isRecruitable?'🐉 Recruitable Rider — [ R ] Recruit':npc.userData.isCitizen?'👤 City Resident':npc.userData.isCity?'🏙 City Folk':'');document.getElementById('dialog-subtitle').textContent=sub;}
+  {const sub=npc.userData.npcSubtitle||(npc.userData.isCityWizardBook?'📖 Wizard — Books & Spells':npc.userData.isCityLibrary?'📚 Librarian — [ E ] Talk · [ B ] Browse · [ N ] Next · [ R ] Read':npc.userData.isCityWeaponShop?'⚔ City Blacksmith':npc.userData.isCityArmorShop?'🛡 City Armorer':npc.userData.isCityHospital?'⚕ City Healer':npc.userData.isCityTavern?'🍺 Tavern Keeper':npc.userData.isCityPotionShop?'🧪 Alchemist':npc.userData.isCityWizardShop?'🔮 Wizard Mage':npc.userData.isCityCookieShop?'🍪 Cookie Shop':npc.userData.isBlane?'🐉 Dragon Rider Master':npc.userData.isRecruitable?'🐉 Recruitable Rider — [ R ] Recruit':npc.userData.isCityHunter?'🏹 City Hunter — Protects the city':npc.userData.isCitizen?'👤 City Resident':npc.userData.isCity?'🏙 City Folk':'');document.getElementById('dialog-subtitle').textContent=sub;}
   document.getElementById('dialog-text').textContent=txt;
   // Populate right-side item shelf (shop mode only)
   if(isShopNPC){const shelf=document.getElementById('dialog-items');shelf.innerHTML='';
@@ -9046,6 +9063,19 @@ function update(ts){
         const toW=new THREE.Vector3(wx-npc2.position.x,0,wz-npc2.position.z);
         if(toW.length()>2){toW.normalize();npc2.position.addScaledVector(toW,3*dt);npc2.rotation.y=Math.atan2(toW.x,toW.z);}
         npc2.position.y=groundY(npc2.position.x,npc2.position.z)+1.1;
+      });
+      // Hunter patrol movement
+      cityHunters.forEach(h=>{
+        if(!h.userData.isCityHunter||dialogOpen)return;
+        if(!h.userData.patrolAngle)h.userData.patrolAngle=Math.random()*Math.PI*2;
+        h.userData.patrolAngle+=dt*0.4;
+        const pr=h.userData.patrolR||18;
+        const tx=h.userData.baseX+Math.cos(h.userData.patrolAngle)*pr;
+        const tz=h.userData.baseZ+Math.sin(h.userData.patrolAngle)*pr;
+        const dx=tx-h.position.x,dz=tz-h.position.z;
+        const dl=Math.sqrt(dx*dx+dz*dz);
+        if(dl>1){h.position.x+=dx/dl*3*dt;h.position.z+=dz/dl*3*dt;h.rotation.y=Math.atan2(dx,dz);}
+        h.position.y=groundY(h.position.x,h.position.z)+1.1;
       });
       // Hunters: shoot at player dragon if on dragon within range (stop after King of Death dies)
       if(!isHuman&&!gameAtPeace){

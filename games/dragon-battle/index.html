@@ -4167,7 +4167,7 @@ document.addEventListener('keydown',e=>{
       else if(nearNPC){
         // Give king weapon to army member if we have one selected and they're in the army
         const ref2=isHuman&&humanMesh?humanMesh.position:dragonMesh.position;
-        const nearArmy=dragonArmy.find(a=>a.mesh===nearNPC||ref2.distanceTo(a.mesh.position)<8);
+        const nearArmy=dragonArmy.find(a=>a.mesh===nearNPC);
         if(nearArmy&&playerKingWeapons.length>0&&!nearArmy.isGolem){
           const w=playerKingWeapons[activeKingWeaponIdx];
           nearArmy.kingWeapon={...w};
@@ -4286,7 +4286,9 @@ function initMobile(){
   },{passive:false});}
   const eBtn=document.getElementById('mc-talk');
   if(eBtn){eBtn.addEventListener('touchstart',e=>{e.preventDefault();
-    if(nearNPC&&gs==='playing')openDialog(nearNPC);
+    if(gs!=='playing')return;
+    if(dialogOpen){closeDialog();}
+    else if(nearNPC){openDialog(nearNPC);}
   },{passive:false});}
 
   // Keep old button wires for backward compat (mc-up etc no longer in DOM but safe)
@@ -4329,7 +4331,7 @@ function initMobile(){
         nearNPC.userData.npcText='Blane is coming to take me to the Hatchery. I will meet you there!';
         hatcheryQueue.push({recruit:nearNPC,phase:'fetch',t:0});
         floatWorld(nearNPC.position,'🐉 RECRUITED!','#44ffcc');
-      } else if(nearNPC&&gs==='playing'){openDialog(nearNPC);}
+      } else if(nearNPC&&gs==='playing'){if(dialogOpen)closeDialog();else openDialog(nearNPC);}
     }
     lastTapT=now;
   },{passive:false});
@@ -6047,7 +6049,7 @@ function update(ts){
       camera.position.copy(eyePos);
       camera.lookAt(eyePos.clone().add(lookDir));
       // NPC proximity check
-      let closest=null,closestD=12;
+      let closest=null,closestD=18;
       for(const npc of friendlyNPCs){
         const d=humanMesh.position.distanceTo(npc.position);
         if(d<closestD){closest=npc;closestD=d;}

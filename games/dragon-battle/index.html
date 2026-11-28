@@ -1730,6 +1730,10 @@ function spawnZone(cx,cz){
         const angle=i/nRiders*Math.PI*2;
         dr.position.set(rx+Math.cos(angle)*8, groundY(rx,rz)+mh+2, rz+Math.sin(angle)*8);
         dr.rotation.y=angle+Math.PI;
+        const riderNames=['Mountain Rider','Peak Guard','Sky Scout','Ridge Warden','Summit Rider'];
+        const riderLines=['This peak has a great view of the valley. Watch out for hunters!','I ride patrol here. The shadow hunters fear these heights.','The dragons found me up here. Now we watch the lands below together.','Dragon Mountain sent riders to every peak. We hold the skies.','Stay sharp, rider. Hunters strike from below when you least expect it.'];
+        const ri=Math.floor(Math.random()*riderNames.length);
+        dr.userData={npcName:riderNames[ri],npcText:riderLines[ri]};
         scene.add(dr);objects.push(dr);
         friendlyNPCs.push(dr);
       }
@@ -4871,8 +4875,8 @@ const ARMOR_TIERS=[
 ];
 function openDialog(npc){
   if(!npc||!npc.userData)return;
-  // Don't open dialog for objects with no NPC text or name (e.g. army dragon meshes)
-  if(!npc.userData.npcName&&!npc.userData.isBlane)return;
+  // Don't open dialog for objects with no NPC data (e.g. raw army dragon meshes)
+  if(!npc.userData.npcName&&!npc.userData.npcText&&!npc.userData.isBlane)return;
   dialogOpen=true;
   const isSmith=npc.userData.npcName==='Blacksmith'&&armorLevel<3;
   let txt=npc.userData.npcText||'';

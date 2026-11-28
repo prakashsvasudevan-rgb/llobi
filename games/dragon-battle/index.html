@@ -268,6 +268,18 @@ canvas{display:block;width:100%;height:100%;position:relative;z-index:0}
         <div class="mc-btn" id="mc-recruit" style="font-size:.45rem;width:40px;height:40px">🤝<br><span style="font-size:.2rem">R</span></div>
         <div class="mc-btn" id="mc-talk" style="font-size:.45rem;width:40px;height:40px">💬<br><span style="font-size:.2rem">E</span></div>
       </div>
+      <div style="display:flex;gap:3px;flex-wrap:wrap;justify-content:center">
+        <div class="mc-btn" id="mc-elemCloud" style="font-size:.45rem;width:40px;height:40px">⚡<br><span style="font-size:.2rem">ELEM</span></div>
+        <div class="mc-btn" id="mc-elemBite" style="font-size:.45rem;width:40px;height:40px">🐉<br><span style="font-size:.2rem">XBITE</span></div>
+        <div class="mc-btn" id="mc-heal" style="font-size:.45rem;width:40px;height:40px">💚<br><span style="font-size:.2rem">HEAL</span></div>
+        <div class="mc-btn" id="mc-freeze" style="font-size:.45rem;width:40px;height:40px">❄<br><span style="font-size:.2rem">FRZE</span></div>
+        <div class="mc-btn" id="mc-burn" style="font-size:.45rem;width:40px;height:40px">🔥<br><span style="font-size:.2rem">BURN</span></div>
+        <div class="mc-btn" id="mc-bolt" style="font-size:.45rem;width:40px;height:40px">⚡<br><span style="font-size:.2rem">BOLT</span></div>
+        <div class="mc-btn" id="mc-soulShield" style="font-size:.45rem;width:40px;height:40px">🔮<br><span style="font-size:.2rem">SHLD</span></div>
+        <div class="mc-btn" id="mc-earthInv" style="font-size:.45rem;width:40px;height:40px">🌍<br><span style="font-size:.2rem">INV</span></div>
+        <div class="mc-btn" id="mc-map" style="font-size:.45rem;width:40px;height:40px">🗺<br><span style="font-size:.2rem">MAP</span></div>
+        <div class="mc-btn" id="mc-jump" style="font-size:.45rem;width:40px;height:40px">🦘<br><span style="font-size:.2rem">JUMP</span></div>
+      </div>
       <div style="display:flex;gap:6px;align-items:center;margin-top:2px">
         <div class="mc-fire" id="mc-fire">🔥</div>
         <div id="mc-atk" style="width:64px;height:64px;background:rgba(255,180,0,.22);border:3px solid rgba(255,200,0,.5);border-radius:50%;color:#ffcc00;font-size:.7rem;display:grid;place-items:center;cursor:pointer;pointer-events:all;flex-shrink:0;-webkit-tap-highlight-color:transparent;user-select:none;text-align:center;line-height:1.2;font-family:'Press Start 2P',monospace">⚔<br><span style="font-size:.22rem">ATTACK</span></div>
@@ -3656,7 +3668,7 @@ function diffScale(){return 1+Math.min(5,score/8000);}
 
 // ── Input ─────────────────────────────────────────────────────────────────────
 const keys={};
-const mk={up:false,dn:false,lf:false,rt:false,fire:false,bite:false,tail:false,roar:false,power:false,kw:false,tab:false,sit:false,human:false};
+const mk={up:false,dn:false,lf:false,rt:false,fire:false,bite:false,tail:false,roar:false,power:false,kw:false,tab:false,sit:false,human:false,elemCloud:false,elemBite:false,heal:false,freeze:false,burn:false,bolt:false,soulShield:false,earthInv:false,map:false,jump:false};
 let useMobile=false;
 document.addEventListener('keydown',e=>{
   keys[e.code]=true;if(e.code==='Space')e.preventDefault();
@@ -4221,7 +4233,7 @@ function initMobile(){
     fireBtnEl.addEventListener('touchend',e=>{e.preventDefault();mk.fire=false;},{passive:false});
   }
   // One-shot action buttons
-  ['bite','tail','roar','power','kw','tab','sit','human'].forEach(f=>{
+  ['bite','tail','roar','power','kw','tab','sit','human','elemCloud','elemBite','heal','freeze','burn','bolt','soulShield','earthInv','map','jump'].forEach(f=>{
     const el=document.getElementById('mc-'+f);if(!el)return;
     el.addEventListener('touchstart',e=>{e.preventDefault();mk[f]=true;},{passive:false});
     el.addEventListener('touchend',e=>{e.preventDefault();},{passive:false});
@@ -5285,6 +5297,16 @@ function update(ts){
     if(mk.tab){mk.tab=false;if(playerKingWeapons.length>0){activeKingWeaponIdx=(activeKingWeaponIdx+1)%playerKingWeapons.length;updateKingWeaponHUD();}}
     if(mk.sit){mk.sit=false;if(!isHuman&&isLanded){isSitting=!isSitting;floatWorld(dragonMesh.position,isSitting?'🐉 SIT':'🐉 STAND','#88ff44');}}
     if(mk.human){mk.human=false;if(!dialogOpen&&!mapOpen)toggleHumanMode();}
+    if(mk.map){mk.map=false;toggleWorldMap();}
+    if(mk.jump){mk.jump=false;if(isHuman&&humanMesh){keys['KeyJ']=true;setTimeout(()=>{delete keys['KeyJ'];},120);}}
+    if(mk.elemCloud){mk.elemCloud=false;if(!isHuman&&!isLanded){keys['KeyF']=true;setTimeout(()=>{delete keys['KeyF'];},120);}}
+    if(mk.elemBite){mk.elemBite=false;if(!isHuman&&!isLanded){keys['KeyX']=true;setTimeout(()=>{delete keys['KeyX'];},120);}}
+    if(mk.heal){mk.heal=false;if(!isHuman&&dtype.id==='nature'){keys['KeyH']=true;setTimeout(()=>{delete keys['KeyH'];},120);}}
+    if(mk.freeze){mk.freeze=false;if(!isHuman&&dtype.id==='ice'){keys['KeyV']=true;setTimeout(()=>{delete keys['KeyV'];},120);}}
+    if(mk.burn){mk.burn=false;if(!isHuman&&dtype.id==='fire'){keys['KeyU']=true;setTimeout(()=>{delete keys['KeyU'];},120);}}
+    if(mk.bolt){mk.bolt=false;if(!isHuman&&dtype.id==='lightning'){keys['KeyG']=true;setTimeout(()=>{delete keys['KeyG'];},120);}}
+    if(mk.soulShield){mk.soulShield=false;if(!isHuman&&dtype.id==='soul'){keys['Semicolon']=true;setTimeout(()=>{delete keys['Semicolon'];},120);}}
+    if(mk.earthInv){mk.earthInv=false;if(!isHuman&&dtype.id==='earth'){keys['Equal']=true;setTimeout(()=>{delete keys['Equal'];},120);}}
 
     // Dragon melee ram — damages any enemy within 7u while flying
     if(!isLanded&&!isHuman){

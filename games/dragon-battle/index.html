@@ -8384,9 +8384,9 @@ function update(ts){
       const ref3=humanMesh.position;
       let nearWild=null,nearWildD=18;
       for(const wd of wildDragons){if(wd.userData.tameable){const d=ref3.distanceTo(wd.position);if(d<nearWildD){nearWildD=d;nearWild=wd;}}}
-      // Check for nearby building doors / stairs
+      // Check for nearby building doors / stairs (independent of nearNPC — B key is separate)
       nearDoor=null;
-      if(cityDoors.length&&!nearNPC){
+      if(cityDoors.length){
         const hp=humanMesh.position;
         for(const d of cityDoors){
           const cr=d.checkR||12;
@@ -8398,7 +8398,11 @@ function update(ts){
           if((isEntry||isExit2||isStair2)&&Math.abs(hp.x-cx)<cr&&Math.abs(hp.z-cz)<cr){nearDoor=d;break;}
         }
       }
-      if(nearNPC){
+      if(nearNPC&&nearDoor){
+        const dh=nearDoor.hintText||(nearDoor.isExit?'[ B ] Exit '+nearDoor.name.replace('EXIT ',''):'[ B ] Enter '+nearDoor.name);
+        hint.textContent='[ E ] Talk to '+nearNPC.userData.npcName+'  ·  '+dh;
+        hint.style.display='block';
+      } else if(nearNPC){
         hint.textContent='[ E ] Talk to '+nearNPC.userData.npcName;
         hint.style.display='block';
       } else if(nearDoor){
